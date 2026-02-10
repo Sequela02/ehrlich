@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass
 from typing import Any
@@ -7,6 +8,9 @@ from typing import Any
 import anthropic
 
 logger = logging.getLogger(__name__)
+
+_MAX_RETRIES = 3
+_BASE_DELAY = 1.0
 
 
 @dataclass(frozen=True)
@@ -18,8 +22,13 @@ class MessageResponse:
 
 
 class AnthropicClientAdapter:
-    def __init__(self, model: str = "claude-sonnet-4-5-20250929", max_tokens: int = 16384) -> None:
-        self._client = anthropic.AsyncAnthropic()
+    def __init__(
+        self,
+        model: str = "claude-sonnet-4-5-20250929",
+        max_tokens: int = 16384,
+        api_key: str | None = None,
+    ) -> None:
+        self._client = anthropic.AsyncAnthropic(api_key=api_key or None)
         self._model = model
         self._max_tokens = max_tokens
 
@@ -29,31 +38,40 @@ class AnthropicClientAdapter:
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]],
     ) -> MessageResponse:
-        try:
-            response = await self._client.messages.create(
-                model=self._model,
-                max_tokens=self._max_tokens,
-                system=system,
-                messages=messages,  # type: ignore[arg-type]
-                tools=tools,  # type: ignore[arg-type]
-            )
-        except anthropic.RateLimitError:
-            logger.warning("Rate limited by Anthropic API, raising")
-            raise
-        except anthropic.APITimeoutError:
-            logger.warning("Anthropic API timeout, raising")
-            raise
-        except anthropic.APIError as e:
-            logger.error("Anthropic API error: %s", e)
-            raise
+        last_error: Exception | None = None
+        for attempt in range(_MAX_RETRIES):
+            try:
+                response = await self._client.messages.create(
+                    model=self._model,
+                    max_tokens=self._max_tokens,
+                    system=system,
+                    messages=messages,  # type: ignore[arg-type]
+                    tools=tools,  # type: ignore[arg-type]
+                )
+                content = _parse_content_blocks(response.content)
+                return MessageResponse(
+                    content=content,
+                    stop_reason=response.stop_reason or "end_turn",
+                    input_tokens=response.usage.input_tokens,
+                    output_tokens=response.usage.output_tokens,
+                )
+            except (anthropic.RateLimitError, anthropic.APITimeoutError) as e:
+                last_error = e
+                delay = _BASE_DELAY * (2**attempt)
+                logger.warning(
+                    "Anthropic API %s (attempt %d/%d), retrying in %.1fs",
+                    type(e).__name__,
+                    attempt + 1,
+                    _MAX_RETRIES,
+                    delay,
+                )
+                if attempt < _MAX_RETRIES - 1:
+                    await asyncio.sleep(delay)
+            except anthropic.APIError as e:
+                logger.error("Anthropic API error: %s", e)
+                raise
 
-        content = _parse_content_blocks(response.content)
-        return MessageResponse(
-            content=content,
-            stop_reason=response.stop_reason or "end_turn",
-            input_tokens=response.usage.input_tokens,
-            output_tokens=response.usage.output_tokens,
-        )
+        raise last_error  # type: ignore[misc]
 
 
 def _parse_content_blocks(blocks: Any) -> list[dict[str, Any]]:

@@ -8,6 +8,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Integration: API key wired from `Settings` to `AnthropicClientAdapter` constructor
+- Integration: Exponential backoff retry (3 attempts) for rate-limit and timeout errors
+- Integration: Startup lifespan event with API key validation, tool count logging, optional dependency checks
+- Integration: Data preparation script (`data/scripts/prepare_data.py`) using `ChEMBLLoader` for pre-downloading ChEMBL bioactivity data and PDB protein structures
+- Integration: E2E smoke test exercising full pipeline (tool registry, orchestrator dispatch, SSE events)
+- Integration: Environment variable documentation in README
+- Integration: Demo instructions in README
+
+### Changed
+
+- Removed `modify_molecule` stub from tool registry (19 tools, down from 20)
+- Improved error handling in `explore_dataset` (ChEMBL timeout, empty datasets)
+- Improved error handling in `train_model` (dataset too small)
+- Improved error handling in `predict_candidates` (model not found)
+- Improved error handling in `dock_against_target` (invalid target, lists available targets)
+- Improved error handling in `assess_resistance` (invalid target, invalid SMILES)
+- Added `has_api_key` property to `Settings` for startup validation
+
+### Fixed
+
+- `AnthropicClientAdapter` no longer ignores `Settings.anthropic_api_key` (was reading only from env)
+
+---
+
 - Initial project scaffolding with DDD architecture (6 bounded contexts)
 - Server: Python 3.12 + FastAPI + uv with full domain/application/infrastructure layers
 - Console: React 19 + TypeScript 5.7 + Bun + Vite 6 + TanStack Router

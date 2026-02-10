@@ -1,3 +1,5 @@
+import os
+
 from pydantic_settings import BaseSettings
 
 
@@ -9,6 +11,10 @@ class Settings(BaseSettings):
     max_iterations: int = 50
     log_level: str = "INFO"
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
+
+    @property
+    def has_api_key(self) -> bool:
+        return bool(self.anthropic_api_key) or bool(os.environ.get("ANTHROPIC_API_KEY"))
 
 
 def get_settings() -> Settings:

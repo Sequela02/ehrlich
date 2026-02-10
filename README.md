@@ -33,6 +33,16 @@ Ehrlich follows Domain-Driven Design with six bounded contexts:
 - Python 3.12
 - An Anthropic API key
 
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `EHRLICH_ANTHROPIC_API_KEY` | Yes | Anthropic API key for Claude |
+| `ANTHROPIC_API_KEY` | Alt | Falls back to this if EHRLICH_ not set |
+| `EHRLICH_ANTHROPIC_MODEL` | No | Model name (default: `claude-sonnet-4-5-20250929`) |
+| `EHRLICH_MAX_ITERATIONS` | No | Max agent loop iterations (default: 50) |
+| `EHRLICH_LOG_LEVEL` | No | Logging level (default: INFO) |
+
 ### Server
 
 ```bash
@@ -58,6 +68,23 @@ bun dev
 
 Open http://localhost:5173 in your browser.
 
+### Data Preparation (Optional)
+
+Pre-download ChEMBL bioactivity data to avoid first-run delays:
+
+```bash
+# Download bioactivity data for all target organisms
+uv run python data/scripts/prepare_data.py --chembl
+
+# Download protein structures from RCSB PDB
+uv run python data/scripts/prepare_data.py --proteins
+
+# Download everything
+uv run python data/scripts/prepare_data.py --all
+```
+
+Cached datasets are stored in `data/datasets/` as parquet files.
+
 ### Docker
 
 ```bash
@@ -65,6 +92,14 @@ docker compose up
 ```
 
 Server at :8000, Console at :3000.
+
+## Demo
+
+1. Start the server: `cd server && uv run uvicorn ehrlich.api.app:create_app --factory --port 8000`
+2. Start the console: `cd console && bun dev`
+3. Open http://localhost:5173
+4. Type a research prompt, e.g.: *"Find novel antimicrobial candidates against MRSA"*
+5. Watch the investigation unfold in real-time via SSE streaming
 
 ## Development
 

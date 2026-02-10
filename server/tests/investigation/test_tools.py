@@ -16,9 +16,7 @@ class TestRecordFinding:
     async def test_with_phase(self) -> None:
         from ehrlich.investigation.tools import record_finding
 
-        result = json.loads(
-            await record_finding("Finding", "Detail", phase="Literature Review")
-        )
+        result = json.loads(await record_finding("Finding", "Detail", phase="Literature Review"))
         assert result["phase"] == "Literature Review"
 
 

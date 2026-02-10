@@ -12,7 +12,6 @@ from ehrlich.chemistry.tools import (
     compute_descriptors,
     compute_fingerprint,
     generate_3d,
-    modify_molecule,
     substructure_match,
     tanimoto_similarity,
     validate_smiles,
@@ -53,7 +52,6 @@ def _build_registry() -> ToolRegistry:
         "tanimoto_similarity": tanimoto_similarity,
         "generate_3d": generate_3d,
         "substructure_match": substructure_match,
-        "modify_molecule": modify_molecule,
         "search_literature": search_literature,
         "get_reference": get_reference,
         "explore_dataset": explore_dataset,
@@ -89,7 +87,10 @@ async def stream_investigation(investigation_id: str) -> EventSourceResponse:
         raise HTTPException(status_code=409, detail="Investigation already started")
 
     settings = get_settings()
-    client = AnthropicClientAdapter(model=settings.anthropic_model)
+    client = AnthropicClientAdapter(
+        model=settings.anthropic_model,
+        api_key=settings.anthropic_api_key or None,
+    )
     registry = _build_registry()
     orchestrator = Orchestrator(
         client=client,

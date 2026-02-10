@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 from ehrlich.chemistry.infrastructure.rdkit_adapter import RDKitAdapter
+from ehrlich.kernel.exceptions import InvalidSMILESError, TargetNotFoundError
 from ehrlich.kernel.types import SMILES
 from ehrlich.simulation.application.simulation_service import SimulationService
 from ehrlich.simulation.infrastructure.pkcsm_client import PkCSMClient
@@ -23,7 +24,14 @@ _service = SimulationService(
 
 async def dock_against_target(smiles: str, target_id: str) -> str:
     """Dock a molecule against a protein target."""
-    result = await _service.dock(SMILES(smiles), target_id)
+    try:
+        result = await _service.dock(SMILES(smiles), target_id)
+    except TargetNotFoundError:
+        available = await _protein_store.list_targets()
+        ids = [t.pdb_id for t in available]
+        return json.dumps({"error": f"Unknown target: {target_id}", "available_targets": ids})
+    except InvalidSMILESError as e:
+        return json.dumps({"error": str(e), "smiles": smiles})
     return json.dumps(
         {
             "smiles": str(result.smiles),
@@ -59,7 +67,14 @@ async def predict_admet(smiles: str) -> str:
 
 async def assess_resistance(smiles: str, target_id: str) -> str:
     """Assess resistance mutation risk for a molecule-target pair."""
-    result = await _service.assess_resistance(SMILES(smiles), target_id)
+    try:
+        result = await _service.assess_resistance(SMILES(smiles), target_id)
+    except TargetNotFoundError:
+        available = await _protein_store.list_targets()
+        ids = [t.pdb_id for t in available]
+        return json.dumps({"error": f"Unknown target: {target_id}", "available_targets": ids})
+    except InvalidSMILESError as e:
+        return json.dumps({"error": str(e), "smiles": smiles})
     return json.dumps(
         {
             "smiles": smiles,

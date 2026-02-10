@@ -23,7 +23,10 @@ _service = PredictionService(
 
 async def train_model(target: str, model_type: str = "xgboost") -> str:
     """Train an ML model for antimicrobial activity prediction."""
-    trained = await _service.train(target, model_type)
+    try:
+        trained = await _service.train(target, model_type)
+    except ValueError as e:
+        return json.dumps({"error": str(e), "target": target, "model_type": model_type})
     return json.dumps(
         {
             "model_id": trained.model_id,
@@ -41,7 +44,10 @@ async def train_model(target: str, model_type: str = "xgboost") -> str:
 async def predict_candidates(smiles_list: list[str], model_id: str) -> str:
     """Predict antimicrobial activity for a list of SMILES."""
     typed_smiles = [SMILES(s) for s in smiles_list]
-    results = await _service.predict(typed_smiles, model_id)
+    try:
+        results = await _service.predict(typed_smiles, model_id)
+    except (FileNotFoundError, KeyError) as e:
+        return json.dumps({"error": f"Model not found: {model_id}", "detail": str(e)})
     return json.dumps(
         {
             "model_id": model_id,

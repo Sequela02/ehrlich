@@ -2,6 +2,7 @@ import json
 
 from ehrlich.analysis.application.analysis_service import AnalysisService
 from ehrlich.analysis.infrastructure.chembl_loader import ChEMBLLoader
+from ehrlich.kernel.exceptions import ExternalServiceError
 
 _loader = ChEMBLLoader()
 _service = AnalysisService(repository=_loader)
@@ -9,7 +10,21 @@ _service = AnalysisService(repository=_loader)
 
 async def explore_dataset(target: str, threshold: float = 1.0) -> str:
     """Load and explore a bioactivity dataset for the given target organism."""
-    dataset = await _service.explore(target, threshold)
+    try:
+        dataset = await _service.explore(target, threshold)
+    except ExternalServiceError as e:
+        return json.dumps({"error": f"ChEMBL API error: {e.detail}", "target": target})
+    if dataset.size == 0:
+        return json.dumps(
+            {
+                "name": dataset.name,
+                "target": dataset.target,
+                "size": 0,
+                "active_count": 0,
+                "message": f"No bioactivity data found for '{target}'. "
+                "Try a different organism name.",
+            }
+        )
     return json.dumps(
         {
             "name": dataset.name,
@@ -17,9 +32,7 @@ async def explore_dataset(target: str, threshold: float = 1.0) -> str:
             "size": dataset.size,
             "active_count": dataset.active_count,
             "inactive_count": dataset.size - dataset.active_count,
-            "active_ratio": round(dataset.active_count / dataset.size, 4)
-            if dataset.size > 0
-            else 0,
+            "active_ratio": round(dataset.active_count / dataset.size, 4),
             "metadata": dataset.metadata,
         }
     )
