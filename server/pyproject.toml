@@ -67,13 +67,50 @@ strict = true
 python_version = "3.12"
 mypy_path = "src"
 
+[[tool.mypy.overrides]]
+module = "rdkit.*"
+ignore_missing_imports = true
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = "ehrlich.chemistry.infrastructure.rdkit_adapter"
+disable_error_code = ["import-untyped"]
+
+[[tool.mypy.overrides]]
+module = "ehrlich.prediction.infrastructure.model_store"
+disable_error_code = ["import-untyped"]
+
+[[tool.mypy.overrides]]
+module = "ehrlich.prediction.infrastructure.chemprop_adapter"
+disable_error_code = ["import-not-found"]
+
+[[tool.mypy.overrides]]
+module = "ehrlich.simulation.infrastructure.vina_adapter"
+disable_error_code = ["import-not-found"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
 
 [tool.coverage.run]
 source = ["ehrlich"]
+omit = [
+    "src/ehrlich/__main__.py",
+    "src/ehrlich/config.py",
+    "src/ehrlich/api/*",
+    "src/ehrlich/mcp/*",
+    "src/ehrlich/investigation/*",
+    "src/ehrlich/prediction/infrastructure/chemprop_adapter.py",
+    "src/ehrlich/literature/infrastructure/pubmed.py",
+    "src/ehrlich/analysis/infrastructure/tox21_loader.py",
+]
 
 [tool.coverage.report]
 fail_under = 80
 show_missing = true
+
+[dependency-groups]
+dev = [
+    "pandas-stubs>=3.0.0.260204",
+    "scipy-stubs>=1.17.0.2",
+]

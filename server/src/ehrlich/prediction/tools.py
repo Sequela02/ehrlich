@@ -1,16 +1,77 @@
+from __future__ import annotations
+
 import json
+
+from ehrlich.analysis.infrastructure.chembl_loader import ChEMBLLoader
+from ehrlich.chemistry.infrastructure.rdkit_adapter import RDKitAdapter
+from ehrlich.kernel.types import SMILES
+from ehrlich.prediction.application.prediction_service import PredictionService
+from ehrlich.prediction.infrastructure.model_store import ModelStore
+from ehrlich.prediction.infrastructure.xgboost_adapter import XGBoostAdapter
+
+_rdkit = RDKitAdapter()
+_xgboost = XGBoostAdapter()
+_model_store = ModelStore()
+_dataset_repo = ChEMBLLoader()
+_service = PredictionService(
+    model_repo=_model_store,
+    dataset_repo=_dataset_repo,
+    rdkit=_rdkit,
+    xgboost=_xgboost,
+)
 
 
 async def train_model(target: str, model_type: str = "xgboost") -> str:
     """Train an ML model for antimicrobial activity prediction."""
-    return json.dumps({"status": "not_implemented", "target": target, "model_type": model_type})
+    trained = await _service.train(target, model_type)
+    return json.dumps(
+        {
+            "model_id": trained.model_id,
+            "model_type": trained.model_type,
+            "target": trained.target,
+            "metrics": trained.metrics,
+            "feature_importance": dict(list(trained.feature_importance.items())[:10]),
+            "n_train": trained.n_train,
+            "n_test": trained.n_test,
+            "created_at": trained.created_at,
+        }
+    )
 
 
 async def predict_candidates(smiles_list: list[str], model_id: str) -> str:
     """Predict antimicrobial activity for a list of SMILES."""
-    return json.dumps({"status": "not_implemented", "count": len(smiles_list)})
+    typed_smiles = [SMILES(s) for s in smiles_list]
+    results = await _service.predict(typed_smiles, model_id)
+    return json.dumps(
+        {
+            "model_id": model_id,
+            "count": len(results),
+            "predictions": [
+                {
+                    "rank": r.rank,
+                    "smiles": str(r.smiles),
+                    "probability": round(r.probability, 4),
+                    "model_type": r.model_type,
+                }
+                for r in results
+            ],
+        }
+    )
 
 
 async def cluster_compounds(smiles_list: list[str], n_clusters: int = 5) -> str:
-    """Cluster compounds by structural similarity."""
-    return json.dumps({"status": "not_implemented", "count": len(smiles_list)})
+    """Cluster compounds by structural similarity using Butina clustering."""
+    typed_smiles = [SMILES(s) for s in smiles_list]
+    clusters = await _service.cluster(typed_smiles, n_clusters)
+    return json.dumps(
+        {
+            "n_clusters": len(clusters),
+            "clusters": {
+                str(k): {
+                    "size": len(v),
+                    "smiles": [str(s) for s in v],
+                }
+                for k, v in clusters.items()
+            },
+        }
+    )

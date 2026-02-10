@@ -1,46 +1,64 @@
 {
   "version": "1.0",
   "description": "Curated core references for antimicrobial discovery research",
-  "papers": [
-    {
+  "papers": {
+    "halicin": {
       "doi": "10.1038/s41586-020-2008-3",
       "title": "A Deep Learning Approach to Antibiotic Discovery",
       "authors": ["Stokes", "Yang", "Swanson", "Jin", "Cubillos-Ruiz", "Donghia"],
       "year": 2020,
       "journal": "Nature",
-      "relevance": "Foundational paper on ML-driven antibiotic discovery (Halicin)"
+      "abstract": "Using a deep neural network trained on 2335 compounds, screened 6111 compounds and discovered halicin, a structurally novel antibiotic with broad-spectrum activity including M. tuberculosis and pan-resistant A. baumannii.",
+      "key_findings": "Halicin disrupts electrochemical gradient across bacterial membranes. Active against C. difficile, A. baumannii, M. tuberculosis. Low resistance evolution rate.",
+      "training_size": 2335,
+      "hit_rate": "0.3%"
     },
-    {
+    "abaucin": {
       "doi": "10.1038/s41589-023-01349-8",
       "title": "Discovery of a structural class of antibiotics with explainable deep learning",
       "authors": ["Wong", "Li", "Stokes", "Collins"],
       "year": 2023,
       "journal": "Nature Chemical Biology",
-      "relevance": "Explainable GNN for antibiotic discovery (abaucin)"
+      "abstract": "Used Chemprop with Monte Carlo tree search to discover abaucin, a narrow-spectrum antibiotic targeting A. baumannii with explainable substructure attribution.",
+      "key_findings": "Abaucin targets lipoprotein trafficking. Narrow-spectrum activity minimizes microbiome disruption. Explainable AI identifies key pharmacophore atoms.",
+      "training_size": 7684,
+      "hit_rate": "0.6%"
     },
-    {
+    "amr_crisis": {
       "doi": "10.1038/nrd4010",
       "title": "Antimicrobial resistance: a global emerging threat to public health systems",
       "authors": ["Laxminarayan", "Duse", "Wattal", "Zaidi"],
       "year": 2013,
       "journal": "Nature Reviews Drug Discovery",
-      "relevance": "AMR crisis overview and drug pipeline analysis"
+      "abstract": "Comprehensive review of the antimicrobial resistance crisis, documenting the decline in antibiotic R&D investment and the growing gap between resistance emergence and new drug approvals.",
+      "key_findings": "18 pharma companies in 1980s vs 3 today. Only 4 drugs in pipeline target critical WHO pathogens. AMR projected to cause 10M deaths/year by 2050."
     },
-    {
+    "chemprop": {
       "doi": "10.1021/acs.jcim.9b00237",
       "title": "Analyzing Learned Molecular Representations for Property Prediction",
       "authors": ["Yang", "Swanson", "Jin", "Coley", "Eiden"],
       "year": 2019,
       "journal": "Journal of Chemical Information and Modeling",
-      "relevance": "Chemprop D-MPNN architecture used for molecular property prediction"
+      "abstract": "Introduces Chemprop, a directed message-passing neural network (D-MPNN) that learns molecular representations directly from molecular graphs, outperforming fixed fingerprint methods on multiple benchmarks.",
+      "key_findings": "D-MPNN outperforms Morgan fingerprints + random forest on 19 of 22 benchmarks. Learns task-specific molecular features. Supports multi-task learning."
     },
-    {
+    "pkcsm": {
       "doi": "10.1002/cmdc.201700478",
       "title": "pkCSM: Predicting Small-Molecule Pharmacokinetic and Toxicity Properties Using Graph-Based Signatures",
       "authors": ["Pires", "Blundell", "Ascher"],
       "year": 2015,
       "journal": "Journal of Medicinal Chemistry",
-      "relevance": "ADMET prediction methodology"
+      "abstract": "Graph-based signatures for predicting 30 ADMET properties including Caco-2 permeability, BBB penetration, CYP inhibition, hERG blocking, and hepatotoxicity.",
+      "key_findings": "Free web server for ADMET prediction. Covers absorption, distribution, metabolism, excretion, and toxicity. Validated on curated datasets."
+    },
+    "who_bppl_2024": {
+      "doi": "10.2471/BLT.24.291693",
+      "title": "WHO Bacterial Priority Pathogens List 2024",
+      "authors": ["WHO"],
+      "year": 2024,
+      "journal": "WHO Bulletin",
+      "abstract": "Updated priority pathogen list for R&D of new antibiotics. MRSA remains critical priority. Lists 15 pathogen-antibiotic combinations requiring urgent new treatments.",
+      "key_findings": "MRSA, CRE, CRAB are critical priority. Only 12 innovative antibiotics in clinical pipeline. 4 target critical WHO pathogens."
     }
-  ]
+  }
 }

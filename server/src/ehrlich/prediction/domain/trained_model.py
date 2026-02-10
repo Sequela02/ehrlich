@@ -11,3 +11,6 @@ class TrainedModel:
     metrics: dict[str, float] = field(default_factory=dict)
     feature_importance: dict[str, float] = field(default_factory=dict)
     is_trained: bool = False
+    n_train: int = 0
+    n_test: int = 0
+    created_at: str = ""
