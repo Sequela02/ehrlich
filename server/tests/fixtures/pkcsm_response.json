@@ -1,0 +1,10 @@
+{
+  "absorption": 0.0,
+  "distribution_vd": 0.0,
+  "metabolism_cyp_inhibitor": false,
+  "excretion_clearance": 0.0,
+  "toxicity_ld50": 0.0,
+  "toxicity_ames": false,
+  "herg_inhibitor": false,
+  "bbb_permeant": false
+}

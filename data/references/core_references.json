@@ -1,0 +1,46 @@
+{
+  "version": "1.0",
+  "description": "Curated core references for antimicrobial discovery research",
+  "papers": [
+    {
+      "doi": "10.1038/s41586-020-2008-3",
+      "title": "A Deep Learning Approach to Antibiotic Discovery",
+      "authors": ["Stokes", "Yang", "Swanson", "Jin", "Cubillos-Ruiz", "Donghia"],
+      "year": 2020,
+      "journal": "Nature",
+      "relevance": "Foundational paper on ML-driven antibiotic discovery (Halicin)"
+    },
+    {
+      "doi": "10.1038/s41589-023-01349-8",
+      "title": "Discovery of a structural class of antibiotics with explainable deep learning",
+      "authors": ["Wong", "Li", "Stokes", "Collins"],
+      "year": 2023,
+      "journal": "Nature Chemical Biology",
+      "relevance": "Explainable GNN for antibiotic discovery (abaucin)"
+    },
+    {
+      "doi": "10.1038/nrd4010",
+      "title": "Antimicrobial resistance: a global emerging threat to public health systems",
+      "authors": ["Laxminarayan", "Duse", "Wattal", "Zaidi"],
+      "year": 2013,
+      "journal": "Nature Reviews Drug Discovery",
+      "relevance": "AMR crisis overview and drug pipeline analysis"
+    },
+    {
+      "doi": "10.1021/acs.jcim.9b00237",
+      "title": "Analyzing Learned Molecular Representations for Property Prediction",
+      "authors": ["Yang", "Swanson", "Jin", "Coley", "Eiden"],
+      "year": 2019,
+      "journal": "Journal of Chemical Information and Modeling",
+      "relevance": "Chemprop D-MPNN architecture used for molecular property prediction"
+    },
+    {
+      "doi": "10.1002/cmdc.201700478",
+      "title": "pkCSM: Predicting Small-Molecule Pharmacokinetic and Toxicity Properties Using Graph-Based Signatures",
+      "authors": ["Pires", "Blundell", "Ascher"],
+      "year": 2015,
+      "journal": "Journal of Medicinal Chemistry",
+      "relevance": "ADMET prediction methodology"
+    }
+  ]
+}
