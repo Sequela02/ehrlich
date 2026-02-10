@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -18,12 +19,28 @@ class PhaseStarted(DomainEvent):
 @dataclass(frozen=True)
 class ToolCalled(DomainEvent):
     tool_name: str = ""
+    tool_input: dict[str, Any] = field(default_factory=dict)
+    investigation_id: str = ""
+
+
+@dataclass(frozen=True)
+class ToolResultEvent(DomainEvent):
+    tool_name: str = ""
+    result_preview: str = ""
+    investigation_id: str = ""
+
+
+@dataclass(frozen=True)
+class Thinking(DomainEvent):
+    text: str = ""
     investigation_id: str = ""
 
 
 @dataclass(frozen=True)
 class FindingRecorded(DomainEvent):
     title: str = ""
+    detail: str = ""
+    phase: str = ""
     investigation_id: str = ""
 
 
@@ -31,3 +48,11 @@ class FindingRecorded(DomainEvent):
 class InvestigationCompleted(DomainEvent):
     investigation_id: str = ""
     candidate_count: int = 0
+    summary: str = ""
+    cost: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class InvestigationError(DomainEvent):
+    error: str = ""
+    investigation_id: str = ""

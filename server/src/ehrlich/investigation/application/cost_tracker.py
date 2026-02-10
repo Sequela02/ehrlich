@@ -26,3 +26,12 @@ class CostTracker:
     @property
     def total_tokens(self) -> int:
         return self.input_tokens + self.output_tokens
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "input_tokens": self.input_tokens,
+            "output_tokens": self.output_tokens,
+            "total_tokens": self.total_tokens,
+            "tool_calls": self.tool_calls,
+            "total_cost_usd": round(self.total_cost, 6),
+        }

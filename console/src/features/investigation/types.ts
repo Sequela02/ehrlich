@@ -1,6 +1,62 @@
+export type SSEEventType =
+  | "phase_started"
+  | "tool_called"
+  | "tool_result"
+  | "finding_recorded"
+  | "thinking"
+  | "error"
+  | "completed";
+
 export interface SSEEvent {
-  event: string;
+  event: SSEEventType;
   data: Record<string, unknown>;
+}
+
+export interface PhaseStartedData {
+  phase: string;
+  investigation_id: string;
+}
+
+export interface ToolCalledData {
+  tool_name: string;
+  tool_input: Record<string, unknown>;
+  investigation_id: string;
+}
+
+export interface ToolResultData {
+  tool_name: string;
+  result_preview: string;
+  investigation_id: string;
+}
+
+export interface FindingRecordedData {
+  title: string;
+  detail: string;
+  phase: string;
+  investigation_id: string;
+}
+
+export interface ThinkingData {
+  text: string;
+  investigation_id: string;
+}
+
+export interface CompletedData {
+  investigation_id: string;
+  candidate_count: number;
+  summary: string;
+  cost: {
+    input_tokens: number;
+    output_tokens: number;
+    total_tokens: number;
+    tool_calls: number;
+    total_cost_usd: number;
+  };
+}
+
+export interface ErrorData {
+  error: string;
+  investigation_id: string;
 }
 
 export interface InvestigationRequest {
@@ -15,24 +71,20 @@ export interface InvestigationResponse {
 export interface Finding {
   title: string;
   detail: string;
-  evidence: string;
   phase: string;
-  confidence: number;
 }
 
 export interface CandidateRow {
   smiles: string;
   name: string;
-  predictionScore: number;
-  dockingScore: number;
-  admetScore: number;
-  resistanceRisk: string;
   rank: number;
+  notes: string;
 }
 
 export interface CostInfo {
   inputTokens: number;
   outputTokens: number;
+  totalTokens: number;
   totalCost: number;
   toolCalls: number;
 }
