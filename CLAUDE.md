@@ -177,10 +177,16 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 - `LiveLabViewer` subscribes to SSE stream, renders molecular scene: protein cartoon + ligand sticks + score labels
 - SSE event → 3D action mapping: `dock_against_target` → ligand appears in binding pocket, `predict_candidates` → molecules color by probability, `completed` → top candidates glow
 - Interactive: rotate, zoom, click molecules for details; split-pane with Timeline
-- **Excalidraw investigation diagrams**: `@excalidraw/excalidraw` React component renders auto-generated visual maps from investigation data
-- `InvestigationDiagram`: converts hypothesis/experiment/finding relationships into Excalidraw elements (nodes + arrows)
-- Diagram types: hypothesis map (status-colored nodes, parent/revised arrows), investigation flow (literature -> hypotheses -> experiments -> findings -> candidates), evidence chains
+- **Excalidraw investigation diagrams**: `@excalidraw/excalidraw` v0.18+ React component renders auto-generated visual maps from investigation data
+- `InvestigationDiagram`: converts hypothesis/experiment/finding relationships into Excalidraw elements using the skeleton transform API (`convertToExcalidrawElements`)
+- Professional rendering: `roughness: 0` (clean lines), `fontFamily: 2` (Helvetica), `strokeWidth: 2`, `fillStyle: "solid"`, Excalidraw semantic color palette
+- `label` prop on rectangles for bound text (not separate text elements) -- halves element count
+- Arrow binding via `start: { id }` / `end: { id }` with descriptive labels ("revised to", "tested by", "supports", "contradicts")
+- Dashed arrows for hypothesis revisions, solid arrows for experiment/finding links
+- Locked section titles ("HYPOTHESES", "EXPERIMENTS", "FINDINGS") as row headers
+- Status-colored nodes: proposed (gray), testing (blue), supported (green), refuted (red), revised (orange)
 - Read-only auto-generated view during investigation; interactive editing post-completion
+- `ErrorBoundary` wraps both LiveLabViewer and InvestigationDiagram to prevent page crashes
 
 ## Key Files (Investigation Context)
 
@@ -238,4 +244,5 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 | `console/.../investigation/components/LiveLabViewer.tsx` | 3Dmol.js scene driven by SSE events: proteins, ligands, scores in real-time |
 | `console/.../investigation/lib/scene-builder.ts` | Maps SSE events to 3Dmol.js operations (addModel, setStyle, addLabel, zoom) |
 | `console/.../investigation/components/InvestigationDiagram.tsx` | Excalidraw wrapper: converts investigation data to visual diagram |
-| `console/.../investigation/lib/diagram-builder.ts` | Transforms hypotheses/experiments/findings into Excalidraw elements (nodes, arrows, labels) |
+| `console/.../investigation/lib/diagram-builder.ts` | Transforms hypotheses/experiments/findings into Excalidraw elements (skeleton API with labels, bound arrows) |
+| `console/.../shared/components/ErrorBoundary.tsx` | Class-based error boundary wrapping LiveLabViewer and InvestigationDiagram |

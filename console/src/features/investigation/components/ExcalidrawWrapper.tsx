@@ -22,10 +22,18 @@ export default function ExcalidrawWrapper({ skeletons, viewMode }: ExcalidrawWra
         appState: {
           theme: THEME.DARK,
           viewBackgroundColor: "#0f1219",
+          currentItemFontFamily: 2,
+          currentItemStrokeColor: "#1e1e1e",
         },
       }}
       viewModeEnabled={viewMode}
       theme={THEME.DARK}
+      UIOptions={{
+        canvasActions: {
+          toggleTheme: false,
+          export: false,
+        },
+      }}
     />
   );
 }

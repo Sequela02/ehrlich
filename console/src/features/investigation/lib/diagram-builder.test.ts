@@ -35,18 +35,41 @@ function makeFinding(overrides: Partial<FindingNode> = {}): FindingNode {
   };
 }
 
+function getRects(elements: ReturnType<typeof buildDiagramElements>) {
+  return elements.filter((e) => e.type === "rectangle");
+}
+
+function getArrows(elements: ReturnType<typeof buildDiagramElements>) {
+  return elements.filter((e) => e.type === "arrow");
+}
+
+function getTexts(elements: ReturnType<typeof buildDiagramElements>) {
+  return elements.filter((e) => e.type === "text");
+}
+
 describe("buildDiagramElements", () => {
   it("returns empty array for no data", () => {
     const elements = buildDiagramElements([], [], []);
     expect(elements).toEqual([]);
   });
 
-  it("creates rectangle + 2 text elements per hypothesis", () => {
+  it("creates rectangle with label for hypothesis (no separate text elements)", () => {
     const elements = buildDiagramElements([makeHypothesis()], [], []);
-    const rectangles = elements.filter((e) => e.type === "rectangle");
-    const texts = elements.filter((e) => e.type === "text");
-    expect(rectangles).toHaveLength(1);
-    expect(texts).toHaveLength(2);
+    const rects = getRects(elements);
+    expect(rects).toHaveLength(1);
+    const rect = rects[0] as Record<string, unknown>;
+    expect(rect.label).toBeDefined();
+    const label = rect.label as Record<string, unknown>;
+    expect((label.text as string)).toContain("Test hypothesis");
+  });
+
+  it("adds section title as locked text", () => {
+    const elements = buildDiagramElements([makeHypothesis()], [], []);
+    const texts = getTexts(elements);
+    expect(texts.length).toBeGreaterThanOrEqual(1);
+    const title = texts[0] as Record<string, unknown>;
+    expect(title.text).toBe("HYPOTHESES");
+    expect(title.locked).toBe(true);
   });
 
   it("applies correct status color to hypothesis", () => {
@@ -55,9 +78,24 @@ describe("buildDiagramElements", () => {
       [],
       [],
     );
-    const rect = elements.find((e) => e.type === "rectangle");
-    expect(rect).toBeDefined();
-    expect((rect as Record<string, unknown>).strokeColor).toBe("#22c55e");
+    const rect = getRects(elements)[0] as Record<string, unknown>;
+    expect(rect.strokeColor).toBe("#2f9e44");
+    expect(rect.backgroundColor).toBe("#b2f2bb");
+  });
+
+  it("uses clean professional defaults (roughness 0, strokeWidth 2)", () => {
+    const elements = buildDiagramElements([makeHypothesis()], [], []);
+    const rect = getRects(elements)[0] as Record<string, unknown>;
+    expect(rect.roughness).toBe(0);
+    expect(rect.strokeWidth).toBe(2);
+    expect(rect.fillStyle).toBe("solid");
+  });
+
+  it("uses Helvetica font in labels", () => {
+    const elements = buildDiagramElements([makeHypothesis()], [], []);
+    const rect = getRects(elements)[0] as Record<string, unknown>;
+    const label = rect.label as Record<string, unknown>;
+    expect(label.fontFamily).toBe(2);
   });
 
   it("truncates long hypothesis statements", () => {
@@ -67,84 +105,108 @@ describe("buildDiagramElements", () => {
       [],
       [],
     );
-    const texts = elements.filter((e) => e.type === "text");
-    const statementText = texts[0] as Record<string, unknown>;
-    expect((statementText.text as string).length).toBeLessThanOrEqual(50);
-    expect((statementText.text as string).endsWith("...")).toBe(true);
+    const rect = getRects(elements)[0] as Record<string, unknown>;
+    const label = rect.label as Record<string, unknown>;
+    const firstLine = (label.text as string).split("\n")[0];
+    expect(firstLine.length).toBeLessThanOrEqual(45);
+    expect(firstLine.endsWith("...")).toBe(true);
   });
 
-  it("shows confidence in status label", () => {
+  it("shows confidence in status line", () => {
     const elements = buildDiagramElements(
       [makeHypothesis({ status: "supported", confidence: 0.85 })],
       [],
       [],
     );
-    const texts = elements.filter((e) => e.type === "text");
-    const statusText = texts[1] as Record<string, unknown>;
-    expect(statusText.text).toBe("supported (85%)");
+    const rect = getRects(elements)[0] as Record<string, unknown>;
+    const label = rect.label as Record<string, unknown>;
+    expect((label.text as string)).toContain("SUPPORTED (85%)");
   });
 
-  it("creates arrow between parent and revised hypothesis", () => {
+  it("creates dashed arrow between parent and revised hypothesis with label", () => {
     const hyps = [
       makeHypothesis({ id: "h1", status: "refuted" }),
       makeHypothesis({ id: "h2", status: "revised", parentId: "h1" }),
     ];
     const elements = buildDiagramElements(hyps, [], []);
-    const arrows = elements.filter((e) => e.type === "arrow");
+    const arrows = getArrows(elements);
     expect(arrows).toHaveLength(1);
-    expect((arrows[0] as Record<string, unknown>).strokeColor).toBe("#f97316");
+    const arrow = arrows[0] as Record<string, unknown>;
+    expect(arrow.strokeColor).toBe("#f08c00");
+    expect(arrow.strokeStyle).toBe("dashed");
+    const label = arrow.label as Record<string, unknown>;
+    expect(label.text).toBe("revised to");
+  });
+
+  it("uses id-based arrow binding instead of raw coordinates", () => {
+    const hyps = [
+      makeHypothesis({ id: "h1" }),
+      makeHypothesis({ id: "h2", parentId: "h1" }),
+    ];
+    const elements = buildDiagramElements(hyps, [], []);
+    const arrow = getArrows(elements)[0] as Record<string, unknown>;
+    const start = arrow.start as Record<string, unknown>;
+    const end = arrow.end as Record<string, unknown>;
+    expect(start.id).toBeDefined();
+    expect(end.id).toBeDefined();
+    expect(typeof start.id).toBe("string");
   });
 
   it("skips arrow when parentId references non-existent hypothesis", () => {
-    const hyps = [
-      makeHypothesis({ id: "h2", parentId: "h_nonexistent" }),
-    ];
+    const hyps = [makeHypothesis({ id: "h2", parentId: "h_nonexistent" })];
     const elements = buildDiagramElements(hyps, [], []);
-    const arrows = elements.filter((e) => e.type === "arrow");
+    const arrows = getArrows(elements);
     expect(arrows).toHaveLength(0);
   });
 
-  it("creates experiment nodes with arrow to hypothesis", () => {
+  it("creates experiment nodes with labeled arrow to hypothesis", () => {
     const hyps = [makeHypothesis()];
     const exps = [makeExperiment()];
     const elements = buildDiagramElements(hyps, exps, []);
-    const rectangles = elements.filter((e) => e.type === "rectangle");
-    const arrows = elements.filter((e) => e.type === "arrow");
-    expect(rectangles).toHaveLength(2);
+    const rects = getRects(elements);
+    const arrows = getArrows(elements);
+    expect(rects).toHaveLength(2);
     expect(arrows).toHaveLength(1);
+    const arrowLabel = (arrows[0] as Record<string, unknown>).label as Record<string, unknown>;
+    expect(arrowLabel.text).toBe("tested by");
   });
 
-  it("applies correct status color to experiment", () => {
+  it("adds EXPERIMENTS section title when experiments exist", () => {
     const elements = buildDiagramElements(
       [makeHypothesis()],
-      [makeExperiment({ status: "failed" })],
+      [makeExperiment()],
       [],
     );
-    const rectangles = elements.filter((e) => e.type === "rectangle");
-    const expRect = rectangles[1] as Record<string, unknown>;
-    expect(expRect.strokeColor).toBe("#ef4444");
+    const texts = getTexts(elements);
+    const expTitle = texts.find((t) => (t as Record<string, unknown>).text === "EXPERIMENTS");
+    expect(expTitle).toBeDefined();
   });
 
-  it("creates finding nodes with arrow to experiment", () => {
+  it("creates finding nodes with evidence-labeled arrow", () => {
     const hyps = [makeHypothesis()];
     const exps = [makeExperiment()];
     const finds = [makeFinding()];
     const elements = buildDiagramElements(hyps, exps, finds);
-    const rectangles = elements.filter((e) => e.type === "rectangle");
-    const arrows = elements.filter((e) => e.type === "arrow");
-    expect(rectangles).toHaveLength(3);
+    const rects = getRects(elements);
+    const arrows = getArrows(elements);
+    expect(rects).toHaveLength(3);
     expect(arrows).toHaveLength(2);
+    const findingArrow = arrows[arrows.length - 1] as Record<string, unknown>;
+    const label = findingArrow.label as Record<string, unknown>;
+    expect(label.text).toBe("supports");
   });
 
-  it("applies evidence type color to finding arrow", () => {
+  it("uses contradicting color and label for contradicting findings", () => {
     const elements = buildDiagramElements(
       [makeHypothesis()],
       [makeExperiment()],
       [makeFinding({ evidenceType: "contradicting" })],
     );
-    const arrows = elements.filter((e) => e.type === "arrow");
+    const arrows = getArrows(elements);
     const findingArrow = arrows[arrows.length - 1] as Record<string, unknown>;
-    expect(findingArrow.strokeColor).toBe("#ef4444");
+    expect(findingArrow.strokeColor).toBe("#e03131");
+    const label = findingArrow.label as Record<string, unknown>;
+    expect(label.text).toBe("contradicts");
   });
 
   it("positions hypotheses in a row with correct spacing", () => {
@@ -153,10 +215,10 @@ describe("buildDiagramElements", () => {
       makeHypothesis({ id: "h2" }),
     ];
     const elements = buildDiagramElements(hyps, [], []);
-    const rectangles = elements.filter((e) => e.type === "rectangle");
-    const x1 = (rectangles[0] as Record<string, unknown>).x as number;
-    const x2 = (rectangles[1] as Record<string, unknown>).x as number;
-    expect(x2 - x1).toBe(240 + 40);
+    const rects = getRects(elements);
+    const x1 = (rects[0] as Record<string, unknown>).x as number;
+    const x2 = (rects[1] as Record<string, unknown>).x as number;
+    expect(x2 - x1).toBe(260 + 50);
   });
 
   it("handles full graph with multiple nodes", () => {
@@ -173,16 +235,16 @@ describe("buildDiagramElements", () => {
       makeFinding({ id: "f2", hypothesisId: "h2", evidenceType: "contradicting" }),
     ];
     const elements = buildDiagramElements(hyps, exps, finds);
-    const rectangles = elements.filter((e) => e.type === "rectangle");
-    const arrows = elements.filter((e) => e.type === "arrow");
-    expect(rectangles).toHaveLength(6);
+    const rects = getRects(elements);
+    const arrows = getArrows(elements);
+    expect(rects).toHaveLength(6);
     expect(arrows).toHaveLength(4);
   });
 
   it("resets ID counter between calls", () => {
     buildDiagramElements([makeHypothesis()], [], []);
     const elements = buildDiagramElements([makeHypothesis()], [], []);
-    const rect = elements.find((e) => e.type === "rectangle");
-    expect((rect as Record<string, unknown>).id).toBe("diag_1");
+    const texts = getTexts(elements);
+    expect((texts[0] as Record<string, unknown>).id).toBe("diag_1");
   });
 });
