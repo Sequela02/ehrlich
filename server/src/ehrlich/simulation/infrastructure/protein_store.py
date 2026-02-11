@@ -1,72 +1,71 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+import yaml
 
 from ehrlich.kernel.exceptions import TargetNotFoundError
 from ehrlich.simulation.domain.protein_target import ProteinTarget
 
-_PROTEINS_DIR = Path(__file__).resolve().parents[5] / "data" / "proteins"
+if TYPE_CHECKING:
+    from ehrlich.simulation.domain.repository import ProteinTargetRepository
 
-# Pre-configured MRSA targets with approximate active-site centers
-_TARGETS: dict[str, ProteinTarget] = {
-    "1VQQ": ProteinTarget(
-        pdb_id="1VQQ",
-        name="PBP2a",
-        organism="Staphylococcus aureus (MRSA)",
-        center_x=26.0,
-        center_y=13.0,
-        center_z=60.0,
-        box_size=22.0,
-    ),
-    "1AD4": ProteinTarget(
-        pdb_id="1AD4",
-        name="DHPS",
-        organism="Staphylococcus aureus",
-        center_x=42.0,
-        center_y=34.0,
-        center_z=36.0,
-        box_size=20.0,
-    ),
-    "2XCT": ProteinTarget(
-        pdb_id="2XCT",
-        name="DNA Gyrase",
-        organism="Staphylococcus aureus",
-        center_x=19.0,
-        center_y=-5.0,
-        center_z=38.0,
-        box_size=22.0,
-    ),
-    "1UAE": ProteinTarget(
-        pdb_id="1UAE",
-        name="MurA",
-        organism="Escherichia coli",
-        center_x=34.0,
-        center_y=30.0,
-        center_z=22.0,
-        box_size=20.0,
-    ),
-    "3SPU": ProteinTarget(
-        pdb_id="3SPU",
-        name="NDM-1",
-        organism="Klebsiella pneumoniae",
-        center_x=14.0,
-        center_y=-10.0,
-        center_z=5.0,
-        box_size=22.0,
-    ),
-}
+logger = logging.getLogger(__name__)
+
+_PROTEINS_DIR = Path(__file__).resolve().parents[5] / "data" / "proteins"
+_TARGETS_YAML = Path(__file__).resolve().parents[5] / "data" / "targets" / "default.yaml"
+
+
+def _load_targets_from_yaml(yaml_path: Path) -> dict[str, ProteinTarget]:
+    if not yaml_path.exists():
+        logger.warning("Targets YAML not found: %s", yaml_path)
+        return {}
+    with open(yaml_path) as f:
+        data = yaml.safe_load(f)
+    targets: dict[str, ProteinTarget] = {}
+    for entry in data.get("targets", []):
+        pdb_id = str(entry["pdb_id"]).upper()
+        targets[pdb_id] = ProteinTarget(
+            pdb_id=pdb_id,
+            name=str(entry["name"]),
+            organism=str(entry.get("organism", "")),
+            center_x=float(entry.get("center_x", 0.0)),
+            center_y=float(entry.get("center_y", 0.0)),
+            center_z=float(entry.get("center_z", 0.0)),
+            box_size=float(entry.get("box_size", 20.0)),
+        )
+    return targets
 
 
 class ProteinStore:
-    def __init__(self, proteins_dir: Path | None = None) -> None:
+    def __init__(
+        self,
+        proteins_dir: Path | None = None,
+        yaml_path: Path | None = None,
+        rcsb_client: ProteinTargetRepository | None = None,
+    ) -> None:
         self._dir = proteins_dir or _PROTEINS_DIR
         self._dir.mkdir(parents=True, exist_ok=True)
+        self._targets = _load_targets_from_yaml(yaml_path or _TARGETS_YAML)
+        self._rcsb = rcsb_client
 
     def get_target(self, pdb_id: str) -> ProteinTarget:
-        target = _TARGETS.get(pdb_id.upper())
+        target = self._targets.get(pdb_id.upper())
         if target is None:
             raise TargetNotFoundError(pdb_id)
         return target
+
+    async def search(self, query: str, organism: str = "", limit: int = 10) -> list[ProteinTarget]:
+        if self._rcsb is not None:
+            return await self._rcsb.search(query, organism, limit)
+        results = [
+            t
+            for t in self._targets.values()
+            if query.lower() in t.name.lower() or query.lower() in t.organism.lower()
+        ]
+        return results[:limit]
 
     async def get_pdbqt(self, pdb_id: str) -> str:
         target = self.get_target(pdb_id)
@@ -79,4 +78,4 @@ class ProteinStore:
         return str(pdbqt_path)
 
     async def list_targets(self) -> list[ProteinTarget]:
-        return list(_TARGETS.values())
+        return list(self._targets.values())

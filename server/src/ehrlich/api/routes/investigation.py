@@ -9,7 +9,13 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
-from ehrlich.analysis.tools import analyze_substructures, compute_properties, explore_dataset
+from ehrlich.analysis.tools import (
+    analyze_substructures,
+    compute_properties,
+    explore_dataset,
+    search_bioactivity,
+    search_compounds,
+)
 from ehrlich.api.sse import SSEEventType, domain_event_to_sse
 from ehrlich.chemistry.tools import (
     compute_descriptors,
@@ -36,7 +42,13 @@ from ehrlich.investigation.tools import (
 )
 from ehrlich.literature.tools import get_reference, search_literature
 from ehrlich.prediction.tools import cluster_compounds, predict_candidates, train_model
-from ehrlich.simulation.tools import assess_resistance, dock_against_target, predict_admet
+from ehrlich.simulation.tools import (
+    assess_resistance,
+    dock_against_target,
+    fetch_toxicity_profile,
+    predict_admet,
+    search_protein_targets,
+)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -109,13 +121,17 @@ def _build_registry() -> ToolRegistry:
         "search_literature": search_literature,
         "get_reference": get_reference,
         "explore_dataset": explore_dataset,
+        "search_compounds": search_compounds,
+        "search_bioactivity": search_bioactivity,
         "analyze_substructures": analyze_substructures,
         "compute_properties": compute_properties,
         "train_model": train_model,
         "predict_candidates": predict_candidates,
         "cluster_compounds": cluster_compounds,
+        "search_protein_targets": search_protein_targets,
         "dock_against_target": dock_against_target,
         "predict_admet": predict_admet,
+        "fetch_toxicity_profile": fetch_toxicity_profile,
         "assess_resistance": assess_resistance,
         "record_finding": record_finding,
         "conclude_investigation": conclude_investigation,

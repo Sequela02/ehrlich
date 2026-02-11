@@ -46,7 +46,7 @@ class TestToolRegistry:
     def test_build_registry_has_expected_tools(self) -> None:
         registry = _build_registry()
         tools = registry.list_tools()
-        assert len(tools) == 23
+        assert len(tools) == 27
         assert "validate_smiles" in tools
         assert "search_literature" in tools
         assert "explore_dataset" in tools
@@ -62,7 +62,7 @@ class TestToolRegistry:
     def test_all_tools_have_schemas(self) -> None:
         registry = _build_registry()
         schemas = registry.list_schemas()
-        assert len(schemas) == 23
+        assert len(schemas) == 27
         for schema in schemas:
             assert "name" in schema
             assert "description" in schema

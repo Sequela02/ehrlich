@@ -18,10 +18,15 @@ _CACHE_DIR = Path(__file__).resolve().parents[5] / "data" / "datasets"
 
 
 class ChEMBLLoader(DatasetRepository):
-    def __init__(self, cache_dir: Path | None = None) -> None:
+    def __init__(
+        self,
+        cache_dir: Path | None = None,
+        assay_types: list[str] | None = None,
+    ) -> None:
         self._cache_dir = cache_dir or _CACHE_DIR
         self._cache_dir.mkdir(parents=True, exist_ok=True)
         self._client = httpx.AsyncClient(timeout=_TIMEOUT)
+        self._assay_types = assay_types or ["MIC", "IC50"]
 
     async def load(self, target: str, threshold: float = 1.0) -> Dataset:
         cache_file = self._cache_dir / f"chembl_{target.replace(' ', '_').lower()}.parquet"
@@ -35,14 +40,6 @@ class ChEMBLLoader(DatasetRepository):
         for f in cached:
             name = f.stem.replace("chembl_", "").replace("_", " ").title()
             targets.append(name)
-        if not targets:
-            targets = [
-                "Staphylococcus aureus",
-                "Escherichia coli",
-                "Pseudomonas aeruginosa",
-                "Acinetobacter baumannii",
-                "Mycobacterium tuberculosis",
-            ]
         return targets
 
     async def _load_from_api(self, target: str, threshold: float, cache_file: Path) -> Dataset:
@@ -66,7 +63,7 @@ class ChEMBLLoader(DatasetRepository):
                     f"{_CHEMBL_API}/activity.json",
                     params={
                         "target_organism__iexact": target_organism,
-                        "standard_type__in": "MIC,IC50",
+                        "standard_type__in": ",".join(self._assay_types),
                         "standard_relation": "=",
                         "limit": limit,
                         "offset": offset,
@@ -149,6 +146,60 @@ class ChEMBLLoader(DatasetRepository):
                 "active_count": str(int(df["activity"].sum())),
             },
         )
+
+    async def search_bioactivity(
+        self,
+        target: str,
+        assay_types: list[str] | None = None,
+        threshold: float = 1.0,
+    ) -> Dataset:
+        """Search bioactivity data with flexible assay types."""
+        types = assay_types or self._assay_types
+        type_key = "_".join(sorted(t.lower() for t in types))
+        cache_file = (
+            self._cache_dir / f"chembl_{target.replace(' ', '_').lower()}_{type_key}.parquet"
+        )
+        if cache_file.exists():
+            return self._load_from_cache(cache_file, target, threshold)
+        try:
+            all_activities: list[dict[str, object]] = []
+            offset = 0
+            limit = 1000
+            while True:
+                try:
+                    resp = await self._client.get(
+                        f"{_CHEMBL_API}/activity.json",
+                        params={
+                            "target_organism__iexact": target,
+                            "standard_type__in": ",".join(types),
+                            "standard_relation": "=",
+                            "limit": limit,
+                            "offset": offset,
+                        },
+                    )
+                    if resp.status_code == 429:
+                        raise ExternalServiceError("ChEMBL", "Rate limit exceeded")
+                    resp.raise_for_status()
+                    data = resp.json()
+                    activities = data.get("activities", [])
+                    if not activities:
+                        break
+                    all_activities.extend(activities)
+                    if len(activities) < limit:
+                        break
+                    offset += limit
+                    if offset >= 20000:
+                        break
+                except httpx.TimeoutException as e:
+                    logger.warning("ChEMBL timeout at offset %d: %s", offset, e)
+                    break
+            if not all_activities:
+                return Dataset(name=f"ChEMBL {target}", target=target)
+            df = self._process_activities(all_activities, threshold)
+            df.to_parquet(cache_file, index=False)
+            return self._df_to_dataset(df, target)
+        except httpx.HTTPError as e:
+            raise ExternalServiceError("ChEMBL", str(e)) from e
 
     def _load_from_cache(self, path: Path, target: str, threshold: float) -> Dataset:
         df = pd.read_parquet(path)

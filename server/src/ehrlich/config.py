@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
     db_path: str = "data/ehrlich.db"
+    comptox_api_key: str = ""
 
     @property
     def has_api_key(self) -> bool:

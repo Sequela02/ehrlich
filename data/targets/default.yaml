@@ -1,0 +1,36 @@
+targets:
+  - pdb_id: "1VQQ"
+    name: "PBP2a"
+    organism: "Staphylococcus aureus (MRSA)"
+    center_x: 26.0
+    center_y: 13.0
+    center_z: 60.0
+    box_size: 22.0
+  - pdb_id: "1AD4"
+    name: "DHPS"
+    organism: "Staphylococcus aureus"
+    center_x: 42.0
+    center_y: 34.0
+    center_z: 36.0
+    box_size: 20.0
+  - pdb_id: "2XCT"
+    name: "DNA Gyrase"
+    organism: "Staphylococcus aureus"
+    center_x: 19.0
+    center_y: -5.0
+    center_z: 38.0
+    box_size: 22.0
+  - pdb_id: "1UAE"
+    name: "MurA"
+    organism: "Escherichia coli"
+    center_x: 34.0
+    center_y: 30.0
+    center_z: 22.0
+    box_size: 20.0
+  - pdb_id: "3SPU"
+    name: "NDM-1"
+    organism: "Klebsiella pneumoniae"
+    center_x: 14.0
+    center_y: -10.0
+    center_z: 5.0
+    box_size: 22.0

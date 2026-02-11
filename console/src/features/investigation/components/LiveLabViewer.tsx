@@ -1,0 +1,146 @@
+import { useEffect, useRef, useState } from "react";
+import { FlaskConical } from "lucide-react";
+import type { GLViewer } from "3dmol";
+import type { SSEEvent } from "../types";
+import { buildSceneUpdates, type SceneAction } from "../lib/scene-builder";
+
+interface LiveLabViewerProps {
+  events: SSEEvent[];
+  completed: boolean;
+}
+
+export function LiveLabViewer({ events, completed }: LiveLabViewerProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const viewerRef = useRef<GLViewer | null>(null);
+  const processedRef = useRef(0);
+  const [ready, setReady] = useState(false);
+  const [hasContent, setHasContent] = useState(false);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    let cancelled = false;
+
+    import("3dmol").then((mod) => {
+      if (cancelled || !containerRef.current) return;
+      const viewer = mod.createViewer(containerRef.current, {
+        backgroundColor: "#0f1219",
+      });
+      viewerRef.current = viewer;
+      viewer.render();
+      setReady(true);
+    });
+
+    return () => {
+      cancelled = true;
+      if (viewerRef.current) {
+        viewerRef.current.clear();
+        viewerRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!ready || !viewerRef.current) return;
+
+    const viewer = viewerRef.current;
+    const newEvents = events.slice(processedRef.current);
+    processedRef.current = events.length;
+
+    for (const event of newEvents) {
+      const actions = buildSceneUpdates({ type: event.event, data: event.data });
+      for (const action of actions) {
+        applyAction(viewer, action);
+        setHasContent(true);
+      }
+    }
+
+    if (newEvents.length > 0) {
+      viewer.render();
+    }
+  }, [events, ready]);
+
+  return (
+    <div className="relative overflow-hidden rounded-lg border border-border">
+      <div
+        ref={containerRef}
+        style={{ width: "100%", height: 400, position: "relative" }}
+        className="bg-[#0f1219]"
+      />
+      {!hasContent && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+          <FlaskConical className="h-8 w-8 text-muted-foreground/30" />
+          <p className="text-sm text-muted-foreground/50">
+            {completed
+              ? "No molecular data was visualized"
+              : "Waiting for molecular data..."}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function applyAction(viewer: GLViewer, action: SceneAction): void {
+  switch (action.type) {
+    case "addProtein": {
+      const url = `https://files.rcsb.org/download/${action.pdbId}.pdb`;
+      fetch(url)
+        .then((r) => r.text())
+        .then((pdb) => {
+          viewer.addModel(pdb, "pdb");
+          viewer.setStyle({ model: -1 }, { cartoon: { color: "spectrum" } });
+          viewer.zoomTo();
+          viewer.render();
+        })
+        .catch(() => {});
+      break;
+    }
+    case "addLigand": {
+      if (action.molblock) {
+        viewer.addModel(action.molblock, "mol");
+        const scheme = action.color
+          ? { prop: "elem", map: { C: action.color } }
+          : "greenCarbon";
+        viewer.setStyle(
+          { model: -1 },
+          { stick: { colorscheme: scheme as string } },
+        );
+        viewer.zoomTo({ model: -1 });
+        viewer.render();
+      }
+      break;
+    }
+    case "addLabel": {
+      (viewer as unknown as { addLabel: (text: string, opts: Record<string, unknown>) => void }).addLabel(action.text, {
+        position: action.position,
+        fontSize: 14,
+        fontColor: action.color ?? "#ffffff",
+        backgroundColor: "#00000080",
+        backgroundOpacity: 0.7,
+      });
+      break;
+    }
+    case "colorByScore": {
+      const addLabelFn = (viewer as unknown as { addLabel: (text: string, opts: Record<string, unknown>) => void }).addLabel.bind(viewer);
+      for (const { score } of action.scores) {
+        const color = score > 0.7 ? "#22c55e" : score > 0.4 ? "#f97316" : "#ef4444";
+        addLabelFn(`${score.toFixed(2)}`, {
+          position: { x: 0, y: 0, z: 0 },
+          fontSize: 12,
+          fontColor: color,
+          backgroundColor: "#00000080",
+          backgroundOpacity: 0.7,
+        });
+      }
+      break;
+    }
+    case "zoomTo":
+      viewer.zoomTo(action.selection);
+      break;
+    case "highlight":
+      break;
+    case "clear":
+      viewer.clear();
+      break;
+  }
+}

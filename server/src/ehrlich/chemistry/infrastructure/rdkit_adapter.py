@@ -1,5 +1,12 @@
 from rdkit import Chem
-from rdkit.Chem import QED, AllChem, Descriptors, MACCSkeys, rdFingerprintGenerator, rdMolDescriptors
+from rdkit.Chem import (
+    QED,
+    AllChem,
+    Descriptors,
+    MACCSkeys,
+    rdFingerprintGenerator,
+    rdMolDescriptors,
+)
 from rdkit.Chem.Draw import rdMolDraw2D
 from rdkit.Chem.inchi import MolToInchi
 from rdkit.Chem.Scaffolds.MurckoScaffold import GetScaffoldForMol

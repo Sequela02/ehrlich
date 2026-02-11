@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+from ehrlich.analysis.domain.compound import CompoundSearchResult
 from ehrlich.analysis.domain.dataset import Dataset
 
 
@@ -9,3 +10,13 @@ class DatasetRepository(ABC):
 
     @abstractmethod
     async def list_targets(self) -> list[str]: ...
+
+
+class CompoundSearchRepository(ABC):
+    @abstractmethod
+    async def search(self, query: str, limit: int = 10) -> list[CompoundSearchResult]: ...
+
+    @abstractmethod
+    async def search_by_similarity(
+        self, smiles: str, threshold: float = 0.8, limit: int = 10
+    ) -> list[CompoundSearchResult]: ...

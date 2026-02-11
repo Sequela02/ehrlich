@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING
+
+import yaml
 
 from ehrlich.simulation.domain.docking_result import DockingResult
 from ehrlich.simulation.domain.resistance_assessment import MutationRisk, ResistanceAssessment
@@ -11,38 +14,34 @@ if TYPE_CHECKING:
     from ehrlich.chemistry.infrastructure.rdkit_adapter import RDKitAdapter
     from ehrlich.kernel.types import SMILES
     from ehrlich.simulation.domain.admet_profile import ADMETProfile
+    from ehrlich.simulation.domain.protein_target import ProteinTarget
+    from ehrlich.simulation.domain.repository import ProteinTargetRepository, ToxicityRepository
+    from ehrlich.simulation.domain.toxicity_profile import ToxicityProfile
     from ehrlich.simulation.infrastructure.pkcsm_client import PkCSMClient
     from ehrlich.simulation.infrastructure.protein_store import ProteinStore
 
 logger = logging.getLogger(__name__)
 
-# Known resistance mutations per target
-_KNOWN_MUTATIONS: dict[str, list[tuple[str, str, str]]] = {
-    "1VQQ": [
-        ("S403A", "HIGH", "Reduced beta-lactam binding affinity at active site"),
-        ("N146K", "MODERATE", "Altered active site geometry affecting drug orientation"),
-    ],
-    "1AD4": [
-        ("F17L", "HIGH", "Sulfonamide resistance via altered DHPS binding pocket"),
-    ],
-    "2XCT": [
-        ("S84L", "HIGH", "Fluoroquinolone resistance via DNA gyrase QRDR mutation"),
-    ],
-    "1UAE": [
-        ("C115D", "MODERATE", "Fosfomycin resistance via altered MurA active site cysteine"),
-    ],
-    "3SPU": [
-        ("V73_ins", "HIGH", "Extended-spectrum resistance via NDM-1 loop insertion"),
-        ("M154L", "MODERATE", "Altered zinc coordination in metallo-beta-lactamase"),
-    ],
-}
+_RESISTANCE_YAML = Path(__file__).resolve().parents[5] / "data" / "resistance" / "default.yaml"
 
-# Compound class patterns -> affected targets
-_RESISTANCE_PATTERNS: dict[str, list[str]] = {
-    "C1C(C(=O)N1)S": ["1VQQ"],  # beta-lactam ring -> PBP2a
-    "c1cc2c(cc1F)c(=O)c(cn2)C(=O)O": ["2XCT"],  # fluoroquinolone -> DNA Gyrase
-    "NS(=O)(=O)": ["1AD4"],  # sulfonamide -> DHPS
-}
+
+def _load_resistance_data(
+    yaml_path: Path,
+) -> tuple[dict[str, list[tuple[str, str, str]]], dict[str, list[str]]]:
+    if not yaml_path.exists():
+        logger.warning("Resistance YAML not found: %s", yaml_path)
+        return {}, {}
+    with open(yaml_path) as f:
+        data = yaml.safe_load(f)
+    mutations: dict[str, list[tuple[str, str, str]]] = {}
+    for target_id, entries in data.get("mutations", {}).items():
+        mutations[target_id] = [
+            (str(e["mutation"]), str(e["risk"]), str(e["mechanism"])) for e in entries
+        ]
+    patterns: dict[str, list[str]] = {}
+    for smarts, info in data.get("patterns", {}).items():
+        patterns[str(smarts)] = [str(t) for t in info.get("targets", [])]
+    return mutations, patterns
 
 
 class SimulationService:
@@ -52,11 +51,29 @@ class SimulationService:
         rdkit: RDKitAdapter,
         vina: VinaAdapter,
         admet_client: PkCSMClient,
+        rcsb_client: ProteinTargetRepository | None = None,
+        comptox_client: ToxicityRepository | None = None,
+        resistance_yaml: Path | None = None,
     ) -> None:
         self._proteins = protein_store
         self._rdkit = rdkit
         self._vina = vina
         self._admet = admet_client
+        self._rcsb = rcsb_client
+        self._comptox = comptox_client
+        mutations, patterns = _load_resistance_data(resistance_yaml or _RESISTANCE_YAML)
+        self._known_mutations = mutations
+        self._resistance_patterns = patterns
+
+    async def search_targets(
+        self, query: str, organism: str = "", limit: int = 10
+    ) -> list[ProteinTarget]:
+        return await self._proteins.search(query, organism, limit)
+
+    async def fetch_toxicity(self, identifier: str) -> ToxicityProfile | None:
+        if self._comptox is None:
+            return None
+        return await self._comptox.fetch(identifier)
 
     async def dock(self, smiles: SMILES, target_id: str) -> DockingResult:
         target = self._proteins.get_target(target_id)
@@ -88,7 +105,7 @@ class SimulationService:
 
     async def assess_resistance(self, smiles: SMILES, target_id: str) -> ResistanceAssessment:
         target = self._proteins.get_target(target_id)
-        mutations_config = _KNOWN_MUTATIONS.get(target_id.upper(), [])
+        mutations_config = self._known_mutations.get(target_id.upper(), [])
 
         if not mutations_config:
             return ResistanceAssessment(
@@ -150,7 +167,7 @@ class SimulationService:
         )
 
     def _assess_compound_class_risk(self, smiles: SMILES, target_id: str) -> str:
-        for pattern, affected_targets in _RESISTANCE_PATTERNS.items():
+        for pattern, affected_targets in self._resistance_patterns.items():
             if target_id.upper() in affected_targets:
                 matched, _ = self._rdkit.substructure_match(smiles, pattern)
                 if matched:

@@ -11,3 +11,5 @@ export { HypothesisCard } from "./HypothesisCard";
 export { ActiveExperimentCard } from "./ActiveExperimentCard";
 export { CompletionSummaryCard } from "./CompletionSummaryCard";
 export { NegativeControlPanel } from "./NegativeControlPanel";
+export { LiveLabViewer } from "./LiveLabViewer";
+export { InvestigationDiagram } from "./InvestigationDiagram";

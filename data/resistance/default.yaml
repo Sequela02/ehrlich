@@ -1,0 +1,35 @@
+mutations:
+  "1VQQ":
+    - mutation: "S403A"
+      risk: "HIGH"
+      mechanism: "Reduced beta-lactam binding affinity at active site"
+    - mutation: "N146K"
+      risk: "MODERATE"
+      mechanism: "Altered active site geometry affecting drug orientation"
+  "1AD4":
+    - mutation: "F17L"
+      risk: "HIGH"
+      mechanism: "Sulfonamide resistance via altered DHPS binding pocket"
+  "2XCT":
+    - mutation: "S84L"
+      risk: "HIGH"
+      mechanism: "Fluoroquinolone resistance via DNA gyrase QRDR mutation"
+  "1UAE":
+    - mutation: "C115D"
+      risk: "MODERATE"
+      mechanism: "Fosfomycin resistance via altered MurA active site cysteine"
+  "3SPU":
+    - mutation: "V73_ins"
+      risk: "HIGH"
+      mechanism: "Extended-spectrum resistance via NDM-1 loop insertion"
+    - mutation: "M154L"
+      risk: "MODERATE"
+      mechanism: "Altered zinc coordination in metallo-beta-lactamase"
+
+patterns:
+  "C1C(C(=O)N1)S":
+    targets: ["1VQQ"]
+  "c1cc2c(cc1F)c(=O)c(cn2)C(=O)O":
+    targets: ["2XCT"]
+  "NS(=O)(=O)":
+    targets: ["1AD4"]

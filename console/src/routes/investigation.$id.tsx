@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState, useMemo } from "react";
 import { ArrowLeft, WifiOff } from "lucide-react";
+import { cn } from "@/shared/lib/utils";
 import {
   Timeline,
   CandidateTable,
@@ -10,13 +11,18 @@ import {
   ActiveExperimentCard,
   CompletionSummaryCard,
   NegativeControlPanel,
+  LiveLabViewer,
+  InvestigationDiagram,
 } from "@/features/investigation/components";
 import { FindingsPanel } from "@/features/investigation/components/FindingsPanel";
 import { useSSE } from "@/features/investigation/hooks/use-sse";
+import type { HypothesisNode, ExperimentNode, FindingNode } from "@/features/investigation/lib/diagram-builder";
 
 export const Route = createFileRoute("/investigation/$id")({
   component: InvestigationPage,
 });
+
+type ViewTab = "timeline" | "lab" | "diagram";
 
 function InvestigationPage() {
   const { id } = Route.useParams();
@@ -41,14 +47,51 @@ function InvestigationPage() {
     experimentFindingCount,
   } = useSSE(streamUrl);
 
+  const [activeTab, setActiveTab] = useState<ViewTab>("timeline");
   const timelineEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    timelineEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [events.length]);
+    if (activeTab === "timeline") {
+      timelineEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [events.length, activeTab]);
 
   const currentExperiment = experiments.find((e) => e.id === currentExperimentId);
   const linkedHypothesis = hypotheses.find((h) => h.id === currentHypothesisId);
+
+  const diagramHypotheses: HypothesisNode[] = useMemo(
+    () =>
+      hypotheses.map((h) => ({
+        id: h.id,
+        statement: h.statement,
+        status: h.status,
+        parentId: h.parent_id || undefined,
+        confidence: h.confidence,
+      })),
+    [hypotheses],
+  );
+
+  const diagramExperiments: ExperimentNode[] = useMemo(
+    () =>
+      experiments.map((e) => ({
+        id: e.id,
+        hypothesisId: e.hypothesis_id,
+        description: e.description,
+        status: e.status as ExperimentNode["status"],
+      })),
+    [experiments],
+  );
+
+  const diagramFindings: FindingNode[] = useMemo(
+    () =>
+      findings.map((f, i) => ({
+        id: `finding-${i}`,
+        hypothesisId: f.hypothesis_id,
+        summary: f.title,
+        evidenceType: f.evidence_type,
+      })),
+    [findings],
+  );
 
   return (
     <div className="mx-auto max-w-6xl p-6">
@@ -103,16 +146,49 @@ function InvestigationPage() {
         )}
       </div>
 
+      <div className="mb-4 flex gap-1 rounded-lg border border-border bg-muted/30 p-1">
+        {(["timeline", "lab", "diagram"] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={cn(
+              "rounded-md px-4 py-1.5 font-mono text-[11px] font-medium uppercase tracking-wider transition-colors",
+              activeTab === tab
+                ? "bg-surface text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {tab === "timeline" ? "Timeline" : tab === "lab" ? "Lab View" : "Diagram"}
+          </button>
+        ))}
+      </div>
+
       <div className="space-y-6">
-        <section>
-          <h2 className="mb-3 border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-            Timeline
-          </h2>
-          <div className="max-h-[500px] overflow-y-auto rounded-lg border border-border bg-surface p-4">
-            <Timeline events={events} />
-            <div ref={timelineEndRef} />
-          </div>
-        </section>
+        {activeTab === "timeline" && (
+          <section>
+            <div className="max-h-[500px] overflow-y-auto rounded-lg border border-border bg-surface p-4">
+              <Timeline events={events} />
+              <div ref={timelineEndRef} />
+            </div>
+          </section>
+        )}
+
+        {activeTab === "lab" && (
+          <section>
+            <LiveLabViewer events={events} completed={completed} />
+          </section>
+        )}
+
+        {activeTab === "diagram" && (
+          <section>
+            <InvestigationDiagram
+              hypotheses={diagramHypotheses}
+              experiments={diagramExperiments}
+              findings={diagramFindings}
+              completed={completed}
+            />
+          </section>
+        )}
 
         <section>
           <FindingsPanel findings={findings} />

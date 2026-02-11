@@ -22,7 +22,7 @@ _service = PredictionService(
 
 
 async def train_model(target: str, model_type: str = "xgboost") -> str:
-    """Train an ML model for antimicrobial activity prediction."""
+    """Train an ML model for bioactivity prediction."""
     try:
         trained = await _service.train(target, model_type)
     except ValueError as e:
@@ -42,7 +42,7 @@ async def train_model(target: str, model_type: str = "xgboost") -> str:
 
 
 async def predict_candidates(smiles_list: list[str], model_id: str) -> str:
-    """Predict antimicrobial activity for a list of SMILES."""
+    """Predict bioactivity for a list of SMILES."""
     typed_smiles = [SMILES(s) for s in smiles_list]
     try:
         results = await _service.predict(typed_smiles, model_id)

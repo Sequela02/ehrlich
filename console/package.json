@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "3dmol": "^2.5.4",
+    "@excalidraw/excalidraw": "^0.18.0",
     "@tanstack/react-query": "^5.64.0",
     "@tanstack/react-router": "^1.114.0",
     "clsx": "^2.1.0",

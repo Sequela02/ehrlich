@@ -1,7 +1,7 @@
 [project]
 name = "ehrlich"
 version = "0.1.0"
-description = "AI-powered antimicrobial discovery agent"
+description = "AI-powered molecular discovery agent"
 readme = "../README.md"
 license = {text = "MIT"}
 requires-python = ">=3.12"
@@ -22,6 +22,7 @@ dependencies = [
     "requests>=2.32,<3",
     "joblib>=1.4,<2",
     "httpx>=0.28,<1",
+    "pyyaml>=6,<7",
     "aiosqlite>=0.20,<1",
     "pyarrow>=19,<20",
 ]
@@ -41,6 +42,7 @@ dev = [
     "pytest>=8,<9",
     "pytest-asyncio>=0.25,<1",
     "pytest-cov>=6,<7",
+    "respx>=0.22,<1",
     "ruff>=0.9,<1",
     "mypy>=1.14,<2",
     "pre-commit>=4,<5",
@@ -89,6 +91,10 @@ disable_error_code = ["import-not-found"]
 [[tool.mypy.overrides]]
 module = "ehrlich.simulation.infrastructure.vina_adapter"
 disable_error_code = ["import-not-found"]
+
+[[tool.mypy.overrides]]
+module = "yaml.*"
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -84,9 +84,7 @@ class TestEvaluateHypothesis:
     async def test_returns_evaluated_status(self) -> None:
         from ehrlich.investigation.tools import evaluate_hypothesis
 
-        result = json.loads(
-            await evaluate_hypothesis("h1", "supported", 0.85, "Strong evidence")
-        )
+        result = json.loads(await evaluate_hypothesis("h1", "supported", 0.85, "Strong evidence"))
         assert result["status"] == "evaluated"
         assert result["hypothesis_id"] == "h1"
         assert result["confidence"] == 0.85
@@ -97,9 +95,7 @@ class TestRecordNegativeControl:
     async def test_returns_recorded_status(self) -> None:
         from ehrlich.investigation.tools import record_negative_control
 
-        result = json.loads(
-            await record_negative_control("CCO", "Ethanol", 0.1, "Known inactive")
-        )
+        result = json.loads(await record_negative_control("CCO", "Ethanol", 0.1, "Known inactive"))
         assert result["status"] == "recorded"
         assert result["correctly_classified"] is True
 

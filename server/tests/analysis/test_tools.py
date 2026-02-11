@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from ehrlich.analysis.domain.compound import CompoundSearchResult
 from ehrlich.analysis.domain.dataset import Dataset
 from ehrlich.kernel.types import SMILES
 
@@ -93,3 +94,90 @@ class TestComputeProperties:
             result = json.loads(await tools.compute_properties("Staphylococcus aureus"))
             assert result["total"] == 4
             assert "molecular_weight" in result
+
+
+class TestSearchCompounds:
+    @pytest.mark.asyncio
+    async def test_search_by_name(self) -> None:
+        from ehrlich.analysis import tools
+
+        mock_results = [
+            CompoundSearchResult(
+                cid=2244,
+                smiles="CC(=O)Oc1ccccc1C(=O)O",
+                iupac_name="aspirin",
+                molecular_formula="C9H8O4",
+                molecular_weight=180.16,
+            )
+        ]
+        with patch.object(tools._service, "search_compounds", new_callable=AsyncMock) as mock:
+            mock.return_value = mock_results
+            result = json.loads(await tools.search_compounds("aspirin"))
+            assert result["count"] == 1
+            assert result["search_type"] == "name"
+            assert result["compounds"][0]["cid"] == 2244
+            assert result["compounds"][0]["smiles"] == "CC(=O)Oc1ccccc1C(=O)O"
+
+    @pytest.mark.asyncio
+    async def test_search_by_similarity(self) -> None:
+        from ehrlich.analysis import tools
+
+        mock_results = [
+            CompoundSearchResult(
+                cid=100,
+                smiles="CCO",
+                iupac_name="ethanol",
+                molecular_formula="C2H6O",
+                molecular_weight=46.07,
+            )
+        ]
+        with patch.object(tools._service, "search_by_similarity", new_callable=AsyncMock) as mock:
+            mock.return_value = mock_results
+            result = json.loads(await tools.search_compounds("CCO", search_type="similarity"))
+            assert result["count"] == 1
+            assert result["search_type"] == "similarity"
+
+    @pytest.mark.asyncio
+    async def test_error_handling(self) -> None:
+        from ehrlich.analysis import tools
+        from ehrlich.kernel.exceptions import ExternalServiceError
+
+        with patch.object(tools._service, "search_compounds", new_callable=AsyncMock) as mock:
+            mock.side_effect = ExternalServiceError("PubChem", "timeout")
+            result = json.loads(await tools.search_compounds("bad"))
+            assert "error" in result
+
+
+class TestSearchBioactivity:
+    @pytest.mark.asyncio
+    async def test_returns_dataset_stats(self) -> None:
+        from ehrlich.analysis import tools
+
+        mock_dataset = _mock_dataset()
+        with patch.object(tools._loader, "search_bioactivity", new_callable=AsyncMock) as mock:
+            mock.return_value = mock_dataset
+            result = json.loads(await tools.search_bioactivity("Staphylococcus aureus", "Ki,EC50"))
+            assert result["size"] == 4
+            assert result["assay_types"] == ["Ki", "EC50"]
+            assert result["active_count"] == 2
+
+    @pytest.mark.asyncio
+    async def test_empty_results(self) -> None:
+        from ehrlich.analysis import tools
+
+        empty = Dataset(name="ChEMBL empty", target="nothing")
+        with patch.object(tools._loader, "search_bioactivity", new_callable=AsyncMock) as mock:
+            mock.return_value = empty
+            result = json.loads(await tools.search_bioactivity("nothing", "Ki"))
+            assert result["size"] == 0
+            assert "message" in result
+
+    @pytest.mark.asyncio
+    async def test_error_handling(self) -> None:
+        from ehrlich.analysis import tools
+        from ehrlich.kernel.exceptions import ExternalServiceError
+
+        with patch.object(tools._loader, "search_bioactivity", new_callable=AsyncMock) as mock:
+            mock.side_effect = ExternalServiceError("ChEMBL", "timeout")
+            result = json.loads(await tools.search_bioactivity("bad", "MIC"))
+            assert "error" in result

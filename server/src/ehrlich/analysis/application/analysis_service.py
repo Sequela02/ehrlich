@@ -1,12 +1,18 @@
+from __future__ import annotations
+
 import logging
+from typing import TYPE_CHECKING
 
 import numpy as np
 from scipy import stats
 
-from ehrlich.analysis.domain.dataset import Dataset
 from ehrlich.analysis.domain.enrichment import EnrichmentResult
-from ehrlich.analysis.domain.repository import DatasetRepository
 from ehrlich.chemistry.infrastructure.rdkit_adapter import RDKitAdapter
+
+if TYPE_CHECKING:
+    from ehrlich.analysis.domain.compound import CompoundSearchResult
+    from ehrlich.analysis.domain.dataset import Dataset
+    from ehrlich.analysis.domain.repository import CompoundSearchRepository, DatasetRepository
 
 logger = logging.getLogger(__name__)
 
@@ -25,9 +31,26 @@ _KNOWN_SUBSTRUCTURES: dict[str, tuple[str, str]] = {
 
 
 class AnalysisService:
-    def __init__(self, repository: DatasetRepository) -> None:
+    def __init__(
+        self,
+        repository: DatasetRepository,
+        compound_repo: CompoundSearchRepository | None = None,
+    ) -> None:
         self._repository = repository
+        self._compound_repo = compound_repo
         self._adapter = RDKitAdapter()
+
+    async def search_compounds(self, query: str, limit: int = 10) -> list[CompoundSearchResult]:
+        if self._compound_repo is None:
+            return []
+        return await self._compound_repo.search(query, limit)
+
+    async def search_by_similarity(
+        self, smiles: str, threshold: float = 0.8, limit: int = 10
+    ) -> list[CompoundSearchResult]:
+        if self._compound_repo is None:
+            return []
+        return await self._compound_repo.search_by_similarity(smiles, threshold, limit)
 
     async def explore(self, target: str, threshold: float = 1.0) -> Dataset:
         return await self._repository.load(target, threshold)

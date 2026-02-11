@@ -1,8 +1,10 @@
-# Ehrlich - AI Antimicrobial Discovery Agent
+# Ehrlich - AI Molecular Discovery Engine
 
 ## Project Overview
 
-Ehrlich is an AI-powered antimicrobial discovery agent built for the Claude Code Hackathon (Feb 10-16, 2026). It uses Claude as a scientific reasoning engine with cheminformatics, ML, and molecular simulation tools.
+Ehrlich is a domain-agnostic molecular discovery platform built for the Claude Code Hackathon (Feb 10-16, 2026). It uses Claude as a hypothesis-driven scientific reasoning engine with cheminformatics, ML, molecular simulation, and multi-source data tools. Named after Paul Ehrlich, the father of the "magic bullet" concept -- finding the right molecule for any target.
+
+Ehrlich handles any molecular science question: antimicrobial resistance, Alzheimer's drug candidates, environmental toxicity, agricultural biocontrol, and beyond. The hypothesis-driven engine is domain-agnostic; the data sources make it universal.
 
 ## Architecture
 
@@ -12,7 +14,7 @@ DDD monorepo: `server/` (Python 3.12) + `console/` (React 19 / TypeScript / Bun)
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, designs experiments, evaluates evidence, synthesizes (NO tools)
-Sonnet 4.5 (Researcher) -- Executes experiments with 23 tools
+Sonnet 4.5 (Researcher) -- Executes experiments with 27 tools
 Haiku 4.5 (Summarizer)  -- Compresses large tool outputs (>2000 chars)
 ```
 
@@ -23,12 +25,22 @@ Falls back to single-model `Orchestrator` when `director_model == researcher_mod
 | Context | Location | Purpose |
 |---------|----------|---------|
 | kernel | `server/src/ehrlich/kernel/` | Shared primitives (SMILES, Molecule, exceptions) |
-| literature | `server/src/ehrlich/literature/` | Paper search, references |
+| literature | `server/src/ehrlich/literature/` | Paper search (Semantic Scholar), references |
 | chemistry | `server/src/ehrlich/chemistry/` | RDKit cheminformatics |
-| analysis | `server/src/ehrlich/analysis/` | Dataset exploration, enrichment |
+| analysis | `server/src/ehrlich/analysis/` | Dataset exploration (ChEMBL, PubChem), enrichment |
 | prediction | `server/src/ehrlich/prediction/` | ML models (Chemprop, XGBoost) |
-| simulation | `server/src/ehrlich/simulation/` | Docking, ADMET, resistance |
+| simulation | `server/src/ehrlich/simulation/` | Docking, ADMET, resistance, target discovery (RCSB PDB), toxicity (EPA CompTox) |
 | investigation | `server/src/ehrlich/investigation/` | Multi-model agent orchestration + SQLite persistence |
+
+### External Data Sources
+
+| Source | API | Purpose | Auth |
+|--------|-----|---------|------|
+| ChEMBL | `https://www.ebi.ac.uk/chembl/api/data` | Bioactivity data (any assay type: MIC, IC50, Ki, EC50, Kd) | None |
+| Semantic Scholar | `https://api.semanticscholar.org/graph/v1` | Scientific paper search | None |
+| RCSB PDB | `https://search.rcsb.org` + `https://data.rcsb.org` | Dynamic protein target discovery by organism/function | None |
+| PubChem | `https://pubchem.ncbi.nlm.nih.gov/rest/pug` | Compound search by target/activity/similarity | None |
+| EPA CompTox | `https://api-ccte.epa.gov` | Environmental toxicity, bioaccumulation, fate (1M+ chemicals) | Free API key |
 
 ### Dependency Rules (STRICT)
 
@@ -38,6 +50,7 @@ Falls back to single-model `Orchestrator` when `director_model == researcher_mod
 4. `tools.py` calls `application/` services, returns JSON for Claude
 5. No cross-context domain imports -- communicate via `kernel/` primitives
 6. RDKit imports ONLY in `chemistry/infrastructure/rdkit_adapter.py`
+7. External API clients live in `infrastructure/` of their bounded context
 
 ## Commands
 
@@ -85,6 +98,47 @@ Types: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`
 
 Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investigation, api, console, mol, data, ci, docs, infra
 
+## Tools (27 Total)
+
+### Chemistry (6) -- RDKit cheminformatics, domain-agnostic
+- `validate_smiles` -- Validate SMILES string
+- `compute_descriptors` -- MW, LogP, TPSA, HBD, HBA, QED, rings
+- `compute_fingerprint` -- Morgan (2048-bit) or MACCS (166-bit)
+- `tanimoto_similarity` -- Similarity between two molecules
+- `generate_3d` -- 3D conformer with MMFF94 optimization
+- `substructure_match` -- SMARTS/SMILES substructure search
+
+### Literature (2) -- Semantic Scholar
+- `search_literature` -- Paper search (title, authors, year, DOI, abstract, citations)
+- `get_reference` -- Curated reference lookup by key or DOI
+
+### Analysis (5) -- ChEMBL + PubChem
+- `explore_dataset` -- Load ChEMBL bioactivity data for any organism/target
+- `search_bioactivity` -- Flexible ChEMBL query (any assay type: MIC, Ki, EC50, IC50, Kd)
+- `search_compounds` -- PubChem compound search by target/activity/similarity
+- `analyze_substructures` -- Chi-squared enrichment of SMARTS patterns
+- `compute_properties` -- Property distributions (active vs inactive)
+
+### Prediction (3) -- XGBoost, Chemprop
+- `train_model` -- Train ML model on any SMILES+activity dataset
+- `predict_candidates` -- Score compounds with trained model
+- `cluster_compounds` -- Butina structural clustering
+
+### Simulation (5) -- Docking, ADMET, targets, toxicity
+- `search_protein_targets` -- RCSB PDB search by organism/function/keyword
+- `dock_against_target` -- AutoDock Vina docking (or RDKit fallback)
+- `predict_admet` -- Drug-likeness profiling (absorption, metabolism, toxicity)
+- `fetch_toxicity_profile` -- EPA CompTox environmental toxicity data
+- `assess_resistance` -- Knowledge-based resistance mutation scoring
+
+### Investigation (6) -- Hypothesis lifecycle
+- `propose_hypothesis` -- Register testable hypothesis
+- `design_experiment` -- Plan experiment with tool sequence
+- `evaluate_hypothesis` -- Assess outcome (supported/refuted/revised)
+- `record_finding` -- Record finding linked to hypothesis + evidence_type
+- `record_negative_control` -- Validate model with known-inactive compounds
+- `conclude_investigation` -- Final summary with ranked candidates
+
 ## Key Patterns
 
 - Each bounded context has: `domain/`, `application/`, `infrastructure/`, `tools.py`
@@ -93,8 +147,13 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 - Infrastructure adapters implement repository ABCs
 - Tool functions in `tools.py` are the boundary between Claude and application services
 - **Hypothesis-driven investigation loop**: formulate hypotheses, design experiments, execute tools, evaluate evidence, revise/reject, synthesize
+- **Domain-agnostic prompts**: Director infers domain from user's research question, adapts scientific context
 - **Evidence-linked findings**: every finding references a `hypothesis_id` + `evidence_type` (supporting/contradicting/neutral)
 - **Negative controls**: validate model predictions with known-inactive compounds (`NegativeControl` entity)
+- **Dynamic target discovery**: RCSB PDB Search API finds protein targets for any organism/disease
+- **Flexible data loading**: ChEMBL queries accept any assay type (MIC, Ki, EC50, etc.), not hardcoded
+- **Protein targets**: YAML-configured (`data/targets/*.yaml`) + dynamic RCSB PDB discovery
+- **Resistance data**: YAML-configured (`data/resistance/*.yaml`), extensible per domain
 - 6 control tools: `propose_hypothesis`, `design_experiment`, `evaluate_hypothesis`, `record_finding`, `record_negative_control`, `conclude_investigation`
 - SSE streaming for real-time investigation updates (12 event types)
 - TanStack Router file-based routing in console
@@ -104,6 +163,7 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 - `CostTracker` tracks per-model token usage with tiered pricing
 - SSE reconnection with exponential backoff (1s, 2s, 4s, max 3 retries)
 - Semantic Scholar client: exponential backoff retry (3 attempts, 1s/2s/4s) on 429 and timeout
+- All external API clients follow same pattern: httpx.AsyncClient, retry with backoff, structured error handling
 - Molecule visualization: server-side 2D SVG depiction (RDKit `rdMolDraw2D`), 3Dmol.js for 3D/docking views
 - `CandidateTable` shows 2D structure thumbnails with expandable detail panel (3D viewer + properties + Lipinski badge)
 - Molecule API: `/molecule/depict` (SVG, cached 24h), `/molecule/conformer`, `/molecule/descriptors`, `/targets`
@@ -113,6 +173,14 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 - `CompletionSummaryCard` replaces `ActiveExperimentCard` post-completion (candidate + finding + hypothesis counts)
 - `HypothesisBoard`: kanban-style card grid showing hypothesis status (proposed/testing/supported/refuted/revised)
 - `NegativeControlPanel`: table of known-inactive compounds with pass/fail classification indicators
+- **Live Lab Viewer**: 3Dmol.js scene that updates in real-time from SSE events -- protein targets load, ligands dock, candidates color by score
+- `LiveLabViewer` subscribes to SSE stream, renders molecular scene: protein cartoon + ligand sticks + score labels
+- SSE event → 3D action mapping: `dock_against_target` → ligand appears in binding pocket, `predict_candidates` → molecules color by probability, `completed` → top candidates glow
+- Interactive: rotate, zoom, click molecules for details; split-pane with Timeline
+- **Excalidraw investigation diagrams**: `@excalidraw/excalidraw` React component renders auto-generated visual maps from investigation data
+- `InvestigationDiagram`: converts hypothesis/experiment/finding relationships into Excalidraw elements (nodes + arrows)
+- Diagram types: hypothesis map (status-colored nodes, parent/revised arrows), investigation flow (literature -> hypotheses -> experiments -> findings -> candidates), evidence chains
+- Read-only auto-generated view during investigation; interactive editing post-completion
 
 ## Key Files (Investigation Context)
 
@@ -121,7 +189,7 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 | `investigation/application/orchestrator.py` | Single-model agentic loop with hypothesis control tool dispatch |
 | `investigation/application/multi_orchestrator.py` | Hypothesis-driven Director-Worker-Summarizer orchestrator |
 | `investigation/application/cost_tracker.py` | Per-model cost tracking with tiered pricing |
-| `investigation/application/prompts.py` | 7 prompts: scientist, director (formulation/experiment/evaluation/synthesis), researcher, summarizer |
+| `investigation/application/prompts.py` | Domain-adaptive prompts: scientist, director (4 phases), researcher, summarizer |
 | `investigation/domain/hypothesis.py` | Hypothesis entity + HypothesisStatus enum |
 | `investigation/domain/experiment.py` | Experiment entity + ExperimentStatus enum |
 | `investigation/domain/negative_control.py` | NegativeControl frozen dataclass |
@@ -129,9 +197,20 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 | `investigation/domain/repository.py` | InvestigationRepository ABC |
 | `investigation/infrastructure/sqlite_repository.py` | SQLite implementation with hypothesis/experiment/negative_control serialization |
 | `investigation/infrastructure/anthropic_client.py` | Anthropic API adapter with retry |
-| `api/routes/investigation.py` | REST + SSE endpoints, 23-tool registry, auto-selects orchestrator |
+| `api/routes/investigation.py` | REST + SSE endpoints, 27-tool registry, auto-selects orchestrator |
 | `api/routes/molecule.py` | Molecule depiction, conformer, descriptors, targets endpoints |
 | `api/sse.py` | Domain event to SSE conversion (12 types) |
+
+## Key Files (Data Source Clients)
+
+| File | Purpose |
+|------|---------|
+| `analysis/infrastructure/chembl_loader.py` | ChEMBL bioactivity loader (flexible assay types) |
+| `analysis/infrastructure/pubchem_client.py` | PubChem PUG REST compound search |
+| `simulation/infrastructure/rcsb_client.py` | RCSB PDB Search + Data API for target discovery |
+| `simulation/infrastructure/comptox_client.py` | EPA CompTox CTX API for environmental toxicity |
+| `simulation/infrastructure/protein_store.py` | YAML-based protein target store + RCSB PDB fallback |
+| `literature/infrastructure/semantic_scholar_client.py` | Semantic Scholar paper search with retry |
 
 ## Key Files (Molecule Visualization)
 
@@ -151,3 +230,12 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 | `console/.../investigation/components/NegativeControlPanel.tsx` | Negative control validation table |
 | `console/.../investigation/components/CompletionSummaryCard.tsx` | Post-completion card (candidate + finding + hypothesis counts) |
 | `console/.../shared/components/ui/Toaster.tsx` | Sonner toast wrapper with dark OKLCH theme |
+
+## Key Files (Live Lab + Diagrams)
+
+| File | Purpose |
+|------|---------|
+| `console/.../investigation/components/LiveLabViewer.tsx` | 3Dmol.js scene driven by SSE events: proteins, ligands, scores in real-time |
+| `console/.../investigation/lib/scene-builder.ts` | Maps SSE events to 3Dmol.js operations (addModel, setStyle, addLabel, zoom) |
+| `console/.../investigation/components/InvestigationDiagram.tsx` | Excalidraw wrapper: converts investigation data to visual diagram |
+| `console/.../investigation/lib/diagram-builder.ts` | Transforms hypotheses/experiments/findings into Excalidraw elements (nodes, arrows, labels) |

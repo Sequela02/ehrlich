@@ -183,9 +183,7 @@ class TestHypothesisFormulation:
             ]
         )
         # Researcher: literature survey (end_turn), experiment execution (end_turn)
-        researcher.create_message = AsyncMock(
-            return_value=_make_text_response("Done.")
-        )
+        researcher.create_message = AsyncMock(return_value=_make_text_response("Done."))
 
         orchestrator = MultiModelOrchestrator(
             director=director,
@@ -256,9 +254,7 @@ class TestExperimentExecution:
                 _make_text_response(_synthesis_json()),
             ]
         )
-        researcher.create_message = AsyncMock(
-            return_value=_make_text_response("Done.")
-        )
+        researcher.create_message = AsyncMock(return_value=_make_text_response("Done."))
 
         orchestrator = MultiModelOrchestrator(
             director=director,
@@ -338,9 +334,7 @@ class TestHypothesisEvaluation:
                 _make_text_response(_synthesis_json()),
             ]
         )
-        researcher.create_message = AsyncMock(
-            return_value=_make_text_response("Done.")
-        )
+        researcher.create_message = AsyncMock(return_value=_make_text_response("Done."))
 
         orchestrator = MultiModelOrchestrator(
             director=director,
@@ -373,9 +367,7 @@ class TestHypothesisEvaluation:
                 _make_text_response(_synthesis_json()),
             ]
         )
-        researcher.create_message = AsyncMock(
-            return_value=_make_text_response("Done.")
-        )
+        researcher.create_message = AsyncMock(return_value=_make_text_response("Done."))
 
         orchestrator = MultiModelOrchestrator(
             director=director,
@@ -408,9 +400,7 @@ class TestNegativeControls:
                 _make_text_response(_synthesis_json()),
             ]
         )
-        researcher.create_message = AsyncMock(
-            return_value=_make_text_response("Done.")
-        )
+        researcher.create_message = AsyncMock(return_value=_make_text_response("Done."))
 
         orchestrator = MultiModelOrchestrator(
             director=director,
@@ -532,9 +522,7 @@ class TestDirectorSynthesis:
                 _make_text_response(_synthesis_json()),
             ]
         )
-        researcher.create_message = AsyncMock(
-            return_value=_make_text_response("Done.")
-        )
+        researcher.create_message = AsyncMock(return_value=_make_text_response("Done."))
 
         orchestrator = MultiModelOrchestrator(
             director=director,
@@ -611,9 +599,7 @@ class TestErrorHandling:
     async def test_director_api_error(self) -> None:
         director, researcher, summarizer = _make_clients()
         director.create_message = AsyncMock(side_effect=RuntimeError("API down"))
-        researcher.create_message = AsyncMock(
-            return_value=_make_text_response("Done.")
-        )
+        researcher.create_message = AsyncMock(return_value=_make_text_response("Done."))
 
         orchestrator = MultiModelOrchestrator(
             director=director,
