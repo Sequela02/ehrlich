@@ -39,7 +39,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             "Set EHRLICH_ANTHROPIC_API_KEY or ANTHROPIC_API_KEY to run investigations."
         )
     else:
-        logger.info("Anthropic API key configured (model=%s)", settings.anthropic_model)
+        logger.info(
+            "Anthropic API key configured (director=%s, researcher=%s)",
+            settings.director_model,
+            settings.researcher_model,
+        )
 
     from ehrlich.api.routes.investigation import _build_registry
 

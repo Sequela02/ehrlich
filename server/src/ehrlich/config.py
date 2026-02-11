@@ -14,12 +14,10 @@ class Settings(BaseSettings):
     )
 
     anthropic_api_key: str = ""
-    anthropic_model: str = "claude-opus-4-6"
     director_model: str = "claude-opus-4-6"
     researcher_model: str = "claude-sonnet-4-5-20250929"
     summarizer_model: str = "claude-haiku-4-5-20251001"
     summarizer_threshold: int = 2000
-    max_iterations: int = 50
     max_iterations_per_experiment: int = 10
     log_level: str = "INFO"
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
