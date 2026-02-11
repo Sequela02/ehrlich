@@ -1,5 +1,6 @@
 export type SSEEventType =
   | "phase_started"
+  | "phase_completed"
   | "tool_called"
   | "tool_result"
   | "finding_recorded"
@@ -80,6 +81,13 @@ export interface OutputSummarizedData {
   tool_name: string;
   original_length: number;
   summarized_length: number;
+  investigation_id: string;
+}
+
+export interface PhaseCompletedData {
+  phase: string;
+  tool_count: number;
+  finding_count: number;
   investigation_id: string;
 }
 

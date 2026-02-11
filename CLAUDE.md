@@ -92,7 +92,7 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 - Repository interfaces are ABCs in `domain/repository.py`
 - Infrastructure adapters implement repository ABCs
 - Tool functions in `tools.py` are the boundary between Claude and application services
-- SSE streaming for real-time investigation updates (10 event types)
+- SSE streaming for real-time investigation updates (11 event types)
 - TanStack Router file-based routing in console
 - `MultiModelOrchestrator` uses Director-Worker-Summarizer pattern (3 Claude tiers)
 - `Orchestrator` is the single-model fallback (used when all models are the same)
@@ -111,13 +111,13 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 | `investigation/application/multi_orchestrator.py` | Director-Worker-Summarizer orchestrator |
 | `investigation/application/cost_tracker.py` | Per-model cost tracking with tiered pricing |
 | `investigation/application/prompts.py` | System prompts for Director, Researcher, Summarizer |
-| `investigation/domain/events.py` | 10 domain events (including Director*, OutputSummarized) |
+| `investigation/domain/events.py` | 11 domain events (including Director*, OutputSummarized, PhaseCompleted) |
 | `investigation/domain/repository.py` | InvestigationRepository ABC |
 | `investigation/infrastructure/sqlite_repository.py` | SQLite implementation |
 | `investigation/infrastructure/anthropic_client.py` | Anthropic API adapter with retry |
 | `api/routes/investigation.py` | REST + SSE endpoints, auto-selects orchestrator |
 | `api/routes/molecule.py` | Molecule depiction, conformer, descriptors, targets endpoints |
-| `api/sse.py` | Domain event to SSE conversion (10 types) |
+| `api/sse.py` | Domain event to SSE conversion (11 types) |
 
 ## Key Files (Molecule Visualization)
 
@@ -131,3 +131,4 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 | `console/.../molecule/components/DockingViewer.tsx` | 3Dmol.js protein+ligand overlay viewer |
 | `console/.../investigation/components/CandidateDetail.tsx` | Expandable panel: 2D + 3D views + property card + Lipinski badge |
 | `console/.../investigation/components/CandidateTable.tsx` | Thumbnail grid with expand/collapse rows |
+| `console/.../investigation/components/ActivePhaseCard.tsx` | Live phase activity card (tool name, counters, director state) |

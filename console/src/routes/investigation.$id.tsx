@@ -7,6 +7,7 @@ import {
   ReportViewer,
   CostBadge,
   PhaseProgress,
+  ActivePhaseCard,
 } from "@/features/investigation/components";
 import { FindingsPanel } from "@/features/investigation/components/FindingsPanel";
 import { useSSE } from "@/features/investigation/hooks/use-sse";
@@ -30,6 +31,9 @@ function InvestigationPage() {
     summary,
     cost,
     error,
+    activeToolName,
+    phaseToolCount,
+    phaseFindingCount,
   } = useSSE(streamUrl);
 
   const timelineEndRef = useRef<HTMLDivElement>(null);
@@ -68,6 +72,16 @@ function InvestigationPage() {
         <PhaseProgress
           currentPhase={currentPhase}
           completedPhases={completedPhases}
+        />
+      </div>
+
+      <div className="mb-6">
+        <ActivePhaseCard
+          currentPhase={currentPhase}
+          completed={completed}
+          activeToolName={activeToolName}
+          phaseToolCount={phaseToolCount}
+          phaseFindingCount={phaseFindingCount}
         />
       </div>
 

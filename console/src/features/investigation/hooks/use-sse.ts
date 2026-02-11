@@ -10,6 +10,7 @@ import type {
 
 const EVENT_TYPES: SSEEventType[] = [
   "phase_started",
+  "phase_completed",
   "tool_called",
   "tool_result",
   "finding_recorded",
@@ -36,6 +37,9 @@ interface SSEState {
   cost: CostInfo | null;
   error: string | null;
   toolCallCount: number;
+  activeToolName: string;
+  phaseToolCount: number;
+  phaseFindingCount: number;
 }
 
 export function useSSE(url: string | null): SSEState {
@@ -51,6 +55,9 @@ export function useSSE(url: string | null): SSEState {
   const [cost, setCost] = useState<CostInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [toolCallCount, setToolCallCount] = useState(0);
+  const [activeToolName, setActiveToolName] = useState("");
+  const [phaseToolCount, setPhaseToolCount] = useState(0);
+  const [phaseFindingCount, setPhaseFindingCount] = useState(0);
   const sourceRef = useRef<EventSource | null>(null);
   const attemptRef = useRef(0);
   const doneRef = useRef(false);
@@ -70,19 +77,29 @@ export function useSSE(url: string | null): SSEState {
 
     switch (eventType) {
       case "phase_started":
-        setCurrentPhase((prevPhase) => {
-          if (prevPhase && prevPhase !== (parsed.data.phase as string)) {
-            setCompletedPhases((prev) =>
-              prev.includes(prevPhase) ? prev : [...prev, prevPhase],
-            );
-          }
-          return parsed.data.phase as string;
+        setCurrentPhase(parsed.data.phase as string);
+        setPhaseToolCount(0);
+        setPhaseFindingCount(0);
+        setActiveToolName("");
+        break;
+      case "phase_completed":
+        setCompletedPhases((prev) => {
+          const phase = parsed.data.phase as string;
+          return prev.includes(phase) ? prev : [...prev, phase];
         });
+        setCurrentPhase("");
+        setActiveToolName("");
         break;
       case "tool_called":
         setToolCallCount((prev) => prev + 1);
+        setPhaseToolCount((prev) => prev + 1);
+        setActiveToolName(parsed.data.tool_name as string);
+        break;
+      case "tool_result":
+        setActiveToolName("");
         break;
       case "finding_recorded":
+        setPhaseFindingCount((prev) => prev + 1);
         setFindings((prev) => [
           ...prev,
           {
@@ -189,5 +206,8 @@ export function useSSE(url: string | null): SSEState {
     cost,
     error,
     toolCallCount,
+    activeToolName,
+    phaseToolCount,
+    phaseFindingCount,
   };
 }

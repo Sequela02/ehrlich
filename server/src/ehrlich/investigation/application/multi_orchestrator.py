@@ -21,6 +21,7 @@ from ehrlich.investigation.domain.events import (
     InvestigationCompleted,
     InvestigationError,
     OutputSummarized,
+    PhaseCompleted,
     PhaseStarted,
     Thinking,
     ToolCalled,
@@ -110,12 +111,21 @@ class MultiModelOrchestrator:
                 yield PhaseStarted(phase=phase_name, investigation_id=investigation.id)
 
                 phase_summary = ""
+                phase_tool_count = cost.tool_calls
+                phase_finding_count = len(investigation.findings)
                 async for event in self._run_researcher_phase(
                     investigation, phase_name, cost, plan
                 ):
                     yield event
                     if isinstance(event, Thinking):
                         phase_summary += event.text + "\n"
+
+                yield PhaseCompleted(
+                    phase=phase_name,
+                    tool_count=cost.tool_calls - phase_tool_count,
+                    finding_count=len(investigation.findings) - phase_finding_count,
+                    investigation_id=investigation.id,
+                )
 
                 # Director reviews phase
                 yield DirectorPlanning(

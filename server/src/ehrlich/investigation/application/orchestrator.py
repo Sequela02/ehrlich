@@ -12,6 +12,7 @@ from ehrlich.investigation.domain.events import (
     FindingRecorded,
     InvestigationCompleted,
     InvestigationError,
+    PhaseCompleted,
     PhaseStarted,
     Thinking,
     ToolCalled,
@@ -68,6 +69,8 @@ class Orchestrator:
         ]
         tool_schemas = self._registry.list_schemas()
         concluded = False
+        phase_tool_count = 0
+        phase_finding_count = 0
 
         try:
             for iteration in range(self._max_iterations):
@@ -107,11 +110,22 @@ class Orchestrator:
 
                     phase = _PHASE_KEYWORDS.get(tool_name)
                     if phase and phase != investigation.current_phase:
+                        if investigation.current_phase:
+                            yield PhaseCompleted(
+                                phase=investigation.current_phase,
+                                tool_count=phase_tool_count,
+                                finding_count=phase_finding_count,
+                                investigation_id=investigation.id,
+                            )
+                        phase_tool_count = 0
+                        phase_finding_count = 0
                         investigation.start_phase(phase)
                         yield PhaseStarted(
                             phase=phase,
                             investigation_id=investigation.id,
                         )
+
+                    phase_tool_count += 1
 
                     yield ToolCalled(
                         tool_name=tool_name,
@@ -129,6 +143,7 @@ class Orchestrator:
                     )
 
                     if tool_name == "record_finding":
+                        phase_finding_count += 1
                         yield FindingRecorded(
                             title=tool_input.get("title", ""),
                             detail=tool_input.get("detail", ""),
@@ -152,6 +167,14 @@ class Orchestrator:
 
                 if concluded:
                     break
+
+            if investigation.current_phase:
+                yield PhaseCompleted(
+                    phase=investigation.current_phase,
+                    tool_count=phase_tool_count,
+                    finding_count=phase_finding_count,
+                    investigation_id=investigation.id,
+                )
 
             investigation.status = InvestigationStatus.COMPLETED
             yield InvestigationCompleted(

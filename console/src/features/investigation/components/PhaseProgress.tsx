@@ -47,11 +47,10 @@ export function PhaseProgress({
               />
               <span
                 className={cn(
-                  "absolute top-5 whitespace-nowrap font-mono text-[10px] opacity-0",
-                  "transition-opacity group-hover:opacity-100",
-                  isActive && "text-primary",
+                  "absolute top-5 whitespace-nowrap font-mono text-[10px]",
+                  isActive && "text-primary animate-pulse-glow",
                   isCompleted && "text-primary/70",
-                  !isActive && !isCompleted && "text-muted-foreground",
+                  !isActive && !isCompleted && "text-muted-foreground/50",
                 )}
               >
                 {phase.split(" ")[0]}

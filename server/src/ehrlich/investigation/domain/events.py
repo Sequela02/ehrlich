@@ -68,6 +68,14 @@ class OutputSummarized(DomainEvent):
 
 
 @dataclass(frozen=True)
+class PhaseCompleted(DomainEvent):
+    phase: str = ""
+    tool_count: int = 0
+    finding_count: int = 0
+    investigation_id: str = ""
+
+
+@dataclass(frozen=True)
 class InvestigationCompleted(DomainEvent):
     investigation_id: str = ""
     candidate_count: int = 0

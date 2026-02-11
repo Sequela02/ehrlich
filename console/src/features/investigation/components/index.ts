@@ -7,3 +7,4 @@ export { CostBadge } from "./CostBadge";
 export { FindingsPanel } from "./FindingsPanel";
 export { InvestigationList } from "./InvestigationList";
 export { PhaseProgress } from "./PhaseProgress";
+export { ActivePhaseCard } from "./ActivePhaseCard";
