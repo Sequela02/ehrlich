@@ -39,7 +39,7 @@ function InvestigationPage() {
   }, [events.length]);
 
   return (
-    <div className="mx-auto max-w-7xl p-6">
+    <div className="mx-auto max-w-6xl p-6">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <a
@@ -71,36 +71,39 @@ function InvestigationPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <div className="space-y-6">
-            <section>
-              <h2 className="mb-3 border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                Timeline
-              </h2>
-              <div className="max-h-[600px] overflow-y-auto rounded-lg border border-border bg-surface p-4">
-                <Timeline events={events} currentPhase={currentPhase} />
-                <div ref={timelineEndRef} />
-              </div>
-            </section>
-
-            {completed && summary && (
-              <section>
-                <h2 className="mb-3 border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                  Report
-                </h2>
-                <div className="rounded-lg border border-border bg-surface p-4">
-                  <ReportViewer content={summary} />
-                </div>
-              </section>
-            )}
+      <div className="space-y-6">
+        <section>
+          <h2 className="mb-3 border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            Timeline
+          </h2>
+          <div className="max-h-[500px] overflow-y-auto rounded-lg border border-border bg-surface p-4">
+            <Timeline events={events} currentPhase={currentPhase} />
+            <div ref={timelineEndRef} />
           </div>
-        </div>
+        </section>
 
-        <div className="space-y-6">
-          <FindingsPanel findings={findings} />
-          <CandidateTable candidates={candidates} />
-        </div>
+        {findings.length > 0 && (
+          <section>
+            <FindingsPanel findings={findings} />
+          </section>
+        )}
+
+        {candidates.length > 0 && (
+          <section>
+            <CandidateTable candidates={candidates} />
+          </section>
+        )}
+
+        {completed && summary && (
+          <section>
+            <h2 className="mb-3 border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Report
+            </h2>
+            <div className="rounded-lg border border-border bg-surface p-6">
+              <ReportViewer content={summary} />
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );

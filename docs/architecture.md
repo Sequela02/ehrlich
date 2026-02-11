@@ -143,8 +143,10 @@ api/ -> investigation/application/ only
    c. **Director** (Opus) reviews phase results, decides whether to proceed
 5. **Director** (Opus) synthesizes final report with candidates and citations
 6. All events stream via SSE (10 event types) to Console in real-time
+   - `FindingRecorded` includes `evidence` field for supporting data
+   - `InvestigationCompleted` includes candidates with multi-criteria scores
 7. Investigation persisted to SQLite with findings, candidates, and cost breakdown
-8. Console displays report, candidates, phase progress, and cost
+8. Console displays: full-width timeline (expandable events), findings grid with evidence, scored candidate table, full report, per-model cost breakdown
 
 ### Single-Model (Fallback)
 

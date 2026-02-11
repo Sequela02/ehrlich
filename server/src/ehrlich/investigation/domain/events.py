@@ -41,6 +41,7 @@ class FindingRecorded(DomainEvent):
     title: str = ""
     detail: str = ""
     phase: str = ""
+    evidence: str = ""
     investigation_id: str = ""
 
 

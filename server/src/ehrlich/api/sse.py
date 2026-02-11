@@ -71,6 +71,7 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
                 "title": event.title,
                 "detail": event.detail,
                 "phase": event.phase,
+                "evidence": event.evidence,
                 "investigation_id": event.investigation_id,
             },
         )

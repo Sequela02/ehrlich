@@ -36,6 +36,7 @@ export interface FindingRecordedData {
   title: string;
   detail: string;
   phase: string;
+  evidence?: string;
   investigation_id: string;
 }
 
@@ -103,6 +104,7 @@ export interface Finding {
   title: string;
   detail: string;
   phase: string;
+  evidence?: string;
 }
 
 export interface CandidateRow {
@@ -110,6 +112,17 @@ export interface CandidateRow {
   name: string;
   rank: number;
   notes: string;
+  prediction_score?: number;
+  docking_score?: number;
+  admet_score?: number;
+  resistance_risk?: string;
+}
+
+export interface ModelCost {
+  input_tokens: number;
+  output_tokens: number;
+  calls: number;
+  cost_usd: number;
 }
 
 export interface CostInfo {
@@ -118,4 +131,5 @@ export interface CostInfo {
   totalTokens: number;
   totalCost: number;
   toolCalls: number;
+  byModel?: Record<string, ModelCost>;
 }

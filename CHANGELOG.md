@@ -15,6 +15,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Branding: Dark prose overrides for react-markdown content
 - Console: Molecular bond phase progress (node-and-bond visualization replacing flat bars)
 - Console: Section headers with monospace uppercase + left green border accent
+- Data pipeline: `evidence` field threaded from Finding entity through FindingRecorded event to SSE to frontend
+- Data pipeline: Candidate scoring fields (`prediction_score`, `docking_score`, `admet_score`, `resistance_risk`) populated from orchestrator prompts and serialized through SSE
+- Console: Expandable Timeline events -- tool results, thinking, director decisions expand on click
+- Console: Rich Director decision cards -- planning shows phase goals, review shows quality/gaps/guidance, synthesis shows confidence/limitations
+- Console: FindingsPanel grid layout (2-3 columns) with evidence section
+- Console: CandidateTable scoring columns (Prediction, Docking, ADMET, Resistance) with color-coded values
+- Console: CostBadge per-model breakdown popover (Director, Researcher, Summarizer costs)
 - Molecule visualization: server-side 2D SVG depiction via RDKit `rdMolDraw2D` (`depict_2d` on RDKitAdapter and ChemistryService)
 - Molecule API: `GET /molecule/depict` returns `image/svg+xml` with 24h cache, error SVG for invalid SMILES
 - Molecule API: `GET /molecule/conformer` returns 3D conformer JSON (mol_block, energy, num_atoms)
@@ -37,9 +44,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Console: Complete dark theme overhaul — all 15 components restyled for dark background
 - Console: AppLayout header redesigned with green bar accent, monospace alpha badge, right-aligned label
 - Console: Home page left-aligned (anti-AI pattern), mono stat line "19 tools · 7 phases · multi-model"
-- Console: Investigation page sections use `bg-surface` dark panels with `border-border`
+- Console: Investigation page redesigned as full-width vertical stack (was 2/3+1/3 grid)
 - Console: Timeline events restyled — green findings, amber director events, mono tool names
-- Console: CostBadge uses monospace with green-highlighted cost amount
+- Console: CostBadge uses monospace with green-highlighted cost amount, clickable for model breakdown
 - Console: PromptInput dark textarea with green focus ring and glow hover on button
 - Console: InvestigationList dark cards with green border hover effect
 - Console: FindingsPanel dark surface cards with green file icon
@@ -48,8 +55,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Molecule: 3Dmol.js viewers use dark background (`#1a1e1a`) instead of white
 - Molecule: Error SVG uses dark background matching surface color
 - Molecule: MolViewer2D error fallback uses `bg-surface` instead of `bg-white`
-- `CandidateTable` replaces raw SMILES text column with inline 2D structure thumbnails (80x60)
+- `CandidateTable` replaces raw SMILES text column with inline 2D structure thumbnails (100x75)
 - `CandidateTable` rows are now clickable to expand `CandidateDetail` panel
+- `FindingsPanel` shows full detail text (removed 200-char truncation)
+- Tool result preview increased from 500 to 1500 chars in both orchestrators
+- Prompts: `DIRECTOR_SYNTHESIS_PROMPT` and `SCIENTIST_SYSTEM_PROMPT` request candidate scoring fields
 
 ---
 

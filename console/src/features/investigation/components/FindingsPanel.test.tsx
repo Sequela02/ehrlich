@@ -23,11 +23,11 @@ describe("FindingsPanel", () => {
     expect(screen.getByText("Literature Review")).toBeInTheDocument();
   });
 
-  it("truncates long detail text", () => {
+  it("shows full detail text without truncation", () => {
     const longDetail = "A".repeat(300);
     render(
       <FindingsPanel findings={[{ title: "Long", detail: longDetail, phase: "" }]} />,
     );
-    expect(screen.getByText(/\.\.\.$/)).toBeInTheDocument();
+    expect(screen.getByText(longDetail)).toBeInTheDocument();
   });
 });

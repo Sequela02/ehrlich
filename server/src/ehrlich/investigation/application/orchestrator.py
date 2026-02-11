@@ -121,7 +121,7 @@ class Orchestrator:
 
                     result_str = await self._dispatch_tool(tool_name, tool_input, investigation)
 
-                    preview = result_str[:500] if len(result_str) > 500 else result_str
+                    preview = result_str[:1500] if len(result_str) > 1500 else result_str
                     yield ToolResultEvent(
                         tool_name=tool_name,
                         result_preview=preview,
@@ -133,6 +133,7 @@ class Orchestrator:
                             title=tool_input.get("title", ""),
                             detail=tool_input.get("detail", ""),
                             phase=tool_input.get("phase", investigation.current_phase),
+                            evidence=tool_input.get("evidence", ""),
                             investigation_id=investigation.id,
                         )
 
@@ -220,6 +221,10 @@ class Orchestrator:
                 name=c.get("name", ""),
                 notes=c.get("rationale", c.get("notes", "")),
                 rank=i + 1,
+                prediction_score=float(c.get("prediction_score", 0.0)),
+                docking_score=float(c.get("docking_score", 0.0)),
+                admet_score=float(c.get("admet_score", 0.0)),
+                resistance_risk=c.get("resistance_risk", "unknown"),
             )
             for i, c in enumerate(raw_candidates)
         ]

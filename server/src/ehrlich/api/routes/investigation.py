@@ -265,7 +265,16 @@ async def _replay_final(
 ) -> AsyncGenerator[dict[str, str], None]:
     if investigation.status == InvestigationStatus.COMPLETED:
         candidates = [
-            {"smiles": c.smiles, "name": c.name, "rank": c.rank, "notes": c.notes}
+            {
+                "smiles": c.smiles,
+                "name": c.name,
+                "rank": c.rank,
+                "notes": c.notes,
+                "prediction_score": c.prediction_score,
+                "docking_score": c.docking_score,
+                "admet_score": c.admet_score,
+                "resistance_risk": c.resistance_risk,
+            }
             for c in investigation.candidates
         ]
         data = json.dumps(
@@ -310,6 +319,10 @@ def _to_detail(inv: Investigation) -> InvestigationDetail:
             "name": c.name,
             "rank": c.rank,
             "notes": c.notes,
+            "prediction_score": c.prediction_score,
+            "docking_score": c.docking_score,
+            "admet_score": c.admet_score,
+            "resistance_risk": c.resistance_risk,
         }
         for c in inv.candidates
     ]

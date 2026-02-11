@@ -89,6 +89,7 @@ export function useSSE(url: string | null): SSEState {
             title: parsed.data.title as string,
             detail: parsed.data.detail as string,
             phase: parsed.data.phase as string,
+            evidence: (parsed.data.evidence as string) || undefined,
           },
         ]);
         break;
@@ -99,12 +100,14 @@ export function useSSE(url: string | null): SSEState {
           setCandidates(d.candidates);
         }
         if (d.cost) {
+          const costData = d.cost as Record<string, unknown>;
           setCost({
-            inputTokens: d.cost.input_tokens,
-            outputTokens: d.cost.output_tokens,
-            totalTokens: d.cost.total_tokens,
-            totalCost: d.cost.total_cost_usd,
-            toolCalls: d.cost.tool_calls,
+            inputTokens: costData.input_tokens as number,
+            outputTokens: costData.output_tokens as number,
+            totalTokens: costData.total_tokens as number,
+            totalCost: costData.total_cost_usd as number,
+            toolCalls: costData.tool_calls as number,
+            byModel: costData.by_model as CostInfo["byModel"],
           });
         }
         setCompleted(true);

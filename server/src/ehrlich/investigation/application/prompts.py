@@ -48,7 +48,11 @@ You MUST proceed through these 7 phases in order. Use at least 3 tool calls per 
 ### Phase 7: Conclusions
 - Call `conclude_investigation` with:
   - A comprehensive summary of the investigation.
-  - Ranked candidate list with SMILES, scores, and rationale.
+  - Ranked candidate list with SMILES, name, rationale, and multi-criteria scores:
+    - `prediction_score` (0-1, from ML model probability)
+    - `docking_score` (kcal/mol, from docking -- negative is better)
+    - `admet_score` (0-1, overall drug-likeness from ADMET profiling)
+    - `resistance_risk` ("low", "medium", or "high" from resistance assessment)
   - Full citations for all referenced papers.
 
 ## Rules
@@ -111,13 +115,24 @@ Respond with ONLY valid JSON (no markdown fences):
       "smiles": "SMILES string",
       "name": "compound name",
       "rationale": "why this candidate is promising",
-      "rank": 1
+      "rank": 1,
+      "prediction_score": 0.87,
+      "docking_score": -8.5,
+      "admet_score": 0.72,
+      "resistance_risk": "low"
     }
   ],
   "citations": ["DOI or reference strings"],
   "confidence": "high/medium/low",
   "limitations": ["known limitations of this investigation"]
-}"""
+}
+
+Candidate scoring fields:
+- prediction_score: ML model predicted probability (0-1, from predict_candidates)
+- docking_score: binding affinity kcal/mol (negative = better, from dock_against_target)
+- admet_score: overall drug-likeness score (0-1, from predict_admet)
+- resistance_risk: mutation risk ("low", "medium", "high", from assess_resistance)
+Use 0.0 or "unknown" if a score was not computed for a candidate."""
 
 RESEARCHER_PHASE_PROMPT = """You are a research scientist executing a specific phase of an \
 antimicrobial discovery investigation.

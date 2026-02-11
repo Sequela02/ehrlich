@@ -24,7 +24,7 @@ export function FindingsPanel({ findings }: FindingsPanelProps) {
       <h3 className="border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
         Findings ({findings.length})
       </h3>
-      <div className="space-y-2">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
         {findings.map((f, i) => (
           <div key={i} className="rounded-lg border border-border bg-surface p-3">
             <div className="flex items-start gap-2">
@@ -38,8 +38,18 @@ export function FindingsPanel({ findings }: FindingsPanelProps) {
                 )}
                 {f.detail && (
                   <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-                    {f.detail.length > 200 ? f.detail.slice(0, 200) + "..." : f.detail}
+                    {f.detail}
                   </p>
+                )}
+                {f.evidence && (
+                  <div className="mt-2 rounded bg-muted/30 px-2 py-1.5">
+                    <span className="font-mono text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
+                      Evidence
+                    </span>
+                    <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+                      {f.evidence}
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
