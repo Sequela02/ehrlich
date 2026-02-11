@@ -26,7 +26,7 @@ export function DockingViewer({
       if (cancelled || !containerRef.current) return;
 
       const viewer = $3Dmol.createViewer(containerRef.current, {
-        backgroundColor: "white",
+        backgroundColor: "#1a1e1a",
       });
       viewerRef.current = viewer;
 

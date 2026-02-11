@@ -15,9 +15,9 @@ _chemistry = ChemistryService()
 _protein_store = ProteinStore()
 
 _ERROR_SVG = """<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}">
-  <rect width="100%" height="100%" fill="#f5f5f5" rx="8"/>
+  <rect width="100%" height="100%" fill="#1a1e1a" rx="8"/>
   <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle"
-        font-family="monospace" font-size="11" fill="#999">Invalid SMILES</text>
+        font-family="monospace" font-size="11" fill="#666">Invalid SMILES</text>
 </svg>"""
 
 

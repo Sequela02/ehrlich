@@ -78,7 +78,47 @@ Ehrlich uses a hybrid approach for molecule rendering:
 | `GET /molecule/descriptors?smiles=` | JSON descriptors + `passes_lipinski` | None |
 | `GET /targets` | JSON list of `{pdb_id, name, organism}` | None |
 
-Invalid SMILES on `/depict` returns a grey error SVG (200 status). Invalid SMILES on `/conformer` or `/descriptors` returns 400.
+Invalid SMILES on `/depict` returns a dark error SVG (200 status). Invalid SMILES on `/conformer` or `/descriptors` returns 400.
+
+## Visual Identity — "Lab Protocol"
+
+Dark-only theme mixing Industrial Scientific + Editorial Academic + Cyberpunk Lab aesthetics.
+
+### Design Tokens (OKLCH)
+
+| Token | Value | Purpose |
+|-------|-------|---------|
+| background | `oklch(0.10 0.005 155)` | Deep black with green micro-tint |
+| surface | `oklch(0.14 0.008 155)` | Raised cards, panels |
+| foreground | `oklch(0.93 0.005 155)` | Primary text |
+| primary | `oklch(0.72 0.19 155)` | Molecular Green — CTAs, active states |
+| secondary | `oklch(0.55 0.10 200)` | Teal — completed states |
+| accent | `oklch(0.75 0.15 80)` | Amber — director events |
+| muted | `oklch(0.18 0.005 155)` | Muted backgrounds |
+| border | `oklch(0.22 0.01 155)` | Subtle borders |
+| destructive | `oklch(0.60 0.22 25)` | Error red |
+
+### Typography
+
+- **Display/Body**: Space Grotesk (400, 500, 600, 700) — geometric, scientific
+- **Data/Code/Labels**: JetBrains Mono (400, 500) — SMILES, costs, tool names, IDs
+- Labels use monospace uppercase with wide tracking (0.08em)
+
+### Signature Elements
+
+1. **Molecular bond phase progress** — Nodes connected by lines (not bars). Active node pulses green.
+2. **Terminal-style timeline** — Monospace tool names, green-tinted findings, amber director events.
+3. **Section headers** — Monospace uppercase with left green border accent (`border-l-2 border-primary`).
+4. **Green glow pulse** — Running states emit soft green `box-shadow` animation.
+
+### Anti-Patterns (Deliberately Avoided)
+
+- No purple/indigo — molecular green is the identity color
+- No Inter/Roboto — Space Grotesk for display, JetBrains Mono for data
+- No light mode — dark-only, scientific instrument aesthetic
+- No centered hero — left-aligned, utilitarian layout
+- No blur shadows — hard borders or glow effects only
+- No gradient blobs or decorative elements
 
 ## Dependency Rules
 

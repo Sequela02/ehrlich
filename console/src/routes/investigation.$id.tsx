@@ -50,7 +50,7 @@ function InvestigationPage() {
           </a>
           <div>
             <h1 className="text-xl font-semibold">Investigation</h1>
-            <p className="font-mono text-xs text-muted-foreground">{id}</p>
+            <p className="font-mono text-[11px] text-muted-foreground">{id}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -75,8 +75,10 @@ function InvestigationPage() {
         <div className="lg:col-span-2">
           <div className="space-y-6">
             <section>
-              <h2 className="mb-3 text-sm font-medium text-muted-foreground">Timeline</h2>
-              <div className="max-h-[600px] overflow-y-auto rounded-lg border border-border p-4">
+              <h2 className="mb-3 border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                Timeline
+              </h2>
+              <div className="max-h-[600px] overflow-y-auto rounded-lg border border-border bg-surface p-4">
                 <Timeline events={events} currentPhase={currentPhase} />
                 <div ref={timelineEndRef} />
               </div>
@@ -84,8 +86,10 @@ function InvestigationPage() {
 
             {completed && summary && (
               <section>
-                <h2 className="mb-3 text-sm font-medium text-muted-foreground">Report</h2>
-                <div className="rounded-lg border border-border p-4">
+                <h2 className="mb-3 border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  Report
+                </h2>
+                <div className="rounded-lg border border-border bg-surface p-4">
                   <ReportViewer content={summary} />
                 </div>
               </section>
@@ -131,7 +135,7 @@ function StatusIndicator({
   }
   if (reconnecting) {
     return (
-      <span className="inline-flex items-center gap-1.5 text-xs text-amber-500">
+      <span className="inline-flex items-center gap-1.5 text-xs text-accent">
         <WifiOff className="h-3 w-3 animate-pulse" />
         Reconnecting...
       </span>

@@ -63,7 +63,7 @@ function TimelineEntry({ event }: { event: SSEEvent }) {
   switch (event.event) {
     case "phase_started":
       return (
-        <div className="flex items-center gap-2 rounded-md bg-primary/5 px-3 py-2 text-sm font-medium text-primary">
+        <div className="flex items-center gap-2 rounded-md bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
           <PhaseIcon phase={event.data.phase as string} />
           {event.data.phase as string}
         </div>
@@ -71,10 +71,10 @@ function TimelineEntry({ event }: { event: SSEEvent }) {
 
     case "tool_called":
       return (
-        <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground">
-          <Wrench className="h-3.5 w-3.5 shrink-0" />
-          <span className="font-mono font-medium">{event.data.tool_name as string}</span>
-          <span className="truncate text-muted-foreground/60">
+        <div className="flex items-center gap-2 px-3 py-1 text-xs text-muted-foreground">
+          <Wrench className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
+          <span className="font-mono font-medium text-primary/80">{event.data.tool_name as string}</span>
+          <span className="truncate font-mono text-muted-foreground/50">
             {formatToolInput(event.data.tool_input as Record<string, unknown>)}
           </span>
         </div>
@@ -82,15 +82,15 @@ function TimelineEntry({ event }: { event: SSEEvent }) {
 
     case "tool_result":
       return (
-        <div className="px-3 py-1 pl-9 text-xs text-muted-foreground/80">
+        <div className="px-3 py-0.5 pl-9 font-mono text-[11px] text-muted-foreground/50">
           <span className="line-clamp-2">{truncate(event.data.result_preview as string, 200)}</span>
         </div>
       );
 
     case "finding_recorded":
       return (
-        <div className="rounded-md border border-secondary/20 bg-secondary/5 px-3 py-2">
-          <div className="flex items-center gap-1.5 text-xs font-medium text-secondary">
+        <div className="rounded-md border-l-2 border-primary bg-primary/5 px-3 py-2">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
             <CheckCircle2 className="h-3.5 w-3.5" />
             Finding: {event.data.title as string}
           </div>
@@ -104,7 +104,7 @@ function TimelineEntry({ event }: { event: SSEEvent }) {
 
     case "thinking":
       return (
-        <div className="px-3 py-1.5 text-xs leading-relaxed text-foreground/70">
+        <div className="px-3 py-1.5 text-xs italic leading-relaxed text-foreground/50">
           {truncate(event.data.text as string, 500)}
         </div>
       );
@@ -119,7 +119,7 @@ function TimelineEntry({ event }: { event: SSEEvent }) {
             ? `Director reviewing ${phase}...`
             : "Director synthesizing results...";
       return (
-        <div className="flex items-center gap-2 rounded-md border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs font-medium text-amber-600 dark:text-amber-400">
+        <div className="flex items-center gap-2 rounded-md bg-accent/10 px-3 py-2 text-xs font-medium text-accent">
           <Brain className="h-3.5 w-3.5 animate-pulse" />
           {label}
         </div>
@@ -138,7 +138,7 @@ function TimelineEntry({ event }: { event: SSEEvent }) {
               ? `Synthesis: ${((decision.candidates as unknown[]) ?? []).length} candidates`
               : "Decision received";
       return (
-        <div className="rounded-md border border-amber-500/20 px-3 py-1.5 text-xs text-amber-600 dark:text-amber-400">
+        <div className="border-l-2 border-accent/40 px-3 py-1.5 font-mono text-xs text-accent">
           <Sparkles className="mr-1.5 inline h-3 w-3" />
           {summary}
         </div>
@@ -147,7 +147,7 @@ function TimelineEntry({ event }: { event: SSEEvent }) {
 
     case "output_summarized":
       return (
-        <div className="flex items-center gap-1.5 px-3 py-1 pl-9 text-[10px] text-muted-foreground/60">
+        <div className="flex items-center gap-1.5 px-3 py-0.5 pl-9 font-mono text-[10px] text-muted-foreground/40">
           <Shrink className="h-3 w-3" />
           {event.data.tool_name as string}: {event.data.original_length as number} chars
           {" -> "}{event.data.summarized_length as number} chars
@@ -165,8 +165,8 @@ function TimelineEntry({ event }: { event: SSEEvent }) {
     case "completed":
       return (
         <div className={cn(
-          "flex items-center gap-2 rounded-md bg-secondary/10 px-3 py-2",
-          "text-sm font-medium text-secondary",
+          "flex items-center gap-2 rounded-md bg-primary/10 px-3 py-2",
+          "text-sm font-medium text-primary",
         )}>
           <CheckCircle2 className="h-4 w-4" />
           Investigation complete ({event.data.candidate_count as number} candidates)

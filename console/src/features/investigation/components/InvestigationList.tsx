@@ -39,55 +39,50 @@ export function InvestigationList({ investigations }: InvestigationListProps) {
   }
 
   return (
-    <div className="space-y-3">
-      <h2 className="text-sm font-medium text-muted-foreground">
-        Recent Investigations
-      </h2>
-      <div className="space-y-2">
-        {investigations.map((inv) => {
-          const config = STATUS_CONFIG[inv.status] ?? STATUS_CONFIG.pending!;
-          const StatusIcon = config.icon;
-          return (
-            <Link
-              key={inv.id}
-              to="/investigation/$id"
-              params={{ id: inv.id }}
-              className={cn(
-                "flex items-center justify-between rounded-lg border border-border p-3",
-                "transition-colors hover:bg-muted/50",
-              )}
-            >
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm">{inv.prompt}</p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {new Date(inv.created_at).toLocaleDateString(undefined, {
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </p>
-              </div>
-              <div className="ml-3 flex items-center gap-2">
-                {inv.candidate_count > 0 && (
-                  <span className="text-xs text-muted-foreground">
-                    {inv.candidate_count} candidates
-                  </span>
-                )}
-                <span
-                  className={cn(
-                    "inline-flex items-center gap-1 text-xs",
-                    config.className,
-                  )}
-                >
-                  <StatusIcon className="h-3.5 w-3.5" />
-                  {config.label}
+    <div className="space-y-2">
+      {investigations.map((inv) => {
+        const config = STATUS_CONFIG[inv.status] ?? STATUS_CONFIG.pending!;
+        const StatusIcon = config.icon;
+        return (
+          <Link
+            key={inv.id}
+            to="/investigation/$id"
+            params={{ id: inv.id }}
+            className={cn(
+              "flex items-center justify-between rounded-lg border border-border bg-surface p-3",
+              "transition-colors hover:border-primary/30",
+            )}
+          >
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm">{inv.prompt}</p>
+              <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
+                {new Date(inv.created_at).toLocaleDateString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </p>
+            </div>
+            <div className="ml-3 flex items-center gap-2">
+              {inv.candidate_count > 0 && (
+                <span className="font-mono text-[11px] text-muted-foreground">
+                  {inv.candidate_count} candidates
                 </span>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
+              )}
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 text-xs",
+                  config.className,
+                )}
+              >
+                <StatusIcon className="h-3.5 w-3.5" />
+                {config.label}
+              </span>
+            </div>
+          </Link>
+        );
+      })}
     </div>
   );
 }

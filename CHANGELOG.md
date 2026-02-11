@@ -8,6 +8,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Branding: "Lab Protocol" dark-only visual identity (Industrial Scientific + Editorial + Cyberpunk Lab)
+- Branding: OKLCH color system with Molecular Green primary (`oklch(0.72 0.19 155)`)
+- Branding: Space Grotesk display/body font + JetBrains Mono data/label font via Google Fonts
+- Branding: `pulse-glow` keyframe animation for active/running states
+- Branding: Dark prose overrides for react-markdown content
+- Console: Molecular bond phase progress (node-and-bond visualization replacing flat bars)
+- Console: Section headers with monospace uppercase + left green border accent
 - Molecule visualization: server-side 2D SVG depiction via RDKit `rdMolDraw2D` (`depict_2d` on RDKitAdapter and ChemistryService)
 - Molecule API: `GET /molecule/depict` returns `image/svg+xml` with 24h cache, error SVG for invalid SMILES
 - Molecule API: `GET /molecule/conformer` returns 3D conformer JSON (mol_block, energy, num_atoms)
@@ -27,6 +34,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Console: Complete dark theme overhaul — all 15 components restyled for dark background
+- Console: AppLayout header redesigned with green bar accent, monospace alpha badge, right-aligned label
+- Console: Home page left-aligned (anti-AI pattern), mono stat line "19 tools · 7 phases · multi-model"
+- Console: Investigation page sections use `bg-surface` dark panels with `border-border`
+- Console: Timeline events restyled — green findings, amber director events, mono tool names
+- Console: CostBadge uses monospace with green-highlighted cost amount
+- Console: PromptInput dark textarea with green focus ring and glow hover on button
+- Console: InvestigationList dark cards with green border hover effect
+- Console: FindingsPanel dark surface cards with green file icon
+- Console: ReportViewer uses `prose-invert` with custom dark prose colors
+- Console: Lipinski badges use `bg-primary/20` (pass) and `bg-destructive/20` (fail)
+- Molecule: 3Dmol.js viewers use dark background (`#1a1e1a`) instead of white
+- Molecule: Error SVG uses dark background matching surface color
+- Molecule: MolViewer2D error fallback uses `bg-surface` instead of `bg-white`
 - `CandidateTable` replaces raw SMILES text column with inline 2D structure thumbnails (80x60)
 - `CandidateTable` rows are now clickable to expand `CandidateDetail` panel
 

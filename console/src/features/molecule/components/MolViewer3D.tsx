@@ -20,7 +20,7 @@ export function MolViewer3D({ molBlock, width = 400, height = 300 }: MolViewer3D
       if (cancelled || !containerRef.current) return;
 
       const viewer = $3Dmol.createViewer(containerRef.current, {
-        backgroundColor: "white",
+        backgroundColor: "#1a1e1a",
       });
       viewerRef.current = viewer;
       viewer.addModel(molBlock, "mol");

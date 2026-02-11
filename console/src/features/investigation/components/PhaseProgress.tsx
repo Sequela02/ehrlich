@@ -24,39 +24,48 @@ export function PhaseProgress({
   }
 
   return (
-    <div className="flex items-center gap-1">
-      {PHASES.map((phase) => {
+    <div className="flex items-center">
+      {PHASES.map((phase, index) => {
         const isActive = phase === currentPhase;
         const isCompleted =
           completedPhases.includes(phase) ||
           (currentPhase !== phase &&
             PHASES.indexOf(phase) < PHASES.indexOf(currentPhase));
+        const isLast = index === PHASES.length - 1;
 
         return (
-          <div
-            key={phase}
-            className="group relative flex-1"
-            title={phase}
-          >
-            <div
-              className={cn(
-                "h-1.5 rounded-full transition-all",
-                isActive && "animate-pulse bg-primary",
-                isCompleted && "bg-secondary",
-                !isActive && !isCompleted && "bg-muted",
-              )}
-            />
-            <span
-              className={cn(
-                "absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] opacity-0",
-                "transition-opacity group-hover:opacity-100",
-                isActive && "text-primary",
-                isCompleted && "text-secondary",
-                !isActive && !isCompleted && "text-muted-foreground",
-              )}
-            >
-              {phase.split(" ")[0]}
-            </span>
+          <div key={phase} className="group flex flex-1 items-center">
+            {/* Node */}
+            <div className="relative flex flex-col items-center">
+              <div
+                className={cn(
+                  "h-2.5 w-2.5 rounded-full transition-all",
+                  isActive && "bg-primary animate-pulse-glow",
+                  isCompleted && "bg-primary",
+                  !isActive && !isCompleted && "border border-border bg-muted",
+                )}
+              />
+              <span
+                className={cn(
+                  "absolute top-5 whitespace-nowrap font-mono text-[10px] opacity-0",
+                  "transition-opacity group-hover:opacity-100",
+                  isActive && "text-primary",
+                  isCompleted && "text-primary/70",
+                  !isActive && !isCompleted && "text-muted-foreground",
+                )}
+              >
+                {phase.split(" ")[0]}
+              </span>
+            </div>
+            {/* Bond line */}
+            {!isLast && (
+              <div
+                className={cn(
+                  "h-px flex-1 transition-colors",
+                  isCompleted ? "bg-primary/50" : "bg-border",
+                )}
+              />
+            )}
           </div>
         );
       })}
