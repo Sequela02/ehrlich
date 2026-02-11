@@ -1,3 +1,6 @@
+import { useEffect, useRef } from "react";
+import type { GLViewer } from "3dmol";
+
 interface DockingViewerProps {
   proteinPdb: string;
   ligandMolBlock: string;
@@ -11,15 +14,46 @@ export function DockingViewer({
   width = 500,
   height = 400,
 }: DockingViewerProps) {
-  // TODO: Integrate 3Dmol.js for protein + ligand view
+  const containerRef = useRef<HTMLDivElement>(null);
+  const viewerRef = useRef<GLViewer | null>(null);
+
+  useEffect(() => {
+    if (!containerRef.current || !proteinPdb || !ligandMolBlock) return;
+
+    let cancelled = false;
+
+    import("3dmol").then(($3Dmol) => {
+      if (cancelled || !containerRef.current) return;
+
+      const viewer = $3Dmol.createViewer(containerRef.current, {
+        backgroundColor: "white",
+      });
+      viewerRef.current = viewer;
+
+      viewer.addModel(proteinPdb, "pdb");
+      viewer.setStyle({ model: 0 }, { cartoon: { color: "spectrum" } });
+
+      viewer.addModel(ligandMolBlock, "mol");
+      viewer.setStyle({ model: 1 }, { stick: { colorscheme: "greenCarbon" } });
+
+      viewer.zoomTo({ model: 1 });
+      viewer.render();
+    });
+
+    return () => {
+      cancelled = true;
+      if (viewerRef.current) {
+        viewerRef.current.clear();
+        viewerRef.current = null;
+      }
+    };
+  }, [proteinPdb, ligandMolBlock]);
+
   return (
     <div
-      className="flex items-center justify-center rounded-lg border border-border bg-white"
-      style={{ width, height }}
-    >
-      <span className="text-xs text-muted-foreground">
-        Docking viewer (protein: {proteinPdb.length}, ligand: {ligandMolBlock.length})
-      </span>
-    </div>
+      ref={containerRef}
+      style={{ width, height, position: "relative" }}
+      className="rounded-lg border border-border"
+    />
   );
 }

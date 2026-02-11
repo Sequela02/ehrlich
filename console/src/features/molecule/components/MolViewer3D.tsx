@@ -1,3 +1,6 @@
+import { useEffect, useRef } from "react";
+import type { GLViewer } from "3dmol";
+
 interface MolViewer3DProps {
   molBlock: string;
   width?: number;
@@ -5,15 +8,41 @@ interface MolViewer3DProps {
 }
 
 export function MolViewer3D({ molBlock, width = 400, height = 300 }: MolViewer3DProps) {
-  // TODO: Integrate 3Dmol.js WebGL viewer
+  const containerRef = useRef<HTMLDivElement>(null);
+  const viewerRef = useRef<GLViewer | null>(null);
+
+  useEffect(() => {
+    if (!containerRef.current || !molBlock) return;
+
+    let cancelled = false;
+
+    import("3dmol").then(($3Dmol) => {
+      if (cancelled || !containerRef.current) return;
+
+      const viewer = $3Dmol.createViewer(containerRef.current, {
+        backgroundColor: "white",
+      });
+      viewerRef.current = viewer;
+      viewer.addModel(molBlock, "mol");
+      viewer.setStyle({}, { stick: { colorscheme: "Jmol" } });
+      viewer.zoomTo();
+      viewer.render();
+    });
+
+    return () => {
+      cancelled = true;
+      if (viewerRef.current) {
+        viewerRef.current.clear();
+        viewerRef.current = null;
+      }
+    };
+  }, [molBlock]);
+
   return (
     <div
-      className="flex items-center justify-center rounded-lg border border-border bg-white"
-      style={{ width, height }}
-    >
-      <span className="text-xs text-muted-foreground">
-        3D viewer ({molBlock.length} chars)
-      </span>
-    </div>
+      ref={containerRef}
+      style={{ width, height, position: "relative" }}
+      className="rounded-lg border border-border"
+    />
   );
 }

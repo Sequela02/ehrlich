@@ -22,6 +22,8 @@ dependencies = [
     "requests>=2.32,<3",
     "joblib>=1.4,<2",
     "httpx>=0.28,<1",
+    "aiosqlite>=0.20,<1",
+    "pyarrow>=19,<20",
 ]
 
 [project.optional-dependencies]

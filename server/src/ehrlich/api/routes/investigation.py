@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import asyncio
+import json
+import logging
 from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, HTTPException
@@ -7,7 +10,7 @@ from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 from ehrlich.analysis.tools import analyze_substructures, compute_properties, explore_dataset
-from ehrlich.api.sse import domain_event_to_sse
+from ehrlich.api.sse import SSEEventType, domain_event_to_sse
 from ehrlich.chemistry.tools import (
     compute_descriptors,
     compute_fingerprint,
@@ -17,10 +20,12 @@ from ehrlich.chemistry.tools import (
     validate_smiles,
 )
 from ehrlich.config import get_settings
+from ehrlich.investigation.application.multi_orchestrator import MultiModelOrchestrator
 from ehrlich.investigation.application.orchestrator import Orchestrator
 from ehrlich.investigation.application.tool_registry import ToolRegistry
-from ehrlich.investigation.domain.investigation import Investigation
+from ehrlich.investigation.domain.investigation import Investigation, InvestigationStatus
 from ehrlich.investigation.infrastructure.anthropic_client import AnthropicClientAdapter
+from ehrlich.investigation.infrastructure.sqlite_repository import SqliteInvestigationRepository
 from ehrlich.investigation.tools import conclude_investigation, record_finding
 from ehrlich.literature.tools import get_reference, search_literature
 from ehrlich.prediction.tools import cluster_compounds, predict_candidates, train_model
@@ -29,9 +34,13 @@ from ehrlich.simulation.tools import assess_resistance, dock_against_target, pre
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(tags=["investigation"])
 
-_investigations: dict[str, Investigation] = {}
+_repository: SqliteInvestigationRepository | None = None
+_active_investigations: dict[str, Investigation] = {}
+_subscribers: dict[str, list[asyncio.Queue[dict[str, str] | None]]] = {}
 
 
 class InvestigateRequest(BaseModel):
@@ -41,6 +50,41 @@ class InvestigateRequest(BaseModel):
 class InvestigateResponse(BaseModel):
     id: str
     status: str
+
+
+class InvestigationDetail(BaseModel):
+    id: str
+    prompt: str
+    status: str
+    phases: list[str]
+    current_phase: str
+    findings: list[dict[str, Any]]
+    candidates: list[dict[str, Any]]
+    citations: list[str]
+    summary: str
+    created_at: str
+    cost_data: dict[str, object]
+
+
+class InvestigationSummary(BaseModel):
+    id: str
+    prompt: str
+    status: str
+    created_at: str
+    candidate_count: int
+
+
+async def init_repository(db_path: str) -> None:
+    global _repository  # noqa: PLW0603
+    _repository = SqliteInvestigationRepository(db_path)
+    await _repository.initialize()
+
+
+def _get_repository() -> SqliteInvestigationRepository:
+    if _repository is None:
+        msg = "Repository not initialized"
+        raise RuntimeError(msg)
+    return _repository
 
 
 def _build_registry() -> ToolRegistry:
@@ -71,37 +115,214 @@ def _build_registry() -> ToolRegistry:
     return registry
 
 
+def _broadcast_event(investigation_id: str, event: dict[str, str]) -> None:
+    for queue in _subscribers.get(investigation_id, []):
+        queue.put_nowait(event)
+
+
+def _end_broadcast(investigation_id: str) -> None:
+    for queue in _subscribers.get(investigation_id, []):
+        queue.put_nowait(None)
+    _subscribers.pop(investigation_id, None)
+
+
+@router.get("/investigate")
+async def list_investigations() -> list[InvestigationSummary]:
+    repo = _get_repository()
+    investigations = await repo.list_all()
+    return [
+        InvestigationSummary(
+            id=inv.id,
+            prompt=inv.prompt,
+            status=inv.status.value,
+            created_at=inv.created_at.isoformat(),
+            candidate_count=len(inv.candidates),
+        )
+        for inv in investigations
+    ]
+
+
+@router.get("/investigate/{investigation_id}")
+async def get_investigation(investigation_id: str) -> InvestigationDetail:
+    repo = _get_repository()
+    # Check active first (in-flight data is more current)
+    investigation = _active_investigations.get(investigation_id)
+    if investigation is None:
+        investigation = await repo.get_by_id(investigation_id)
+    if investigation is None:
+        raise HTTPException(status_code=404, detail="Investigation not found")
+    return _to_detail(investigation)
+
+
 @router.post("/investigate")
 async def start_investigation(request: InvestigateRequest) -> InvestigateResponse:
     investigation = Investigation(prompt=request.prompt)
-    _investigations[investigation.id] = investigation
+    repo = _get_repository()
+    await repo.save(investigation)
     return InvestigateResponse(id=investigation.id, status=investigation.status.value)
 
 
 @router.get("/investigate/{investigation_id}/stream")
 async def stream_investigation(investigation_id: str) -> EventSourceResponse:
-    investigation = _investigations.get(investigation_id)
+    repo = _get_repository()
+    investigation = _active_investigations.get(investigation_id)
+    if investigation is None:
+        investigation = await repo.get_by_id(investigation_id)
     if investigation is None:
         raise HTTPException(status_code=404, detail="Investigation not found")
-    if investigation.status != "pending":
-        raise HTTPException(status_code=409, detail="Investigation already started")
 
+    status = investigation.status
+
+    # Completed or failed -- replay final status
+    if status in (InvestigationStatus.COMPLETED, InvestigationStatus.FAILED):
+        return EventSourceResponse(_replay_final(investigation))
+
+    # Running -- subscribe to live events if broadcast is active
+    if status == InvestigationStatus.RUNNING:
+        if investigation.id in _subscribers:
+            return EventSourceResponse(_subscribe(investigation))
+        raise HTTPException(
+            status_code=409,
+            detail="Investigation is running but stream is not available for reconnection",
+        )
+
+    # Pending -- start the investigation and stream
     settings = get_settings()
-    client = AnthropicClientAdapter(
-        model=settings.anthropic_model,
-        api_key=settings.anthropic_api_key or None,
-    )
     registry = _build_registry()
-    orchestrator = Orchestrator(
+
+    _active_investigations[investigation.id] = investigation
+    _subscribers[investigation.id] = []
+
+    orchestrator = _create_orchestrator(settings, registry)
+
+    async def event_generator() -> AsyncGenerator[dict[str, str], None]:
+        try:
+            async for domain_event in orchestrator.run(investigation):
+                sse_event = domain_event_to_sse(domain_event)
+                if sse_event is not None:
+                    event = {
+                        "event": sse_event.event.value,
+                        "data": sse_event.format(),
+                    }
+                    _broadcast_event(investigation.id, event)
+                    yield event
+        finally:
+            _end_broadcast(investigation.id)
+            await repo.update(investigation)
+            _active_investigations.pop(investigation.id, None)
+
+    return EventSourceResponse(event_generator())
+
+
+def _create_orchestrator(
+    settings: Any, registry: ToolRegistry
+) -> MultiModelOrchestrator | Orchestrator:
+    api_key = settings.anthropic_api_key or None
+
+    # Use multi-model if researcher model differs from director
+    if settings.researcher_model != settings.director_model:
+        director = AnthropicClientAdapter(model=settings.director_model, api_key=api_key)
+        researcher = AnthropicClientAdapter(model=settings.researcher_model, api_key=api_key)
+        summarizer = AnthropicClientAdapter(model=settings.summarizer_model, api_key=api_key)
+        return MultiModelOrchestrator(
+            director=director,
+            researcher=researcher,
+            summarizer=summarizer,
+            registry=registry,
+            max_iterations_per_phase=settings.max_iterations_per_phase,
+            summarizer_threshold=settings.summarizer_threshold,
+        )
+
+    # Fallback to single-model orchestrator
+    client = AnthropicClientAdapter(model=settings.anthropic_model, api_key=api_key)
+    return Orchestrator(
         client=client,
         registry=registry,
         max_iterations=settings.max_iterations,
     )
 
-    async def event_generator() -> AsyncGenerator[dict[str, str], None]:
-        async for domain_event in orchestrator.run(investigation):
-            sse_event = domain_event_to_sse(domain_event)
-            if sse_event is not None:
-                yield {"event": sse_event.event.value, "data": sse_event.format()}
 
-    return EventSourceResponse(event_generator())
+async def _subscribe(
+    investigation: Investigation,
+) -> AsyncGenerator[dict[str, str], None]:
+    queue: asyncio.Queue[dict[str, str] | None] = asyncio.Queue()
+    subs = _subscribers.setdefault(investigation.id, [])
+    subs.append(queue)
+    try:
+        while True:
+            event = await queue.get()
+            if event is None:
+                break
+            yield event
+    finally:
+        subs = _subscribers.get(investigation.id, [])
+        if queue in subs:
+            subs.remove(queue)
+
+
+async def _replay_final(
+    investigation: Investigation,
+) -> AsyncGenerator[dict[str, str], None]:
+    if investigation.status == InvestigationStatus.COMPLETED:
+        candidates = [
+            {"smiles": c.smiles, "name": c.name, "rank": c.rank, "notes": c.notes}
+            for c in investigation.candidates
+        ]
+        data = json.dumps(
+            {
+                "event": SSEEventType.COMPLETED.value,
+                "data": {
+                    "investigation_id": investigation.id,
+                    "candidate_count": len(investigation.candidates),
+                    "summary": investigation.summary,
+                    "cost": investigation.cost_data,
+                    "candidates": candidates,
+                },
+            }
+        )
+        yield {"event": SSEEventType.COMPLETED.value, "data": data}
+    elif investigation.status == InvestigationStatus.FAILED:
+        data = json.dumps(
+            {
+                "event": SSEEventType.ERROR.value,
+                "data": {
+                    "error": investigation.error,
+                    "investigation_id": investigation.id,
+                },
+            }
+        )
+        yield {"event": SSEEventType.ERROR.value, "data": data}
+
+
+def _to_detail(inv: Investigation) -> InvestigationDetail:
+    findings = [
+        {
+            "title": f.title,
+            "detail": f.detail,
+            "phase": f.phase,
+            "evidence": f.evidence,
+        }
+        for f in inv.findings
+    ]
+    candidates = [
+        {
+            "smiles": c.smiles,
+            "name": c.name,
+            "rank": c.rank,
+            "notes": c.notes,
+        }
+        for c in inv.candidates
+    ]
+    return InvestigationDetail(
+        id=inv.id,
+        prompt=inv.prompt,
+        status=inv.status.value,
+        phases=inv.phases,
+        current_phase=inv.current_phase,
+        findings=findings,
+        candidates=candidates,
+        citations=inv.citations,
+        summary=inv.summary,
+        created_at=inv.created_at.isoformat(),
+        cost_data=inv.cost_data,
+    )

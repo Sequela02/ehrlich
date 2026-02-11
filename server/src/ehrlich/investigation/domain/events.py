@@ -45,11 +45,34 @@ class FindingRecorded(DomainEvent):
 
 
 @dataclass(frozen=True)
+class DirectorPlanning(DomainEvent):
+    stage: str = ""
+    phase: str = ""
+    investigation_id: str = ""
+
+
+@dataclass(frozen=True)
+class DirectorDecision(DomainEvent):
+    stage: str = ""
+    decision: dict[str, Any] = field(default_factory=dict)
+    investigation_id: str = ""
+
+
+@dataclass(frozen=True)
+class OutputSummarized(DomainEvent):
+    tool_name: str = ""
+    original_length: int = 0
+    summarized_length: int = 0
+    investigation_id: str = ""
+
+
+@dataclass(frozen=True)
 class InvestigationCompleted(DomainEvent):
     investigation_id: str = ""
     candidate_count: int = 0
     summary: str = ""
     cost: dict[str, Any] = field(default_factory=dict)
+    candidates: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

@@ -78,7 +78,7 @@ class Orchestrator:
                     messages=messages,
                     tools=tool_schemas,
                 )
-                cost.add_usage(response.input_tokens, response.output_tokens)
+                cost.add_usage(response.input_tokens, response.output_tokens, self._client.model)
 
                 assistant_content: list[dict[str, Any]] = []
                 tool_use_blocks: list[dict[str, Any]] = []

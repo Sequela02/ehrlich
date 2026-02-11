@@ -5,7 +5,10 @@ export type SSEEventType =
   | "finding_recorded"
   | "thinking"
   | "error"
-  | "completed";
+  | "completed"
+  | "director_planning"
+  | "director_decision"
+  | "output_summarized";
 
 export interface SSEEvent {
   event: SSEEventType;
@@ -52,10 +55,30 @@ export interface CompletedData {
     tool_calls: number;
     total_cost_usd: number;
   };
+  candidates: CandidateRow[];
 }
 
 export interface ErrorData {
   error: string;
+  investigation_id: string;
+}
+
+export interface DirectorPlanningData {
+  stage: string;
+  phase: string;
+  investigation_id: string;
+}
+
+export interface DirectorDecisionData {
+  stage: string;
+  decision: Record<string, unknown>;
+  investigation_id: string;
+}
+
+export interface OutputSummarizedData {
+  tool_name: string;
+  original_length: number;
+  summarized_length: number;
   investigation_id: string;
 }
 
@@ -66,6 +89,14 @@ export interface InvestigationRequest {
 export interface InvestigationResponse {
   id: string;
   status: string;
+}
+
+export interface InvestigationSummary {
+  id: string;
+  prompt: string;
+  status: string;
+  created_at: string;
+  candidate_count: number;
 }
 
 export interface Finding {

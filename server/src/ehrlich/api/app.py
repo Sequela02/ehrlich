@@ -7,7 +7,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from ehrlich.api.routes.health import router as health_router
+from ehrlich.api.routes.investigation import init_repository
 from ehrlich.api.routes.investigation import router as investigation_router
+from ehrlich.api.routes.molecule import router as molecule_router
 from ehrlich.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -48,6 +50,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         status = "available" if _check_optional(mod) else "not installed"
         logger.info("  %s: %s", desc, status)
 
+    await init_repository(settings.db_path)
+    logger.info("SQLite repository initialized (path=%s)", settings.db_path)
+
     yield
 
 
@@ -71,5 +76,6 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router, prefix="/api/v1")
     app.include_router(investigation_router, prefix="/api/v1")
+    app.include_router(molecule_router, prefix="/api/v1")
 
     return app

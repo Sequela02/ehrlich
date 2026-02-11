@@ -19,9 +19,6 @@ export default defineConfig({
       },
     },
   },
-  optimizeDeps: {
-    exclude: ["@rdkit/rdkit"],
-  },
   test: {
     environment: "jsdom",
     setupFiles: ["./src/test-setup.ts"],

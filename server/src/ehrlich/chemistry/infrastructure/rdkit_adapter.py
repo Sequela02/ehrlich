@@ -1,5 +1,6 @@
 from rdkit import Chem
 from rdkit.Chem import QED, AllChem, Descriptors, MACCSkeys, rdMolDescriptors
+from rdkit.Chem.Draw import rdMolDraw2D
 from rdkit.Chem.inchi import MolToInchi
 from rdkit.Chem.Scaffolds.MurckoScaffold import GetScaffoldForMol
 from rdkit.DataStructs import TanimotoSimilarity
@@ -103,6 +104,14 @@ class RDKitAdapter:
         if match:
             return (True, tuple(match))
         return (False, ())
+
+    def depict_2d(self, smiles: SMILES, width: int = 300, height: int = 200) -> str:
+        mol = self._to_mol(smiles)
+        AllChem.Compute2DCoords(mol)
+        drawer = rdMolDraw2D.MolDraw2DSVG(width, height)
+        drawer.DrawMolecule(mol)
+        drawer.FinishDrawing()
+        return str(drawer.GetDrawingText())
 
     def murcko_scaffold(self, smiles: SMILES) -> str:
         mol = self._to_mol(smiles)

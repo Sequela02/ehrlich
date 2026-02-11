@@ -30,5 +30,8 @@ class ChemistryService:
     def generate_conformer(self, smiles: SMILES) -> Conformer3D:
         return self._adapter.generate_conformer(smiles)
 
+    def depict_2d(self, smiles: SMILES, width: int = 300, height: int = 200) -> str:
+        return self._adapter.depict_2d(smiles, width, height)
+
     def substructure_match(self, smiles: SMILES, pattern: str) -> tuple[bool, tuple[int, ...]]:
         return self._adapter.substructure_match(smiles, pattern)

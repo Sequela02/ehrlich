@@ -45,7 +45,9 @@ def _tool_use_block(tool_id: str, name: str, tool_input: dict[str, Any]) -> dict
 
 @pytest.fixture
 def mock_client() -> AsyncMock:
-    return AsyncMock()
+    client = AsyncMock()
+    client.model = "claude-opus-4-6"
+    return client
 
 
 @pytest.fixture

@@ -8,6 +8,16 @@ Ehrlich is an AI-powered antimicrobial discovery agent built for the Claude Code
 
 DDD monorepo: `server/` (Python 3.12) + `console/` (React 19 / TypeScript / Bun).
 
+### Multi-Model Architecture (Director-Worker-Summarizer)
+
+```
+Opus 4.6 (Director)     -- Plans phases, reviews results, synthesizes report (NO tools)
+Sonnet 4.5 (Researcher) -- Executes each phase with 19 tools
+Haiku 4.5 (Summarizer)  -- Compresses large tool outputs (>2000 chars)
+```
+
+Falls back to single-model `Orchestrator` when `director_model == researcher_model`.
+
 ### Bounded Contexts
 
 | Context | Location | Purpose |
@@ -18,7 +28,7 @@ DDD monorepo: `server/` (Python 3.12) + `console/` (React 19 / TypeScript / Bun)
 | analysis | `server/src/ehrlich/analysis/` | Dataset exploration, enrichment |
 | prediction | `server/src/ehrlich/prediction/` | ML models (Chemprop, XGBoost) |
 | simulation | `server/src/ehrlich/simulation/` | Docking, ADMET, resistance |
-| investigation | `server/src/ehrlich/investigation/` | Agent orchestration loop |
+| investigation | `server/src/ehrlich/investigation/` | Multi-model agent orchestration + SQLite persistence |
 
 ### Dependency Rules (STRICT)
 
@@ -82,5 +92,42 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 - Repository interfaces are ABCs in `domain/repository.py`
 - Infrastructure adapters implement repository ABCs
 - Tool functions in `tools.py` are the boundary between Claude and application services
-- SSE streaming for real-time investigation updates
+- SSE streaming for real-time investigation updates (10 event types)
 - TanStack Router file-based routing in console
+- `MultiModelOrchestrator` uses Director-Worker-Summarizer pattern (3 Claude tiers)
+- `Orchestrator` is the single-model fallback (used when all models are the same)
+- `SqliteInvestigationRepository` persists investigations to SQLite (WAL mode)
+- `CostTracker` tracks per-model token usage with tiered pricing
+- SSE reconnection with exponential backoff (1s, 2s, 4s, max 3 retries)
+- Molecule visualization: server-side 2D SVG depiction (RDKit `rdMolDraw2D`), 3Dmol.js for 3D/docking views
+- `CandidateTable` shows 2D structure thumbnails with expandable detail panel (3D viewer + properties + Lipinski badge)
+- Molecule API: `/molecule/depict` (SVG, cached 24h), `/molecule/conformer`, `/molecule/descriptors`, `/targets`
+
+## Key Files (Investigation Context)
+
+| File | Purpose |
+|------|---------|
+| `investigation/application/orchestrator.py` | Single-model agentic loop (fallback) |
+| `investigation/application/multi_orchestrator.py` | Director-Worker-Summarizer orchestrator |
+| `investigation/application/cost_tracker.py` | Per-model cost tracking with tiered pricing |
+| `investigation/application/prompts.py` | System prompts for Director, Researcher, Summarizer |
+| `investigation/domain/events.py` | 10 domain events (including Director*, OutputSummarized) |
+| `investigation/domain/repository.py` | InvestigationRepository ABC |
+| `investigation/infrastructure/sqlite_repository.py` | SQLite implementation |
+| `investigation/infrastructure/anthropic_client.py` | Anthropic API adapter with retry |
+| `api/routes/investigation.py` | REST + SSE endpoints, auto-selects orchestrator |
+| `api/routes/molecule.py` | Molecule depiction, conformer, descriptors, targets endpoints |
+| `api/sse.py` | Domain event to SSE conversion (10 types) |
+
+## Key Files (Molecule Visualization)
+
+| File | Purpose |
+|------|---------|
+| `chemistry/infrastructure/rdkit_adapter.py` | RDKit adapter including `depict_2d` (SVG via `rdMolDraw2D`) |
+| `chemistry/application/chemistry_service.py` | Thin wrapper over adapter |
+| `api/routes/molecule.py` | 4 endpoints: depict (SVG), conformer (JSON), descriptors (JSON), targets (JSON) |
+| `console/.../molecule/components/MolViewer2D.tsx` | Server-side SVG via `<img>` tag, lazy loading, error fallback |
+| `console/.../molecule/components/MolViewer3D.tsx` | 3Dmol.js WebGL viewer for conformers |
+| `console/.../molecule/components/DockingViewer.tsx` | 3Dmol.js protein+ligand overlay viewer |
+| `console/.../investigation/components/CandidateDetail.tsx` | Expandable panel: 2D + 3D views + property card + Lipinski badge |
+| `console/.../investigation/components/CandidateTable.tsx` | Thumbnail grid with expand/collapse rows |

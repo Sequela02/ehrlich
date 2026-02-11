@@ -24,13 +24,17 @@ class MessageResponse:
 class AnthropicClientAdapter:
     def __init__(
         self,
-        model: str = "claude-sonnet-4-5-20250929",
+        model: str = "claude-opus-4-6",
         max_tokens: int = 16384,
         api_key: str | None = None,
     ) -> None:
         self._client = anthropic.AsyncAnthropic(api_key=api_key or None)
         self._model = model
         self._max_tokens = max_tokens
+
+    @property
+    def model(self) -> str:
+        return self._model
 
     async def create_message(
         self,

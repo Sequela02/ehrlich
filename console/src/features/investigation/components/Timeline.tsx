@@ -5,6 +5,8 @@ import {
   FlaskConical,
   Microscope,
   Search,
+  Shrink,
+  Sparkles,
   Target,
   Wrench,
   XCircle,
@@ -104,6 +106,51 @@ function TimelineEntry({ event }: { event: SSEEvent }) {
       return (
         <div className="px-3 py-1.5 text-xs leading-relaxed text-foreground/70">
           {truncate(event.data.text as string, 500)}
+        </div>
+      );
+
+    case "director_planning": {
+      const stage = event.data.stage as string;
+      const phase = event.data.phase as string;
+      const label =
+        stage === "planning"
+          ? "Director planning investigation..."
+          : stage === "review"
+            ? `Director reviewing ${phase}...`
+            : "Director synthesizing results...";
+      return (
+        <div className="flex items-center gap-2 rounded-md border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs font-medium text-amber-600 dark:text-amber-400">
+          <Brain className="h-3.5 w-3.5 animate-pulse" />
+          {label}
+        </div>
+      );
+    }
+
+    case "director_decision": {
+      const stage = event.data.stage as string;
+      const decision = event.data.decision as Record<string, unknown>;
+      const summary =
+        stage === "review" && typeof decision.quality_score === "number"
+          ? `Quality: ${(decision.quality_score as number * 100).toFixed(0)}% — ${decision.proceed ? "Proceeding" : "Stopping"}`
+          : stage === "planning"
+            ? `Plan: ${((decision.phases as unknown[]) ?? []).length} phases`
+            : stage === "synthesis"
+              ? `Synthesis: ${((decision.candidates as unknown[]) ?? []).length} candidates`
+              : "Decision received";
+      return (
+        <div className="rounded-md border border-amber-500/20 px-3 py-1.5 text-xs text-amber-600 dark:text-amber-400">
+          <Sparkles className="mr-1.5 inline h-3 w-3" />
+          {summary}
+        </div>
+      );
+    }
+
+    case "output_summarized":
+      return (
+        <div className="flex items-center gap-1.5 px-3 py-1 pl-9 text-[10px] text-muted-foreground/60">
+          <Shrink className="h-3 w-3" />
+          {event.data.tool_name as string}: {event.data.original_length as number} chars
+          {" -> "}{event.data.summarized_length as number} chars
         </div>
       );
 

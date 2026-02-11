@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useRef, useEffect } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, WifiOff } from "lucide-react";
 import {
   Timeline,
   CandidateTable,
   ReportViewer,
   CostBadge,
+  PhaseProgress,
 } from "@/features/investigation/components";
 import { FindingsPanel } from "@/features/investigation/components/FindingsPanel";
 import { useSSE } from "@/features/investigation/hooks/use-sse";
@@ -17,8 +18,19 @@ export const Route = createFileRoute("/investigation/$id")({
 function InvestigationPage() {
   const { id } = Route.useParams();
   const streamUrl = `/api/v1/investigate/${id}/stream`;
-  const { events, connected, completed, currentPhase, findings, summary, cost, error } =
-    useSSE(streamUrl);
+  const {
+    events,
+    connected,
+    reconnecting,
+    completed,
+    currentPhase,
+    completedPhases,
+    findings,
+    candidates,
+    summary,
+    cost,
+    error,
+  } = useSSE(streamUrl);
 
   const timelineEndRef = useRef<HTMLDivElement>(null);
 
@@ -42,9 +54,21 @@ function InvestigationPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <StatusIndicator connected={connected} completed={completed} error={error} />
+          <StatusIndicator
+            connected={connected}
+            reconnecting={reconnecting}
+            completed={completed}
+            error={error}
+          />
           <CostBadge cost={cost} />
         </div>
+      </div>
+
+      <div className="mb-6">
+        <PhaseProgress
+          currentPhase={currentPhase}
+          completedPhases={completedPhases}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -71,7 +95,7 @@ function InvestigationPage() {
 
         <div className="space-y-6">
           <FindingsPanel findings={findings} />
-          <CandidateTable candidates={[]} />
+          <CandidateTable candidates={candidates} />
         </div>
       </div>
     </div>
@@ -80,10 +104,12 @@ function InvestigationPage() {
 
 function StatusIndicator({
   connected,
+  reconnecting,
   completed,
   error,
 }: {
   connected: boolean;
+  reconnecting: boolean;
   completed: boolean;
   error: string | null;
 }) {
@@ -100,6 +126,14 @@ function StatusIndicator({
       <span className="inline-flex items-center gap-1.5 text-xs text-secondary">
         <span className="h-2 w-2 rounded-full bg-secondary" />
         Completed
+      </span>
+    );
+  }
+  if (reconnecting) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-amber-500">
+        <WifiOff className="h-3 w-3 animate-pulse" />
+        Reconnecting...
       </span>
     );
   }

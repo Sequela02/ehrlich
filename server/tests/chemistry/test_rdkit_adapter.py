@@ -121,6 +121,21 @@ class TestGenerateConformer:
         assert conf.energy != 0.0 or conf.energy == 0.0  # energy is computed
 
 
+class TestDepict2D:
+    def test_returns_svg(self, adapter: RDKitAdapter) -> None:
+        svg = adapter.depict_2d(SMILES("CCO"))
+        assert "<svg" in svg
+        assert "</svg>" in svg
+
+    def test_custom_dimensions(self, adapter: RDKitAdapter) -> None:
+        svg = adapter.depict_2d(SMILES("CCO"), width=100, height=80)
+        assert "<svg" in svg
+
+    def test_invalid_smiles_raises(self, adapter: RDKitAdapter) -> None:
+        with pytest.raises(InvalidSMILESError):
+            adapter.depict_2d(SMILES("invalid!!!"))
+
+
 class TestSubstructureMatch:
     def test_benzene_in_aspirin(self, adapter: RDKitAdapter, aspirin_smiles: SMILES) -> None:
         matched, atoms = adapter.substructure_match(aspirin_smiles, "c1ccccc1")

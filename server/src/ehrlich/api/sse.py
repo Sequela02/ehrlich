@@ -4,10 +4,13 @@ from enum import StrEnum
 from typing import Any
 
 from ehrlich.investigation.domain.events import (
+    DirectorDecision,
+    DirectorPlanning,
     DomainEvent,
     FindingRecorded,
     InvestigationCompleted,
     InvestigationError,
+    OutputSummarized,
     PhaseStarted,
     Thinking,
     ToolCalled,
@@ -23,6 +26,9 @@ class SSEEventType(StrEnum):
     THINKING = "thinking"
     ERROR = "error"
     COMPLETED = "completed"
+    DIRECTOR_PLANNING = "director_planning"
+    DIRECTOR_DECISION = "director_decision"
+    OUTPUT_SUMMARIZED = "output_summarized"
 
 
 @dataclass(frozen=True)
@@ -86,6 +92,35 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
                 "candidate_count": event.candidate_count,
                 "summary": event.summary,
                 "cost": event.cost,
+                "candidates": event.candidates,
+            },
+        )
+    if isinstance(event, DirectorPlanning):
+        return SSEEvent(
+            event=SSEEventType.DIRECTOR_PLANNING,
+            data={
+                "stage": event.stage,
+                "phase": event.phase,
+                "investigation_id": event.investigation_id,
+            },
+        )
+    if isinstance(event, DirectorDecision):
+        return SSEEvent(
+            event=SSEEventType.DIRECTOR_DECISION,
+            data={
+                "stage": event.stage,
+                "decision": event.decision,
+                "investigation_id": event.investigation_id,
+            },
+        )
+    if isinstance(event, OutputSummarized):
+        return SSEEvent(
+            event=SSEEventType.OUTPUT_SUMMARIZED,
+            data={
+                "tool_name": event.tool_name,
+                "original_length": event.original_length,
+                "summarized_length": event.summarized_length,
+                "investigation_id": event.investigation_id,
             },
         )
     return None

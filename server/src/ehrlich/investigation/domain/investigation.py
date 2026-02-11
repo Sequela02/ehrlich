@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
@@ -30,6 +31,8 @@ class Investigation:
     summary: str = ""
     iteration: int = 0
     error: str = ""
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    cost_data: dict[str, object] = field(default_factory=dict)
 
     def record_finding(self, finding: Finding) -> None:
         self.findings.append(finding)

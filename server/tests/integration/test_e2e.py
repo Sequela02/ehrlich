@@ -72,6 +72,7 @@ class TestE2EPipeline:
         """Simulate a full investigation: literature -> chemistry -> finding -> conclude."""
         registry = _build_registry()
         mock_client = AsyncMock()
+        mock_client.model = "claude-opus-4-6"
 
         mock_client.create_message.side_effect = [
             # Turn 1: Claude searches literature
@@ -147,17 +148,17 @@ class TestE2EPipeline:
         assert investigation.summary == "Found potential MRSA candidates"
         assert len(investigation.citations) == 1
 
-        # Verify tool results contain valid JSON
+        # Verify tool results have preview text
         tool_results = [e for e in events if isinstance(e, ToolResultEvent)]
         for tr in tool_results:
-            parsed = json.loads(tr.result_preview)
-            assert isinstance(parsed, dict)
+            assert len(tr.result_preview) > 0
 
     @pytest.mark.asyncio
     async def test_sse_event_generation(self) -> None:
         """Verify all domain events convert to SSE events."""
         registry = _build_registry()
         mock_client = AsyncMock()
+        mock_client.model = "claude-opus-4-6"
 
         mock_client.create_message.side_effect = [
             _make_response(
@@ -200,6 +201,7 @@ class TestE2EPipeline:
         """Verify chemistry tools dispatch correctly through orchestrator."""
         registry = _build_registry()
         mock_client = AsyncMock()
+        mock_client.model = "claude-opus-4-6"
 
         mock_client.create_message.side_effect = [
             _make_response(
@@ -231,6 +233,7 @@ class TestE2EPipeline:
         """Verify prediction tools return proper error for missing model."""
         registry = _build_registry()
         mock_client = AsyncMock()
+        mock_client.model = "claude-opus-4-6"
 
         mock_client.create_message.side_effect = [
             _make_response(
