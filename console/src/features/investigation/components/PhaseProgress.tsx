@@ -24,7 +24,7 @@ export function PhaseProgress({
   }
 
   return (
-    <div className="flex items-center">
+    <div className="flex items-center pb-6">
       {PHASES.map((phase, index) => {
         const isActive = phase === currentPhase;
         const isCompleted =
