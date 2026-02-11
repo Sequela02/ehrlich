@@ -161,7 +161,10 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 - **Protein targets**: YAML-configured (`data/targets/*.yaml`) + dynamic RCSB PDB discovery
 - **Resistance data**: YAML-configured (`data/resistance/*.yaml`), extensible per domain
 - 6 control tools: `propose_hypothesis`, `design_experiment`, `evaluate_hypothesis`, `record_finding`, `record_negative_control`, `conclude_investigation`
-- SSE streaming for real-time investigation updates (12 event types)
+- SSE streaming for real-time investigation updates (14 event types)
+- **Phase progress indicator**: `PhaseChanged` event tracks 5 orchestrator phases (Literature Survey → Formulation → Hypothesis Testing → Negative Controls → Synthesis); frontend renders 5-segment progress bar
+- **Streaming cost indicator**: `CostUpdate` event yields cost snapshots after each phase/batch; `CostBadge` updates progressively (not just at completion)
+- **Investigation templates**: 4 pre-built domain-agnostic prompts (MRSA, Alzheimer's, toxicology, oncology) on home page via `TemplateCards`
 - **Event persistence**: all SSE events stored in SQLite `events` table; completed investigations replay full timeline on page reload
 - TanStack Router file-based routing in console
 - `MultiModelOrchestrator`: hypothesis-driven loop with parallel experiment batches (2 hypotheses tested concurrently)
@@ -211,13 +214,13 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 | `investigation/domain/hypothesis.py` | Hypothesis entity + HypothesisStatus enum |
 | `investigation/domain/experiment.py` | Experiment entity + ExperimentStatus enum |
 | `investigation/domain/negative_control.py` | NegativeControl frozen dataclass |
-| `investigation/domain/events.py` | 12 domain events (Hypothesis*, Experiment*, NegativeControl*, Finding, Tool*, Thinking, Completed, Error) |
+| `investigation/domain/events.py` | 14 domain events (Hypothesis*, Experiment*, NegativeControl*, Finding, Tool*, Thinking, PhaseChanged, CostUpdate, Completed, Error) |
 | `investigation/domain/repository.py` | InvestigationRepository ABC (save_event, get_events for audit trail) |
 | `investigation/infrastructure/sqlite_repository.py` | SQLite implementation with hypothesis/experiment/negative_control/event serialization |
 | `investigation/infrastructure/anthropic_client.py` | Anthropic API adapter with retry |
 | `api/routes/investigation.py` | REST + SSE endpoints, 27-tool registry, auto-selects orchestrator |
 | `api/routes/molecule.py` | Molecule depiction, conformer, descriptors, targets endpoints |
-| `api/sse.py` | Domain event to SSE conversion (12 types) |
+| `api/sse.py` | Domain event to SSE conversion (14 types) |
 
 ## Key Files (Data Source Clients)
 
@@ -263,3 +266,10 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 | `console/.../investigation/lib/diagram-builder.ts` | Transforms hypotheses/experiments/findings into React Flow Node[] + Edge[] |
 | `console/.../investigation/components/InvestigationReport.tsx` | Structured 8-section report (research question, summary, hypotheses, methodology, findings, candidates, validation, cost) |
 | `console/.../shared/components/ErrorBoundary.tsx` | Class-based error boundary wrapping LiveLabViewer and InvestigationDiagram |
+
+## Key Files (Phase 1 Additions)
+
+| File | Purpose |
+|------|---------|
+| `console/.../investigation/components/TemplateCards.tsx` | 4 domain-agnostic research prompt templates (MRSA, Alzheimer's, toxicology, oncology) |
+| `console/.../investigation/components/PromptInput.tsx` | Controlled component (value/onChange props), parent owns state |
