@@ -120,7 +120,7 @@ export function LiveLabViewer({ events, completed, experiments, activeExperiment
 }
 
 function addLigandModel(viewer: GLViewer, molblock: string, color?: string): void {
-  viewer.addModel(molblock, "mol");
+  viewer.addModel(molblock, "sdf");
   const scheme = color
     ? { prop: "elem", map: { C: color } }
     : "greenCarbon";
@@ -167,7 +167,7 @@ function applyAction(viewer: GLViewer, action: SceneAction): void {
         position: action.position,
         fontSize: 14,
         fontColor: action.color ?? "#ffffff",
-        backgroundColor: "#00000080",
+        backgroundColor: "#000000",
         backgroundOpacity: 0.7,
       });
       break;
@@ -180,7 +180,7 @@ function applyAction(viewer: GLViewer, action: SceneAction): void {
           position: { x: 0, y: 0, z: 0 },
           fontSize: 12,
           fontColor: color,
-          backgroundColor: "#00000080",
+          backgroundColor: "#000000",
           backgroundOpacity: 0.7,
         });
       }

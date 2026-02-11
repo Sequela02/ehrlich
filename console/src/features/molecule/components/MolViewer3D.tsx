@@ -23,7 +23,7 @@ export function MolViewer3D({ molBlock, width = 400, height = 300 }: MolViewer3D
         backgroundColor: "#1a1e1a",
       });
       viewerRef.current = viewer;
-      viewer.addModel(molBlock, "mol");
+      viewer.addModel(molBlock, "sdf");
       viewer.setStyle({}, { stick: { colorscheme: "Jmol" } });
       viewer.zoomTo();
       viewer.render();

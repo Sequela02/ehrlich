@@ -33,7 +33,7 @@ export function DockingViewer({
       viewer.addModel(proteinPdb, "pdb");
       viewer.setStyle({ model: 0 }, { cartoon: { color: "spectrum" } });
 
-      viewer.addModel(ligandMolBlock, "mol");
+      viewer.addModel(ligandMolBlock, "sdf");
       viewer.setStyle({ model: 1 }, { stick: { colorscheme: "greenCarbon" } });
 
       viewer.zoomTo({ model: 1 });
