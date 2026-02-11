@@ -1,14 +1,15 @@
 export type SSEEventType =
-  | "phase_started"
-  | "phase_completed"
+  | "hypothesis_formulated"
+  | "experiment_started"
+  | "experiment_completed"
+  | "hypothesis_evaluated"
+  | "negative_control"
   | "tool_called"
   | "tool_result"
   | "finding_recorded"
   | "thinking"
   | "error"
   | "completed"
-  | "director_planning"
-  | "director_decision"
   | "output_summarized";
 
 export interface SSEEvent {
@@ -16,8 +17,73 @@ export interface SSEEvent {
   data: Record<string, unknown>;
 }
 
-export interface PhaseStartedData {
-  phase: string;
+export type HypothesisStatus = "proposed" | "testing" | "supported" | "refuted" | "revised";
+export type EvidenceType = "supporting" | "contradicting" | "neutral";
+
+export interface Hypothesis {
+  id: string;
+  statement: string;
+  rationale: string;
+  status: HypothesisStatus;
+  parent_id: string;
+  confidence: number;
+  supporting_evidence: string[];
+  contradicting_evidence: string[];
+}
+
+export interface Experiment {
+  id: string;
+  hypothesis_id: string;
+  description: string;
+  status: string;
+  tool_count?: number;
+  finding_count?: number;
+}
+
+export interface NegativeControl {
+  smiles: string;
+  name: string;
+  prediction_score: number;
+  correctly_classified: boolean;
+  source: string;
+}
+
+export interface HypothesisFormulatedData {
+  hypothesis_id: string;
+  statement: string;
+  rationale: string;
+  parent_id: string;
+  investigation_id: string;
+}
+
+export interface ExperimentStartedData {
+  experiment_id: string;
+  hypothesis_id: string;
+  description: string;
+  investigation_id: string;
+}
+
+export interface ExperimentCompletedData {
+  experiment_id: string;
+  hypothesis_id: string;
+  tool_count: number;
+  finding_count: number;
+  investigation_id: string;
+}
+
+export interface HypothesisEvaluatedData {
+  hypothesis_id: string;
+  status: HypothesisStatus;
+  confidence: number;
+  reasoning: string;
+  investigation_id: string;
+}
+
+export interface NegativeControlData {
+  smiles: string;
+  name: string;
+  prediction_score: number;
+  correctly_classified: boolean;
   investigation_id: string;
 }
 
@@ -36,7 +102,8 @@ export interface ToolResultData {
 export interface FindingRecordedData {
   title: string;
   detail: string;
-  phase: string;
+  hypothesis_id: string;
+  evidence_type: EvidenceType;
   evidence?: string;
   investigation_id: string;
 }
@@ -59,6 +126,8 @@ export interface CompletedData {
   };
   candidates: CandidateRow[];
   findings?: Finding[];
+  hypotheses?: Hypothesis[];
+  negative_controls?: NegativeControl[];
 }
 
 export interface ErrorData {
@@ -66,29 +135,10 @@ export interface ErrorData {
   investigation_id: string;
 }
 
-export interface DirectorPlanningData {
-  stage: string;
-  phase: string;
-  investigation_id: string;
-}
-
-export interface DirectorDecisionData {
-  stage: string;
-  decision: Record<string, unknown>;
-  investigation_id: string;
-}
-
 export interface OutputSummarizedData {
   tool_name: string;
   original_length: number;
   summarized_length: number;
-  investigation_id: string;
-}
-
-export interface PhaseCompletedData {
-  phase: string;
-  tool_count: number;
-  finding_count: number;
   investigation_id: string;
 }
 
@@ -112,7 +162,8 @@ export interface InvestigationSummary {
 export interface Finding {
   title: string;
   detail: string;
-  phase: string;
+  hypothesis_id: string;
+  evidence_type: EvidenceType;
   evidence?: string;
 }
 

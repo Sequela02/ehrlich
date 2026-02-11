@@ -9,8 +9,11 @@ from typing import Any
 import aiosqlite
 
 from ehrlich.investigation.domain.candidate import Candidate
+from ehrlich.investigation.domain.experiment import Experiment, ExperimentStatus
 from ehrlich.investigation.domain.finding import Finding
+from ehrlich.investigation.domain.hypothesis import Hypothesis, HypothesisStatus
 from ehrlich.investigation.domain.investigation import Investigation, InvestigationStatus
+from ehrlich.investigation.domain.negative_control import NegativeControl
 from ehrlich.investigation.domain.repository import InvestigationRepository
 
 logger = logging.getLogger(__name__)
@@ -20,10 +23,13 @@ CREATE TABLE IF NOT EXISTS investigations (
     id TEXT PRIMARY KEY,
     prompt TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending',
-    phases TEXT NOT NULL DEFAULT '[]',
-    current_phase TEXT NOT NULL DEFAULT '',
+    hypotheses TEXT NOT NULL DEFAULT '[]',
+    experiments TEXT NOT NULL DEFAULT '[]',
+    current_hypothesis_id TEXT NOT NULL DEFAULT '',
+    current_experiment_id TEXT NOT NULL DEFAULT '',
     findings TEXT NOT NULL DEFAULT '[]',
     candidates TEXT NOT NULL DEFAULT '[]',
+    negative_controls TEXT NOT NULL DEFAULT '[]',
     citations TEXT NOT NULL DEFAULT '[]',
     summary TEXT NOT NULL DEFAULT '',
     iteration INTEGER NOT NULL DEFAULT 0,
@@ -50,9 +56,11 @@ class SqliteInvestigationRepository(InvestigationRepository):
         async with aiosqlite.connect(self._db_path) as db:
             await db.execute(
                 """INSERT INTO investigations
-                   (id, prompt, status, phases, current_phase, findings, candidates,
+                   (id, prompt, status, hypotheses, experiments,
+                    current_hypothesis_id, current_experiment_id,
+                    findings, candidates, negative_controls,
                     citations, summary, iteration, error, created_at, cost_data)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 _to_row(investigation),
             )
             await db.commit()
@@ -79,15 +87,22 @@ class SqliteInvestigationRepository(InvestigationRepository):
         async with aiosqlite.connect(self._db_path) as db:
             await db.execute(
                 """UPDATE investigations SET
-                   status=?, phases=?, current_phase=?, findings=?, candidates=?,
+                   status=?, hypotheses=?, experiments=?,
+                   current_hypothesis_id=?, current_experiment_id=?,
+                   findings=?, candidates=?, negative_controls=?,
                    citations=?, summary=?, iteration=?, error=?, cost_data=?
                    WHERE id=?""",
                 (
                     investigation.status.value,
-                    json.dumps(investigation.phases),
-                    investigation.current_phase,
+                    json.dumps([_hypothesis_to_dict(h) for h in investigation.hypotheses]),
+                    json.dumps([_experiment_to_dict(e) for e in investigation.experiments]),
+                    investigation.current_hypothesis_id,
+                    investigation.current_experiment_id,
                     json.dumps([_finding_to_dict(f) for f in investigation.findings]),
                     json.dumps([_candidate_to_dict(c) for c in investigation.candidates]),
+                    json.dumps(
+                        [_negative_control_to_dict(nc) for nc in investigation.negative_controls]
+                    ),
                     json.dumps(investigation.citations),
                     investigation.summary,
                     investigation.iteration,
@@ -104,10 +119,13 @@ def _to_row(inv: Investigation) -> tuple[Any, ...]:
         inv.id,
         inv.prompt,
         inv.status.value,
-        json.dumps(inv.phases),
-        inv.current_phase,
+        json.dumps([_hypothesis_to_dict(h) for h in inv.hypotheses]),
+        json.dumps([_experiment_to_dict(e) for e in inv.experiments]),
+        inv.current_hypothesis_id,
+        inv.current_experiment_id,
         json.dumps([_finding_to_dict(f) for f in inv.findings]),
         json.dumps([_candidate_to_dict(c) for c in inv.candidates]),
+        json.dumps([_negative_control_to_dict(nc) for nc in inv.negative_controls]),
         json.dumps(inv.citations),
         inv.summary,
         inv.iteration,
@@ -117,13 +135,49 @@ def _to_row(inv: Investigation) -> tuple[Any, ...]:
     )
 
 
+def _hypothesis_to_dict(h: Hypothesis) -> dict[str, Any]:
+    return {
+        "id": h.id,
+        "statement": h.statement,
+        "rationale": h.rationale,
+        "status": h.status.value,
+        "parent_id": h.parent_id,
+        "confidence": h.confidence,
+        "supporting_evidence": h.supporting_evidence,
+        "contradicting_evidence": h.contradicting_evidence,
+    }
+
+
+def _experiment_to_dict(e: Experiment) -> dict[str, Any]:
+    return {
+        "id": e.id,
+        "hypothesis_id": e.hypothesis_id,
+        "description": e.description,
+        "tool_plan": e.tool_plan,
+        "status": e.status.value,
+        "result_summary": e.result_summary,
+        "supports_hypothesis": e.supports_hypothesis,
+    }
+
+
 def _finding_to_dict(f: Finding) -> dict[str, Any]:
     return {
         "title": f.title,
         "detail": f.detail,
         "evidence": f.evidence,
-        "phase": f.phase,
+        "hypothesis_id": f.hypothesis_id,
+        "evidence_type": f.evidence_type,
         "confidence": f.confidence,
+    }
+
+
+def _negative_control_to_dict(nc: NegativeControl) -> dict[str, Any]:
+    return {
+        "smiles": nc.smiles,
+        "name": nc.name,
+        "prediction_score": nc.prediction_score,
+        "expected_inactive": nc.expected_inactive,
+        "source": nc.source,
     }
 
 
@@ -141,16 +195,58 @@ def _candidate_to_dict(c: Candidate) -> dict[str, Any]:
 
 
 def _from_row(row: Any) -> Investigation:
+    hypotheses_raw = json.loads(row["hypotheses"])
+    hypotheses = [
+        Hypothesis(
+            statement=h["statement"],
+            rationale=h.get("rationale", ""),
+            id=h["id"],
+            status=HypothesisStatus(h.get("status", "proposed")),
+            parent_id=h.get("parent_id", ""),
+            confidence=h.get("confidence", 0.0),
+            supporting_evidence=h.get("supporting_evidence", []),
+            contradicting_evidence=h.get("contradicting_evidence", []),
+        )
+        for h in hypotheses_raw
+    ]
+
+    experiments_raw = json.loads(row["experiments"])
+    experiments = [
+        Experiment(
+            hypothesis_id=e["hypothesis_id"],
+            description=e["description"],
+            id=e["id"],
+            tool_plan=e.get("tool_plan", []),
+            status=ExperimentStatus(e.get("status", "planned")),
+            result_summary=e.get("result_summary", ""),
+            supports_hypothesis=e.get("supports_hypothesis"),
+        )
+        for e in experiments_raw
+    ]
+
     findings_raw = json.loads(row["findings"])
     findings = [
         Finding(
             title=f["title"],
             detail=f["detail"],
             evidence=f.get("evidence", ""),
-            phase=f.get("phase", ""),
+            hypothesis_id=f.get("hypothesis_id", ""),
+            evidence_type=f.get("evidence_type", "neutral"),
             confidence=f.get("confidence", 0.0),
         )
         for f in findings_raw
+    ]
+
+    negative_controls_raw = json.loads(row["negative_controls"])
+    negative_controls = [
+        NegativeControl(
+            smiles=nc["smiles"],
+            name=nc.get("name", ""),
+            prediction_score=nc.get("prediction_score", 0.0),
+            expected_inactive=nc.get("expected_inactive", True),
+            source=nc.get("source", ""),
+        )
+        for nc in negative_controls_raw
     ]
 
     candidates_raw = json.loads(row["candidates"])
@@ -177,10 +273,13 @@ def _from_row(row: Any) -> Investigation:
         id=row["id"],
         prompt=row["prompt"],
         status=InvestigationStatus(row["status"]),
-        phases=json.loads(row["phases"]),
-        current_phase=row["current_phase"],
+        hypotheses=hypotheses,
+        experiments=experiments,
+        current_hypothesis_id=row["current_hypothesis_id"],
+        current_experiment_id=row["current_experiment_id"],
         findings=findings,
         candidates=candidates,
+        negative_controls=negative_controls,
         citations=json.loads(row["citations"]),
         summary=row["summary"],
         iteration=row["iteration"],

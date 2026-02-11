@@ -8,7 +8,10 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ehrlich.investigation.domain.candidate import Candidate
+    from ehrlich.investigation.domain.experiment import Experiment
     from ehrlich.investigation.domain.finding import Finding
+    from ehrlich.investigation.domain.hypothesis import Hypothesis
+    from ehrlich.investigation.domain.negative_control import NegativeControl
 
 
 class InvestigationStatus(StrEnum):
@@ -23,10 +26,13 @@ class Investigation:
     prompt: str
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     status: InvestigationStatus = InvestigationStatus.PENDING
-    phases: list[str] = field(default_factory=list)
-    current_phase: str = ""
+    hypotheses: list[Hypothesis] = field(default_factory=list)
+    experiments: list[Experiment] = field(default_factory=list)
+    current_hypothesis_id: str = ""
+    current_experiment_id: str = ""
     findings: list[Finding] = field(default_factory=list)
     candidates: list[Candidate] = field(default_factory=list)
+    negative_controls: list[NegativeControl] = field(default_factory=list)
     citations: list[str] = field(default_factory=list)
     summary: str = ""
     iteration: int = 0
@@ -41,7 +47,23 @@ class Investigation:
         self.candidates = candidates
         self.citations = citations
 
-    def start_phase(self, phase: str) -> None:
-        self.current_phase = phase
-        if phase not in self.phases:
-            self.phases.append(phase)
+    def add_hypothesis(self, hypothesis: Hypothesis) -> None:
+        self.hypotheses.append(hypothesis)
+
+    def get_hypothesis(self, hypothesis_id: str) -> Hypothesis | None:
+        for h in self.hypotheses:
+            if h.id == hypothesis_id:
+                return h
+        return None
+
+    def add_experiment(self, experiment: Experiment) -> None:
+        self.experiments.append(experiment)
+
+    def get_experiment(self, experiment_id: str) -> Experiment | None:
+        for e in self.experiments:
+            if e.id == experiment_id:
+                return e
+        return None
+
+    def add_negative_control(self, control: NegativeControl) -> None:
+        self.negative_controls.append(control)

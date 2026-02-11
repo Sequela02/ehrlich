@@ -11,8 +11,46 @@ class DomainEvent:
 
 
 @dataclass(frozen=True)
-class PhaseStarted(DomainEvent):
-    phase: str = ""
+class HypothesisFormulated(DomainEvent):
+    hypothesis_id: str = ""
+    statement: str = ""
+    rationale: str = ""
+    parent_id: str = ""
+    investigation_id: str = ""
+
+
+@dataclass(frozen=True)
+class ExperimentStarted(DomainEvent):
+    experiment_id: str = ""
+    hypothesis_id: str = ""
+    description: str = ""
+    investigation_id: str = ""
+
+
+@dataclass(frozen=True)
+class ExperimentCompleted(DomainEvent):
+    experiment_id: str = ""
+    hypothesis_id: str = ""
+    tool_count: int = 0
+    finding_count: int = 0
+    investigation_id: str = ""
+
+
+@dataclass(frozen=True)
+class HypothesisEvaluated(DomainEvent):
+    hypothesis_id: str = ""
+    status: str = ""
+    confidence: float = 0.0
+    reasoning: str = ""
+    investigation_id: str = ""
+
+
+@dataclass(frozen=True)
+class NegativeControlRecorded(DomainEvent):
+    smiles: str = ""
+    name: str = ""
+    prediction_score: float = 0.0
+    correctly_classified: bool = True
     investigation_id: str = ""
 
 
@@ -40,22 +78,9 @@ class Thinking(DomainEvent):
 class FindingRecorded(DomainEvent):
     title: str = ""
     detail: str = ""
-    phase: str = ""
+    hypothesis_id: str = ""
+    evidence_type: str = "neutral"
     evidence: str = ""
-    investigation_id: str = ""
-
-
-@dataclass(frozen=True)
-class DirectorPlanning(DomainEvent):
-    stage: str = ""
-    phase: str = ""
-    investigation_id: str = ""
-
-
-@dataclass(frozen=True)
-class DirectorDecision(DomainEvent):
-    stage: str = ""
-    decision: dict[str, Any] = field(default_factory=dict)
     investigation_id: str = ""
 
 
@@ -68,14 +93,6 @@ class OutputSummarized(DomainEvent):
 
 
 @dataclass(frozen=True)
-class PhaseCompleted(DomainEvent):
-    phase: str = ""
-    tool_count: int = 0
-    finding_count: int = 0
-    investigation_id: str = ""
-
-
-@dataclass(frozen=True)
 class InvestigationCompleted(DomainEvent):
     investigation_id: str = ""
     candidate_count: int = 0
@@ -83,6 +100,8 @@ class InvestigationCompleted(DomainEvent):
     cost: dict[str, Any] = field(default_factory=dict)
     candidates: list[dict[str, Any]] = field(default_factory=list)
     findings: list[dict[str, Any]] = field(default_factory=list)
+    hypotheses: list[dict[str, Any]] = field(default_factory=list)
+    negative_controls: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

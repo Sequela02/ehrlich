@@ -25,6 +25,11 @@ dist/
 *.pkl
 *.joblib
 data/datasets/
+data/models/
+server/data/
+
+# Claude Code
+.claude/
 
 # Environment
 .env

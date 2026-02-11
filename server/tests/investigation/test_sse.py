@@ -1,10 +1,14 @@
 from ehrlich.api.sse import SSEEventType, domain_event_to_sse
 from ehrlich.investigation.domain.events import (
     DomainEvent,
+    ExperimentCompleted,
+    ExperimentStarted,
     FindingRecorded,
+    HypothesisEvaluated,
+    HypothesisFormulated,
     InvestigationCompleted,
     InvestigationError,
-    PhaseStarted,
+    NegativeControlRecorded,
     Thinking,
     ToolCalled,
     ToolResultEvent,
@@ -12,12 +16,69 @@ from ehrlich.investigation.domain.events import (
 
 
 class TestDomainEventToSSE:
-    def test_phase_started(self) -> None:
-        event = PhaseStarted(phase="Literature Review", investigation_id="inv-1")
+    def test_hypothesis_formulated(self) -> None:
+        event = HypothesisFormulated(
+            hypothesis_id="h1",
+            statement="Test hypothesis",
+            rationale="Based on evidence",
+            investigation_id="inv-1",
+        )
         sse = domain_event_to_sse(event)
         assert sse is not None
-        assert sse.event == SSEEventType.PHASE_STARTED
-        assert sse.data["phase"] == "Literature Review"
+        assert sse.event == SSEEventType.HYPOTHESIS_FORMULATED
+        assert sse.data["hypothesis_id"] == "h1"
+        assert sse.data["statement"] == "Test hypothesis"
+
+    def test_experiment_started(self) -> None:
+        event = ExperimentStarted(
+            experiment_id="e1",
+            hypothesis_id="h1",
+            description="Test binding",
+            investigation_id="inv-1",
+        )
+        sse = domain_event_to_sse(event)
+        assert sse is not None
+        assert sse.event == SSEEventType.EXPERIMENT_STARTED
+        assert sse.data["experiment_id"] == "e1"
+
+    def test_experiment_completed(self) -> None:
+        event = ExperimentCompleted(
+            experiment_id="e1",
+            hypothesis_id="h1",
+            tool_count=5,
+            finding_count=2,
+            investigation_id="inv-1",
+        )
+        sse = domain_event_to_sse(event)
+        assert sse is not None
+        assert sse.event == SSEEventType.EXPERIMENT_COMPLETED
+        assert sse.data["tool_count"] == 5
+
+    def test_hypothesis_evaluated(self) -> None:
+        event = HypothesisEvaluated(
+            hypothesis_id="h1",
+            status="supported",
+            confidence=0.85,
+            reasoning="Strong evidence",
+            investigation_id="inv-1",
+        )
+        sse = domain_event_to_sse(event)
+        assert sse is not None
+        assert sse.event == SSEEventType.HYPOTHESIS_EVALUATED
+        assert sse.data["confidence"] == 0.85
+
+    def test_negative_control(self) -> None:
+        event = NegativeControlRecorded(
+            smiles="CCO",
+            name="Ethanol",
+            prediction_score=0.1,
+            correctly_classified=True,
+            investigation_id="inv-1",
+        )
+        sse = domain_event_to_sse(event)
+        assert sse is not None
+        assert sse.event == SSEEventType.NEGATIVE_CONTROL
+        assert sse.data["correctly_classified"] is True
 
     def test_tool_called(self) -> None:
         event = ToolCalled(
@@ -44,13 +105,16 @@ class TestDomainEventToSSE:
         event = FindingRecorded(
             title="Key insight",
             detail="Important detail",
-            phase="Data Exploration",
+            hypothesis_id="h1",
+            evidence_type="supporting",
             investigation_id="inv-1",
         )
         sse = domain_event_to_sse(event)
         assert sse is not None
         assert sse.event == SSEEventType.FINDING_RECORDED
         assert sse.data["title"] == "Key insight"
+        assert sse.data["hypothesis_id"] == "h1"
+        assert sse.data["evidence_type"] == "supporting"
 
     def test_thinking(self) -> None:
         event = Thinking(text="Let me analyze this...", investigation_id="inv-1")
@@ -71,12 +135,16 @@ class TestDomainEventToSSE:
             candidate_count=3,
             summary="Found candidates",
             cost={"total_cost_usd": 0.05},
+            hypotheses=[{"id": "h1", "status": "supported"}],
+            negative_controls=[{"name": "Ethanol", "correctly_classified": True}],
         )
         sse = domain_event_to_sse(event)
         assert sse is not None
         assert sse.event == SSEEventType.COMPLETED
         assert sse.data["candidate_count"] == 3
         assert sse.data["cost"]["total_cost_usd"] == 0.05
+        assert len(sse.data["hypotheses"]) == 1
+        assert len(sse.data["negative_controls"]) == 1
 
     def test_unknown_event_returns_none(self) -> None:
         event = DomainEvent()
@@ -84,12 +152,16 @@ class TestDomainEventToSSE:
         assert sse is None
 
     def test_sse_format_is_json(self) -> None:
-        event = PhaseStarted(phase="Test", investigation_id="inv-1")
+        event = HypothesisFormulated(
+            hypothesis_id="h1",
+            statement="Test",
+            investigation_id="inv-1",
+        )
         sse = domain_event_to_sse(event)
         assert sse is not None
         formatted = sse.format()
         import json
 
         parsed = json.loads(formatted)
-        assert parsed["event"] == "phase_started"
-        assert parsed["data"]["phase"] == "Test"
+        assert parsed["event"] == "hypothesis_formulated"
+        assert parsed["data"]["hypothesis_id"] == "h1"

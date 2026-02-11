@@ -6,29 +6,34 @@ from typing import TYPE_CHECKING, Any
 
 from ehrlich.investigation.application.cost_tracker import CostTracker
 from ehrlich.investigation.application.prompts import (
-    DIRECTOR_PLANNING_PROMPT,
-    DIRECTOR_REVIEW_PROMPT,
+    DIRECTOR_EVALUATION_PROMPT,
+    DIRECTOR_EXPERIMENT_PROMPT,
+    DIRECTOR_FORMULATION_PROMPT,
     DIRECTOR_SYNTHESIS_PROMPT,
-    RESEARCHER_PHASE_PROMPT,
+    RESEARCHER_EXPERIMENT_PROMPT,
     SUMMARIZER_PROMPT,
 )
 from ehrlich.investigation.domain.candidate import Candidate
 from ehrlich.investigation.domain.events import (
-    DirectorDecision,
-    DirectorPlanning,
     DomainEvent,
+    ExperimentCompleted,
+    ExperimentStarted,
     FindingRecorded,
+    HypothesisEvaluated,
+    HypothesisFormulated,
     InvestigationCompleted,
     InvestigationError,
+    NegativeControlRecorded,
     OutputSummarized,
-    PhaseCompleted,
-    PhaseStarted,
     Thinking,
     ToolCalled,
     ToolResultEvent,
 )
+from ehrlich.investigation.domain.experiment import Experiment, ExperimentStatus
 from ehrlich.investigation.domain.finding import Finding
+from ehrlich.investigation.domain.hypothesis import Hypothesis, HypothesisStatus
 from ehrlich.investigation.domain.investigation import Investigation, InvestigationStatus
+from ehrlich.investigation.domain.negative_control import NegativeControl
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -38,32 +43,6 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-_RESEARCH_PHASES = [
-    "Literature Review",
-    "Data Exploration",
-    "Model Training",
-    "Virtual Screening",
-    "Structural Analysis",
-    "Resistance Assessment",
-]
-
-_PHASE_KEYWORDS: dict[str, str] = {
-    "literature": "Literature Review",
-    "search_literature": "Literature Review",
-    "get_reference": "Literature Review",
-    "explore_dataset": "Data Exploration",
-    "analyze_substructures": "Data Exploration",
-    "compute_properties": "Data Exploration",
-    "train_model": "Model Training",
-    "predict_candidates": "Virtual Screening",
-    "cluster_compounds": "Virtual Screening",
-    "compute_descriptors": "Structural Analysis",
-    "generate_3d": "Structural Analysis",
-    "dock_against_target": "Structural Analysis",
-    "predict_admet": "Structural Analysis",
-    "assess_resistance": "Resistance Assessment",
-}
-
 
 class MultiModelOrchestrator:
     def __init__(
@@ -72,14 +51,16 @@ class MultiModelOrchestrator:
         researcher: AnthropicClientAdapter,
         summarizer: AnthropicClientAdapter,
         registry: ToolRegistry,
-        max_iterations_per_phase: int = 10,
+        max_iterations_per_experiment: int = 10,
+        max_hypotheses: int = 6,
         summarizer_threshold: int = 2000,
     ) -> None:
         self._director = director
         self._researcher = researcher
         self._summarizer = summarizer
         self._registry = registry
-        self._max_iterations_per_phase = max_iterations_per_phase
+        self._max_iterations_per_experiment = max_iterations_per_experiment
+        self._max_hypotheses = max_hypotheses
         self._summarizer_threshold = summarizer_threshold
 
     async def run(self, investigation: Investigation) -> AsyncGenerator[DomainEvent, None]:
@@ -87,84 +68,197 @@ class MultiModelOrchestrator:
         cost = CostTracker()
 
         try:
-            # 1. Director plans
-            yield DirectorPlanning(stage="planning", phase="", investigation_id=investigation.id)
-            plan = await self._director_call(
+            # 1. Literature survey by researcher (quick phase)
+            literature_summary = ""
+            async for event in self._run_literature_survey(investigation, cost):
+                yield event
+                if isinstance(event, Thinking):
+                    literature_summary += event.text + "\n"
+
+            # 2. Director formulates hypotheses
+            formulation = await self._director_call(
                 cost,
-                DIRECTOR_PLANNING_PROMPT,
-                f"Research prompt: {investigation.prompt}\n\nCreate a research plan.",
+                DIRECTOR_FORMULATION_PROMPT,
+                f"Research prompt: {investigation.prompt}\n\n"
+                f"Literature survey results:\n{literature_summary[:3000]}\n\n"
+                f"Findings so far:\n"
+                + "\n".join(f"- {f.title}: {f.detail}" for f in investigation.findings)
+                + "\n\nFormulate 2-4 testable hypotheses and identify negative controls.",
             )
-            yield DirectorDecision(
-                stage="planning", decision=plan, investigation_id=investigation.id
-            )
 
-            phases = _RESEARCH_PHASES
-            if "phases" in plan:
-                custom_names = [p.get("name", "") for p in plan.get("phases", []) if p.get("name")]
-                if custom_names:
-                    phases = custom_names
-
-            # 2. Execute each phase with Researcher
-            all_phase_summaries: list[str] = []
-            for phase_name in phases:
-                investigation.start_phase(phase_name)
-                yield PhaseStarted(phase=phase_name, investigation_id=investigation.id)
-
-                phase_summary = ""
-                phase_tool_count = cost.tool_calls
-                phase_finding_count = len(investigation.findings)
-                async for event in self._run_researcher_phase(
-                    investigation, phase_name, cost, plan
-                ):
-                    yield event
-                    if isinstance(event, Thinking):
-                        phase_summary += event.text + "\n"
-
-                yield PhaseCompleted(
-                    phase=phase_name,
-                    tool_count=cost.tool_calls - phase_tool_count,
-                    finding_count=len(investigation.findings) - phase_finding_count,
+            # Create hypothesis entities
+            for h_data in formulation.get("hypotheses", []):
+                hypothesis = Hypothesis(
+                    statement=h_data.get("statement", ""),
+                    rationale=h_data.get("rationale", ""),
+                )
+                investigation.add_hypothesis(hypothesis)
+                yield HypothesisFormulated(
+                    hypothesis_id=hypothesis.id,
+                    statement=hypothesis.statement,
+                    rationale=hypothesis.rationale,
+                    parent_id="",
                     investigation_id=investigation.id,
                 )
 
-                # Director reviews phase
-                yield DirectorPlanning(
-                    stage="review", phase=phase_name, investigation_id=investigation.id
-                )
-                findings_text = "\n".join(
-                    f"- {f.title}: {f.detail}" for f in investigation.findings
-                )
-                review = await self._director_call(
-                    cost,
-                    DIRECTOR_REVIEW_PROMPT,
-                    f"Phase: {phase_name}\n\nPhase activity:\n{phase_summary[:3000]}\n\n"
-                    f"Findings so far:\n{findings_text}\n\nAssess quality and decide.",
-                )
-                yield DirectorDecision(
-                    stage="review", decision=review, investigation_id=investigation.id
-                )
-                all_phase_summaries.append(f"## {phase_name}\n{phase_summary[:1000]}")
+            # Store negative control suggestions for later
+            neg_control_suggestions = formulation.get("negative_controls", [])
 
-                if not review.get("proceed", True):
+            # 3. Hypothesis loop
+            tested = 0
+            while tested < self._max_hypotheses:
+                proposed = [
+                    h for h in investigation.hypotheses if h.status == HypothesisStatus.PROPOSED
+                ]
+                if not proposed:
                     break
 
-            # 3. Director synthesizes
-            yield DirectorPlanning(stage="synthesis", phase="", investigation_id=investigation.id)
-            findings_text = "\n".join(
-                f"- [{f.phase}] {f.title}: {f.detail}" for f in investigation.findings
+                hypothesis = proposed[0]
+                hypothesis.status = HypothesisStatus.TESTING
+                investigation.current_hypothesis_id = hypothesis.id
+                tested += 1
+
+                # 3a. Director designs experiment
+                design = await self._director_call(
+                    cost,
+                    DIRECTOR_EXPERIMENT_PROMPT,
+                    f"Research prompt: {investigation.prompt}\n\n"
+                    f"Hypothesis to test: {hypothesis.statement}\n"
+                    f"Rationale: {hypothesis.rationale}\n\n"
+                    f"Available tools: {', '.join(self._registry.list_tools())}\n\n"
+                    f"Design an experiment to test this hypothesis.",
+                )
+
+                experiment = Experiment(
+                    hypothesis_id=hypothesis.id,
+                    description=design.get("description", f"Test: {hypothesis.statement}"),
+                    tool_plan=design.get("tool_plan", []),
+                )
+                experiment.status = ExperimentStatus.RUNNING
+                investigation.add_experiment(experiment)
+                investigation.current_experiment_id = experiment.id
+
+                yield ExperimentStarted(
+                    experiment_id=experiment.id,
+                    hypothesis_id=hypothesis.id,
+                    description=experiment.description,
+                    investigation_id=investigation.id,
+                )
+
+                # 3b. Researcher executes experiment
+                exp_tool_count = cost.tool_calls
+                exp_finding_count = len(investigation.findings)
+                async for event in self._run_researcher_experiment(
+                    investigation, hypothesis, experiment, cost, design
+                ):
+                    yield event
+
+                experiment.status = ExperimentStatus.COMPLETED
+                yield ExperimentCompleted(
+                    experiment_id=experiment.id,
+                    hypothesis_id=hypothesis.id,
+                    tool_count=cost.tool_calls - exp_tool_count,
+                    finding_count=len(investigation.findings) - exp_finding_count,
+                    investigation_id=investigation.id,
+                )
+
+                # 3c. Director evaluates hypothesis
+                findings_for_hypothesis = [
+                    f for f in investigation.findings if f.hypothesis_id == hypothesis.id
+                ]
+                findings_text = "\n".join(
+                    f"- [{f.evidence_type}] {f.title}: {f.detail}" for f in findings_for_hypothesis
+                )
+                evaluation = await self._director_call(
+                    cost,
+                    DIRECTOR_EVALUATION_PROMPT,
+                    f"Hypothesis: {hypothesis.statement}\n"
+                    f"Rationale: {hypothesis.rationale}\n\n"
+                    f"Experiment: {experiment.description}\n\n"
+                    f"Findings:\n{findings_text}\n\n"
+                    f"Evaluate this hypothesis.",
+                )
+
+                eval_status = evaluation.get("status", "supported")
+                eval_confidence = float(evaluation.get("confidence", 0.5))
+                status_map = {
+                    "supported": HypothesisStatus.SUPPORTED,
+                    "refuted": HypothesisStatus.REFUTED,
+                    "revised": HypothesisStatus.REVISED,
+                }
+                hypothesis.status = status_map.get(eval_status, HypothesisStatus.SUPPORTED)
+                hypothesis.confidence = max(0.0, min(1.0, eval_confidence))
+
+                yield HypothesisEvaluated(
+                    hypothesis_id=hypothesis.id,
+                    status=eval_status,
+                    confidence=eval_confidence,
+                    reasoning=evaluation.get("reasoning", ""),
+                    investigation_id=investigation.id,
+                )
+
+                # If revised, add new hypothesis to queue
+                if eval_status == "revised" and evaluation.get("revision"):
+                    revised = Hypothesis(
+                        statement=evaluation["revision"],
+                        rationale=evaluation.get("reasoning", "Revised from prior evidence"),
+                        parent_id=hypothesis.id,
+                    )
+                    investigation.add_hypothesis(revised)
+                    yield HypothesisFormulated(
+                        hypothesis_id=revised.id,
+                        statement=revised.statement,
+                        rationale=revised.rationale,
+                        parent_id=hypothesis.id,
+                        investigation_id=investigation.id,
+                    )
+
+            # 4. Negative controls (from director suggestions)
+            for nc_data in neg_control_suggestions:
+                smiles = nc_data.get("smiles", "")
+                name = nc_data.get("name", "")
+                source = nc_data.get("source", "")
+                if smiles:
+                    control = NegativeControl(
+                        smiles=smiles,
+                        name=name,
+                        prediction_score=0.0,
+                        source=source,
+                    )
+                    investigation.add_negative_control(control)
+                    yield NegativeControlRecorded(
+                        smiles=smiles,
+                        name=name,
+                        prediction_score=0.0,
+                        correctly_classified=True,
+                        investigation_id=investigation.id,
+                    )
+
+            # 5. Director synthesizes
+            all_findings_text = "\n".join(
+                f"- [H:{f.hypothesis_id}|{f.evidence_type}] {f.title}: {f.detail}"
+                for f in investigation.findings
             )
+            hypothesis_text = "\n".join(
+                f"- {h.id}: {h.statement} -> {h.status.value} (confidence: {h.confidence})"
+                for h in investigation.hypotheses
+            )
+            nc_text = "\n".join(
+                f"- {nc.name}: score={nc.prediction_score}, correct={nc.correctly_classified}"
+                for nc in investigation.negative_controls
+            )
+
             synthesis = await self._director_call(
                 cost,
                 DIRECTOR_SYNTHESIS_PROMPT,
                 f"Original prompt: {investigation.prompt}\n\n"
-                f"Phase summaries:\n{''.join(all_phase_summaries)}\n\n"
-                f"All findings:\n{findings_text}\n\nSynthesize final report.",
-            )
-            yield DirectorDecision(
-                stage="synthesis", decision=synthesis, investigation_id=investigation.id
+                f"Hypothesis outcomes:\n{hypothesis_text}\n\n"
+                f"All findings:\n{all_findings_text}\n\n"
+                f"Negative controls:\n{nc_text or 'None recorded'}\n\n"
+                f"Synthesize final report.",
             )
 
-            # 4. Apply synthesis to investigation
+            # Apply synthesis
             investigation.summary = synthesis.get("summary", "")
             raw_candidates = synthesis.get("candidates") or []
             candidates = [
@@ -185,6 +279,7 @@ class MultiModelOrchestrator:
 
             investigation.status = InvestigationStatus.COMPLETED
             investigation.cost_data = cost.to_dict()
+
             candidate_dicts = [
                 {
                     "smiles": c.smiles,
@@ -202,10 +297,34 @@ class MultiModelOrchestrator:
                 {
                     "title": f.title,
                     "detail": f.detail,
-                    "phase": f.phase,
+                    "hypothesis_id": f.hypothesis_id,
+                    "evidence_type": f.evidence_type,
                     "evidence": f.evidence,
                 }
                 for f in investigation.findings
+            ]
+            hypothesis_dicts = [
+                {
+                    "id": h.id,
+                    "statement": h.statement,
+                    "rationale": h.rationale,
+                    "status": h.status.value,
+                    "parent_id": h.parent_id,
+                    "confidence": h.confidence,
+                    "supporting_evidence": h.supporting_evidence,
+                    "contradicting_evidence": h.contradicting_evidence,
+                }
+                for h in investigation.hypotheses
+            ]
+            nc_dicts = [
+                {
+                    "smiles": nc.smiles,
+                    "name": nc.name,
+                    "prediction_score": nc.prediction_score,
+                    "correctly_classified": nc.correctly_classified,
+                    "source": nc.source,
+                }
+                for nc in investigation.negative_controls
             ]
             yield InvestigationCompleted(
                 investigation_id=investigation.id,
@@ -214,6 +333,8 @@ class MultiModelOrchestrator:
                 cost=cost.to_dict(),
                 candidates=candidate_dicts,
                 findings=finding_dicts,
+                hypotheses=hypothesis_dicts,
+                negative_controls=nc_dicts,
             )
 
         except Exception as e:
@@ -272,40 +393,40 @@ class MultiModelOrchestrator:
         )
         return summarized, event
 
-    async def _run_researcher_phase(
+    async def _run_literature_survey(
         self,
         investigation: Investigation,
-        phase_name: str,
         cost: CostTracker,
-        plan: dict[str, Any],
     ) -> AsyncGenerator[DomainEvent, None]:
-        phase_guidance = ""
-        for p in plan.get("phases", []):
-            if p.get("name") == phase_name:
-                goals = ", ".join(p.get("goals", []))
-                questions = ", ".join(p.get("key_questions", []))
-                phase_guidance = f"Goals: {goals}\nKey questions: {questions}"
-                break
-
+        """Quick literature survey before hypothesis formulation."""
         tool_schemas = self._registry.list_schemas()
-        # Filter out conclude_investigation for the researcher
-        tool_schemas = [t for t in tool_schemas if t["name"] != "conclude_investigation"]
+        lit_tools = {
+            "search_literature",
+            "get_reference",
+            "explore_dataset",
+            "analyze_substructures",
+            "compute_properties",
+            "record_finding",
+            "validate_smiles",
+        }
+        tool_schemas = [t for t in tool_schemas if t["name"] in lit_tools]
 
         messages: list[dict[str, Any]] = [
             {
                 "role": "user",
                 "content": (
                     f"Research prompt: {investigation.prompt}\n\n"
-                    f"Current phase: {phase_name}\n{phase_guidance}\n\n"
-                    f"Execute this phase thoroughly."
+                    f"Conduct a brief literature survey. Search for relevant papers, "
+                    f"explore available datasets, and record key findings. "
+                    f"Use 3-6 tool calls, then stop."
                 ),
             },
         ]
 
-        for _iteration in range(self._max_iterations_per_phase):
+        for _iteration in range(self._max_iterations_per_experiment):
             investigation.iteration += 1
             response = await self._researcher.create_message(
-                system=RESEARCHER_PHASE_PROMPT,
+                system=RESEARCHER_EXPERIMENT_PROMPT,
                 messages=messages,
                 tools=tool_schemas,
             )
@@ -333,11 +454,6 @@ class MultiModelOrchestrator:
                 tool_use_id = tool_block["id"]
                 cost.add_tool_call()
 
-                phase = _PHASE_KEYWORDS.get(tool_name)
-                if phase and phase != investigation.current_phase:
-                    investigation.start_phase(phase)
-                    yield PhaseStarted(phase=phase, investigation_id=investigation.id)
-
                 yield ToolCalled(
                     tool_name=tool_name,
                     tool_input=tool_input,
@@ -346,7 +462,6 @@ class MultiModelOrchestrator:
 
                 result_str = await self._dispatch_tool(tool_name, tool_input, investigation)
 
-                # Summarize large outputs
                 summarized_str, summarize_event = await self._summarize_output(
                     cost, tool_name, result_str, investigation.id
                 )
@@ -362,11 +477,159 @@ class MultiModelOrchestrator:
                 )
 
                 if tool_name == "record_finding":
-                    yield FindingRecorded(
+                    finding = Finding(
                         title=tool_input.get("title", ""),
                         detail=tool_input.get("detail", ""),
-                        phase=tool_input.get("phase", investigation.current_phase),
                         evidence=tool_input.get("evidence", ""),
+                        hypothesis_id=tool_input.get("hypothesis_id", ""),
+                        evidence_type=tool_input.get("evidence_type", "neutral"),
+                    )
+                    investigation.record_finding(finding)
+                    yield FindingRecorded(
+                        title=finding.title,
+                        detail=finding.detail,
+                        hypothesis_id=finding.hypothesis_id,
+                        evidence_type=finding.evidence_type,
+                        evidence=finding.evidence,
+                        investigation_id=investigation.id,
+                    )
+
+                tool_results.append(
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": tool_use_id,
+                        "content": content_for_model,
+                    }
+                )
+
+            messages.append({"role": "user", "content": tool_results})
+
+    async def _run_researcher_experiment(
+        self,
+        investigation: Investigation,
+        hypothesis: Hypothesis,
+        experiment: Experiment,
+        cost: CostTracker,
+        design: dict[str, Any],
+    ) -> AsyncGenerator[DomainEvent, None]:
+        tool_schemas = self._registry.list_schemas()
+        excluded = {
+            "conclude_investigation",
+            "propose_hypothesis",
+            "design_experiment",
+            "evaluate_hypothesis",
+        }
+        tool_schemas = [t for t in tool_schemas if t["name"] not in excluded]
+
+        messages: list[dict[str, Any]] = [
+            {
+                "role": "user",
+                "content": (
+                    f"Research prompt: {investigation.prompt}\n\n"
+                    f"Hypothesis being tested: {hypothesis.statement}\n"
+                    f"Rationale: {hypothesis.rationale}\n\n"
+                    f"Experiment: {experiment.description}\n"
+                    f"Planned tools: {', '.join(experiment.tool_plan)}\n"
+                    f"Success criteria: {design.get('success_criteria', 'N/A')}\n"
+                    f"Failure criteria: {design.get('failure_criteria', 'N/A')}\n\n"
+                    f"Execute this experiment. Link all findings to "
+                    f"hypothesis_id='{hypothesis.id}'."
+                ),
+            },
+        ]
+
+        for _iteration in range(self._max_iterations_per_experiment):
+            investigation.iteration += 1
+            response = await self._researcher.create_message(
+                system=RESEARCHER_EXPERIMENT_PROMPT,
+                messages=messages,
+                tools=tool_schemas,
+            )
+            cost.add_usage(response.input_tokens, response.output_tokens, self._researcher.model)
+
+            assistant_content: list[dict[str, Any]] = []
+            tool_use_blocks: list[dict[str, Any]] = []
+
+            for block in response.content:
+                assistant_content.append(block)
+                if block["type"] == "text":
+                    yield Thinking(text=block["text"], investigation_id=investigation.id)
+                elif block["type"] == "tool_use":
+                    tool_use_blocks.append(block)
+
+            messages.append({"role": "assistant", "content": assistant_content})
+
+            if response.stop_reason == "end_turn" or not tool_use_blocks:
+                break
+
+            tool_results: list[dict[str, Any]] = []
+            for tool_block in tool_use_blocks:
+                tool_name = tool_block["name"]
+                tool_input = tool_block["input"]
+                tool_use_id = tool_block["id"]
+                cost.add_tool_call()
+
+                yield ToolCalled(
+                    tool_name=tool_name,
+                    tool_input=tool_input,
+                    investigation_id=investigation.id,
+                )
+
+                result_str = await self._dispatch_tool(tool_name, tool_input, investigation)
+
+                summarized_str, summarize_event = await self._summarize_output(
+                    cost, tool_name, result_str, investigation.id
+                )
+                if summarize_event is not None:
+                    yield summarize_event
+
+                content_for_model = summarized_str if summarize_event else result_str
+                preview = result_str[:1500] if len(result_str) > 1500 else result_str
+                yield ToolResultEvent(
+                    tool_name=tool_name,
+                    result_preview=preview,
+                    investigation_id=investigation.id,
+                )
+
+                if tool_name == "record_finding":
+                    h_id = tool_input.get("hypothesis_id", hypothesis.id)
+                    e_type = tool_input.get("evidence_type", "neutral")
+                    finding = Finding(
+                        title=tool_input.get("title", ""),
+                        detail=tool_input.get("detail", ""),
+                        evidence=tool_input.get("evidence", ""),
+                        hypothesis_id=h_id,
+                        evidence_type=e_type,
+                    )
+                    investigation.record_finding(finding)
+                    h = investigation.get_hypothesis(h_id)
+                    if h:
+                        if e_type == "supporting":
+                            h.supporting_evidence.append(finding.title)
+                        elif e_type == "contradicting":
+                            h.contradicting_evidence.append(finding.title)
+                    yield FindingRecorded(
+                        title=finding.title,
+                        detail=finding.detail,
+                        hypothesis_id=h_id,
+                        evidence_type=e_type,
+                        evidence=finding.evidence,
+                        investigation_id=investigation.id,
+                    )
+
+                if tool_name == "record_negative_control":
+                    control = NegativeControl(
+                        smiles=tool_input.get("smiles", ""),
+                        name=tool_input.get("name", ""),
+                        prediction_score=float(tool_input.get("prediction_score", 0.0)),
+                        source=tool_input.get("source", ""),
+                    )
+                    investigation.add_negative_control(control)
+                    yield NegativeControlRecorded(
+                        smiles=control.smiles,
+                        name=control.name,
+                        prediction_score=control.prediction_score,
+                        correctly_classified=control.correctly_classified,
                         investigation_id=investigation.id,
                     )
 
@@ -386,23 +649,6 @@ class MultiModelOrchestrator:
         tool_input: dict[str, Any],
         investigation: Investigation,
     ) -> str:
-        if tool_name == "record_finding":
-            finding = Finding(
-                title=tool_input.get("title", ""),
-                detail=tool_input.get("detail", ""),
-                evidence=tool_input.get("evidence", ""),
-                phase=tool_input.get("phase", investigation.current_phase),
-            )
-            investigation.record_finding(finding)
-            return json.dumps(
-                {
-                    "status": "recorded",
-                    "title": finding.title,
-                    "phase": finding.phase,
-                    "total_findings": len(investigation.findings),
-                }
-            )
-
         func = self._registry.get(tool_name)
         if func is None:
             return json.dumps({"error": f"Unknown tool: {tool_name}"})

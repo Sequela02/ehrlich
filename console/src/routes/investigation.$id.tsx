@@ -6,9 +6,10 @@ import {
   CandidateTable,
   ReportViewer,
   CostBadge,
-  PhaseProgress,
-  ActivePhaseCard,
+  HypothesisBoard,
+  ActiveExperimentCard,
   CompletionSummaryCard,
+  NegativeControlPanel,
 } from "@/features/investigation/components";
 import { FindingsPanel } from "@/features/investigation/components/FindingsPanel";
 import { useSSE } from "@/features/investigation/hooks/use-sse";
@@ -25,16 +26,19 @@ function InvestigationPage() {
     connected,
     reconnecting,
     completed,
-    currentPhase,
-    completedPhases,
+    hypotheses,
+    currentHypothesisId,
+    currentExperimentId,
+    experiments,
+    negativeControls,
     findings,
     candidates,
     summary,
     cost,
     error,
     activeToolName,
-    phaseToolCount,
-    phaseFindingCount,
+    experimentToolCount,
+    experimentFindingCount,
   } = useSSE(streamUrl);
 
   const timelineEndRef = useRef<HTMLDivElement>(null);
@@ -42,6 +46,9 @@ function InvestigationPage() {
   useEffect(() => {
     timelineEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [events.length]);
+
+  const currentExperiment = experiments.find((e) => e.id === currentExperimentId);
+  const linkedHypothesis = hypotheses.find((h) => h.id === currentHypothesisId);
 
   return (
     <div className="mx-auto max-w-6xl p-6">
@@ -70,9 +77,9 @@ function InvestigationPage() {
       </div>
 
       <div className="mb-6">
-        <PhaseProgress
-          currentPhase={currentPhase}
-          completedPhases={completedPhases}
+        <HypothesisBoard
+          hypotheses={hypotheses}
+          currentHypothesisId={currentHypothesisId}
         />
       </div>
 
@@ -81,14 +88,17 @@ function InvestigationPage() {
           <CompletionSummaryCard
             candidateCount={candidates.length}
             findingCount={findings.length}
+            hypothesisCount={hypotheses.length}
           />
         ) : (
-          <ActivePhaseCard
-            currentPhase={currentPhase}
+          <ActiveExperimentCard
             completed={completed}
+            currentExperimentId={currentExperimentId}
+            experimentDescription={currentExperiment?.description}
+            linkedHypothesis={linkedHypothesis}
             activeToolName={activeToolName}
-            phaseToolCount={phaseToolCount}
-            phaseFindingCount={phaseFindingCount}
+            experimentToolCount={experimentToolCount}
+            experimentFindingCount={experimentFindingCount}
           />
         )}
       </div>
@@ -107,6 +117,12 @@ function InvestigationPage() {
         <section>
           <FindingsPanel findings={findings} />
         </section>
+
+        {negativeControls.length > 0 && (
+          <section>
+            <NegativeControlPanel controls={negativeControls} />
+          </section>
+        )}
 
         {candidates.length > 0 && (
           <section>

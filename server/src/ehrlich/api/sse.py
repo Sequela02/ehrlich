@@ -4,15 +4,16 @@ from enum import StrEnum
 from typing import Any
 
 from ehrlich.investigation.domain.events import (
-    DirectorDecision,
-    DirectorPlanning,
     DomainEvent,
+    ExperimentCompleted,
+    ExperimentStarted,
     FindingRecorded,
+    HypothesisEvaluated,
+    HypothesisFormulated,
     InvestigationCompleted,
     InvestigationError,
+    NegativeControlRecorded,
     OutputSummarized,
-    PhaseCompleted,
-    PhaseStarted,
     Thinking,
     ToolCalled,
     ToolResultEvent,
@@ -20,17 +21,18 @@ from ehrlich.investigation.domain.events import (
 
 
 class SSEEventType(StrEnum):
-    PHASE_STARTED = "phase_started"
+    HYPOTHESIS_FORMULATED = "hypothesis_formulated"
+    EXPERIMENT_STARTED = "experiment_started"
+    EXPERIMENT_COMPLETED = "experiment_completed"
+    HYPOTHESIS_EVALUATED = "hypothesis_evaluated"
+    NEGATIVE_CONTROL = "negative_control"
     TOOL_CALLED = "tool_called"
     TOOL_RESULT = "tool_result"
     FINDING_RECORDED = "finding_recorded"
     THINKING = "thinking"
     ERROR = "error"
     COMPLETED = "completed"
-    DIRECTOR_PLANNING = "director_planning"
-    DIRECTOR_DECISION = "director_decision"
     OUTPUT_SUMMARIZED = "output_summarized"
-    PHASE_COMPLETED = "phase_completed"
 
 
 @dataclass(frozen=True)
@@ -43,10 +45,59 @@ class SSEEvent:
 
 
 def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
-    if isinstance(event, PhaseStarted):
+    if isinstance(event, HypothesisFormulated):
         return SSEEvent(
-            event=SSEEventType.PHASE_STARTED,
-            data={"phase": event.phase, "investigation_id": event.investigation_id},
+            event=SSEEventType.HYPOTHESIS_FORMULATED,
+            data={
+                "hypothesis_id": event.hypothesis_id,
+                "statement": event.statement,
+                "rationale": event.rationale,
+                "parent_id": event.parent_id,
+                "investigation_id": event.investigation_id,
+            },
+        )
+    if isinstance(event, ExperimentStarted):
+        return SSEEvent(
+            event=SSEEventType.EXPERIMENT_STARTED,
+            data={
+                "experiment_id": event.experiment_id,
+                "hypothesis_id": event.hypothesis_id,
+                "description": event.description,
+                "investigation_id": event.investigation_id,
+            },
+        )
+    if isinstance(event, ExperimentCompleted):
+        return SSEEvent(
+            event=SSEEventType.EXPERIMENT_COMPLETED,
+            data={
+                "experiment_id": event.experiment_id,
+                "hypothesis_id": event.hypothesis_id,
+                "tool_count": event.tool_count,
+                "finding_count": event.finding_count,
+                "investigation_id": event.investigation_id,
+            },
+        )
+    if isinstance(event, HypothesisEvaluated):
+        return SSEEvent(
+            event=SSEEventType.HYPOTHESIS_EVALUATED,
+            data={
+                "hypothesis_id": event.hypothesis_id,
+                "status": event.status,
+                "confidence": event.confidence,
+                "reasoning": event.reasoning,
+                "investigation_id": event.investigation_id,
+            },
+        )
+    if isinstance(event, NegativeControlRecorded):
+        return SSEEvent(
+            event=SSEEventType.NEGATIVE_CONTROL,
+            data={
+                "smiles": event.smiles,
+                "name": event.name,
+                "prediction_score": event.prediction_score,
+                "correctly_classified": event.correctly_classified,
+                "investigation_id": event.investigation_id,
+            },
         )
     if isinstance(event, ToolCalled):
         return SSEEvent(
@@ -72,7 +123,8 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
             data={
                 "title": event.title,
                 "detail": event.detail,
-                "phase": event.phase,
+                "hypothesis_id": event.hypothesis_id,
+                "evidence_type": event.evidence_type,
                 "evidence": event.evidence,
                 "investigation_id": event.investigation_id,
             },
@@ -97,24 +149,8 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
                 "cost": event.cost,
                 "candidates": event.candidates,
                 "findings": event.findings,
-            },
-        )
-    if isinstance(event, DirectorPlanning):
-        return SSEEvent(
-            event=SSEEventType.DIRECTOR_PLANNING,
-            data={
-                "stage": event.stage,
-                "phase": event.phase,
-                "investigation_id": event.investigation_id,
-            },
-        )
-    if isinstance(event, DirectorDecision):
-        return SSEEvent(
-            event=SSEEventType.DIRECTOR_DECISION,
-            data={
-                "stage": event.stage,
-                "decision": event.decision,
-                "investigation_id": event.investigation_id,
+                "hypotheses": event.hypotheses,
+                "negative_controls": event.negative_controls,
             },
         )
     if isinstance(event, OutputSummarized):
@@ -124,16 +160,6 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
                 "tool_name": event.tool_name,
                 "original_length": event.original_length,
                 "summarized_length": event.summarized_length,
-                "investigation_id": event.investigation_id,
-            },
-        )
-    if isinstance(event, PhaseCompleted):
-        return SSEEvent(
-            event=SSEEventType.PHASE_COMPLETED,
-            data={
-                "phase": event.phase,
-                "tool_count": event.tool_count,
-                "finding_count": event.finding_count,
                 "investigation_id": event.investigation_id,
             },
         )

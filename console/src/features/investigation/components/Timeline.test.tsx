@@ -9,12 +9,12 @@ describe("Timeline", () => {
     expect(screen.getByText(/connecting/i)).toBeInTheDocument();
   });
 
-  it("renders phase_started event", () => {
+  it("renders hypothesis_formulated event", () => {
     const events: SSEEvent[] = [
-      { event: "phase_started", data: { phase: "Literature Review" } },
+      { event: "hypothesis_formulated", data: { statement: "Compound X inhibits target Y", rationale: "Based on literature", hypothesis_id: "h1", parent_id: "" } },
     ];
     render(<Timeline events={events} />);
-    expect(screen.getAllByText("Literature Review").length).toBeGreaterThan(0);
+    expect(screen.getByText(/Compound X inhibits target Y/)).toBeInTheDocument();
   });
 
   it("renders tool_called event", () => {
@@ -32,7 +32,7 @@ describe("Timeline", () => {
     const events: SSEEvent[] = [
       {
         event: "finding_recorded",
-        data: { title: "Key insight", detail: "Detail text", phase: "Literature Review" },
+        data: { title: "Key insight", detail: "Detail text", hypothesis_id: "h1", evidence_type: "supporting" },
       },
     ];
     render(<Timeline events={events} />);

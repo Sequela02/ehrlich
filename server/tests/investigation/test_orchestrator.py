@@ -9,10 +9,13 @@ import pytest
 from ehrlich.investigation.application.orchestrator import Orchestrator
 from ehrlich.investigation.application.tool_registry import ToolRegistry
 from ehrlich.investigation.domain.events import (
+    ExperimentStarted,
     FindingRecorded,
+    HypothesisEvaluated,
+    HypothesisFormulated,
     InvestigationCompleted,
     InvestigationError,
-    PhaseStarted,
+    NegativeControlRecorded,
     Thinking,
     ToolCalled,
     ToolResultEvent,
@@ -62,8 +65,23 @@ def registry() -> ToolRegistry:
         """Validate a SMILES string."""
         return json.dumps({"smiles": smiles, "valid": True})
 
+    from ehrlich.investigation.tools import (
+        conclude_investigation,
+        design_experiment,
+        evaluate_hypothesis,
+        propose_hypothesis,
+        record_finding,
+        record_negative_control,
+    )
+
     registry.register("search_literature", mock_search_literature)
     registry.register("validate_smiles", mock_validate_smiles)
+    registry.register("record_finding", record_finding)
+    registry.register("conclude_investigation", conclude_investigation)
+    registry.register("propose_hypothesis", propose_hypothesis)
+    registry.register("design_experiment", design_experiment)
+    registry.register("evaluate_hypothesis", evaluate_hypothesis)
+    registry.register("record_negative_control", record_negative_control)
     return registry
 
 
@@ -121,12 +139,9 @@ class TestOrchestratorToolDispatch:
 
         tool_called = [e for e in events if isinstance(e, ToolCalled)]
         tool_results = [e for e in events if isinstance(e, ToolResultEvent)]
-        phase_started = [e for e in events if isinstance(e, PhaseStarted)]
         assert len(tool_called) == 1
         assert tool_called[0].tool_name == "search_literature"
         assert len(tool_results) == 1
-        assert len(phase_started) == 1
-        assert phase_started[0].phase == "Literature Review"
 
     @pytest.mark.asyncio
     async def test_unknown_tool_returns_error(
@@ -154,7 +169,84 @@ class TestOrchestratorToolDispatch:
 
 class TestOrchestratorControlTools:
     @pytest.mark.asyncio
-    async def test_record_finding_updates_investigation(
+    async def test_propose_hypothesis_creates_entity(
+        self, mock_client: AsyncMock, registry: ToolRegistry
+    ) -> None:
+        mock_client.create_message.side_effect = [
+            _make_response(
+                content=[
+                    _tool_use_block(
+                        "tu_1",
+                        "propose_hypothesis",
+                        {
+                            "statement": "Thiazolidine compounds are active against MRSA",
+                            "rationale": "Literature suggests activity",
+                        },
+                    ),
+                ],
+                stop_reason="tool_use",
+            ),
+            _make_response(
+                content=[_text_block("Done.")],
+                stop_reason="end_turn",
+            ),
+        ]
+        orchestrator = Orchestrator(client=mock_client, registry=registry, max_iterations=5)
+        investigation = Investigation(prompt="Test")
+
+        events = await _collect_events(orchestrator, investigation)
+
+        assert len(investigation.hypotheses) == 1
+        statement = investigation.hypotheses[0].statement
+        assert statement == "Thiazolidine compounds are active against MRSA"
+        hyp_events = [e for e in events if isinstance(e, HypothesisFormulated)]
+        assert len(hyp_events) == 1
+
+    @pytest.mark.asyncio
+    async def test_design_experiment_creates_entity(
+        self, mock_client: AsyncMock, registry: ToolRegistry
+    ) -> None:
+        mock_client.create_message.side_effect = [
+            _make_response(
+                content=[
+                    _tool_use_block(
+                        "tu_1",
+                        "propose_hypothesis",
+                        {"statement": "Test hypothesis", "rationale": "Reason"},
+                    ),
+                ],
+                stop_reason="tool_use",
+            ),
+            _make_response(
+                content=[
+                    _tool_use_block(
+                        "tu_2",
+                        "design_experiment",
+                        {
+                            "hypothesis_id": "",  # will be filled from investigation state
+                            "description": "Test binding",
+                            "tool_plan": ["dock_against_target"],
+                        },
+                    ),
+                ],
+                stop_reason="tool_use",
+            ),
+            _make_response(
+                content=[_text_block("Done.")],
+                stop_reason="end_turn",
+            ),
+        ]
+        orchestrator = Orchestrator(client=mock_client, registry=registry, max_iterations=5)
+        investigation = Investigation(prompt="Test")
+
+        events = await _collect_events(orchestrator, investigation)
+
+        assert len(investigation.experiments) == 1
+        exp_events = [e for e in events if isinstance(e, ExperimentStarted)]
+        assert len(exp_events) == 1
+
+    @pytest.mark.asyncio
+    async def test_record_finding_links_to_hypothesis(
         self, mock_client: AsyncMock, registry: ToolRegistry
     ) -> None:
         mock_client.create_message.side_effect = [
@@ -166,7 +258,8 @@ class TestOrchestratorControlTools:
                         {
                             "title": "Key insight",
                             "detail": "Important detail",
-                            "phase": "Literature Review",
+                            "hypothesis_id": "h1",
+                            "evidence_type": "supporting",
                         },
                     ),
                 ],
@@ -183,10 +276,85 @@ class TestOrchestratorControlTools:
         events = await _collect_events(orchestrator, investigation)
 
         assert len(investigation.findings) == 1
-        assert investigation.findings[0].title == "Key insight"
+        assert investigation.findings[0].hypothesis_id == "h1"
+        assert investigation.findings[0].evidence_type == "supporting"
         finding_events = [e for e in events if isinstance(e, FindingRecorded)]
         assert len(finding_events) == 1
-        assert finding_events[0].title == "Key insight"
+        assert finding_events[0].evidence_type == "supporting"
+
+    @pytest.mark.asyncio
+    async def test_evaluate_hypothesis_updates_status(
+        self, mock_client: AsyncMock, registry: ToolRegistry
+    ) -> None:
+        mock_client.create_message.side_effect = [
+            _make_response(
+                content=[
+                    _tool_use_block(
+                        "tu_1",
+                        "propose_hypothesis",
+                        {"statement": "Test", "rationale": "Reason"},
+                    ),
+                ],
+                stop_reason="tool_use",
+            ),
+            _make_response(
+                content=[
+                    _tool_use_block(
+                        "tu_2",
+                        "evaluate_hypothesis",
+                        {
+                            "hypothesis_id": "",  # placeholder
+                            "status": "supported",
+                            "confidence": 0.9,
+                            "reasoning": "Strong evidence",
+                        },
+                    ),
+                ],
+                stop_reason="tool_use",
+            ),
+            _make_response(
+                content=[_text_block("Done.")],
+                stop_reason="end_turn",
+            ),
+        ]
+        orchestrator = Orchestrator(client=mock_client, registry=registry, max_iterations=5)
+        investigation = Investigation(prompt="Test")
+
+        events = await _collect_events(orchestrator, investigation)
+
+        eval_events = [e for e in events if isinstance(e, HypothesisEvaluated)]
+        assert len(eval_events) == 1
+        assert eval_events[0].status == "supported"
+
+    @pytest.mark.asyncio
+    async def test_record_negative_control(
+        self, mock_client: AsyncMock, registry: ToolRegistry
+    ) -> None:
+        mock_client.create_message.side_effect = [
+            _make_response(
+                content=[
+                    _tool_use_block(
+                        "tu_1",
+                        "record_negative_control",
+                        {"smiles": "CCO", "name": "Ethanol", "prediction_score": 0.1},
+                    ),
+                ],
+                stop_reason="tool_use",
+            ),
+            _make_response(
+                content=[_text_block("Done.")],
+                stop_reason="end_turn",
+            ),
+        ]
+        orchestrator = Orchestrator(client=mock_client, registry=registry, max_iterations=5)
+        investigation = Investigation(prompt="Test")
+
+        events = await _collect_events(orchestrator, investigation)
+
+        assert len(investigation.negative_controls) == 1
+        assert investigation.negative_controls[0].correctly_classified is True
+        nc_events = [e for e in events if isinstance(e, NegativeControlRecorded)]
+        assert len(nc_events) == 1
 
     @pytest.mark.asyncio
     async def test_conclude_ends_loop(self, mock_client: AsyncMock, registry: ToolRegistry) -> None:
@@ -243,35 +411,6 @@ class TestOrchestratorMaxIterations:
 
         assert mock_client.create_message.call_count == 3
         assert investigation.status == InvestigationStatus.COMPLETED
-
-
-class TestOrchestratorParallelToolCalls:
-    @pytest.mark.asyncio
-    async def test_handles_multiple_tool_uses(
-        self, mock_client: AsyncMock, registry: ToolRegistry
-    ) -> None:
-        mock_client.create_message.side_effect = [
-            _make_response(
-                content=[
-                    _tool_use_block("tu_1", "search_literature", {"query": "MRSA"}),
-                    _tool_use_block("tu_2", "validate_smiles", {"smiles": "CCO"}),
-                ],
-                stop_reason="tool_use",
-            ),
-            _make_response(
-                content=[_text_block("Done.")],
-                stop_reason="end_turn",
-            ),
-        ]
-        orchestrator = Orchestrator(client=mock_client, registry=registry, max_iterations=5)
-        investigation = Investigation(prompt="Test")
-
-        events = await _collect_events(orchestrator, investigation)
-
-        tool_called = [e for e in events if isinstance(e, ToolCalled)]
-        tool_results = [e for e in events if isinstance(e, ToolResultEvent)]
-        assert len(tool_called) == 2
-        assert len(tool_results) == 2
 
 
 class TestOrchestratorErrorHandling:

@@ -106,7 +106,12 @@ class TestUpdate:
         await repository.save(inv)
 
         inv.record_finding(
-            Finding(title="Key insight", detail="Details", phase="Literature Review")
+            Finding(
+                title="Key insight",
+                detail="Details",
+                hypothesis_id="h1",
+                evidence_type="supporting",
+            )
         )
         inv.set_candidates(
             [

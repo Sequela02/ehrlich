@@ -8,5 +8,6 @@ class Finding:
     title: str
     detail: str
     evidence: str = ""
-    phase: str = ""
+    hypothesis_id: str = ""
+    evidence_type: str = "neutral"
     confidence: float = 0.0

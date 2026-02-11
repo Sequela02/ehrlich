@@ -11,8 +11,8 @@ DDD monorepo: `server/` (Python 3.12) + `console/` (React 19 / TypeScript / Bun)
 ### Multi-Model Architecture (Director-Worker-Summarizer)
 
 ```
-Opus 4.6 (Director)     -- Plans phases, reviews results, synthesizes report (NO tools)
-Sonnet 4.5 (Researcher) -- Executes each phase with 19 tools
+Opus 4.6 (Director)     -- Formulates hypotheses, designs experiments, evaluates evidence, synthesizes (NO tools)
+Sonnet 4.5 (Researcher) -- Executes experiments with 23 tools
 Haiku 4.5 (Summarizer)  -- Compresses large tool outputs (>2000 chars)
 ```
 
@@ -92,9 +92,13 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 - Repository interfaces are ABCs in `domain/repository.py`
 - Infrastructure adapters implement repository ABCs
 - Tool functions in `tools.py` are the boundary between Claude and application services
-- SSE streaming for real-time investigation updates (11 event types)
+- **Hypothesis-driven investigation loop**: formulate hypotheses, design experiments, execute tools, evaluate evidence, revise/reject, synthesize
+- **Evidence-linked findings**: every finding references a `hypothesis_id` + `evidence_type` (supporting/contradicting/neutral)
+- **Negative controls**: validate model predictions with known-inactive compounds (`NegativeControl` entity)
+- 6 control tools: `propose_hypothesis`, `design_experiment`, `evaluate_hypothesis`, `record_finding`, `record_negative_control`, `conclude_investigation`
+- SSE streaming for real-time investigation updates (12 event types)
 - TanStack Router file-based routing in console
-- `MultiModelOrchestrator` uses Director-Worker-Summarizer pattern (3 Claude tiers)
+- `MultiModelOrchestrator`: hypothesis-driven loop (formulate -> design -> execute -> evaluate per hypothesis)
 - `Orchestrator` is the single-model fallback (used when all models are the same)
 - `SqliteInvestigationRepository` persists investigations to SQLite (WAL mode)
 - `CostTracker` tracks per-model token usage with tiered pricing
@@ -106,23 +110,28 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 - Toast notifications via `sonner` (completion + error events, dark-themed OKLCH colors)
 - Custom scrollbar CSS: 8px webkit + Firefox `scrollbar-width: thin` with OKLCH theme colors
 - Findings replay: `InvestigationCompleted` event carries `findings[]` so page reloads hydrate findings from SSE
-- `CompletionSummaryCard` replaces `ActivePhaseCard` post-completion (candidate + finding counts)
+- `CompletionSummaryCard` replaces `ActiveExperimentCard` post-completion (candidate + finding + hypothesis counts)
+- `HypothesisBoard`: kanban-style card grid showing hypothesis status (proposed/testing/supported/refuted/revised)
+- `NegativeControlPanel`: table of known-inactive compounds with pass/fail classification indicators
 
 ## Key Files (Investigation Context)
 
 | File | Purpose |
 |------|---------|
-| `investigation/application/orchestrator.py` | Single-model agentic loop (fallback) |
-| `investigation/application/multi_orchestrator.py` | Director-Worker-Summarizer orchestrator |
+| `investigation/application/orchestrator.py` | Single-model agentic loop with hypothesis control tool dispatch |
+| `investigation/application/multi_orchestrator.py` | Hypothesis-driven Director-Worker-Summarizer orchestrator |
 | `investigation/application/cost_tracker.py` | Per-model cost tracking with tiered pricing |
-| `investigation/application/prompts.py` | System prompts for Director, Researcher, Summarizer |
-| `investigation/domain/events.py` | 11 domain events (including Director*, OutputSummarized, PhaseCompleted) |
+| `investigation/application/prompts.py` | 7 prompts: scientist, director (formulation/experiment/evaluation/synthesis), researcher, summarizer |
+| `investigation/domain/hypothesis.py` | Hypothesis entity + HypothesisStatus enum |
+| `investigation/domain/experiment.py` | Experiment entity + ExperimentStatus enum |
+| `investigation/domain/negative_control.py` | NegativeControl frozen dataclass |
+| `investigation/domain/events.py` | 12 domain events (Hypothesis*, Experiment*, NegativeControl*, Finding, Tool*, Thinking, Completed, Error) |
 | `investigation/domain/repository.py` | InvestigationRepository ABC |
-| `investigation/infrastructure/sqlite_repository.py` | SQLite implementation |
+| `investigation/infrastructure/sqlite_repository.py` | SQLite implementation with hypothesis/experiment/negative_control serialization |
 | `investigation/infrastructure/anthropic_client.py` | Anthropic API adapter with retry |
-| `api/routes/investigation.py` | REST + SSE endpoints, auto-selects orchestrator |
+| `api/routes/investigation.py` | REST + SSE endpoints, 23-tool registry, auto-selects orchestrator |
 | `api/routes/molecule.py` | Molecule depiction, conformer, descriptors, targets endpoints |
-| `api/sse.py` | Domain event to SSE conversion (11 types) |
+| `api/sse.py` | Domain event to SSE conversion (12 types) |
 
 ## Key Files (Molecule Visualization)
 
@@ -136,6 +145,9 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 | `console/.../molecule/components/DockingViewer.tsx` | 3Dmol.js protein+ligand overlay viewer |
 | `console/.../investigation/components/CandidateDetail.tsx` | Expandable panel: 2D + 3D views + property card + Lipinski badge |
 | `console/.../investigation/components/CandidateTable.tsx` | Thumbnail grid with expand/collapse rows |
-| `console/.../investigation/components/ActivePhaseCard.tsx` | Live phase activity card (tool name, counters, director state) |
-| `console/.../investigation/components/CompletionSummaryCard.tsx` | Post-completion card (candidate + finding counts) |
+| `console/.../investigation/components/HypothesisBoard.tsx` | Kanban-style hypothesis status grid |
+| `console/.../investigation/components/HypothesisCard.tsx` | Expandable hypothesis card with confidence bar |
+| `console/.../investigation/components/ActiveExperimentCard.tsx` | Live experiment activity card (tool name, counters) |
+| `console/.../investigation/components/NegativeControlPanel.tsx` | Negative control validation table |
+| `console/.../investigation/components/CompletionSummaryCard.tsx` | Post-completion card (candidate + finding + hypothesis counts) |
 | `console/.../shared/components/ui/Toaster.tsx` | Sonner toast wrapper with dark OKLCH theme |

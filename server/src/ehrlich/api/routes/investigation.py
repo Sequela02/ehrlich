@@ -26,7 +26,14 @@ from ehrlich.investigation.application.tool_registry import ToolRegistry
 from ehrlich.investigation.domain.investigation import Investigation, InvestigationStatus
 from ehrlich.investigation.infrastructure.anthropic_client import AnthropicClientAdapter
 from ehrlich.investigation.infrastructure.sqlite_repository import SqliteInvestigationRepository
-from ehrlich.investigation.tools import conclude_investigation, record_finding
+from ehrlich.investigation.tools import (
+    conclude_investigation,
+    design_experiment,
+    evaluate_hypothesis,
+    propose_hypothesis,
+    record_finding,
+    record_negative_control,
+)
 from ehrlich.literature.tools import get_reference, search_literature
 from ehrlich.prediction.tools import cluster_compounds, predict_candidates, train_model
 from ehrlich.simulation.tools import assess_resistance, dock_against_target, predict_admet
@@ -56,10 +63,13 @@ class InvestigationDetail(BaseModel):
     id: str
     prompt: str
     status: str
-    phases: list[str]
-    current_phase: str
+    hypotheses: list[dict[str, Any]]
+    experiments: list[dict[str, Any]]
+    current_hypothesis_id: str
+    current_experiment_id: str
     findings: list[dict[str, Any]]
     candidates: list[dict[str, Any]]
+    negative_controls: list[dict[str, Any]]
     citations: list[str]
     summary: str
     created_at: str
@@ -109,6 +119,10 @@ def _build_registry() -> ToolRegistry:
         "assess_resistance": assess_resistance,
         "record_finding": record_finding,
         "conclude_investigation": conclude_investigation,
+        "propose_hypothesis": propose_hypothesis,
+        "design_experiment": design_experiment,
+        "evaluate_hypothesis": evaluate_hypothesis,
+        "record_negative_control": record_negative_control,
     }
     for name, func in tools.items():
         registry.register(name, func)
@@ -229,7 +243,7 @@ def _create_orchestrator(
             researcher=researcher,
             summarizer=summarizer,
             registry=registry,
-            max_iterations_per_phase=settings.max_iterations_per_phase,
+            max_iterations_per_experiment=settings.max_iterations_per_experiment,
             summarizer_threshold=settings.summarizer_threshold,
         )
 
@@ -281,10 +295,34 @@ async def _replay_final(
             {
                 "title": f.title,
                 "detail": f.detail,
-                "phase": f.phase,
+                "hypothesis_id": f.hypothesis_id,
+                "evidence_type": f.evidence_type,
                 "evidence": f.evidence,
             }
             for f in investigation.findings
+        ]
+        hypotheses = [
+            {
+                "id": h.id,
+                "statement": h.statement,
+                "rationale": h.rationale,
+                "status": h.status.value,
+                "parent_id": h.parent_id,
+                "confidence": h.confidence,
+                "supporting_evidence": h.supporting_evidence,
+                "contradicting_evidence": h.contradicting_evidence,
+            }
+            for h in investigation.hypotheses
+        ]
+        negative_controls = [
+            {
+                "smiles": nc.smiles,
+                "name": nc.name,
+                "prediction_score": nc.prediction_score,
+                "correctly_classified": nc.correctly_classified,
+                "source": nc.source,
+            }
+            for nc in investigation.negative_controls
         ]
         data = json.dumps(
             {
@@ -296,6 +334,8 @@ async def _replay_final(
                     "cost": investigation.cost_data,
                     "candidates": candidates,
                     "findings": findings,
+                    "hypotheses": hypotheses,
+                    "negative_controls": negative_controls,
                 },
             }
         )
@@ -318,7 +358,8 @@ def _to_detail(inv: Investigation) -> InvestigationDetail:
         {
             "title": f.title,
             "detail": f.detail,
-            "phase": f.phase,
+            "hypothesis_id": f.hypothesis_id,
+            "evidence_type": f.evidence_type,
             "evidence": f.evidence,
         }
         for f in inv.findings
@@ -336,14 +377,50 @@ def _to_detail(inv: Investigation) -> InvestigationDetail:
         }
         for c in inv.candidates
     ]
+    hypotheses = [
+        {
+            "id": h.id,
+            "statement": h.statement,
+            "rationale": h.rationale,
+            "status": h.status.value,
+            "parent_id": h.parent_id,
+            "confidence": h.confidence,
+            "supporting_evidence": h.supporting_evidence,
+            "contradicting_evidence": h.contradicting_evidence,
+        }
+        for h in inv.hypotheses
+    ]
+    experiments = [
+        {
+            "id": e.id,
+            "hypothesis_id": e.hypothesis_id,
+            "description": e.description,
+            "tool_plan": e.tool_plan,
+            "status": e.status.value,
+        }
+        for e in inv.experiments
+    ]
+    negative_controls = [
+        {
+            "smiles": nc.smiles,
+            "name": nc.name,
+            "prediction_score": nc.prediction_score,
+            "correctly_classified": nc.correctly_classified,
+            "source": nc.source,
+        }
+        for nc in inv.negative_controls
+    ]
     return InvestigationDetail(
         id=inv.id,
         prompt=inv.prompt,
         status=inv.status.value,
-        phases=inv.phases,
-        current_phase=inv.current_phase,
+        hypotheses=hypotheses,
+        experiments=experiments,
+        current_hypothesis_id=inv.current_hypothesis_id,
+        current_experiment_id=inv.current_experiment_id,
         findings=findings,
         candidates=candidates,
+        negative_controls=negative_controls,
         citations=inv.citations,
         summary=inv.summary,
         created_at=inv.created_at.isoformat(),

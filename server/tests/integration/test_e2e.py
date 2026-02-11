@@ -46,7 +46,7 @@ class TestToolRegistry:
     def test_build_registry_has_expected_tools(self) -> None:
         registry = _build_registry()
         tools = registry.list_tools()
-        assert len(tools) == 19
+        assert len(tools) == 23
         assert "validate_smiles" in tools
         assert "search_literature" in tools
         assert "explore_dataset" in tools
@@ -54,12 +54,15 @@ class TestToolRegistry:
         assert "dock_against_target" in tools
         assert "record_finding" in tools
         assert "conclude_investigation" in tools
-        assert "modify_molecule" not in tools
+        assert "propose_hypothesis" in tools
+        assert "design_experiment" in tools
+        assert "evaluate_hypothesis" in tools
+        assert "record_negative_control" in tools
 
     def test_all_tools_have_schemas(self) -> None:
         registry = _build_registry()
         schemas = registry.list_schemas()
-        assert len(schemas) == 19
+        assert len(schemas) == 23
         for schema in schemas:
             assert "name" in schema
             assert "description" in schema
@@ -100,7 +103,8 @@ class TestE2EPipeline:
                         {
                             "title": "Aspirin shows activity",
                             "detail": "Aspirin has antimicrobial properties",
-                            "phase": "Literature Review",
+                            "hypothesis_id": "h1",
+                            "evidence_type": "supporting",
                         },
                     ),
                     _tool(
@@ -133,7 +137,6 @@ class TestE2EPipeline:
         # Verify event types
         event_types = [type(e).__name__ for e in events]
         assert "Thinking" in event_types
-        assert "PhaseStarted" in event_types
         assert "ToolCalled" in event_types
         assert "ToolResultEvent" in event_types
         assert "FindingRecorded" in event_types
@@ -185,7 +188,6 @@ class TestE2EPipeline:
 
         event_types = {e.event for e in sse_events}
         assert SSEEventType.THINKING in event_types
-        assert SSEEventType.PHASE_STARTED in event_types
         assert SSEEventType.TOOL_CALLED in event_types
         assert SSEEventType.TOOL_RESULT in event_types
         assert SSEEventType.COMPLETED in event_types

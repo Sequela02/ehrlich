@@ -209,7 +209,7 @@ The core: Claude as an autonomous scientist.
 - [x] Tests: mock API, verify request/response handling
 
 ### 5B. Tool Registry
-- [x] Register all 20 tools from all contexts (7 chemistry, 2 literature, 3 analysis, 3 prediction, 3 simulation, 2 investigation control)
+- [x] Register all 23 tools from all contexts (7 chemistry, 2 literature, 3 analysis, 3 prediction, 3 simulation, 5 investigation control)
 - [x] Auto-generate JSON Schema from Python type hints + docstrings
 - [x] `get(name)` -> callable, `list_tools()` -> all registered tools, `list_schemas()` -> Anthropic-compatible schemas
 - [x] Schema format matches Anthropic tool_use specification
@@ -232,7 +232,7 @@ The core: Claude as an autonomous scientist.
 - [x] Build messages array: system prompt + user research question
 - [x] Loop: call Claude -> check stop_reason -> dispatch tool_use -> collect results -> repeat
 - [x] Max iteration guard (configurable, default 50)
-- [x] Emit domain events: PhaseStarted, ToolCalled, ToolResultEvent, FindingRecorded, Thinking, InvestigationCompleted, InvestigationError
+- [x] Emit domain events: HypothesisFormulated, ExperimentStarted, ExperimentCompleted, HypothesisEvaluated, NegativeControlRecorded, ToolCalled, ToolResultEvent, FindingRecorded, Thinking, InvestigationCompleted, InvestigationError
 - [x] Handle: parallel tool calls (Claude can request multiple), tool errors (graceful JSON error return)
 - [x] End condition: stop_reason == "end_turn", conclude_investigation called, or max iterations
 - [x] Phase auto-detection from tool names
@@ -241,9 +241,9 @@ The core: Claude as an autonomous scientist.
 ### 5F. SSE Streaming
 - [x] Convert domain events to SSE events via `domain_event_to_sse()` mapper
 - [x] Wire orchestrator async generator to `sse-starlette` EventSourceResponse
-- [x] Event types: phase_started, tool_called, tool_result, finding_recorded, thinking, error, completed
+- [x] Event types: hypothesis_formulated, experiment_started, experiment_completed, hypothesis_evaluated, negative_control, tool_called, tool_result, finding_recorded, thinking, error, completed, output_summarized
 - [x] Include cost tracker data in completed event
-- [x] Tests: all 7 event type conversions + JSON format (9 tests)
+- [x] Tests: all 12 event type conversions + JSON format (14 tests)
 
 ### 5G. Investigation API Routes
 - [x] `POST /api/v1/investigate` -- accept prompt, create investigation, return ID
@@ -253,9 +253,10 @@ The core: Claude as an autonomous scientist.
 - [x] Tests: FastAPI TestClient (4 tests)
 
 ### 5H. Control Tools
-- [x] `record_finding(title, detail, evidence, phase)` -- orchestrator intercepts and stores in Investigation entity
+- [x] `record_finding(title, detail, hypothesis_id, evidence_type)` -- orchestrator intercepts and stores in Investigation entity
 - [x] `conclude_investigation(summary, candidates, citations)` -- orchestrator intercepts, sets candidates/citations, ends loop
-- [x] Tests: verify finding storage, conclusion structure (5 tests)
+- [x] `propose_hypothesis`, `design_experiment`, `evaluate_hypothesis`, `record_negative_control` -- hypothesis control tools
+- [x] Tests: verify finding storage, conclusion structure, hypothesis tools (10 tests)
 
 **Verification:** `uv run pytest tests/investigation/ tests/api/ -v` -- 41 passed. Full suite 153 passed, 82% coverage, ruff 0, mypy 0.
 
@@ -327,10 +328,10 @@ Visualization and real-time streaming UI.
 Cost-efficient multi-model orchestration, persistence, and UI polish.
 
 ### 8A. Domain Foundation + Config
-- [x] 3 new domain events: `DirectorPlanning`, `DirectorDecision`, `OutputSummarized`
+- [x] Domain events: `OutputSummarized` (kept), hypothesis/experiment events (added in Phase 10A)
 - [x] `created_at` and `cost_data` fields on Investigation entity
 - [x] Per-model config settings: director, researcher, summarizer models
-- [x] `summarizer_threshold`, `max_iterations_per_phase`, `db_path` settings
+- [x] `summarizer_threshold`, `max_iterations_per_experiment`, `db_path` settings
 
 ### 8B. Multi-Model Cost Tracker
 - [x] Per-model usage tracking with model-specific pricing
@@ -339,13 +340,13 @@ Cost-efficient multi-model orchestration, persistence, and UI polish.
 - [x] `AnthropicClientAdapter.model` property for cost attribution
 
 ### 8C. Multi-Model Orchestrator
-- [x] `MultiModelOrchestrator` with Director-Worker-Summarizer pattern
-- [x] Director (Opus) plans phases, reviews results, synthesizes report -- NO tool access
-- [x] Researcher (Sonnet) executes phases with 19 tools (max 10 iterations per phase)
+- [x] `MultiModelOrchestrator` with hypothesis-driven Director-Worker-Summarizer pattern
+- [x] Director (Opus) formulates hypotheses, designs experiments, evaluates evidence, synthesizes -- NO tool access
+- [x] Researcher (Sonnet) executes experiments with 23 tools (max 10 iterations per experiment)
 - [x] Summarizer (Haiku) compresses large outputs exceeding threshold
-- [x] 5 new prompts: director planning/review/synthesis, researcher phase, summarizer
+- [x] 7 prompts: director formulation/experiment/evaluation/synthesis, researcher experiment, scientist, summarizer
 - [x] Auto-fallback to single-model Orchestrator when researcher == director
-- [x] Tests: 11 tests across 7 classes (planning, execution, compression, review, synthesis, full flow, errors)
+- [x] Tests: 12 tests across 8 classes (formulation, execution, evaluation, negative controls, compression, synthesis, full flow, errors)
 
 ### 8D. SQLite Persistence
 - [x] `InvestigationRepository` ABC in domain layer
@@ -358,14 +359,14 @@ Cost-efficient multi-model orchestration, persistence, and UI polish.
 - [x] `GET /investigate/{id}` -- full investigation detail
 - [x] SQLite repository initialization in app lifespan
 - [x] Automatic orchestrator selection (multi-model vs single-model)
-- [x] 3 new SSE event types: `director_planning`, `director_decision`, `output_summarized`
+- [x] SSE event types: `hypothesis_formulated`, `experiment_started`, `experiment_completed`, `hypothesis_evaluated`, `negative_control`, `output_summarized`
 - [x] `completed` event includes candidates and cost data
 
 ### 8F. SSE Reconnection
 - [x] Exponential backoff (1s, 2s, 4s) with max 3 retries
 - [x] `reconnecting` state with amber WiFi-off indicator
 - [x] Reset attempt counter on successful reconnect
-- [x] Track `completedPhases` and `toolCallCount` from events
+- [x] Track `experiments`, `hypotheses`, `negativeControls` and `toolCallCount` from events
 
 ### 8G. Investigation History
 - [x] `useInvestigations` hook with TanStack Query (10s refetch)
@@ -373,8 +374,8 @@ Cost-efficient multi-model orchestration, persistence, and UI polish.
 - [x] History section on home page below prompt input
 
 ### 8H. UI Feedback
-- [x] `PhaseProgress` 7-segment progress bar with active/completed/inactive states
-- [x] Director event rendering in Timeline (planning, decision, summarized)
+- [x] `HypothesisBoard` kanban-style grid with status columns and confidence bars
+- [x] Hypothesis/experiment event rendering in Timeline
 - [x] Candidates wired to `CandidateTable` from SSE completed event
 - [x] `StatusIndicator` handles reconnecting state
 
@@ -449,15 +450,137 @@ Phase 2A-D    Phase 2E-G
      Phase 8 (Multi-Model + Polish) -- DONE
            |
      Phase 9 (Molecule Visualization) -- DONE
+          |
+     Phase 10A (Hypothesis-Driven Engine) -- DONE
 ```
 
-## Post-Hackathon
+## Phase 10A: Hypothesis-Driven Investigation Engine (Day 2) -- DONE
 
-- MCP server for external Claude Code / Claude Desktop clients
-- Investigation comparison (side-by-side results across runs)
+Replaced the linear 7-phase pipeline with a hypothesis-driven scientific method loop.
+
+### Architecture Change
+- **Old:** Literature -> Data -> Model -> Screen -> Structure -> Resistance -> Conclude (linear recipe)
+- **New:** Literature Survey -> Formulate Hypotheses -> For each: Design Experiment -> Execute -> Evaluate -> Negative Controls -> Synthesize
+
+### Domain Layer
+- [x] `Hypothesis` entity: statement, rationale, status (proposed/testing/supported/refuted/revised), confidence, evidence lists
+- [x] `Experiment` entity: hypothesis_id, description, tool_plan, status, result_summary
+- [x] `NegativeControl` frozen dataclass: smiles, name, prediction_score, correctly_classified property
+- [x] `Finding` modified: `hypothesis_id` + `evidence_type` replace `phase`
+- [x] `Investigation` modified: hypotheses, experiments, negative_controls replace phases
+
+### Events (12 total, was 11)
+- [x] Removed: `PhaseStarted`, `PhaseCompleted`, `DirectorPlanning`, `DirectorDecision`
+- [x] Added: `HypothesisFormulated`, `ExperimentStarted`, `ExperimentCompleted`, `HypothesisEvaluated`, `NegativeControlRecorded`
+- [x] Modified: `FindingRecorded` (hypothesis_id + evidence_type), `InvestigationCompleted` (hypotheses + negative_controls)
+
+### Tools (23 total, was 19)
+- [x] 4 new control tools: `propose_hypothesis`, `design_experiment`, `evaluate_hypothesis`, `record_negative_control`
+- [x] Modified: `record_finding` (hypothesis_id + evidence_type), `conclude_investigation` (hypothesis assessments)
+
+### Orchestrators
+- [x] Single-model `Orchestrator`: hypothesis control tool dispatch with entity creation
+- [x] `MultiModelOrchestrator`: hypothesis-driven loop (formulate -> design -> execute -> evaluate per hypothesis)
+- [x] 7 hypothesis-driven prompts replacing 6 phase-based prompts
+
+### Console
+- [x] `HypothesisBoard` + `HypothesisCard`: kanban-style status grid with confidence bars
+- [x] `ActiveExperimentCard`: replaces `ActivePhaseCard` with experiment context
+- [x] `NegativeControlPanel`: validation table with pass/fail indicators
+- [x] `FindingsPanel`: evidence type badges + hypothesis grouping
+- [x] `Timeline`: hypothesis/experiment/evaluation event rendering
+- [x] Deleted: `PhaseProgress.tsx`, `ActivePhaseCard.tsx`
+
+### Persistence
+- [x] SQLite schema: hypotheses, experiments, negative_controls columns (JSON serialized)
+- [x] Removed: phases, current_phase columns
+
+**Verification:** 212 tests passed, mypy 0 errors, ruff 0 violations, tsc 0 errors, bun build success.
+
+---
+
+## Phase 10B: Additional Organisms (Day 2)
+
+Expand beyond MRSA to cover the WHO critical/high-priority pathogens.
+
+### 10A. Organism Registry
+- [ ] Centralized organism config: name, ChEMBL target IDs, protein targets, known resistance mutations
+- [ ] E. coli (Gram-negative, ESBL-producing)
+- [ ] P. aeruginosa (Gram-negative, carbapenem-resistant)
+- [ ] A. baumannii (Gram-negative, pan-drug resistant)
+- [ ] M. tuberculosis (mycobacterium, MDR/XDR-TB)
+
+### 10B. Protein Targets per Organism
+- [ ] E. coli: PBP3, DNA Gyrase, Dihydrofolate reductase (DHFR)
+- [ ] P. aeruginosa: OprM efflux, PBP3, DNA Gyrase
+- [ ] A. baumannii: OXA-23 beta-lactamase, PBP1a, DNA Gyrase
+- [ ] M. tuberculosis: InhA (isoniazid target), KatG, DprE1
+
+### 10C. Resistance Knowledge Base Expansion
+- [ ] Per-organism mutation profiles with literature references
+- [ ] Compound class patterns per organism (not just MRSA)
+- [ ] Cross-organism resistance comparison
+
+### 10D. Prompts + Agent Guidance
+- [ ] Update system prompts to handle multi-organism investigations
+- [ ] Organism-aware phase guidance (e.g., different screening strategies for Gram-neg vs mycobacteria)
+
+**Verification:** All existing tests pass + new organism config tests. Agent can run investigations against any of the 5 organisms.
+
+---
+
+## Phase 11: Investigation Comparison (Day 3)
+
+Side-by-side comparison of investigation runs for reproducibility and consensus analysis.
+
+### 11A. Comparison Domain
+- [ ] `Comparison` entity: list of investigation IDs, consensus candidates, overlap metrics
+- [ ] Candidate overlap calculation (by SMILES / Tanimoto similarity threshold)
+- [ ] Finding overlap detection (by phase + title similarity)
+- [ ] Score aggregation across runs (mean, std, min, max)
+
+### 11B. Comparison API
+- [ ] `POST /compare` -- accept list of investigation IDs, return comparison
+- [ ] `GET /compare/{id}` -- retrieve saved comparison
+
+### 11C. Comparison Console
+- [ ] `/compare` page: pick 2+ completed investigations
+- [ ] Side-by-side candidate table with overlap highlighting
+- [ ] Consensus candidates panel (appear in N/M runs)
+- [ ] Score distribution visualization (per candidate across runs)
+- [ ] Findings diff view (shared vs unique per run)
+
+**Verification:** Compare 2 completed investigations, verify overlap metrics and consensus candidates render correctly.
+
+---
+
+## Phase 12: MCP Server (Day 4-5)
+
+Expose Ehrlich as a tool server for Claude Code / Claude Desktop via Model Context Protocol.
+
+### 12A. MCP Transport
+- [ ] Stdio transport for Claude Code integration
+- [ ] SSE transport for Claude Desktop / remote clients
+- [ ] Tool registration: expose all 23 Ehrlich tools as MCP tools
+
+### 12B. Investigation Tool
+- [ ] `start_investigation(prompt, organism)` -- kick off full investigation, return ID
+- [ ] `get_investigation(id)` -- return status, findings, candidates
+- [ ] `compare_investigations(ids)` -- return comparison summary
+
+### 12C. Documentation + Demo
+- [ ] MCP server config for Claude Code (`claude_desktop_config.json`)
+- [ ] Usage examples in README
+- [ ] Demo: Claude Code running a full investigation via MCP
+
+**Verification:** Claude Code can connect to Ehrlich MCP server and run an investigation end-to-end.
+
+---
+
+## Backlog (Post-Hackathon)
+
 - PostgreSQL migration for production persistence
 - Batch screening mode (score entire ZINC subsets)
-- Additional organisms: E. coli, P. aeruginosa, A. baumannii, M. tuberculosis
 - Antifungal/antiviral expansion
 - Automated synthesis lab integration (Emerald Cloud Lab, Strateos)
 - Community contributions: new tools, new targets, new models
