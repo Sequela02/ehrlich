@@ -96,6 +96,7 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
                 "summary": event.summary,
                 "cost": event.cost,
                 "candidates": event.candidates,
+                "findings": event.findings,
             },
         )
     if isinstance(event, DirectorPlanning):

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Toaster } from "@/shared/components/ui/Toaster";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -24,6 +25,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         </div>
       </header>
       <main>{children}</main>
+      <Toaster />
     </div>
   );
 }

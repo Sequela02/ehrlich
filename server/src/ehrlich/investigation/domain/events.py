@@ -82,6 +82,7 @@ class InvestigationCompleted(DomainEvent):
     summary: str = ""
     cost: dict[str, Any] = field(default_factory=dict)
     candidates: list[dict[str, Any]] = field(default_factory=list)
+    findings: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

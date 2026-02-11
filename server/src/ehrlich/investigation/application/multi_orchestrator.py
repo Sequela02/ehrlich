@@ -198,12 +198,22 @@ class MultiModelOrchestrator:
                 }
                 for c in candidates
             ]
+            finding_dicts = [
+                {
+                    "title": f.title,
+                    "detail": f.detail,
+                    "phase": f.phase,
+                    "evidence": f.evidence,
+                }
+                for f in investigation.findings
+            ]
             yield InvestigationCompleted(
                 investigation_id=investigation.id,
                 candidate_count=len(candidates),
                 summary=investigation.summary,
                 cost=cost.to_dict(),
                 candidates=candidate_dicts,
+                findings=finding_dicts,
             )
 
         except Exception as e:

@@ -103,6 +103,10 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 - Molecule visualization: server-side 2D SVG depiction (RDKit `rdMolDraw2D`), 3Dmol.js for 3D/docking views
 - `CandidateTable` shows 2D structure thumbnails with expandable detail panel (3D viewer + properties + Lipinski badge)
 - Molecule API: `/molecule/depict` (SVG, cached 24h), `/molecule/conformer`, `/molecule/descriptors`, `/targets`
+- Toast notifications via `sonner` (completion + error events, dark-themed OKLCH colors)
+- Custom scrollbar CSS: 8px webkit + Firefox `scrollbar-width: thin` with OKLCH theme colors
+- Findings replay: `InvestigationCompleted` event carries `findings[]` so page reloads hydrate findings from SSE
+- `CompletionSummaryCard` replaces `ActivePhaseCard` post-completion (candidate + finding counts)
 
 ## Key Files (Investigation Context)
 
@@ -133,3 +137,5 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 | `console/.../investigation/components/CandidateDetail.tsx` | Expandable panel: 2D + 3D views + property card + Lipinski badge |
 | `console/.../investigation/components/CandidateTable.tsx` | Thumbnail grid with expand/collapse rows |
 | `console/.../investigation/components/ActivePhaseCard.tsx` | Live phase activity card (tool name, counters, director state) |
+| `console/.../investigation/components/CompletionSummaryCard.tsx` | Post-completion card (candidate + finding counts) |
+| `console/.../shared/components/ui/Toaster.tsx` | Sonner toast wrapper with dark OKLCH theme |

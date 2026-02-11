@@ -177,11 +177,35 @@ class Orchestrator:
                 )
 
             investigation.status = InvestigationStatus.COMPLETED
+            candidate_dicts = [
+                {
+                    "smiles": c.smiles,
+                    "name": c.name,
+                    "rank": c.rank,
+                    "notes": c.notes,
+                    "prediction_score": c.prediction_score,
+                    "docking_score": c.docking_score,
+                    "admet_score": c.admet_score,
+                    "resistance_risk": c.resistance_risk,
+                }
+                for c in investigation.candidates
+            ]
+            finding_dicts = [
+                {
+                    "title": f.title,
+                    "detail": f.detail,
+                    "phase": f.phase,
+                    "evidence": f.evidence,
+                }
+                for f in investigation.findings
+            ]
             yield InvestigationCompleted(
                 investigation_id=investigation.id,
                 candidate_count=len(investigation.candidates),
                 summary=investigation.summary,
                 cost=cost.to_dict(),
+                candidates=candidate_dicts,
+                findings=finding_dicts,
             )
 
         except Exception as e:

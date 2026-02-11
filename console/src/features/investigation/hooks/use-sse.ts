@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import type {
   CandidateRow,
   CompletedData,
@@ -116,6 +117,9 @@ export function useSSE(url: string | null): SSEState {
         if (d.candidates) {
           setCandidates(d.candidates);
         }
+        if (d.findings && d.findings.length > 0) {
+          setFindings((prev) => (prev.length === 0 ? d.findings! : prev));
+        }
         if (d.cost) {
           const costData = d.cost as Record<string, unknown>;
           setCost({
@@ -129,6 +133,9 @@ export function useSSE(url: string | null): SSEState {
         }
         setCompleted(true);
         doneRef.current = true;
+        toast.success("Investigation complete", {
+          description: `${d.candidate_count} candidates identified`,
+        });
         if (sourceRef.current) {
           sourceRef.current.close();
           sourceRef.current = null;
@@ -138,6 +145,9 @@ export function useSSE(url: string | null): SSEState {
       case "error":
         setError(parsed.data.error as string);
         doneRef.current = true;
+        toast.error("Investigation failed", {
+          description: parsed.data.error as string,
+        });
         if (sourceRef.current) {
           sourceRef.current.close();
           sourceRef.current = null;

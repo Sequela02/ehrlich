@@ -277,6 +277,15 @@ async def _replay_final(
             }
             for c in investigation.candidates
         ]
+        findings = [
+            {
+                "title": f.title,
+                "detail": f.detail,
+                "phase": f.phase,
+                "evidence": f.evidence,
+            }
+            for f in investigation.findings
+        ]
         data = json.dumps(
             {
                 "event": SSEEventType.COMPLETED.value,
@@ -286,6 +295,7 @@ async def _replay_final(
                     "summary": investigation.summary,
                     "cost": investigation.cost_data,
                     "candidates": candidates,
+                    "findings": findings,
                 },
             }
         )

@@ -8,6 +8,7 @@ import {
   CostBadge,
   PhaseProgress,
   ActivePhaseCard,
+  CompletionSummaryCard,
 } from "@/features/investigation/components";
 import { FindingsPanel } from "@/features/investigation/components/FindingsPanel";
 import { useSSE } from "@/features/investigation/hooks/use-sse";
@@ -76,13 +77,20 @@ function InvestigationPage() {
       </div>
 
       <div className="mb-6">
-        <ActivePhaseCard
-          currentPhase={currentPhase}
-          completed={completed}
-          activeToolName={activeToolName}
-          phaseToolCount={phaseToolCount}
-          phaseFindingCount={phaseFindingCount}
-        />
+        {completed ? (
+          <CompletionSummaryCard
+            candidateCount={candidates.length}
+            findingCount={findings.length}
+          />
+        ) : (
+          <ActivePhaseCard
+            currentPhase={currentPhase}
+            completed={completed}
+            activeToolName={activeToolName}
+            phaseToolCount={phaseToolCount}
+            phaseFindingCount={phaseFindingCount}
+          />
+        )}
       </div>
 
       <div className="space-y-6">

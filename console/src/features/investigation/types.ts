@@ -58,6 +58,7 @@ export interface CompletedData {
     total_cost_usd: number;
   };
   candidates: CandidateRow[];
+  findings?: Finding[];
 }
 
 export interface ErrorData {

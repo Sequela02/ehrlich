@@ -29,6 +29,15 @@ export function CandidateTable({ candidates }: CandidateTableProps) {
       <h3 className="border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
         Ranked Candidates
       </h3>
+      {hasScores && (
+        <div className="rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
+          <span className="font-medium text-foreground/70">Score legend:</span>{" "}
+          <span className="font-mono">Pred.</span> = ML activity prediction (0-1, higher is better) ·{" "}
+          <span className="font-mono">Dock.</span> = binding affinity kcal/mol (more negative is better) ·{" "}
+          <span className="font-mono">ADMET</span> = drug-likeness score (0-1, higher is better) ·{" "}
+          <span className="font-mono">Resist.</span> = resistance risk (low/medium/high)
+        </div>
+      )}
       <div className="overflow-x-auto rounded-lg border border-border bg-surface">
         <table className="w-full text-sm">
           <thead>
@@ -186,7 +195,7 @@ function CandidateRowComponent({
             <ResistanceCell risk={candidate.resistance_risk} />
           </>
         )}
-        <td className="max-w-xs truncate px-3 py-2 text-xs text-muted-foreground">
+        <td className="max-h-20 max-w-md overflow-y-auto px-3 py-2 text-xs leading-relaxed text-muted-foreground">
           {candidate.notes || "-"}
         </td>
       </tr>
