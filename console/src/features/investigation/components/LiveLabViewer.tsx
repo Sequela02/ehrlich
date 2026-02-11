@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { FlaskConical } from "lucide-react";
 import type { GLViewer } from "3dmol";
-import type { SSEEvent } from "../types";
+import type { Experiment, SSEEvent } from "../types";
 import { buildSceneUpdates, type SceneAction } from "../lib/scene-builder";
 
 interface LiveLabViewerProps {
   events: SSEEvent[];
   completed: boolean;
+  experiments?: Experiment[];
+  activeExperimentId?: string | null;
+  onExperimentChange?: (id: string | null) => void;
 }
 
-export function LiveLabViewer({ events, completed }: LiveLabViewerProps) {
+export function LiveLabViewer({ events, completed, experiments, activeExperimentId, onExperimentChange }: LiveLabViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<GLViewer | null>(null);
   const processedRef = useRef(0);
@@ -40,13 +43,26 @@ export function LiveLabViewer({ events, completed }: LiveLabViewerProps) {
     };
   }, []);
 
+  // Reset viewer when switching experiments
+  useEffect(() => {
+    if (!viewerRef.current) return;
+    viewerRef.current.clear();
+    viewerRef.current.render();
+    processedRef.current = 0;
+    seenSmilesRef.current = new Set();
+    setHasContent(false);
+  }, [activeExperimentId]);
+
   useEffect(() => {
     if (!ready || !viewerRef.current) return;
 
     const viewer = viewerRef.current;
     const seen = seenSmilesRef.current;
-    const newEvents = events.slice(processedRef.current);
-    processedRef.current = events.length;
+    const filteredEvents = activeExperimentId
+      ? events.filter((e) => (e.data as Record<string, unknown>).experiment_id === activeExperimentId)
+      : events;
+    const newEvents = filteredEvents.slice(processedRef.current);
+    processedRef.current = filteredEvents.length;
 
     for (const event of newEvents) {
       const actions = buildSceneUpdates({ type: event.event, data: event.data });
@@ -61,10 +77,29 @@ export function LiveLabViewer({ events, completed }: LiveLabViewerProps) {
     if (newEvents.length > 0) {
       viewer.render();
     }
-  }, [events, ready]);
+  }, [events, ready, activeExperimentId]);
 
   return (
     <div className="relative overflow-hidden rounded-lg border border-border">
+      {experiments && experiments.length > 0 && onExperimentChange && (
+        <div className="flex items-center gap-2 border-b border-border p-2">
+          <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+            Experiment:
+          </span>
+          <select
+            value={activeExperimentId ?? "all"}
+            onChange={(e) => onExperimentChange(e.target.value === "all" ? null : e.target.value)}
+            className="rounded-md border border-border bg-surface px-2 py-1 text-xs text-foreground"
+          >
+            <option value="all">All</option>
+            {experiments.map((exp) => (
+              <option key={exp.id} value={exp.id}>
+                {exp.description.slice(0, 50)}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       <div
         ref={containerRef}
         style={{ width: "100%", height: 400, position: "relative" }}

@@ -50,6 +50,7 @@ function InvestigationPage() {
   } = useSSE(streamUrl);
 
   const [activeTab, setActiveTab] = useState<ViewTab>("lab");
+  const [activeExperimentId, setActiveExperimentId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const sidebarTimelineRef = useRef<HTMLDivElement>(null);
   const mobileTimelineRef = useRef<HTMLDivElement>(null);
@@ -223,7 +224,13 @@ function InvestigationPage() {
                     </p>
                   </div>
                   <ErrorBoundary fallbackMessage="Failed to load 3D viewer">
-                    <LiveLabViewer events={events} completed={completed} />
+                    <LiveLabViewer
+                      events={events}
+                      completed={completed}
+                      experiments={experiments}
+                      activeExperimentId={activeExperimentId}
+                      onExperimentChange={setActiveExperimentId}
+                    />
                   </ErrorBoundary>
                 </section>
               )}
@@ -320,7 +327,13 @@ function InvestigationPage() {
                     </p>
                   </div>
                   <ErrorBoundary fallbackMessage="Failed to load 3D viewer">
-                    <LiveLabViewer events={events} completed={completed} />
+                    <LiveLabViewer
+                      events={events}
+                      completed={completed}
+                      experiments={experiments}
+                      activeExperimentId={activeExperimentId}
+                      onExperimentChange={setActiveExperimentId}
+                    />
                   </ErrorBoundary>
                 </section>
               )}

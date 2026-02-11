@@ -14,11 +14,11 @@ DDD monorepo: `server/` (Python 3.12) + `console/` (React 19 / TypeScript / Bun)
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, designs experiments, evaluates evidence, synthesizes (NO tools)
-Sonnet 4.5 (Researcher) -- Executes experiments with 27 tools
+Sonnet 4.5 (Researcher) -- Executes experiments with 30 tools
 Haiku 4.5 (Summarizer)  -- Compresses large tool outputs (>2000 chars)
 ```
 
-Falls back to single-model `Orchestrator` when `director_model == researcher_model`.
+Always uses `MultiModelOrchestrator` (even when all models are the same).
 
 ### Bounded Contexts
 
@@ -41,6 +41,9 @@ Falls back to single-model `Orchestrator` when `director_model == researcher_mod
 | RCSB PDB | `https://search.rcsb.org` + `https://data.rcsb.org` | Dynamic protein target discovery by organism/function | None |
 | PubChem | `https://pubchem.ncbi.nlm.nih.gov/rest/pug` | Compound search by target/activity/similarity | None |
 | EPA CompTox | `https://api-ccte.epa.gov` | Environmental toxicity, bioaccumulation, fate (1M+ chemicals) | Free API key |
+| UniProt | `https://rest.uniprot.org` | Protein function, disease associations, GO terms, PDB cross-refs | None |
+| Open Targets | `https://api.platform.opentargets.org` | Disease-target associations (GraphQL, scored evidence) | None |
+| GtoPdb | `https://www.guidetopharmacology.org/services` | Expert-curated pharmacology (pKi, pIC50, receptor classification) | None |
 
 ### Dependency Rules (STRICT)
 
@@ -98,7 +101,7 @@ Types: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`
 
 Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investigation, api, console, mol, data, ci, docs, infra
 
-## Tools (27 Total)
+## Tools (30 Total)
 
 ### Chemistry (6) -- RDKit cheminformatics, domain-agnostic
 - `validate_smiles` -- Validate SMILES string
@@ -112,10 +115,11 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 - `search_literature` -- Paper search (title, authors, year, DOI, abstract, citations)
 - `get_reference` -- Curated reference lookup by key or DOI
 
-### Analysis (5) -- ChEMBL + PubChem
+### Analysis (6) -- ChEMBL + PubChem + GtoPdb
 - `explore_dataset` -- Load ChEMBL bioactivity data for any organism/target
 - `search_bioactivity` -- Flexible ChEMBL query (any assay type: MIC, Ki, EC50, IC50, Kd)
 - `search_compounds` -- PubChem compound search by target/activity/similarity
+- `search_pharmacology` -- GtoPdb curated receptor/ligand interactions with affinities
 - `analyze_substructures` -- Chi-squared enrichment of SMARTS patterns
 - `compute_properties` -- Property distributions (active vs inactive)
 
@@ -124,8 +128,10 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 - `predict_candidates` -- Score compounds with trained model
 - `cluster_compounds` -- Butina structural clustering
 
-### Simulation (5) -- Docking, ADMET, targets, toxicity
+### Simulation (7) -- Docking, ADMET, targets, toxicity, annotations
 - `search_protein_targets` -- RCSB PDB search by organism/function/keyword
+- `get_protein_annotation` -- UniProt protein function, disease links, GO terms
+- `search_disease_targets` -- Open Targets disease-target associations (scored)
 - `dock_against_target` -- AutoDock Vina docking (or RDKit fallback)
 - `predict_admet` -- Drug-likeness profiling (absorption, metabolism, toxicity)
 - `fetch_toxicity_profile` -- EPA CompTox environmental toxicity data
@@ -159,7 +165,7 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 - **Event persistence**: all SSE events stored in SQLite `events` table; completed investigations replay full timeline on page reload
 - TanStack Router file-based routing in console
 - `MultiModelOrchestrator`: hypothesis-driven loop (formulate -> design -> execute -> evaluate per hypothesis)
-- `Orchestrator` is the single-model fallback (used when all models are the same)
+- `ToolCache` provides in-memory TTL-based caching for deterministic and API tools
 - `SqliteInvestigationRepository` persists investigations + events to SQLite (WAL mode)
 - `CostTracker` tracks per-model token usage with tiered pricing
 - SSE reconnection with exponential backoff (1s, 2s, 4s, max 3 retries)
@@ -195,9 +201,9 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 
 | File | Purpose |
 |------|---------|
-| `investigation/application/orchestrator.py` | Single-model agentic loop with hypothesis control tool dispatch |
 | `investigation/application/multi_orchestrator.py` | Hypothesis-driven Director-Worker-Summarizer orchestrator |
 | `investigation/application/cost_tracker.py` | Per-model cost tracking with tiered pricing |
+| `investigation/application/tool_cache.py` | In-memory TTL cache for tool results (deterministic + API) |
 | `investigation/application/prompts.py` | Domain-adaptive prompts: scientist, director (4 phases), researcher, summarizer |
 | `investigation/domain/hypothesis.py` | Hypothesis entity + HypothesisStatus enum |
 | `investigation/domain/experiment.py` | Experiment entity + ExperimentStatus enum |
@@ -219,6 +225,9 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 | `simulation/infrastructure/rcsb_client.py` | RCSB PDB Search + Data API for target discovery |
 | `simulation/infrastructure/comptox_client.py` | EPA CompTox CTX API for environmental toxicity |
 | `simulation/infrastructure/protein_store.py` | YAML-based protein target store + RCSB PDB fallback |
+| `simulation/infrastructure/uniprot_client.py` | UniProt REST client for protein annotations |
+| `simulation/infrastructure/opentargets_client.py` | Open Targets GraphQL client for disease-target associations |
+| `analysis/infrastructure/gtopdb_client.py` | GtoPdb REST client for curated pharmacology |
 | `literature/infrastructure/semantic_scholar_client.py` | Semantic Scholar paper search with retry |
 
 ## Key Files (Molecule Visualization)

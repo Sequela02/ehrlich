@@ -33,6 +33,7 @@ const MAX_RETRIES = 3;
 
 interface SSEState {
   events: SSEEvent[];
+  eventsByExperiment: Map<string, SSEEvent[]>;
   connected: boolean;
   reconnecting: boolean;
   completed: boolean;
@@ -55,6 +56,7 @@ interface SSEState {
 
 export function useSSE(url: string | null): SSEState {
   const [events, setEvents] = useState<SSEEvent[]>([]);
+  const [eventsByExperiment, setEventsByExperiment] = useState<Map<string, SSEEvent[]>>(new Map());
   const [connected, setConnected] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
   const [completed, setCompleted] = useState(false);
@@ -167,14 +169,34 @@ export function useSSE(url: string | null): SSEState {
         setNegativeControls((prev) => [...prev, nc]);
         break;
       }
-      case "tool_called":
+      case "tool_called": {
         setToolCallCount((prev) => prev + 1);
         setExperimentToolCount((prev) => prev + 1);
         setActiveToolName(parsed.data.tool_name as string);
+        const tcExpId = parsed.data.experiment_id as string;
+        if (tcExpId) {
+          setEventsByExperiment((prev) => {
+            const next = new Map(prev);
+            const arr = next.get(tcExpId) ?? [];
+            next.set(tcExpId, [...arr, sseEvent]);
+            return next;
+          });
+        }
         break;
-      case "tool_result":
+      }
+      case "tool_result": {
         setActiveToolName("");
+        const trExpId = parsed.data.experiment_id as string;
+        if (trExpId) {
+          setEventsByExperiment((prev) => {
+            const next = new Map(prev);
+            const arr = next.get(trExpId) ?? [];
+            next.set(trExpId, [...arr, sseEvent]);
+            return next;
+          });
+        }
         break;
+      }
       case "finding_recorded":
         setExperimentFindingCount((prev) => prev + 1);
         setFindings((prev) => [
@@ -289,6 +311,7 @@ export function useSSE(url: string | null): SSEState {
 
   return {
     events,
+    eventsByExperiment,
     connected,
     reconnecting,
     completed,

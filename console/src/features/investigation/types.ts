@@ -90,12 +90,14 @@ export interface NegativeControlData {
 export interface ToolCalledData {
   tool_name: string;
   tool_input: Record<string, unknown>;
+  experiment_id?: string;
   investigation_id: string;
 }
 
 export interface ToolResultData {
   tool_name: string;
   result_preview: string;
+  experiment_id?: string;
   investigation_id: string;
 }
 

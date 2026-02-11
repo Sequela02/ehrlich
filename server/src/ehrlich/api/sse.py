@@ -105,6 +105,7 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
             data={
                 "tool_name": event.tool_name,
                 "tool_input": event.tool_input,
+                "experiment_id": event.experiment_id,
                 "investigation_id": event.investigation_id,
             },
         )
@@ -114,6 +115,7 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
             data={
                 "tool_name": event.tool_name,
                 "result_preview": event.result_preview,
+                "experiment_id": event.experiment_id,
                 "investigation_id": event.investigation_id,
             },
         )

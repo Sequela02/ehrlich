@@ -8,13 +8,17 @@ from ehrlich.kernel.exceptions import ExternalServiceError, InvalidSMILESError, 
 from ehrlich.kernel.types import SMILES
 from ehrlich.simulation.application.simulation_service import SimulationService
 from ehrlich.simulation.infrastructure.comptox_client import CompToxClient
+from ehrlich.simulation.infrastructure.opentargets_client import OpenTargetsClient
 from ehrlich.simulation.infrastructure.pkcsm_client import PkCSMClient
 from ehrlich.simulation.infrastructure.protein_store import ProteinStore
 from ehrlich.simulation.infrastructure.rcsb_client import RCSBClient
+from ehrlich.simulation.infrastructure.uniprot_client import UniProtClient
 from ehrlich.simulation.infrastructure.vina_adapter import VinaAdapter
 
 _rdkit = RDKitAdapter()
 _rcsb_client = RCSBClient()
+_uniprot_client = UniProtClient()
+_opentargets_client = OpenTargetsClient()
 _settings = get_settings()
 _comptox_client = CompToxClient(api_key=_settings.comptox_api_key)
 _protein_store = ProteinStore(rcsb_client=_rcsb_client)
@@ -155,5 +159,58 @@ async def assess_resistance(smiles: str, target_id: str) -> str:
                 for mr in result.mutation_risks
             ],
             "explanation": result.explanation,
+        }
+    )
+
+
+async def get_protein_annotation(query: str, organism: str = "") -> str:
+    """Get protein annotations from UniProt."""
+    try:
+        annotations = await _uniprot_client.search(query, organism)
+    except ExternalServiceError as e:
+        return json.dumps({"error": f"UniProt search failed: {e.detail}", "query": query})
+    return json.dumps(
+        {
+            "query": query,
+            "count": len(annotations),
+            "proteins": [
+                {
+                    "accession": a.accession,
+                    "name": a.name,
+                    "organism": a.organism,
+                    "function": a.function,
+                    "disease_associations": a.disease_associations,
+                    "go_terms": a.go_terms,
+                    "pdb_cross_refs": a.pdb_cross_refs,
+                    "pathway": a.pathway,
+                }
+                for a in annotations
+            ],
+        }
+    )
+
+
+async def search_disease_targets(disease: str, limit: int = 10) -> str:
+    """Search disease-target associations via Open Targets."""
+    try:
+        associations = await _opentargets_client.search(disease, limit)
+    except ExternalServiceError as e:
+        return json.dumps({"error": f"Open Targets search failed: {e.detail}", "disease": disease})
+    return json.dumps(
+        {
+            "disease": disease,
+            "count": len(associations),
+            "targets": [
+                {
+                    "target_id": a.target_id,
+                    "target_name": a.target_name,
+                    "disease_name": a.disease_name,
+                    "association_score": a.association_score,
+                    "evidence_count": a.evidence_count,
+                    "tractability": a.tractability,
+                    "known_drugs": a.known_drugs,
+                }
+                for a in associations
+            ],
         }
     )

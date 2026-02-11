@@ -2,11 +2,13 @@ import json
 
 from ehrlich.analysis.application.analysis_service import AnalysisService
 from ehrlich.analysis.infrastructure.chembl_loader import ChEMBLLoader
+from ehrlich.analysis.infrastructure.gtopdb_client import GtoPdbClient
 from ehrlich.analysis.infrastructure.pubchem_client import PubChemClient
 from ehrlich.kernel.exceptions import ExternalServiceError
 
 _loader = ChEMBLLoader()
 _pubchem = PubChemClient()
+_gtopdb = GtoPdbClient()
 _service = AnalysisService(repository=_loader, compound_repo=_pubchem)
 
 
@@ -132,3 +134,30 @@ async def compute_properties(target: str, threshold: float = 1.0) -> str:
     dataset = await _service.explore(target, threshold)
     props = await _service.compute_properties(dataset)
     return json.dumps({"target": target, **{k: v for k, v in props.items()}})
+
+
+async def search_pharmacology(target: str, family: str = "") -> str:
+    """Search pharmacological data from Guide to Pharmacology."""
+    try:
+        entries = await _gtopdb.search(target, family)
+    except ExternalServiceError as e:
+        return json.dumps({"error": f"GtoPdb search failed: {e.detail}", "target": target})
+    return json.dumps(
+        {
+            "target": target,
+            "count": len(entries),
+            "interactions": [
+                {
+                    "target_name": e.target_name,
+                    "target_family": e.target_family,
+                    "ligand_name": e.ligand_name,
+                    "ligand_smiles": e.ligand_smiles,
+                    "affinity_type": e.affinity_type,
+                    "affinity_value": e.affinity_value,
+                    "action": e.action,
+                    "approved": e.approved,
+                }
+                for e in entries
+            ],
+        }
+    )

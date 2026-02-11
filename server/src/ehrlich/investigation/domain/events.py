@@ -58,6 +58,7 @@ class NegativeControlRecorded(DomainEvent):
 class ToolCalled(DomainEvent):
     tool_name: str = ""
     tool_input: dict[str, Any] = field(default_factory=dict)
+    experiment_id: str = ""
     investigation_id: str = ""
 
 
@@ -65,6 +66,7 @@ class ToolCalled(DomainEvent):
 class ToolResultEvent(DomainEvent):
     tool_name: str = ""
     result_preview: str = ""
+    experiment_id: str = ""
     investigation_id: str = ""
 
 

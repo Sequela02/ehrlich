@@ -124,9 +124,7 @@ class SqliteInvestigationRepository(InvestigationRepository):
             )
             await db.commit()
 
-    async def save_event(
-        self, investigation_id: str, event_type: str, event_data: str
-    ) -> None:
+    async def save_event(self, investigation_id: str, event_type: str, event_data: str) -> None:
         async with aiosqlite.connect(self._db_path) as db:
             await db.execute(
                 "INSERT INTO events (investigation_id, event_type, event_data) VALUES (?, ?, ?)",
@@ -144,8 +142,7 @@ class SqliteInvestigationRepository(InvestigationRepository):
             )
             rows = await cursor.fetchall()
             return [
-                {"event_type": row["event_type"], "event_data": row["event_data"]}
-                for row in rows
+                {"event_type": row["event_type"], "event_data": row["event_data"]} for row in rows
             ]
 
 

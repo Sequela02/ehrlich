@@ -8,6 +8,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Token optimization: prompt caching via `cache_control: ephemeral` on system messages (90% cheaper cached tokens across 20-40 calls)
+- Token optimization: phase-based tool filtering -- researcher gets only planned tools per experiment (5-10 instead of 23)
+- Token optimization: structured extraction (`_compact_result`) strips verbose fields before summarizer check, eliminating 50-80% of Haiku calls
+- Token optimization: in-memory TTL tool cache (`ToolCache`) -- deterministic tools cached forever, API results cached 24h-7d
+- Per-experiment Lab View: `experiment_id` field on `ToolCalled` and `ToolResultEvent` domain events
+- Per-experiment Lab View: experiment selector dropdown in `LiveLabViewer` for filtering 3D scene by experiment
+- Per-experiment Lab View: `eventsByExperiment` state in `use-sse.ts` for grouping SSE events
+- Data source: UniProt REST client (`uniprot_client.py`) -- protein function, disease associations, GO terms, PDB cross-refs
+- Data source: Open Targets GraphQL client (`opentargets_client.py`) -- disease-target associations with scored evidence
+- Data source: GtoPdb REST client (`gtopdb_client.py`) -- expert-curated receptor/ligand interactions with affinities
+- Tools: `get_protein_annotation` -- UniProt protein annotations (tool #28)
+- Tools: `search_disease_targets` -- Open Targets disease-target associations (tool #29)
+- Tools: `search_pharmacology` -- GtoPdb curated pharmacology data (tool #30)
+- Domain entities: `ProteinAnnotation`, `TargetAssociation`, `PharmacologyEntry`
+- Repository ABCs: `ProteinAnnotationRepository`, `TargetAssociationRepository`, `PharmacologyRepository`
+- Tests: UniProt, Open Targets, GtoPdb client tests with respx mocking
+
+### Changed
+
+- Always uses `MultiModelOrchestrator` (single-model `Orchestrator` removed)
+- Tool count: 27 -> 30 (3 new data source tools)
+- Prompts: `SCIENTIST_SYSTEM_PROMPT` and `RESEARCHER_EXPERIMENT_PROMPT` mention 3 new data source tools
+- E2E tests: rewritten to use `MultiModelOrchestrator`
+- Server tests: 267 -> 270 passing (80.2% coverage)
+
+### Removed
+
+- `Orchestrator` class (`orchestrator.py`) -- single-model fallback path eliminated
+- `test_orchestrator.py` -- tests for removed class
+
+---
+
+### Added
+
 - Auditability: SSE event persistence in SQLite `events` table -- all events stored during investigation, replayed on page reload
 - Auditability: `save_event()` / `get_events()` methods on `InvestigationRepository` interface and SQLite implementation
 - Auditability: `prompt` field included in `completed` SSE event during replay (research question visible in report)
@@ -100,7 +134,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - `MultiModelOrchestrator`: hypothesis-driven loop (formulate -> design -> execute -> evaluate per hypothesis)
-- `Orchestrator`: single-model fallback with same hypothesis control tools
 - Director prompts: 4 phases (formulation, experiment, evaluation, synthesis) with domain-adaptive language
 - Tool count: 19 -> 23 (6 investigation control tools added)
 - SQLite repository: serializes hypothesis/experiment/negative_control data
@@ -176,7 +209,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Persistence: `InvestigationRepository` ABC in domain layer
 - API: `GET /investigate` -- list all investigations (most recent first)
 - API: `GET /investigate/{id}` -- full investigation detail with findings, candidates, cost
-- API: Automatic orchestrator selection (multi-model when researcher != director, single-model fallback)
+- API: Orchestrator creation from model settings (always multi-model)
 - Console: SSE reconnection with exponential backoff (1s, 2s, 4s, max 3 retries)
 - Console: Investigation history list on home page with status badges and candidate counts
 - Console: Phase progress bar (7-segment) with active/completed/inactive states

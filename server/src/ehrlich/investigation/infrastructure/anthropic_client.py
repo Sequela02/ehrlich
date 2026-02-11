@@ -48,7 +48,13 @@ class AnthropicClientAdapter:
                 response = await self._client.messages.create(
                     model=self._model,
                     max_tokens=self._max_tokens,
-                    system=system,
+                    system=[
+                        {
+                            "type": "text",
+                            "text": system,
+                            "cache_control": {"type": "ephemeral"},
+                        }
+                    ],
                     messages=messages,  # type: ignore[arg-type]
                     tools=tools,  # type: ignore[arg-type]
                 )

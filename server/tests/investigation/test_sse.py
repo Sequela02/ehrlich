@@ -84,22 +84,26 @@ class TestDomainEventToSSE:
         event = ToolCalled(
             tool_name="search_literature",
             tool_input={"query": "MRSA"},
+            experiment_id="exp-1",
             investigation_id="inv-1",
         )
         sse = domain_event_to_sse(event)
         assert sse is not None
         assert sse.event == SSEEventType.TOOL_CALLED
         assert sse.data["tool_name"] == "search_literature"
+        assert sse.data["experiment_id"] == "exp-1"
 
     def test_tool_result(self) -> None:
         event = ToolResultEvent(
             tool_name="search_literature",
             result_preview='{"count": 5}',
+            experiment_id="exp-1",
             investigation_id="inv-1",
         )
         sse = domain_event_to_sse(event)
         assert sse is not None
         assert sse.event == SSEEventType.TOOL_RESULT
+        assert sse.data["experiment_id"] == "exp-1"
 
     def test_finding_recorded(self) -> None:
         event = FindingRecorded(

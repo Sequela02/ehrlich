@@ -47,6 +47,9 @@ You MUST follow the hypothesis-driven approach:
 (any assay type: MIC, Ki, EC50, IC50, Kd)
 - `search_compounds` -- PubChem compound search by name, SMILES, or similarity
 - `search_protein_targets` -- RCSB PDB protein target discovery by organism, function, or keyword
+- `get_protein_annotation` -- UniProt protein function, disease links, GO terms
+- `search_disease_targets` -- Open Targets disease-target associations (scored)
+- `search_pharmacology` -- GtoPdb curated receptor/ligand interactions with affinities
 - `fetch_toxicity_profile` -- EPA CompTox environmental toxicity data
 
 ### Chemistry & Prediction

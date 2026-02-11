@@ -13,6 +13,7 @@ from ehrlich.investigation.application.prompts import (
     RESEARCHER_EXPERIMENT_PROMPT,
     SUMMARIZER_PROMPT,
 )
+from ehrlich.investigation.application.tool_cache import ToolCache
 from ehrlich.investigation.domain.candidate import Candidate
 from ehrlich.investigation.domain.events import (
     DomainEvent,
@@ -43,6 +44,28 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_COMPACT_SCHEMAS: dict[str, list[str]] = {
+    "compute_descriptors": ["molecular_weight", "logp", "tpsa", "hbd", "hba", "qed", "num_rings"],
+    "compute_fingerprint": ["fingerprint_type", "num_bits"],
+    "validate_smiles": ["valid", "canonical_smiles"],
+    "explore_dataset": ["name", "target", "size", "active_count"],
+    "search_bioactivity": ["target", "size", "active_count"],
+    "search_protein_targets": ["query", "count", "targets"],
+    "tanimoto_similarity": ["similarity"],
+}
+
+
+def _compact_result(tool_name: str, result: str) -> str:
+    schema = _COMPACT_SCHEMAS.get(tool_name)
+    if not schema:
+        return result
+    try:
+        data = json.loads(result)
+        compacted = {k: data[k] for k in schema if k in data}
+        return json.dumps(compacted)
+    except (json.JSONDecodeError, TypeError):
+        return result
+
 
 class MultiModelOrchestrator:
     def __init__(
@@ -62,6 +85,7 @@ class MultiModelOrchestrator:
         self._max_iterations_per_experiment = max_iterations_per_experiment
         self._max_hypotheses = max_hypotheses
         self._summarizer_threshold = summarizer_threshold
+        self._cache = ToolCache()
 
     async def run(self, investigation: Investigation) -> AsyncGenerator[DomainEvent, None]:
         investigation.status = InvestigationStatus.RUNNING
@@ -461,6 +485,7 @@ class MultiModelOrchestrator:
                 )
 
                 result_str = await self._dispatch_tool(tool_name, tool_input, investigation)
+                result_str = _compact_result(tool_name, result_str)
 
                 summarized_str, summarize_event = await self._summarize_output(
                     cost, tool_name, result_str, investigation.id
@@ -512,14 +537,19 @@ class MultiModelOrchestrator:
         cost: CostTracker,
         design: dict[str, Any],
     ) -> AsyncGenerator[DomainEvent, None]:
-        tool_schemas = self._registry.list_schemas()
-        excluded = {
-            "conclude_investigation",
-            "propose_hypothesis",
-            "design_experiment",
-            "evaluate_hypothesis",
-        }
-        tool_schemas = [t for t in tool_schemas if t["name"] not in excluded]
+        planned = set(experiment.tool_plan) if experiment.tool_plan else set()
+        control_tools = {"record_finding", "record_negative_control"}
+        if planned:
+            allowed = planned | control_tools
+            tool_schemas = [t for t in self._registry.list_schemas() if t["name"] in allowed]
+        else:
+            excluded = {
+                "conclude_investigation",
+                "propose_hypothesis",
+                "design_experiment",
+                "evaluate_hypothesis",
+            }
+            tool_schemas = [t for t in self._registry.list_schemas() if t["name"] not in excluded]
 
         messages: list[dict[str, Any]] = [
             {
@@ -572,10 +602,12 @@ class MultiModelOrchestrator:
                 yield ToolCalled(
                     tool_name=tool_name,
                     tool_input=tool_input,
+                    experiment_id=experiment.id,
                     investigation_id=investigation.id,
                 )
 
                 result_str = await self._dispatch_tool(tool_name, tool_input, investigation)
+                result_str = _compact_result(tool_name, result_str)
 
                 summarized_str, summarize_event = await self._summarize_output(
                     cost, tool_name, result_str, investigation.id
@@ -588,6 +620,7 @@ class MultiModelOrchestrator:
                 yield ToolResultEvent(
                     tool_name=tool_name,
                     result_preview=preview,
+                    experiment_id=experiment.id,
                     investigation_id=investigation.id,
                 )
 
@@ -649,13 +682,20 @@ class MultiModelOrchestrator:
         tool_input: dict[str, Any],
         investigation: Investigation,
     ) -> str:
+        args_hash = ToolCache.hash_args(tool_input)
+        cached = self._cache.get(tool_name, args_hash)
+        if cached is not None:
+            return cached
+
         func = self._registry.get(tool_name)
         if func is None:
             return json.dumps({"error": f"Unknown tool: {tool_name}"})
 
         try:
             result = await func(**tool_input)
-            return str(result)
+            result_str = str(result)
+            self._cache.put(tool_name, args_hash, result_str)
+            return result_str
         except Exception as e:
             logger.warning("Tool %s failed: %s", tool_name, e)
             return json.dumps({"error": f"Tool {tool_name} failed: {e}"})

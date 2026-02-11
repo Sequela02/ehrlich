@@ -15,6 +15,7 @@ from ehrlich.analysis.tools import (
     explore_dataset,
     search_bioactivity,
     search_compounds,
+    search_pharmacology,
 )
 from ehrlich.api.sse import SSEEventType, domain_event_to_sse
 from ehrlich.chemistry.tools import (
@@ -27,7 +28,6 @@ from ehrlich.chemistry.tools import (
 )
 from ehrlich.config import get_settings
 from ehrlich.investigation.application.multi_orchestrator import MultiModelOrchestrator
-from ehrlich.investigation.application.orchestrator import Orchestrator
 from ehrlich.investigation.application.tool_registry import ToolRegistry
 from ehrlich.investigation.domain.investigation import Investigation, InvestigationStatus
 from ehrlich.investigation.infrastructure.anthropic_client import AnthropicClientAdapter
@@ -46,7 +46,9 @@ from ehrlich.simulation.tools import (
     assess_resistance,
     dock_against_target,
     fetch_toxicity_profile,
+    get_protein_annotation,
     predict_admet,
+    search_disease_targets,
     search_protein_targets,
 )
 
@@ -133,6 +135,9 @@ def _build_registry() -> ToolRegistry:
         "predict_admet": predict_admet,
         "fetch_toxicity_profile": fetch_toxicity_profile,
         "assess_resistance": assess_resistance,
+        "get_protein_annotation": get_protein_annotation,
+        "search_disease_targets": search_disease_targets,
+        "search_pharmacology": search_pharmacology,
         "record_finding": record_finding,
         "conclude_investigation": conclude_investigation,
         "propose_hypothesis": propose_hypothesis,
@@ -251,31 +256,18 @@ async def stream_investigation(investigation_id: str) -> EventSourceResponse:
     return EventSourceResponse(event_generator())
 
 
-def _create_orchestrator(
-    settings: Any, registry: ToolRegistry
-) -> MultiModelOrchestrator | Orchestrator:
+def _create_orchestrator(settings: Any, registry: ToolRegistry) -> MultiModelOrchestrator:
     api_key = settings.anthropic_api_key or None
-
-    # Use multi-model if researcher model differs from director
-    if settings.researcher_model != settings.director_model:
-        director = AnthropicClientAdapter(model=settings.director_model, api_key=api_key)
-        researcher = AnthropicClientAdapter(model=settings.researcher_model, api_key=api_key)
-        summarizer = AnthropicClientAdapter(model=settings.summarizer_model, api_key=api_key)
-        return MultiModelOrchestrator(
-            director=director,
-            researcher=researcher,
-            summarizer=summarizer,
-            registry=registry,
-            max_iterations_per_experiment=settings.max_iterations_per_experiment,
-            summarizer_threshold=settings.summarizer_threshold,
-        )
-
-    # Fallback to single-model orchestrator
-    client = AnthropicClientAdapter(model=settings.anthropic_model, api_key=api_key)
-    return Orchestrator(
-        client=client,
+    director = AnthropicClientAdapter(model=settings.director_model, api_key=api_key)
+    researcher = AnthropicClientAdapter(model=settings.researcher_model, api_key=api_key)
+    summarizer = AnthropicClientAdapter(model=settings.summarizer_model, api_key=api_key)
+    return MultiModelOrchestrator(
+        director=director,
+        researcher=researcher,
+        summarizer=summarizer,
         registry=registry,
-        max_iterations=settings.max_iterations,
+        max_iterations_per_experiment=settings.max_iterations_per_experiment,
+        summarizer_threshold=settings.summarizer_threshold,
     )
 
 
