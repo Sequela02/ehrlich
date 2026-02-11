@@ -4,6 +4,7 @@ from enum import StrEnum
 from typing import Any
 
 from ehrlich.investigation.domain.events import (
+    CostUpdate,
     DomainEvent,
     ExperimentCompleted,
     ExperimentStarted,
@@ -35,6 +36,7 @@ class SSEEventType(StrEnum):
     COMPLETED = "completed"
     OUTPUT_SUMMARIZED = "output_summarized"
     PHASE_CHANGED = "phase_changed"
+    COST_UPDATE = "cost_update"
 
 
 @dataclass(frozen=True)
@@ -174,6 +176,18 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
                 "phase": event.phase,
                 "name": event.name,
                 "description": event.description,
+                "investigation_id": event.investigation_id,
+            },
+        )
+    if isinstance(event, CostUpdate):
+        return SSEEvent(
+            event=SSEEventType.COST_UPDATE,
+            data={
+                "input_tokens": event.input_tokens,
+                "output_tokens": event.output_tokens,
+                "total_tokens": event.total_tokens,
+                "total_cost_usd": event.total_cost_usd,
+                "tool_calls": event.tool_calls,
                 "investigation_id": event.investigation_id,
             },
         )

@@ -17,6 +17,7 @@ from ehrlich.investigation.application.prompts import (
 from ehrlich.investigation.application.tool_cache import ToolCache
 from ehrlich.investigation.domain.candidate import Candidate
 from ehrlich.investigation.domain.events import (
+    CostUpdate,
     DomainEvent,
     ExperimentCompleted,
     ExperimentStarted,
@@ -90,6 +91,16 @@ class MultiModelOrchestrator:
         self._cache = ToolCache()
         self._state_lock = asyncio.Lock()
 
+    def _cost_event(self, cost: CostTracker, investigation_id: str) -> CostUpdate:
+        return CostUpdate(
+            input_tokens=cost.input_tokens,
+            output_tokens=cost.output_tokens,
+            total_tokens=cost.total_tokens,
+            total_cost_usd=round(cost.total_cost, 6),
+            tool_calls=cost.tool_calls,
+            investigation_id=investigation_id,
+        )
+
     async def run(self, investigation: Investigation) -> AsyncGenerator[DomainEvent, None]:
         investigation.status = InvestigationStatus.RUNNING
         cost = CostTracker()
@@ -107,6 +118,8 @@ class MultiModelOrchestrator:
                 yield event
                 if isinstance(event, Thinking):
                     literature_summary += event.text + "\n"
+
+            yield self._cost_event(cost, investigation.id)
 
             # 2. Director formulates hypotheses
             yield PhaseChanged(
@@ -142,6 +155,7 @@ class MultiModelOrchestrator:
 
             # Store negative control suggestions for later
             neg_control_suggestions = formulation.get("negative_controls", [])
+            yield self._cost_event(cost, investigation.id)
 
             # 3. Hypothesis loop -- batched parallel execution
             yield PhaseChanged(
@@ -304,6 +318,8 @@ class MultiModelOrchestrator:
                             parent_id=hypothesis.id,
                             investigation_id=investigation.id,
                         )
+
+                yield self._cost_event(cost, investigation.id)
 
             # 4. Negative controls (from director suggestions)
             yield PhaseChanged(

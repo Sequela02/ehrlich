@@ -11,7 +11,8 @@ export type SSEEventType =
   | "error"
   | "completed"
   | "output_summarized"
-  | "phase_changed";
+  | "phase_changed"
+  | "cost_update";
 
 export interface SSEEvent {
   event: SSEEventType;
@@ -157,6 +158,15 @@ export interface PhaseInfo {
   phase: number;
   name: string;
   description: string;
+}
+
+export interface CostUpdateData {
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+  total_cost_usd: number;
+  tool_calls: number;
+  investigation_id: string;
 }
 
 export interface InvestigationRequest {

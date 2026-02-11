@@ -1,5 +1,6 @@
 from ehrlich.api.sse import SSEEventType, domain_event_to_sse
 from ehrlich.investigation.domain.events import (
+    CostUpdate,
     DomainEvent,
     ExperimentCompleted,
     ExperimentStarted,
@@ -164,6 +165,22 @@ class TestDomainEventToSSE:
         assert sse.data["phase"] == 2
         assert sse.data["name"] == "Formulation"
         assert sse.data["description"] == "Director formulating hypotheses"
+
+    def test_cost_update(self) -> None:
+        event = CostUpdate(
+            input_tokens=5000,
+            output_tokens=1000,
+            total_tokens=6000,
+            total_cost_usd=0.1275,
+            tool_calls=3,
+            investigation_id="inv-1",
+        )
+        sse = domain_event_to_sse(event)
+        assert sse is not None
+        assert sse.event == SSEEventType.COST_UPDATE
+        assert sse.data["input_tokens"] == 5000
+        assert sse.data["total_cost_usd"] == 0.1275
+        assert sse.data["tool_calls"] == 3
 
     def test_unknown_event_returns_none(self) -> None:
         event = DomainEvent()

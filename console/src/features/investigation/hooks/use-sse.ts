@@ -29,6 +29,7 @@ const EVENT_TYPES: SSEEventType[] = [
   "completed",
   "output_summarized",
   "phase_changed",
+  "cost_update",
 ];
 
 const MAX_RETRIES = 3;
@@ -219,6 +220,15 @@ export function useSSE(url: string | null): SSEState {
           phase: parsed.data.phase as number,
           name: parsed.data.name as string,
           description: parsed.data.description as string,
+        });
+        break;
+      case "cost_update":
+        setCost({
+          inputTokens: parsed.data.input_tokens as number,
+          outputTokens: parsed.data.output_tokens as number,
+          totalTokens: parsed.data.total_tokens as number,
+          totalCost: parsed.data.total_cost_usd as number,
+          toolCalls: parsed.data.tool_calls as number,
         });
         break;
       case "completed": {

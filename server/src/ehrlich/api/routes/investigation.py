@@ -239,8 +239,12 @@ async def stream_investigation(investigation_id: str) -> EventSourceResponse:
                         "event": sse_event.event.value,
                         "data": sse_event.format(),
                     }
-                    # Persist all events except completed/error (those are replayed from state)
-                    if sse_event.event not in (SSEEventType.COMPLETED, SSEEventType.ERROR):
+                    # Skip completed/error (replayed from state) and cost_update (transient)
+                    if sse_event.event not in (
+                        SSEEventType.COMPLETED,
+                        SSEEventType.ERROR,
+                        SSEEventType.COST_UPDATE,
+                    ):
                         await repo.save_event(
                             investigation.id,
                             sse_event.event.value,

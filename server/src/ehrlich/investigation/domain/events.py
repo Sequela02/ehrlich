@@ -103,6 +103,16 @@ class PhaseChanged(DomainEvent):
 
 
 @dataclass(frozen=True)
+class CostUpdate(DomainEvent):
+    input_tokens: int = 0
+    output_tokens: int = 0
+    total_tokens: int = 0
+    total_cost_usd: float = 0.0
+    tool_calls: int = 0
+    investigation_id: str = ""
+
+
+@dataclass(frozen=True)
 class InvestigationCompleted(DomainEvent):
     investigation_id: str = ""
     candidate_count: int = 0
