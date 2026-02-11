@@ -95,6 +95,14 @@ class OutputSummarized(DomainEvent):
 
 
 @dataclass(frozen=True)
+class PhaseChanged(DomainEvent):
+    phase: int = 0
+    name: str = ""
+    description: str = ""
+    investigation_id: str = ""
+
+
+@dataclass(frozen=True)
 class InvestigationCompleted(DomainEvent):
     investigation_id: str = ""
     candidate_count: int = 0

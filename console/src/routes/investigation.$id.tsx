@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useRef, useEffect, useState, useMemo } from "react";
 import { ArrowLeft, PanelRightClose, PanelRightOpen, WifiOff } from "lucide-react";
+import type { PhaseInfo } from "@/features/investigation/types";
 import { cn } from "@/shared/lib/utils";
 import { ErrorBoundary } from "@/features/shared/components/ErrorBoundary";
 import {
@@ -43,6 +44,7 @@ function InvestigationPage() {
     summary,
     prompt,
     cost,
+    currentPhase,
     error,
     activeToolName,
     experimentToolCount,
@@ -117,6 +119,7 @@ function InvestigationPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {!completed && <PhaseIndicator phase={currentPhase} />}
             <StatusIndicator
               connected={connected}
               reconnecting={reconnecting}
@@ -456,5 +459,31 @@ function StatusIndicator({
       <span className="h-2 w-2 rounded-full bg-muted-foreground" />
       Connecting
     </span>
+  );
+}
+
+function PhaseIndicator({ phase }: { phase: PhaseInfo | null }) {
+  if (!phase) return null;
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex gap-0.5">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div
+            key={i}
+            className={cn(
+              "h-1.5 w-6 rounded-full transition-colors",
+              i < phase.phase
+                ? "bg-primary"
+                : i === phase.phase
+                  ? "animate-pulse bg-primary"
+                  : "bg-muted",
+            )}
+          />
+        ))}
+      </div>
+      <span className="font-mono text-[11px] text-muted-foreground">
+        {phase.name}
+      </span>
+    </div>
   );
 }

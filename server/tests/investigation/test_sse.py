@@ -9,6 +9,7 @@ from ehrlich.investigation.domain.events import (
     InvestigationCompleted,
     InvestigationError,
     NegativeControlRecorded,
+    PhaseChanged,
     Thinking,
     ToolCalled,
     ToolResultEvent,
@@ -149,6 +150,20 @@ class TestDomainEventToSSE:
         assert sse.data["cost"]["total_cost_usd"] == 0.05
         assert len(sse.data["hypotheses"]) == 1
         assert len(sse.data["negative_controls"]) == 1
+
+    def test_phase_changed(self) -> None:
+        event = PhaseChanged(
+            phase=2,
+            name="Formulation",
+            description="Director formulating hypotheses",
+            investigation_id="inv-1",
+        )
+        sse = domain_event_to_sse(event)
+        assert sse is not None
+        assert sse.event == SSEEventType.PHASE_CHANGED
+        assert sse.data["phase"] == 2
+        assert sse.data["name"] == "Formulation"
+        assert sse.data["description"] == "Director formulating hypotheses"
 
     def test_unknown_event_returns_none(self) -> None:
         event = DomainEvent()

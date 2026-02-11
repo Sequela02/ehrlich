@@ -10,7 +10,8 @@ export type SSEEventType =
   | "thinking"
   | "error"
   | "completed"
-  | "output_summarized";
+  | "output_summarized"
+  | "phase_changed";
 
 export interface SSEEvent {
   event: SSEEventType;
@@ -143,6 +144,19 @@ export interface OutputSummarizedData {
   original_length: number;
   summarized_length: number;
   investigation_id: string;
+}
+
+export interface PhaseChangedData {
+  phase: number;
+  name: string;
+  description: string;
+  investigation_id: string;
+}
+
+export interface PhaseInfo {
+  phase: number;
+  name: string;
+  description: string;
 }
 
 export interface InvestigationRequest {

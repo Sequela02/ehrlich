@@ -10,6 +10,7 @@ import type {
   Hypothesis,
   HypothesisStatus,
   NegativeControl,
+  PhaseInfo,
   SSEEvent,
   SSEEventType,
 } from "../types";
@@ -27,6 +28,7 @@ const EVENT_TYPES: SSEEventType[] = [
   "error",
   "completed",
   "output_summarized",
+  "phase_changed",
 ];
 
 const MAX_RETRIES = 3;
@@ -47,6 +49,7 @@ interface SSEState {
   summary: string;
   prompt: string;
   cost: CostInfo | null;
+  currentPhase: PhaseInfo | null;
   error: string | null;
   toolCallCount: number;
   activeToolName: string;
@@ -70,6 +73,7 @@ export function useSSE(url: string | null): SSEState {
   const [summary, setSummary] = useState("");
   const [prompt, setPrompt] = useState("");
   const [cost, setCost] = useState<CostInfo | null>(null);
+  const [currentPhase, setCurrentPhase] = useState<PhaseInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [toolCallCount, setToolCallCount] = useState(0);
   const [activeToolName, setActiveToolName] = useState("");
@@ -210,6 +214,13 @@ export function useSSE(url: string | null): SSEState {
           },
         ]);
         break;
+      case "phase_changed":
+        setCurrentPhase({
+          phase: parsed.data.phase as number,
+          name: parsed.data.name as string,
+          description: parsed.data.description as string,
+        });
+        break;
       case "completed": {
         const d = parsed.data as unknown as CompletedData;
         setSummary(d.summary);
@@ -325,6 +336,7 @@ export function useSSE(url: string | null): SSEState {
     summary,
     prompt,
     cost,
+    currentPhase,
     error,
     toolCallCount,
     activeToolName,

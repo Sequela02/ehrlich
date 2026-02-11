@@ -14,6 +14,7 @@ from ehrlich.investigation.domain.events import (
     InvestigationError,
     NegativeControlRecorded,
     OutputSummarized,
+    PhaseChanged,
     Thinking,
     ToolCalled,
     ToolResultEvent,
@@ -33,6 +34,7 @@ class SSEEventType(StrEnum):
     ERROR = "error"
     COMPLETED = "completed"
     OUTPUT_SUMMARIZED = "output_summarized"
+    PHASE_CHANGED = "phase_changed"
 
 
 @dataclass(frozen=True)
@@ -162,6 +164,16 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
                 "tool_name": event.tool_name,
                 "original_length": event.original_length,
                 "summarized_length": event.summarized_length,
+                "investigation_id": event.investigation_id,
+            },
+        )
+    if isinstance(event, PhaseChanged):
+        return SSEEvent(
+            event=SSEEventType.PHASE_CHANGED,
+            data={
+                "phase": event.phase,
+                "name": event.name,
+                "description": event.description,
                 "investigation_id": event.investigation_id,
             },
         )

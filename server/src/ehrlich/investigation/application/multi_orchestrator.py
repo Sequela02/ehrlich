@@ -27,6 +27,7 @@ from ehrlich.investigation.domain.events import (
     InvestigationError,
     NegativeControlRecorded,
     OutputSummarized,
+    PhaseChanged,
     Thinking,
     ToolCalled,
     ToolResultEvent,
@@ -95,6 +96,12 @@ class MultiModelOrchestrator:
 
         try:
             # 1. Literature survey by researcher (quick phase)
+            yield PhaseChanged(
+                phase=1,
+                name="Literature Survey",
+                description="Searching scientific literature and available datasets",
+                investigation_id=investigation.id,
+            )
             literature_summary = ""
             async for event in self._run_literature_survey(investigation, cost):
                 yield event
@@ -102,6 +109,12 @@ class MultiModelOrchestrator:
                     literature_summary += event.text + "\n"
 
             # 2. Director formulates hypotheses
+            yield PhaseChanged(
+                phase=2,
+                name="Formulation",
+                description="Director formulating testable hypotheses from literature evidence",
+                investigation_id=investigation.id,
+            )
             formulation = await self._director_call(
                 cost,
                 DIRECTOR_FORMULATION_PROMPT,
@@ -131,6 +144,12 @@ class MultiModelOrchestrator:
             neg_control_suggestions = formulation.get("negative_controls", [])
 
             # 3. Hypothesis loop -- batched parallel execution
+            yield PhaseChanged(
+                phase=3,
+                name="Hypothesis Testing",
+                description="Running parallel experiments to test hypotheses",
+                investigation_id=investigation.id,
+            )
             tested = 0
             while tested < self._max_hypotheses:
                 proposed = [
@@ -287,6 +306,12 @@ class MultiModelOrchestrator:
                         )
 
             # 4. Negative controls (from director suggestions)
+            yield PhaseChanged(
+                phase=4,
+                name="Negative Controls",
+                description="Validating model predictions with known-inactive compounds",
+                investigation_id=investigation.id,
+            )
             for nc_data in neg_control_suggestions:
                 smiles = nc_data.get("smiles", "")
                 name = nc_data.get("name", "")
@@ -308,6 +333,12 @@ class MultiModelOrchestrator:
                     )
 
             # 5. Director synthesizes
+            yield PhaseChanged(
+                phase=5,
+                name="Synthesis",
+                description="Director synthesizing final report and ranking candidates",
+                investigation_id=investigation.id,
+            )
             all_findings_text = "\n".join(
                 f"- [H:{f.hypothesis_id}|{f.evidence_type}] {f.title}: {f.detail}"
                 for f in investigation.findings
