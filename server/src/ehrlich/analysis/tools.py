@@ -48,11 +48,11 @@ async def analyze_substructures(target: str, threshold: float = 1.0) -> str:
             {
                 "substructure": r.substructure,
                 "description": r.description,
-                "p_value": r.p_value,
-                "odds_ratio": round(r.odds_ratio, 4),
+                "p_value": float(r.p_value),
+                "odds_ratio": round(float(r.odds_ratio), 4),
                 "active_count": r.active_count,
                 "total_count": r.total_count,
-                "significant": r.p_value < 0.05,
+                "significant": bool(r.p_value < 0.05),
             }
         )
     return json.dumps(

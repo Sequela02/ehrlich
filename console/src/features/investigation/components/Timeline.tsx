@@ -19,7 +19,6 @@ import type { SSEEvent } from "../types";
 
 interface TimelineProps {
   events: SSEEvent[];
-  currentPhase: string;
 }
 
 const PHASE_ICONS: Record<string, typeof FlaskConical> = {
@@ -32,7 +31,7 @@ const PHASE_ICONS: Record<string, typeof FlaskConical> = {
   Conclusions: CheckCircle2,
 };
 
-export function Timeline({ events, currentPhase }: TimelineProps) {
+export function Timeline({ events }: TimelineProps) {
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
 
   if (events.length === 0) {
@@ -54,13 +53,7 @@ export function Timeline({ events, currentPhase }: TimelineProps) {
   };
 
   return (
-    <div className="space-y-1.5">
-      {currentPhase && (
-        <div className="mb-3 flex items-center gap-2 text-sm font-medium text-primary">
-          <PhaseIcon phase={currentPhase} />
-          {currentPhase}
-        </div>
-      )}
+    <div className="space-y-0.5">
       {events.map((event, i) => (
         <TimelineEntry
           key={i}
@@ -116,7 +109,7 @@ function TimelineEntry({
   switch (event.event) {
     case "phase_started":
       return (
-        <div className="flex items-center gap-2 rounded-md bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
+        <div className="mt-4 mb-2 flex items-center gap-2 rounded-md bg-primary/8 px-3 py-2 text-sm font-medium text-primary first:mt-0">
           <PhaseIcon phase={event.data.phase as string} />
           {event.data.phase as string}
         </div>
@@ -124,12 +117,12 @@ function TimelineEntry({
 
     case "tool_called":
       return (
-        <div className="flex items-center gap-2 px-3 py-1 text-xs text-muted-foreground">
-          <Wrench className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
-          <span className="font-mono font-medium text-primary/80">
+        <div className="group flex items-center gap-2 rounded px-3 py-1 transition-colors hover:bg-muted/30">
+          <Wrench className="h-3 w-3 shrink-0 text-muted-foreground/40" />
+          <span className="font-mono text-xs font-medium text-foreground/70">
             {event.data.tool_name as string}
           </span>
-          <span className="truncate font-mono text-muted-foreground/50">
+          <span className="truncate font-mono text-[11px] text-muted-foreground/40">
             {formatToolInput(event.data.tool_input as Record<string, unknown>)}
           </span>
         </div>
@@ -137,23 +130,38 @@ function TimelineEntry({
 
     case "tool_result": {
       const result = event.data.result_preview as string;
-      const isLong = result.length > 150;
+      const isLong = result.length > 120;
+      if (!isExpanded) {
+        return (
+          <div
+            className={cn(
+              "ml-7 rounded border-l border-border/40 px-2.5 py-0.5 font-mono text-[10px] leading-relaxed text-muted-foreground/35",
+              isLong && "cursor-pointer hover:text-muted-foreground/50",
+            )}
+            onClick={isLong ? onToggle : undefined}
+          >
+            {isLong && (
+              <ExpandToggle
+                isExpanded={false}
+                onClick={onToggle}
+                className="mr-1"
+              />
+            )}
+            <span className="line-clamp-1">{result}</span>
+          </div>
+        );
+      }
       return (
         <div
-          className={cn(
-            "px-3 py-0.5 pl-9 font-mono text-[11px] text-muted-foreground/50",
-            isLong && "cursor-pointer",
-          )}
-          onClick={isLong ? onToggle : undefined}
+          className="ml-7 cursor-pointer rounded border-l border-border/40 px-2.5 py-1 font-mono text-[10px] leading-relaxed text-muted-foreground/50"
+          onClick={onToggle}
         >
-          {isLong && (
-            <ExpandToggle
-              isExpanded={isExpanded}
-              onClick={onToggle}
-              className="mr-1 -ml-4"
-            />
-          )}
-          <span className={isExpanded ? "" : "line-clamp-2"}>{result}</span>
+          <ExpandToggle
+            isExpanded={true}
+            onClick={onToggle}
+            className="mr-1"
+          />
+          <span className="whitespace-pre-wrap break-all">{result}</span>
         </div>
       );
     }
@@ -161,22 +169,22 @@ function TimelineEntry({
     case "finding_recorded": {
       const evidence = event.data.evidence as string | undefined;
       return (
-        <div className="rounded-md border-l-2 border-primary bg-primary/5 px-3 py-2">
+        <div className="my-1.5 rounded-md border border-primary/20 bg-primary/5 px-3 py-2">
           <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            Finding: {event.data.title as string}
+            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+            {event.data.title as string}
           </div>
           {(event.data.detail as string) && (
-            <p className="mt-1 pl-5 text-xs leading-relaxed text-muted-foreground">
+            <p className="mt-1 pl-5 text-[11px] leading-relaxed text-foreground/60">
               {event.data.detail as string}
             </p>
           )}
           {evidence && (
-            <div className="mt-1.5 ml-5 rounded bg-muted/30 px-2 py-1.5">
-              <span className="font-mono text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70">
+            <div className="mt-1.5 ml-5 rounded bg-muted/30 px-2 py-1">
+              <span className="font-mono text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50">
                 Evidence
               </span>
-              <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">
+              <p className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground/70">
                 {evidence}
               </p>
             </div>
@@ -187,12 +195,12 @@ function TimelineEntry({
 
     case "thinking": {
       const text = event.data.text as string;
-      const isLong = text.length > 200;
+      const isLong = text.length > 150;
       return (
         <div
           className={cn(
-            "px-3 py-1.5 text-xs italic leading-relaxed text-foreground/50",
-            isLong && "cursor-pointer",
+            "rounded px-3 py-1 text-[11px] italic leading-relaxed text-foreground/30",
+            isLong && "cursor-pointer hover:text-foreground/40",
           )}
           onClick={isLong ? onToggle : undefined}
         >
@@ -203,7 +211,7 @@ function TimelineEntry({
               className="mr-1"
             />
           )}
-          <span className={isExpanded ? "" : "line-clamp-3"}>{text}</span>
+          <span className={isExpanded ? "" : "line-clamp-2"}>{text}</span>
         </div>
       );
     }
@@ -218,7 +226,7 @@ function TimelineEntry({
             ? `Director reviewing ${phase}...`
             : "Director synthesizing results...";
       return (
-        <div className="flex items-center gap-2 rounded-md bg-accent/10 px-3 py-2 text-xs font-medium text-accent">
+        <div className="my-1 flex items-center gap-2 rounded-md bg-accent/8 px-3 py-2 text-xs font-medium text-accent">
           <Brain className="h-3.5 w-3.5 animate-pulse" />
           {label}
         </div>
@@ -240,9 +248,10 @@ function TimelineEntry({
 
     case "output_summarized":
       return (
-        <div className="flex items-center gap-1.5 px-3 py-0.5 pl-9 font-mono text-[10px] text-muted-foreground/40">
-          <Shrink className="h-3 w-3" />
-          {event.data.tool_name as string}: {event.data.original_length as number} chars
+        <div className="ml-7 flex items-center gap-1.5 border-l border-border/40 px-2.5 py-0.5 font-mono text-[10px] text-muted-foreground/30">
+          <Shrink className="h-2.5 w-2.5" />
+          {event.data.tool_name as string}:{" "}
+          {event.data.original_length as number}
           {" -> "}
           {event.data.summarized_length as number} chars
         </div>
@@ -250,21 +259,22 @@ function TimelineEntry({
 
     case "phase_completed":
       return (
-        <div className="my-2 flex items-center gap-2 border-t border-b border-border/50 px-3 py-2 text-xs text-muted-foreground">
-          <CheckCircle2 className="h-3.5 w-3.5 text-primary/60" />
-          <span className="font-medium text-primary/70">
+        <div className="mt-1 mb-3 flex items-center gap-2 border-b border-border/30 px-3 pb-2 text-xs text-muted-foreground/60">
+          <CheckCircle2 className="h-3 w-3 text-primary/50" />
+          <span className="font-medium text-primary/60">
             {event.data.phase as string}
           </span>
-          <span>complete</span>
-          <span className="ml-auto font-mono text-[10px] tabular-nums text-muted-foreground/60">
-            {event.data.tool_count as number} tools, {event.data.finding_count as number} findings
+          <span className="text-muted-foreground/40">complete</span>
+          <span className="ml-auto font-mono text-[10px] tabular-nums text-muted-foreground/40">
+            {event.data.tool_count as number} tools,{" "}
+            {event.data.finding_count as number} findings
           </span>
         </div>
       );
 
     case "error":
       return (
-        <div className="flex items-center gap-2 rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">
+        <div className="my-1 flex items-center gap-2 rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">
           <XCircle className="h-3.5 w-3.5 shrink-0" />
           {event.data.error as string}
         </div>
@@ -272,12 +282,7 @@ function TimelineEntry({
 
     case "completed":
       return (
-        <div
-          className={cn(
-            "flex items-center gap-2 rounded-md bg-primary/10 px-3 py-2",
-            "text-sm font-medium text-primary",
-          )}
-        >
+        <div className="mt-3 flex items-center gap-2 rounded-md bg-primary/10 px-3 py-2.5 text-sm font-medium text-primary">
           <CheckCircle2 className="h-4 w-4" />
           Investigation complete ({event.data.candidate_count as number}{" "}
           candidates)
@@ -306,7 +311,7 @@ function DirectorDecisionCard({
     header = `Plan: ${phases.length} phases`;
   } else if (stage === "review" && typeof decision.quality_score === "number") {
     const pct = (decision.quality_score as number) * 100;
-    header = `Quality: ${pct.toFixed(0)}% — ${decision.proceed ? "Proceeding" : "Stopping"}`;
+    header = `Quality: ${pct.toFixed(0)}% -- ${decision.proceed ? "Proceeding" : "Stopping"}`;
   } else if (stage === "synthesis") {
     const cands = (decision.candidates as unknown[]) ?? [];
     header = `Synthesis: ${cands.length} candidates`;
@@ -315,9 +320,9 @@ function DirectorDecisionCard({
   }
 
   return (
-    <div className="border-l-2 border-accent/40 px-3 py-1.5">
+    <div className="my-0.5 border-l-2 border-accent/30 px-3 py-1.5">
       <div
-        className="flex cursor-pointer items-center gap-1.5 font-mono text-xs text-accent"
+        className="flex cursor-pointer items-center gap-1.5 font-mono text-xs text-accent/80"
         onClick={onToggle}
       >
         <ExpandToggle isExpanded={isExpanded} onClick={onToggle} />

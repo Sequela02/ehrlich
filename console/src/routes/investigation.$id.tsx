@@ -91,16 +91,14 @@ function InvestigationPage() {
             Timeline
           </h2>
           <div className="max-h-[500px] overflow-y-auto rounded-lg border border-border bg-surface p-4">
-            <Timeline events={events} currentPhase={currentPhase} />
+            <Timeline events={events} />
             <div ref={timelineEndRef} />
           </div>
         </section>
 
-        {findings.length > 0 && (
-          <section>
-            <FindingsPanel findings={findings} />
-          </section>
-        )}
+        <section>
+          <FindingsPanel findings={findings} />
+        </section>
 
         {candidates.length > 0 && (
           <section>

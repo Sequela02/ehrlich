@@ -5,7 +5,7 @@ import type { SSEEvent } from "../types";
 
 describe("Timeline", () => {
   it("shows connecting message when no events", () => {
-    render(<Timeline events={[]} currentPhase="" />);
+    render(<Timeline events={[]} />);
     expect(screen.getByText(/connecting/i)).toBeInTheDocument();
   });
 
@@ -13,7 +13,7 @@ describe("Timeline", () => {
     const events: SSEEvent[] = [
       { event: "phase_started", data: { phase: "Literature Review" } },
     ];
-    render(<Timeline events={events} currentPhase="Literature Review" />);
+    render(<Timeline events={events} />);
     expect(screen.getAllByText("Literature Review").length).toBeGreaterThan(0);
   });
 
@@ -24,7 +24,7 @@ describe("Timeline", () => {
         data: { tool_name: "search_literature", tool_input: { query: "MRSA" } },
       },
     ];
-    render(<Timeline events={events} currentPhase="" />);
+    render(<Timeline events={events} />);
     expect(screen.getByText("search_literature")).toBeInTheDocument();
   });
 
@@ -35,7 +35,7 @@ describe("Timeline", () => {
         data: { title: "Key insight", detail: "Detail text", phase: "Literature Review" },
       },
     ];
-    render(<Timeline events={events} currentPhase="" />);
+    render(<Timeline events={events} />);
     expect(screen.getByText(/Key insight/)).toBeInTheDocument();
   });
 
@@ -43,7 +43,7 @@ describe("Timeline", () => {
     const events: SSEEvent[] = [
       { event: "thinking", data: { text: "Let me analyze the data..." } },
     ];
-    render(<Timeline events={events} currentPhase="" />);
+    render(<Timeline events={events} />);
     expect(screen.getByText(/Let me analyze/)).toBeInTheDocument();
   });
 
@@ -51,7 +51,7 @@ describe("Timeline", () => {
     const events: SSEEvent[] = [
       { event: "error", data: { error: "API timeout" } },
     ];
-    render(<Timeline events={events} currentPhase="" />);
+    render(<Timeline events={events} />);
     expect(screen.getByText("API timeout")).toBeInTheDocument();
   });
 
@@ -59,7 +59,7 @@ describe("Timeline", () => {
     const events: SSEEvent[] = [
       { event: "completed", data: { candidate_count: 3 } },
     ];
-    render(<Timeline events={events} currentPhase="" />);
+    render(<Timeline events={events} />);
     expect(screen.getByText(/3 candidates/)).toBeInTheDocument();
   });
 });
