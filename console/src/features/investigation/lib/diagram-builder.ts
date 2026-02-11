@@ -63,14 +63,18 @@ const LEFT_PAD = 50;
 
 // -- Shared element defaults (clean, professional) --------------------
 
-const BASE: Record<string, unknown> = {
-  roughness: 0,
-  strokeWidth: 2,
+const BASE = {
+  roughness: 0 as const,
+  strokeWidth: 2 as const,
   fillStyle: "solid" as const,
-  roundness: { type: 3 },
+  roundness: { type: 3 as const },
 };
 
-const FONT = { fontFamily: 2, textAlign: "center" as const, verticalAlign: "middle" as const };
+const FONT = {
+  fontFamily: 2 as const,
+  textAlign: "center" as const,
+  verticalAlign: "middle" as const,
+};
 
 // -- ID generator (reset per call) ------------------------------------
 
@@ -99,6 +103,43 @@ function sectionTitle(text: string, x: number, y: number): ExcalidrawElementSkel
   } as ExcalidrawElementSkeleton;
 }
 
+// -- Arrow with computed position + id binding ------------------------
+
+interface Pos { x: number; y: number; id: string }
+
+function arrow(
+  from: Pos,
+  to: Pos,
+  color: string,
+  labelText?: string,
+  dashed?: boolean,
+): ExcalidrawElementSkeleton {
+  const startX = from.x + NODE_W / 2;
+  const startY = from.y + NODE_H;
+  const endX = to.x + NODE_W / 2;
+  const endY = to.y;
+
+  return {
+    type: "arrow",
+    id: nextId(),
+    x: startX,
+    y: startY,
+    width: endX - startX,
+    height: endY - startY,
+    points: [[0, 0], [endX - startX, endY - startY]],
+    strokeColor: color,
+    strokeStyle: dashed ? "dashed" : "solid",
+    endArrowhead: "arrow",
+    startBinding: { elementId: from.id, focus: 0, gap: 5 },
+    endBinding: { elementId: to.id, focus: 0, gap: 5 },
+    ...BASE,
+    roundness: null,
+    ...(labelText
+      ? { label: { text: labelText, fontSize: 12, ...FONT } }
+      : {}),
+  } as ExcalidrawElementSkeleton;
+}
+
 // -- Main builder -----------------------------------------------------
 
 export function buildDiagramElements(
@@ -110,7 +151,7 @@ export function buildDiagramElements(
   if (hypotheses.length === 0) return [];
 
   const elements: ExcalidrawElementSkeleton[] = [];
-  const nodeIds = new Map<string, string>();
+  const nodePositions = new Map<string, Pos>();
 
   // ---- Row 1: Hypotheses --------------------------------------------
 
@@ -120,7 +161,7 @@ export function buildDiagramElements(
   hypotheses.forEach((h, i) => {
     const x = i * (NODE_W + H_GAP) + LEFT_PAD;
     const rectId = nextId();
-    nodeIds.set(`hyp:${h.id}`, rectId);
+    nodePositions.set(`hyp:${h.id}`, { x, y: HYP_Y, id: rectId });
     const colors = STATUS_COLORS[h.status];
 
     const statusLine = h.confidence
@@ -146,21 +187,10 @@ export function buildDiagramElements(
     } as ExcalidrawElementSkeleton);
 
     if (h.parentId) {
-      const parentRectId = nodeIds.get(`hyp:${h.parentId}`);
-      if (parentRectId) {
-        elements.push({
-          type: "arrow",
-          id: nextId(),
-          x: 0,
-          y: 0,
-          strokeColor: "#f08c00",
-          strokeStyle: "dashed",
-          endArrowhead: "arrow",
-          start: { id: parentRectId },
-          end: { id: rectId },
-          label: { text: ARROW_LABELS.revision, fontSize: 12, ...FONT },
-          ...BASE,
-        } as ExcalidrawElementSkeleton);
+      const parentPos = nodePositions.get(`hyp:${h.parentId}`);
+      if (parentPos) {
+        const pos = nodePositions.get(`hyp:${h.id}`)!;
+        elements.push(arrow(parentPos, pos, "#f08c00", ARROW_LABELS.revision, true));
       }
     }
   });
@@ -182,12 +212,12 @@ export function buildDiagramElements(
 
   let expIndex = 0;
   for (const [hId, exps] of expsByHypothesis) {
-    const parentRectId = nodeIds.get(`hyp:${hId}`);
+    const hPos = nodePositions.get(`hyp:${hId}`);
 
     for (const exp of exps) {
       const x = expIndex * (NODE_W + H_GAP) + LEFT_PAD;
       const rectId = nextId();
-      nodeIds.set(`exp:${exp.id}`, rectId);
+      nodePositions.set(`exp:${exp.id}`, { x, y: EXP_Y, id: rectId });
       const colors = EXPERIMENT_COLORS[exp.status];
 
       elements.push({
@@ -208,19 +238,9 @@ export function buildDiagramElements(
         ...BASE,
       } as ExcalidrawElementSkeleton);
 
-      if (parentRectId) {
-        elements.push({
-          type: "arrow",
-          id: nextId(),
-          x: 0,
-          y: 0,
-          strokeColor: "#868e96",
-          endArrowhead: "arrow",
-          start: { id: parentRectId },
-          end: { id: rectId },
-          label: { text: ARROW_LABELS.experiment, fontSize: 12, ...FONT },
-          ...BASE,
-        } as ExcalidrawElementSkeleton);
+      if (hPos) {
+        const expPos = nodePositions.get(`exp:${exp.id}`)!;
+        elements.push(arrow(hPos, expPos, "#868e96", ARROW_LABELS.experiment));
       }
 
       expIndex++;
@@ -245,8 +265,8 @@ export function buildDiagramElements(
   let findIndex = 0;
   for (const [hId, fs] of findingsByHypothesis) {
     const linkedExpId = experiments.find((e) => e.hypothesisId === hId)?.id;
-    const parentRectId = linkedExpId
-      ? nodeIds.get(`exp:${linkedExpId}`)
+    const parentPos = linkedExpId
+      ? nodePositions.get(`exp:${linkedExpId}`)
       : undefined;
 
     for (const f of fs) {
@@ -272,23 +292,16 @@ export function buildDiagramElements(
         ...BASE,
       } as ExcalidrawElementSkeleton);
 
-      if (parentRectId) {
-        elements.push({
-          type: "arrow",
-          id: nextId(),
-          x: 0,
-          y: 0,
-          strokeColor: colors.stroke,
-          endArrowhead: "arrow",
-          start: { id: parentRectId },
-          end: { id: rectId },
-          label: {
-            text: ARROW_LABELS[f.evidenceType] ?? f.evidenceType,
-            fontSize: 12,
-            ...FONT,
-          },
-          ...BASE,
-        } as ExcalidrawElementSkeleton);
+      if (parentPos) {
+        const findPos: Pos = { x, y: FIND_Y, id: rectId };
+        elements.push(
+          arrow(
+            parentPos,
+            findPos,
+            colors.stroke,
+            ARROW_LABELS[f.evidenceType] ?? f.evidenceType,
+          ),
+        );
       }
 
       findIndex++;

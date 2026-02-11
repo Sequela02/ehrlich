@@ -131,25 +131,26 @@ describe("buildDiagramElements", () => {
     const elements = buildDiagramElements(hyps, [], []);
     const arrows = getArrows(elements);
     expect(arrows).toHaveLength(1);
-    const arrow = arrows[0] as Record<string, unknown>;
-    expect(arrow.strokeColor).toBe("#f08c00");
-    expect(arrow.strokeStyle).toBe("dashed");
-    const label = arrow.label as Record<string, unknown>;
+    const a = arrows[0] as Record<string, unknown>;
+    expect(a.strokeColor).toBe("#f08c00");
+    expect(a.strokeStyle).toBe("dashed");
+    const label = a.label as Record<string, unknown>;
     expect(label.text).toBe("revised to");
   });
 
-  it("uses id-based arrow binding instead of raw coordinates", () => {
+  it("uses computed positions with element binding on arrows", () => {
     const hyps = [
       makeHypothesis({ id: "h1" }),
       makeHypothesis({ id: "h2", parentId: "h1" }),
     ];
     const elements = buildDiagramElements(hyps, [], []);
-    const arrow = getArrows(elements)[0] as Record<string, unknown>;
-    const start = arrow.start as Record<string, unknown>;
-    const end = arrow.end as Record<string, unknown>;
-    expect(start.id).toBeDefined();
-    expect(end.id).toBeDefined();
-    expect(typeof start.id).toBe("string");
+    const a = getArrows(elements)[0] as Record<string, unknown>;
+    const startBinding = a.startBinding as Record<string, unknown>;
+    const endBinding = a.endBinding as Record<string, unknown>;
+    expect(startBinding.elementId).toBeDefined();
+    expect(endBinding.elementId).toBeDefined();
+    expect(a.x).not.toBe(0);
+    expect(a.points).toBeDefined();
   });
 
   it("skips arrow when parentId references non-existent hypothesis", () => {
