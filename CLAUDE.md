@@ -99,6 +99,7 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 - `SqliteInvestigationRepository` persists investigations to SQLite (WAL mode)
 - `CostTracker` tracks per-model token usage with tiered pricing
 - SSE reconnection with exponential backoff (1s, 2s, 4s, max 3 retries)
+- Semantic Scholar client: exponential backoff retry (3 attempts, 1s/2s/4s) on 429 and timeout
 - Molecule visualization: server-side 2D SVG depiction (RDKit `rdMolDraw2D`), 3Dmol.js for 3D/docking views
 - `CandidateTable` shows 2D structure thumbnails with expandable detail panel (3D viewer + properties + Lipinski badge)
 - Molecule API: `/molecule/depict` (SVG, cached 24h), `/molecule/conformer`, `/molecule/descriptors`, `/targets`
