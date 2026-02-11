@@ -130,38 +130,27 @@ function TimelineEntry({
 
     case "tool_result": {
       const result = event.data.result_preview as string;
-      const isLong = result.length > 120;
-      if (!isExpanded) {
-        return (
-          <div
-            className={cn(
-              "ml-7 rounded border-l border-border/40 px-2.5 py-0.5 font-mono text-[10px] leading-relaxed text-muted-foreground/35",
-              isLong && "cursor-pointer hover:text-muted-foreground/50",
-            )}
-            onClick={isLong ? onToggle : undefined}
-          >
-            {isLong && (
-              <ExpandToggle
-                isExpanded={false}
-                onClick={onToggle}
-                className="mr-1"
-              />
-            )}
-            <span className="line-clamp-1">{result}</span>
-          </div>
-        );
-      }
+      const toolName = event.data.tool_name as string;
+      const summary = summarizeToolResult(toolName, result);
       return (
         <div
-          className="ml-7 cursor-pointer rounded border-l border-border/40 px-2.5 py-1 font-mono text-[10px] leading-relaxed text-muted-foreground/50"
+          className="ml-7 cursor-pointer rounded border-l border-border/40 px-2.5 py-0.5 hover:bg-muted/20"
           onClick={onToggle}
         >
-          <ExpandToggle
-            isExpanded={true}
-            onClick={onToggle}
-            className="mr-1"
-          />
-          <span className="whitespace-pre-wrap break-all">{result}</span>
+          <div className="flex items-center gap-1.5">
+            <ExpandToggle
+              isExpanded={isExpanded}
+              onClick={onToggle}
+            />
+            <span className="text-[11px] text-muted-foreground/50">
+              {summary}
+            </span>
+          </div>
+          {isExpanded && (
+            <pre className="mt-1 max-h-60 overflow-auto whitespace-pre-wrap break-all rounded bg-muted/20 p-2 font-mono text-[10px] leading-relaxed text-muted-foreground/40">
+              {formatJsonPreview(result)}
+            </pre>
+          )}
         </div>
       );
     }
@@ -259,14 +248,15 @@ function TimelineEntry({
 
     case "phase_completed":
       return (
-        <div className="mt-1 mb-3 flex items-center gap-2 border-b border-border/30 px-3 pb-2 text-xs text-muted-foreground/60">
-          <CheckCircle2 className="h-3 w-3 text-primary/50" />
+        <div className="mt-3 mb-2 flex items-center gap-2 border-t border-b border-border/20 px-3 py-2.5 text-xs">
+          <CheckCircle2 className="h-3.5 w-3.5 text-primary/50" />
           <span className="font-medium text-primary/60">
             {event.data.phase as string}
           </span>
-          <span className="text-muted-foreground/40">complete</span>
-          <span className="ml-auto font-mono text-[10px] tabular-nums text-muted-foreground/40">
-            {event.data.tool_count as number} tools,{" "}
+          <span className="text-muted-foreground/40">-- complete</span>
+          <span className="ml-auto font-mono text-[10px] tabular-nums text-muted-foreground/50">
+            {event.data.tool_count as number} tools
+            <span className="mx-1.5 text-border">|</span>
             {event.data.finding_count as number} findings
           </span>
         </div>
@@ -448,6 +438,88 @@ function SynthesisDetail({ decision }: { decision: Record<string, unknown> }) {
       )}
     </>
   );
+}
+
+function summarizeToolResult(toolName: string, raw: string): string {
+  try {
+    const data = JSON.parse(raw) as Record<string, unknown>;
+
+    // Error results
+    if (data.error) return `Error: ${truncate(String(data.error), 80)}`;
+
+    // Literature search: show paper count + first title
+    if (
+      (toolName === "search_literature" || toolName === "search_papers") &&
+      Array.isArray(data.papers)
+    ) {
+      const count = data.papers.length;
+      const first = (data.papers[0] as Record<string, unknown>)?.title;
+      return first
+        ? `${count} papers -- "${truncate(String(first), 60)}"`
+        : `${count} papers found`;
+    }
+
+    // Dataset exploration
+    if (toolName === "explore_dataset" && typeof data.size === "number") {
+      return `${data.size} compounds (${data.active_count ?? 0} active)`;
+    }
+
+    // Substructure analysis
+    if (
+      toolName === "analyze_substructures" &&
+      typeof data.significant_count === "number"
+    ) {
+      return `${data.significant_count} significant substructures of ${(data.enrichments as unknown[])?.length ?? 0} tested`;
+    }
+
+    // Model training
+    if (data.model_id || data.model_type) {
+      const score = typeof data.roc_auc === "number" ? ` (AUC: ${(data.roc_auc as number).toFixed(3)})` : "";
+      return `Model trained${score}`;
+    }
+
+    // Predictions
+    if (
+      toolName === "predict_candidates" &&
+      Array.isArray(data.candidates)
+    ) {
+      return `${data.candidates.length} candidates predicted`;
+    }
+
+    // Docking
+    if (toolName === "dock_against_target" && data.score != null) {
+      return `Docking score: ${data.score}`;
+    }
+
+    // ADMET
+    if (toolName === "predict_admet") {
+      return "ADMET profile computed";
+    }
+
+    // Record finding
+    if (data.status === "recorded") {
+      return `Finding recorded: ${truncate(String(data.title ?? ""), 60)}`;
+    }
+
+    // Conclude
+    if (data.status === "concluded") {
+      return `Concluded with ${data.candidate_count ?? 0} candidates`;
+    }
+
+    // Generic: show top-level keys as a hint
+    const keys = Object.keys(data).slice(0, 4).join(", ");
+    return keys ? `{${keys}${Object.keys(data).length > 4 ? ", ..." : ""}}` : raw.slice(0, 80);
+  } catch {
+    return truncate(raw, 80);
+  }
+}
+
+function formatJsonPreview(raw: string): string {
+  try {
+    return JSON.stringify(JSON.parse(raw), null, 2);
+  } catch {
+    return raw;
+  }
 }
 
 function formatToolInput(input: Record<string, unknown>): string {
