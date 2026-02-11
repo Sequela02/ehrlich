@@ -8,6 +8,79 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Domain-agnostic engine: RCSB PDB client for dynamic protein target discovery by organism/function/keyword
+- Domain-agnostic engine: PubChem PUG REST client for compound search by name/SMILES/similarity
+- Domain-agnostic engine: EPA CompTox CTX API client for environmental toxicity profiles (LD50, LC50, BCF, mutagenicity)
+- Domain-agnostic engine: Flexible ChEMBL bioactivity search supporting any assay type (Ki, EC50, Kd, MIC, IC50)
+- Tools: `search_protein_targets` -- RCSB PDB search by organism/function (tool #24)
+- Tools: `search_compounds` -- PubChem compound search by name/SMILES/similarity (tool #25)
+- Tools: `search_bioactivity` -- flexible ChEMBL query with configurable assay types (tool #26)
+- Tools: `fetch_toxicity_profile` -- EPA CompTox environmental toxicity data (tool #27)
+- Domain entities: `ToxicityProfile`, `CompoundSearchResult`
+- Repository ABCs: `ProteinTargetRepository`, `ToxicityRepository`, `CompoundSearchRepository`
+- Data: `data/targets/default.yaml` -- YAML-configured protein targets (replaces hardcoded dict)
+- Data: `data/resistance/default.yaml` -- YAML-configured resistance mutations and SMARTS patterns
+- Config: `EHRLICH_COMPTOX_API_KEY` setting for EPA CompTox API access
+- Console: `LiveLabViewer` -- 3Dmol.js WebGL scene driven by SSE events (proteins load, ligands dock, candidates color by score)
+- Console: `InvestigationDiagram` -- Excalidraw hypothesis map with status-colored nodes and evidence-chain arrows
+- Console: `ExcalidrawWrapper` -- lazy-loaded Excalidraw component with dark theme
+- Console: `scene-builder.ts` -- maps SSE events to 3Dmol.js operations (addProtein, addLigand, colorByScore, highlight)
+- Console: `diagram-builder.ts` -- converts investigation data to Excalidraw elements (nodes, arrows, labels)
+- Console: Tab system on investigation page (Timeline | Lab View | Diagram)
+- Tests: 45+ new tests for RCSB, PubChem, CompTox clients, resistance YAML loader, new tool functions
+- Dependencies: `pyyaml`, `respx` (dev), `@excalidraw/excalidraw`
+
+### Changed
+
+- Engine generalized from antimicrobial-only to domain-agnostic molecular discovery (23 -> 27 tools)
+- Prompts: all "antimicrobial scientist" language replaced with "molecular discovery scientist"
+- Prompts: added domain-adaptive instruction ("The user's research question defines the domain")
+- Prompts: tool references updated to include 4 new data source tools
+- Prediction docstrings: "antimicrobial activity" -> "bioactivity"
+- `ProteinStore`: hardcoded 5-target dict replaced with YAML loader + RCSB PDB fallback search
+- `SimulationService`: hardcoded resistance mutations/patterns replaced with YAML-loaded data
+- `ChEMBLLoader`: parameterized `assay_types` (was hardcoded `MIC,IC50`), type-aware cache keys
+- `AnalysisService`: added `compound_repo` for PubChem integration
+- Tool registry: 23 -> 27 tools registered in investigation routes
+- Server tests: 212 -> 257 passing (80.6% coverage)
+
+---
+
+### Added
+
+- Investigation: hypothesis-driven scientific method replacing linear pipeline
+- Investigation: `propose_hypothesis` tool -- register testable hypotheses with rationale
+- Investigation: `design_experiment` tool -- plan experiments with tool sequences
+- Investigation: `evaluate_hypothesis` tool -- assess outcomes (supported/refuted/revised) with confidence
+- Investigation: `record_finding` tool -- findings linked to hypothesis + evidence type
+- Investigation: `record_negative_control` tool -- validate models with known-inactive compounds
+- Investigation: `conclude_investigation` tool -- final summary with ranked candidates
+- Domain: `Hypothesis` entity with status enum (proposed/testing/supported/refuted/revised)
+- Domain: `Experiment` entity with status enum (planned/running/completed/failed)
+- Domain: `NegativeControl` frozen dataclass
+- Domain: 5 new events (HypothesisFormulated, HypothesisEvaluated, ExperimentStarted, ExperimentCompleted, NegativeControlRecorded)
+- SSE: 5 new event types (hypothesis_formulated, hypothesis_evaluated, experiment_started, experiment_completed, negative_control)
+- Console: `HypothesisBoard` -- kanban-style hypothesis status grid
+- Console: `HypothesisCard` -- expandable card with confidence bar
+- Console: `ActiveExperimentCard` -- live experiment activity card
+- Console: `NegativeControlPanel` -- validation results table
+- Console: `CompletionSummaryCard` -- post-completion counts (candidates, findings, hypotheses)
+- Console: Findings replay from `InvestigationCompleted` event on page reload
+- Console: Toast notifications via `sonner` for completion + error events
+- Console: Custom scrollbar CSS (8px webkit + Firefox thin) with OKLCH theme
+
+### Changed
+
+- `MultiModelOrchestrator`: hypothesis-driven loop (formulate -> design -> execute -> evaluate per hypothesis)
+- `Orchestrator`: single-model fallback with same hypothesis control tools
+- Director prompts: 4 phases (formulation, experiment, evaluation, synthesis) with domain-adaptive language
+- Tool count: 19 -> 23 (6 investigation control tools added)
+- SQLite repository: serializes hypothesis/experiment/negative_control data
+
+---
+
+### Added
+
 - Branding: "Lab Protocol" dark-only visual identity (Industrial Scientific + Editorial + Cyberpunk Lab)
 - Branding: OKLCH color system with Molecular Green primary (`oklch(0.72 0.19 155)`)
 - Branding: Space Grotesk display/body font + JetBrains Mono data/label font via Google Fonts
