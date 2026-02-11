@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useRef, useEffect, useState, useMemo } from "react";
 import { ArrowLeft, WifiOff } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
+import { ErrorBoundary } from "@/features/shared/components/ErrorBoundary";
 import {
   Timeline,
   CandidateTable,
@@ -175,18 +176,22 @@ function InvestigationPage() {
 
         {activeTab === "lab" && (
           <section>
-            <LiveLabViewer events={events} completed={completed} />
+            <ErrorBoundary fallbackMessage="Failed to load 3D viewer">
+              <LiveLabViewer events={events} completed={completed} />
+            </ErrorBoundary>
           </section>
         )}
 
         {activeTab === "diagram" && (
           <section>
-            <InvestigationDiagram
-              hypotheses={diagramHypotheses}
-              experiments={diagramExperiments}
-              findings={diagramFindings}
-              completed={completed}
-            />
+            <ErrorBoundary fallbackMessage="Failed to load investigation diagram">
+              <InvestigationDiagram
+                hypotheses={diagramHypotheses}
+                experiments={diagramExperiments}
+                findings={diagramFindings}
+                completed={completed}
+              />
+            </ErrorBoundary>
           </section>
         )}
 
