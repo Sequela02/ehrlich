@@ -38,17 +38,20 @@ mol = Chem.MolFromSmiles('CC(=O)Oc1ccccc1C(=O)O')
 
 ### Morgan Fingerprints (ECFP)
 ```python
-from rdkit.Chem import AllChem
+from rdkit.Chem import rdFingerprintGenerator
 import numpy as np
 
-# radius=2 = ECFP4 (industry standard), nBits=2048
-fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius=2, nBits=2048)
+# radius=2 = ECFP4 (industry standard), fpSize=2048
+gen = rdFingerprintGenerator.GetMorganGenerator(radius=2, fpSize=2048)
+fp = gen.GetFingerprint(mol)
 fp_array = np.array(fp)  # for ML
 
 # With atom mapping (for highlighting)
-bitInfo = {}
-fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius=2, nBits=2048, bitInfo=bitInfo)
-# bitInfo[872] -> ((6, 2),) = atom index 6, radius 2
+ao = rdFingerprintGenerator.AdditionalOutput()
+ao.AllocateBitInfoMap()
+fp = gen.GetFingerprint(mol, additionalOutput=ao)
+bit_info = ao.GetBitInfoMap()
+# bit_info[872] -> ((6, 2),) = atom index 6, radius 2
 ```
 
 ### MACCS Keys

@@ -1,5 +1,5 @@
 from rdkit import Chem
-from rdkit.Chem import QED, AllChem, Descriptors, MACCSkeys, rdMolDescriptors
+from rdkit.Chem import QED, AllChem, Descriptors, MACCSkeys, rdFingerprintGenerator, rdMolDescriptors
 from rdkit.Chem.Draw import rdMolDraw2D
 from rdkit.Chem.inchi import MolToInchi
 from rdkit.Chem.Scaffolds.MurckoScaffold import GetScaffoldForMol
@@ -50,13 +50,15 @@ class RDKitAdapter:
             num_rings=rdMolDescriptors.CalcNumRings(mol),
         )
 
+    _morgan_gen = rdFingerprintGenerator.GetMorganGenerator(radius=2, fpSize=2048)
+
     def compute_fingerprint(self, smiles: SMILES, fp_type: str = "morgan") -> Fingerprint:
         mol = self._to_mol(smiles)
         if fp_type == "maccs":
             fp = MACCSkeys.GenMACCSKeys(mol)
             on_bits = tuple(fp.GetOnBits())
             return Fingerprint(bits=on_bits, fp_type="maccs", radius=0, n_bits=167)
-        fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius=2, nBits=2048)
+        fp = self._morgan_gen.GetFingerprint(mol)
         on_bits = tuple(fp.GetOnBits())
         return Fingerprint(bits=on_bits, fp_type="morgan", radius=2, n_bits=2048)
 
