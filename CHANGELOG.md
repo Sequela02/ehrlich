@@ -24,14 +24,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Domain entities: `ProteinAnnotation`, `TargetAssociation`, `PharmacologyEntry`
 - Repository ABCs: `ProteinAnnotationRepository`, `TargetAssociationRepository`, `PharmacologyRepository`
 - Tests: UniProt, Open Targets, GtoPdb client tests with respx mocking
+- Parallel researchers: `_run_experiment_batch()` runs 2 experiments concurrently via `asyncio.Queue` event merging
+- Parallel researchers: `asyncio.Lock` protects shared `Investigation` state and `CostTracker` during concurrent execution
+- Prompt engineering: XML-tagged instructions (`<instructions>`, `<examples>`, `<output_format>`) in all Director and Researcher prompts
+- Prompt engineering: multishot examples in `DIRECTOR_FORMULATION_PROMPT` (MRSA + Alzheimer's domains) and `DIRECTOR_EXPERIMENT_PROMPT`
+- Prompt engineering: tool usage examples in `RESEARCHER_EXPERIMENT_PROMPT` (docking, model training, disease-target search)
+- Prompt engineering: search strategy guidance ("start broad, then narrow") from Anthropic multi-agent research patterns
+- Context compaction: `_build_prior_context()` compresses completed hypotheses into XML summary for Director between batches
 
 ### Changed
 
 - Always uses `MultiModelOrchestrator` (single-model `Orchestrator` removed)
+- Hypothesis loop runs batched parallel execution (up to 2 hypotheses per batch)
 - Tool count: 27 -> 30 (3 new data source tools)
-- Prompts: `SCIENTIST_SYSTEM_PROMPT` and `RESEARCHER_EXPERIMENT_PROMPT` mention 3 new data source tools
+- All prompts rewritten with XML structure, multishot examples, and Anthropic best practices
 - E2E tests: rewritten to use `MultiModelOrchestrator`
-- Server tests: 267 -> 270 passing (80.2% coverage)
+- Server tests: 267 -> 271 passing (80.2% coverage)
 
 ### Removed
 

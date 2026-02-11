@@ -14,11 +14,11 @@ DDD monorepo: `server/` (Python 3.12) + `console/` (React 19 / TypeScript / Bun)
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, designs experiments, evaluates evidence, synthesizes (NO tools)
-Sonnet 4.5 (Researcher) -- Executes experiments with 30 tools
+Sonnet 4.5 (Researcher) -- Executes experiments with 30 tools (parallel: 2 experiments per batch)
 Haiku 4.5 (Summarizer)  -- Compresses large tool outputs (>2000 chars)
 ```
 
-Always uses `MultiModelOrchestrator` (even when all models are the same).
+Always uses `MultiModelOrchestrator`. Hypotheses tested in parallel batches of 2.
 
 ### Bounded Contexts
 
@@ -164,7 +164,10 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 - SSE streaming for real-time investigation updates (12 event types)
 - **Event persistence**: all SSE events stored in SQLite `events` table; completed investigations replay full timeline on page reload
 - TanStack Router file-based routing in console
-- `MultiModelOrchestrator`: hypothesis-driven loop (formulate -> design -> execute -> evaluate per hypothesis)
+- `MultiModelOrchestrator`: hypothesis-driven loop with parallel experiment batches (2 hypotheses tested concurrently)
+- **Parallel researchers**: `_run_experiment_batch()` uses `asyncio.Queue` to merge events from 2 concurrent researcher experiments
+- **Prompt engineering**: XML-tagged instructions, multishot examples (2 per Director prompt), tool usage examples for Researcher
+- **Context compaction**: `_build_prior_context()` compresses completed hypotheses into XML summary for Director
 - `ToolCache` provides in-memory TTL-based caching for deterministic and API tools
 - `SqliteInvestigationRepository` persists investigations + events to SQLite (WAL mode)
 - `CostTracker` tracks per-model token usage with tiered pricing

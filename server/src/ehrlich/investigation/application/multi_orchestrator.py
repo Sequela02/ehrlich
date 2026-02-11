@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from typing import TYPE_CHECKING, Any
@@ -86,6 +87,7 @@ class MultiModelOrchestrator:
         self._max_hypotheses = max_hypotheses
         self._summarizer_threshold = summarizer_threshold
         self._cache = ToolCache()
+        self._state_lock = asyncio.Lock()
 
     async def run(self, investigation: Investigation) -> AsyncGenerator[DomainEvent, None]:
         investigation.status = InvestigationStatus.RUNNING
@@ -128,114 +130,161 @@ class MultiModelOrchestrator:
             # Store negative control suggestions for later
             neg_control_suggestions = formulation.get("negative_controls", [])
 
-            # 3. Hypothesis loop
+            # 3. Hypothesis loop -- batched parallel execution
             tested = 0
             while tested < self._max_hypotheses:
                 proposed = [
-                    h for h in investigation.hypotheses if h.status == HypothesisStatus.PROPOSED
+                    h
+                    for h in investigation.hypotheses
+                    if h.status == HypothesisStatus.PROPOSED
                 ]
                 if not proposed:
                     break
 
-                hypothesis = proposed[0]
-                hypothesis.status = HypothesisStatus.TESTING
-                investigation.current_hypothesis_id = hypothesis.id
-                tested += 1
+                # Take up to 2 hypotheses per batch
+                batch_hypotheses = proposed[:2]
+                batch: list[
+                    tuple[Hypothesis, Experiment, dict[str, Any]]
+                ] = []
 
-                # 3a. Director designs experiment
-                design = await self._director_call(
-                    cost,
-                    DIRECTOR_EXPERIMENT_PROMPT,
-                    f"Research prompt: {investigation.prompt}\n\n"
-                    f"Hypothesis to test: {hypothesis.statement}\n"
-                    f"Rationale: {hypothesis.rationale}\n\n"
-                    f"Available tools: {', '.join(self._registry.list_tools())}\n\n"
-                    f"Design an experiment to test this hypothesis.",
-                )
+                for hypothesis in batch_hypotheses:
+                    hypothesis.status = HypothesisStatus.TESTING
+                    investigation.current_hypothesis_id = (
+                        hypothesis.id
+                    )
+                    tested += 1
 
-                experiment = Experiment(
-                    hypothesis_id=hypothesis.id,
-                    description=design.get("description", f"Test: {hypothesis.statement}"),
-                    tool_plan=design.get("tool_plan", []),
-                )
-                experiment.status = ExperimentStatus.RUNNING
-                investigation.add_experiment(experiment)
-                investigation.current_experiment_id = experiment.id
+                    # Director designs experiment
+                    tools_csv = ", ".join(
+                        self._registry.list_tools()
+                    )
+                    design = await self._director_call(
+                        cost,
+                        DIRECTOR_EXPERIMENT_PROMPT,
+                        f"Research prompt: {investigation.prompt}"
+                        f"\n\nHypothesis to test: "
+                        f"{hypothesis.statement}\n"
+                        f"Rationale: {hypothesis.rationale}\n\n"
+                        f"Available tools: {tools_csv}\n\n"
+                        f"Design an experiment to test this "
+                        f"hypothesis.",
+                    )
 
-                yield ExperimentStarted(
-                    experiment_id=experiment.id,
-                    hypothesis_id=hypothesis.id,
-                    description=experiment.description,
-                    investigation_id=investigation.id,
-                )
+                    desc = design.get(
+                        "description",
+                        f"Test: {hypothesis.statement}",
+                    )
+                    experiment = Experiment(
+                        hypothesis_id=hypothesis.id,
+                        description=desc,
+                        tool_plan=design.get("tool_plan", []),
+                    )
+                    experiment.status = ExperimentStatus.RUNNING
+                    investigation.add_experiment(experiment)
+                    investigation.current_experiment_id = (
+                        experiment.id
+                    )
 
-                # 3b. Researcher executes experiment
+                    yield ExperimentStarted(
+                        experiment_id=experiment.id,
+                        hypothesis_id=hypothesis.id,
+                        description=experiment.description,
+                        investigation_id=investigation.id,
+                    )
+
+                    batch.append((hypothesis, experiment, design))
+
+                # Run batch (parallel if 2, sequential if 1)
                 exp_tool_count = cost.tool_calls
                 exp_finding_count = len(investigation.findings)
-                async for event in self._run_researcher_experiment(
-                    investigation, hypothesis, experiment, cost, design
+                async for event in self._run_experiment_batch(
+                    investigation, batch, cost
                 ):
                     yield event
 
-                experiment.status = ExperimentStatus.COMPLETED
-                yield ExperimentCompleted(
-                    experiment_id=experiment.id,
-                    hypothesis_id=hypothesis.id,
-                    tool_count=cost.tool_calls - exp_tool_count,
-                    finding_count=len(investigation.findings) - exp_finding_count,
-                    investigation_id=investigation.id,
-                )
-
-                # 3c. Director evaluates hypothesis
-                findings_for_hypothesis = [
-                    f for f in investigation.findings if f.hypothesis_id == hypothesis.id
-                ]
-                findings_text = "\n".join(
-                    f"- [{f.evidence_type}] {f.title}: {f.detail}" for f in findings_for_hypothesis
-                )
-                evaluation = await self._director_call(
-                    cost,
-                    DIRECTOR_EVALUATION_PROMPT,
-                    f"Hypothesis: {hypothesis.statement}\n"
-                    f"Rationale: {hypothesis.rationale}\n\n"
-                    f"Experiment: {experiment.description}\n\n"
-                    f"Findings:\n{findings_text}\n\n"
-                    f"Evaluate this hypothesis.",
-                )
-
-                eval_status = evaluation.get("status", "supported")
-                eval_confidence = float(evaluation.get("confidence", 0.5))
-                status_map = {
-                    "supported": HypothesisStatus.SUPPORTED,
-                    "refuted": HypothesisStatus.REFUTED,
-                    "revised": HypothesisStatus.REVISED,
-                }
-                hypothesis.status = status_map.get(eval_status, HypothesisStatus.SUPPORTED)
-                hypothesis.confidence = max(0.0, min(1.0, eval_confidence))
-
-                yield HypothesisEvaluated(
-                    hypothesis_id=hypothesis.id,
-                    status=eval_status,
-                    confidence=eval_confidence,
-                    reasoning=evaluation.get("reasoning", ""),
-                    investigation_id=investigation.id,
-                )
-
-                # If revised, add new hypothesis to queue
-                if eval_status == "revised" and evaluation.get("revision"):
-                    revised = Hypothesis(
-                        statement=evaluation["revision"],
-                        rationale=evaluation.get("reasoning", "Revised from prior evidence"),
-                        parent_id=hypothesis.id,
-                    )
-                    investigation.add_hypothesis(revised)
-                    yield HypothesisFormulated(
-                        hypothesis_id=revised.id,
-                        statement=revised.statement,
-                        rationale=revised.rationale,
-                        parent_id=hypothesis.id,
+                # Mark completed + Director evaluates each
+                for hypothesis, experiment, _design in batch:
+                    experiment.status = ExperimentStatus.COMPLETED
+                    yield ExperimentCompleted(
+                        experiment_id=experiment.id,
+                        hypothesis_id=hypothesis.id,
+                        tool_count=(
+                            cost.tool_calls - exp_tool_count
+                        ),
+                        finding_count=(
+                            len(investigation.findings)
+                            - exp_finding_count
+                        ),
                         investigation_id=investigation.id,
                     )
+
+                    # Director evaluates hypothesis
+                    findings_for_hyp = [
+                        f
+                        for f in investigation.findings
+                        if f.hypothesis_id == hypothesis.id
+                    ]
+                    findings_text = "\n".join(
+                        f"- [{f.evidence_type}] "
+                        f"{f.title}: {f.detail}"
+                        for f in findings_for_hyp
+                    )
+                    evaluation = await self._director_call(
+                        cost,
+                        DIRECTOR_EVALUATION_PROMPT,
+                        f"Hypothesis: {hypothesis.statement}\n"
+                        f"Rationale: {hypothesis.rationale}\n\n"
+                        f"Experiment: {experiment.description}"
+                        f"\n\nFindings:\n{findings_text}\n\n"
+                        f"Evaluate this hypothesis.",
+                    )
+
+                    eval_status = evaluation.get(
+                        "status", "supported"
+                    )
+                    eval_confidence = float(
+                        evaluation.get("confidence", 0.5)
+                    )
+                    status_map = {
+                        "supported": HypothesisStatus.SUPPORTED,
+                        "refuted": HypothesisStatus.REFUTED,
+                        "revised": HypothesisStatus.REVISED,
+                    }
+                    hypothesis.status = status_map.get(
+                        eval_status, HypothesisStatus.SUPPORTED
+                    )
+                    hypothesis.confidence = max(
+                        0.0, min(1.0, eval_confidence)
+                    )
+
+                    yield HypothesisEvaluated(
+                        hypothesis_id=hypothesis.id,
+                        status=eval_status,
+                        confidence=eval_confidence,
+                        reasoning=evaluation.get("reasoning", ""),
+                        investigation_id=investigation.id,
+                    )
+
+                    # If revised, add new hypothesis to queue
+                    if eval_status == "revised" and evaluation.get(
+                        "revision"
+                    ):
+                        revised = Hypothesis(
+                            statement=evaluation["revision"],
+                            rationale=evaluation.get(
+                                "reasoning",
+                                "Revised from prior evidence",
+                            ),
+                            parent_id=hypothesis.id,
+                        )
+                        investigation.add_hypothesis(revised)
+                        yield HypothesisFormulated(
+                            hypothesis_id=revised.id,
+                            statement=revised.statement,
+                            rationale=revised.rationale,
+                            parent_id=hypothesis.id,
+                            investigation_id=investigation.id,
+                        )
 
             # 4. Negative controls (from director suggestions)
             for nc_data in neg_control_suggestions:
@@ -575,7 +624,12 @@ class MultiModelOrchestrator:
                 messages=messages,
                 tools=tool_schemas,
             )
-            cost.add_usage(response.input_tokens, response.output_tokens, self._researcher.model)
+            async with self._state_lock:
+                cost.add_usage(
+                    response.input_tokens,
+                    response.output_tokens,
+                    self._researcher.model,
+                )
 
             assistant_content: list[dict[str, Any]] = []
             tool_use_blocks: list[dict[str, Any]] = []
@@ -583,7 +637,10 @@ class MultiModelOrchestrator:
             for block in response.content:
                 assistant_content.append(block)
                 if block["type"] == "text":
-                    yield Thinking(text=block["text"], investigation_id=investigation.id)
+                    yield Thinking(
+                        text=block["text"],
+                        investigation_id=investigation.id,
+                    )
                 elif block["type"] == "tool_use":
                     tool_use_blocks.append(block)
 
@@ -597,7 +654,8 @@ class MultiModelOrchestrator:
                 tool_name = tool_block["name"]
                 tool_input = tool_block["input"]
                 tool_use_id = tool_block["id"]
-                cost.add_tool_call()
+                async with self._state_lock:
+                    cost.add_tool_call()
 
                 yield ToolCalled(
                     tool_name=tool_name,
@@ -606,17 +664,27 @@ class MultiModelOrchestrator:
                     investigation_id=investigation.id,
                 )
 
-                result_str = await self._dispatch_tool(tool_name, tool_input, investigation)
+                result_str = await self._dispatch_tool(
+                    tool_name, tool_input, investigation
+                )
                 result_str = _compact_result(tool_name, result_str)
 
-                summarized_str, summarize_event = await self._summarize_output(
-                    cost, tool_name, result_str, investigation.id
+                summarized_str, summarize_event = (
+                    await self._summarize_output(
+                        cost, tool_name, result_str, investigation.id
+                    )
                 )
                 if summarize_event is not None:
                     yield summarize_event
 
-                content_for_model = summarized_str if summarize_event else result_str
-                preview = result_str[:1500] if len(result_str) > 1500 else result_str
+                content_for_model = (
+                    summarized_str if summarize_event else result_str
+                )
+                preview = (
+                    result_str[:1500]
+                    if len(result_str) > 1500
+                    else result_str
+                )
                 yield ToolResultEvent(
                     tool_name=tool_name,
                     result_preview=preview,
@@ -625,8 +693,12 @@ class MultiModelOrchestrator:
                 )
 
                 if tool_name == "record_finding":
-                    h_id = tool_input.get("hypothesis_id", hypothesis.id)
-                    e_type = tool_input.get("evidence_type", "neutral")
+                    h_id = tool_input.get(
+                        "hypothesis_id", hypothesis.id
+                    )
+                    e_type = tool_input.get(
+                        "evidence_type", "neutral"
+                    )
                     finding = Finding(
                         title=tool_input.get("title", ""),
                         detail=tool_input.get("detail", ""),
@@ -634,13 +706,18 @@ class MultiModelOrchestrator:
                         hypothesis_id=h_id,
                         evidence_type=e_type,
                     )
-                    investigation.record_finding(finding)
-                    h = investigation.get_hypothesis(h_id)
-                    if h:
-                        if e_type == "supporting":
-                            h.supporting_evidence.append(finding.title)
-                        elif e_type == "contradicting":
-                            h.contradicting_evidence.append(finding.title)
+                    async with self._state_lock:
+                        investigation.record_finding(finding)
+                        h = investigation.get_hypothesis(h_id)
+                        if h:
+                            if e_type == "supporting":
+                                h.supporting_evidence.append(
+                                    finding.title
+                                )
+                            elif e_type == "contradicting":
+                                h.contradicting_evidence.append(
+                                    finding.title
+                                )
                     yield FindingRecorded(
                         title=finding.title,
                         detail=finding.detail,
@@ -654,15 +731,20 @@ class MultiModelOrchestrator:
                     control = NegativeControl(
                         smiles=tool_input.get("smiles", ""),
                         name=tool_input.get("name", ""),
-                        prediction_score=float(tool_input.get("prediction_score", 0.0)),
+                        prediction_score=float(
+                            tool_input.get("prediction_score", 0.0)
+                        ),
                         source=tool_input.get("source", ""),
                     )
-                    investigation.add_negative_control(control)
+                    async with self._state_lock:
+                        investigation.add_negative_control(control)
                     yield NegativeControlRecorded(
                         smiles=control.smiles,
                         name=control.name,
                         prediction_score=control.prediction_score,
-                        correctly_classified=control.correctly_classified,
+                        correctly_classified=(
+                            control.correctly_classified
+                        ),
                         investigation_id=investigation.id,
                     )
 
@@ -675,6 +757,59 @@ class MultiModelOrchestrator:
                 )
 
             messages.append({"role": "user", "content": tool_results})
+
+    async def _run_experiment_batch(
+        self,
+        investigation: Investigation,
+        batch: list[
+            tuple[Hypothesis, Experiment, dict[str, Any]]
+        ],
+        cost: CostTracker,
+    ) -> AsyncGenerator[DomainEvent, None]:
+        """Run up to 2 experiments concurrently."""
+        if len(batch) == 1:
+            h, exp, design = batch[0]
+            async for event in self._run_researcher_experiment(
+                investigation, h, exp, cost, design
+            ):
+                yield event
+            return
+
+        queue: asyncio.Queue[DomainEvent | None] = (
+            asyncio.Queue()
+        )
+
+        async def _run_one(
+            hyp: Hypothesis,
+            exp: Experiment,
+            design: dict[str, Any],
+        ) -> None:
+            try:
+                async for ev in self._run_researcher_experiment(
+                    investigation, hyp, exp, cost, design
+                ):
+                    await queue.put(ev)
+            except Exception as e:
+                logger.warning(
+                    "Experiment %s failed: %s", exp.id, e
+                )
+            finally:
+                await queue.put(None)
+
+        tasks = [
+            asyncio.create_task(_run_one(h, e, d))
+            for h, e, d in batch
+        ]
+
+        done_count = 0
+        while done_count < len(tasks):
+            item: DomainEvent | None = await queue.get()
+            if item is None:
+                done_count += 1
+                continue
+            yield item
+
+        await asyncio.gather(*tasks, return_exceptions=True)
 
     async def _dispatch_tool(
         self,

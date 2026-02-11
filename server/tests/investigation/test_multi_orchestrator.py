@@ -594,6 +594,56 @@ class TestFullFlow:
         assert "InvestigationCompleted" in event_types
 
 
+class TestParallelExecution:
+    @pytest.mark.asyncio
+    async def test_two_hypotheses_run_in_parallel_batch(self) -> None:
+        director, researcher, summarizer = _make_clients()
+
+        two_hyp_formulation = json.dumps(
+            {
+                "hypotheses": [
+                    {"statement": "Hypothesis A", "rationale": "Reason A"},
+                    {"statement": "Hypothesis B", "rationale": "Reason B"},
+                ],
+                "negative_controls": [],
+            }
+        )
+
+        director.create_message = AsyncMock(
+            side_effect=[
+                _make_text_response(two_hyp_formulation),
+                _make_text_response(_experiment_design_json()),  # design A
+                _make_text_response(_experiment_design_json()),  # design B
+                _make_text_response(_evaluation_json()),  # eval A
+                _make_text_response(_evaluation_json()),  # eval B
+                _make_text_response(_synthesis_json()),
+            ]
+        )
+        researcher.create_message = AsyncMock(
+            return_value=_make_text_response("Done.")
+        )
+
+        orchestrator = MultiModelOrchestrator(
+            director=director,
+            researcher=researcher,
+            summarizer=summarizer,
+            registry=_build_registry(),
+            max_iterations_per_experiment=1,
+        )
+
+        investigation = Investigation(prompt="Test parallel")
+        events = [e async for e in orchestrator.run(investigation)]
+
+        # Both hypotheses should be tested
+        started = [e for e in events if isinstance(e, ExperimentStarted)]
+        assert len(started) == 2
+        completed = [e for e in events if isinstance(e, ExperimentCompleted)]
+        assert len(completed) == 2
+        evaluated = [e for e in events if isinstance(e, HypothesisEvaluated)]
+        assert len(evaluated) == 2
+        assert investigation.status == InvestigationStatus.COMPLETED
+
+
 class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_director_api_error(self) -> None:
