@@ -39,6 +39,16 @@ CREATE TABLE IF NOT EXISTS investigations (
 )
 """
 
+_CREATE_EVENTS_TABLE = """
+CREATE TABLE IF NOT EXISTS events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    investigation_id TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    event_data TEXT NOT NULL,
+    FOREIGN KEY (investigation_id) REFERENCES investigations(id)
+)
+"""
+
 
 class SqliteInvestigationRepository(InvestigationRepository):
     def __init__(self, db_path: str) -> None:
@@ -49,6 +59,7 @@ class SqliteInvestigationRepository(InvestigationRepository):
         async with aiosqlite.connect(self._db_path) as db:
             await db.execute("PRAGMA journal_mode=WAL")
             await db.execute(_CREATE_TABLE)
+            await db.execute(_CREATE_EVENTS_TABLE)
             await db.commit()
         logger.info("SQLite repository initialized at %s", self._db_path)
 
@@ -112,6 +123,30 @@ class SqliteInvestigationRepository(InvestigationRepository):
                 ),
             )
             await db.commit()
+
+    async def save_event(
+        self, investigation_id: str, event_type: str, event_data: str
+    ) -> None:
+        async with aiosqlite.connect(self._db_path) as db:
+            await db.execute(
+                "INSERT INTO events (investigation_id, event_type, event_data) VALUES (?, ?, ?)",
+                (investigation_id, event_type, event_data),
+            )
+            await db.commit()
+
+    async def get_events(self, investigation_id: str) -> list[dict[str, str]]:
+        async with aiosqlite.connect(self._db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT event_type, event_data FROM events "
+                "WHERE investigation_id = ? ORDER BY id ASC",
+                (investigation_id,),
+            )
+            rows = await cursor.fetchall()
+            return [
+                {"event_type": row["event_type"], "event_data": row["event_data"]}
+                for row in rows
+            ]
 
 
 def _to_row(inv: Investigation) -> tuple[Any, ...]:

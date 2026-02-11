@@ -3,12 +3,20 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { InvestigationDiagram } from "./InvestigationDiagram";
 import type { HypothesisNode, ExperimentNode, FindingNode } from "../lib/diagram-builder";
 
-vi.mock("./ExcalidrawWrapper", () => ({
-  default: ({ viewMode }: { viewMode: boolean }) => (
-    <div data-testid="excalidraw-wrapper" data-view-mode={String(viewMode)}>
-      Excalidraw Mock
-    </div>
+vi.mock("@xyflow/react", () => ({
+  ReactFlow: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="reactflow">{children}</div>
   ),
+  ReactFlowProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  Background: () => null,
+  Controls: () => null,
+  MiniMap: () => null,
+  Handle: () => null,
+  Position: { Top: "top", Bottom: "bottom" },
+}));
+
+vi.mock("./DiagramRenderer", () => ({
+  DiagramRenderer: () => <div data-testid="diagram-renderer" />,
 }));
 
 afterEach(() => {
@@ -42,48 +50,20 @@ describe("InvestigationDiagram", () => {
         hypotheses={[]}
         experiments={[]}
         findings={[]}
-        completed={false}
       />,
     );
     expect(screen.getByText(/no hypotheses to diagram/i)).toBeInTheDocument();
   });
 
-  it("renders ExcalidrawWrapper when hypotheses exist", async () => {
+  it("renders diagram when hypotheses exist", async () => {
     render(
       <InvestigationDiagram
         hypotheses={[hypothesis]}
         experiments={[experiment]}
         findings={[finding]}
-        completed={false}
       />,
     );
-    const wrappers = await screen.findAllByTestId("excalidraw-wrapper");
-    expect(wrappers.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("passes viewMode=true when not completed", async () => {
-    render(
-      <InvestigationDiagram
-        hypotheses={[hypothesis]}
-        experiments={[]}
-        findings={[]}
-        completed={false}
-      />,
-    );
-    const wrappers = await screen.findAllByTestId("excalidraw-wrapper");
-    expect(wrappers[0].dataset.viewMode).toBe("true");
-  });
-
-  it("passes viewMode=false when completed", async () => {
-    render(
-      <InvestigationDiagram
-        hypotheses={[hypothesis]}
-        experiments={[]}
-        findings={[]}
-        completed={true}
-      />,
-    );
-    const wrappers = await screen.findAllByTestId("excalidraw-wrapper");
-    expect(wrappers[0].dataset.viewMode).toBe("false");
+    const renderer = await screen.findByTestId("diagram-renderer");
+    expect(renderer).toBeInTheDocument();
   });
 });

@@ -45,7 +45,73 @@ describe("buildSceneUpdates", () => {
       expect(actions).toHaveLength(0);
     });
 
-    it("search_protein_targets returns empty", () => {
+    it("tanimoto_similarity adds two ligands with different colors", () => {
+      const actions = buildSceneUpdates({
+        type: "tool_called",
+        data: {
+          tool_name: "tanimoto_similarity",
+          tool_input: { smiles_a: "CCO", smiles_b: "CC(=O)O" },
+        },
+      });
+      expect(actions).toHaveLength(2);
+      expect(actions[0]).toEqual({
+        type: "addLigand",
+        smiles: "CCO",
+        style: "stick",
+        color: "#a78bfa",
+      });
+      expect(actions[1]).toEqual({
+        type: "addLigand",
+        smiles: "CC(=O)O",
+        style: "stick",
+        color: "#22d3ee",
+      });
+    });
+
+    it("tanimoto_similarity with only smiles_a adds one ligand", () => {
+      const actions = buildSceneUpdates({
+        type: "tool_called",
+        data: {
+          tool_name: "tanimoto_similarity",
+          tool_input: { smiles_a: "CCO" },
+        },
+      });
+      expect(actions).toHaveLength(1);
+      expect(actions[0].type).toBe("addLigand");
+    });
+
+    it.each([
+      "validate_smiles",
+      "compute_descriptors",
+      "compute_fingerprint",
+      "generate_3d",
+      "substructure_match",
+      "predict_admet",
+    ])("%s with smiles adds ligand", (toolName) => {
+      const actions = buildSceneUpdates({
+        type: "tool_called",
+        data: { tool_name: toolName, tool_input: { smiles: "c1ccccc1" } },
+      });
+      expect(actions).toHaveLength(1);
+      expect(actions[0]).toEqual({
+        type: "addLigand",
+        smiles: "c1ccccc1",
+        style: "stick",
+      });
+    });
+
+    it.each([
+      "validate_smiles",
+      "compute_descriptors",
+    ])("%s without smiles returns empty", (toolName) => {
+      const actions = buildSceneUpdates({
+        type: "tool_called",
+        data: { tool_name: toolName, tool_input: {} },
+      });
+      expect(actions).toHaveLength(0);
+    });
+
+    it("search_protein_targets returns empty on tool_called", () => {
       const actions = buildSceneUpdates({
         type: "tool_called",
         data: { tool_name: "search_protein_targets", tool_input: {} },
@@ -53,7 +119,7 @@ describe("buildSceneUpdates", () => {
       expect(actions).toEqual([]);
     });
 
-    it("predict_candidates returns empty", () => {
+    it("predict_candidates returns empty on tool_called", () => {
       const actions = buildSceneUpdates({
         type: "tool_called",
         data: { tool_name: "predict_candidates", tool_input: {} },
@@ -61,10 +127,10 @@ describe("buildSceneUpdates", () => {
       expect(actions).toEqual([]);
     });
 
-    it("unknown tool returns empty", () => {
+    it("unknown tool without smiles returns empty", () => {
       const actions = buildSceneUpdates({
         type: "tool_called",
-        data: { tool_name: "validate_smiles", tool_input: {} },
+        data: { tool_name: "search_literature", tool_input: { query: "test" } },
       });
       expect(actions).toEqual([]);
     });
@@ -121,6 +187,120 @@ describe("buildSceneUpdates", () => {
         data: {
           tool_name: "dock_against_target",
           result_preview: "Docking completed",
+        },
+      });
+      expect(actions).toEqual([]);
+    });
+
+    it("generate_3d with energy adds label", () => {
+      const actions = buildSceneUpdates({
+        type: "tool_result",
+        data: {
+          tool_name: "generate_3d",
+          result_preview: '{"mol_block": "...", "energy": -45.23, "num_atoms": 12}',
+        },
+      });
+      expect(actions).toHaveLength(1);
+      if (actions[0].type === "addLabel") {
+        expect(actions[0].text).toBe("E = -45.2 kcal/mol");
+        expect(actions[0].color).toBe("#a78bfa");
+      }
+    });
+
+    it("generate_3d with no energy returns empty", () => {
+      const actions = buildSceneUpdates({
+        type: "tool_result",
+        data: {
+          tool_name: "generate_3d",
+          result_preview: "Generation failed",
+        },
+      });
+      expect(actions).toEqual([]);
+    });
+
+    it("compute_descriptors with properties adds label", () => {
+      const actions = buildSceneUpdates({
+        type: "tool_result",
+        data: {
+          tool_name: "compute_descriptors",
+          result_preview: '{"molecular_weight": 180.16, "logp": -0.32, "qed": 0.74, "tpsa": 63.6}',
+        },
+      });
+      expect(actions).toHaveLength(1);
+      if (actions[0].type === "addLabel") {
+        expect(actions[0].text).toContain("MW 180");
+        expect(actions[0].text).toContain("LogP -0.3");
+        expect(actions[0].text).toContain("QED 0.74");
+        expect(actions[0].color).toBe("#94a3b8");
+      }
+    });
+
+    it("compute_descriptors with partial properties adds label", () => {
+      const actions = buildSceneUpdates({
+        type: "tool_result",
+        data: {
+          tool_name: "compute_descriptors",
+          result_preview: '{"molecular_weight": 342.3}',
+        },
+      });
+      expect(actions).toHaveLength(1);
+      if (actions[0].type === "addLabel") {
+        expect(actions[0].text).toBe("MW 342");
+      }
+    });
+
+    it("compute_descriptors with no matching properties returns empty", () => {
+      const actions = buildSceneUpdates({
+        type: "tool_result",
+        data: {
+          tool_name: "compute_descriptors",
+          result_preview: "Error computing descriptors",
+        },
+      });
+      expect(actions).toEqual([]);
+    });
+
+    it("search_compounds extracts SMILES as ligands", () => {
+      const actions = buildSceneUpdates({
+        type: "tool_result",
+        data: {
+          tool_name: "search_compounds",
+          result_preview: '[{"smiles": "CCO", "name": "ethanol"}, {"smiles": "CC(=O)O", "name": "acetic acid"}]',
+        },
+      });
+      expect(actions).toHaveLength(2);
+      expect(actions[0]).toEqual({
+        type: "addLigand",
+        smiles: "CCO",
+        style: "stick",
+        color: "#38bdf8",
+      });
+      expect(actions[1]).toEqual({
+        type: "addLigand",
+        smiles: "CC(=O)O",
+        style: "stick",
+        color: "#38bdf8",
+      });
+    });
+
+    it("search_compounds limits to 5 results", () => {
+      const entries = Array.from({ length: 8 }, (_, i) => `{"smiles": "C${i}"}`);
+      const actions = buildSceneUpdates({
+        type: "tool_result",
+        data: {
+          tool_name: "search_compounds",
+          result_preview: `[${entries.join(", ")}]`,
+        },
+      });
+      expect(actions).toHaveLength(5);
+    });
+
+    it("search_compounds with no SMILES returns empty", () => {
+      const actions = buildSceneUpdates({
+        type: "tool_result",
+        data: {
+          tool_name: "search_compounds",
+          result_preview: "No compounds found",
         },
       });
       expect(actions).toEqual([]);

@@ -234,6 +234,13 @@ async def stream_investigation(investigation_id: str) -> EventSourceResponse:
                         "event": sse_event.event.value,
                         "data": sse_event.format(),
                     }
+                    # Persist all events except completed/error (those are replayed from state)
+                    if sse_event.event not in (SSEEventType.COMPLETED, SSEEventType.ERROR):
+                        await repo.save_event(
+                            investigation.id,
+                            sse_event.event.value,
+                            sse_event.format(),
+                        )
                     _broadcast_event(investigation.id, event)
                     yield event
         finally:
@@ -293,7 +300,14 @@ async def _subscribe(
 async def _replay_final(
     investigation: Investigation,
 ) -> AsyncGenerator[dict[str, str], None]:
+    repo = _get_repository()
+
     if investigation.status == InvestigationStatus.COMPLETED:
+        # Replay all stored events first (full timeline)
+        stored_events = await repo.get_events(investigation.id)
+        for ev in stored_events:
+            yield {"event": ev["event_type"], "data": ev["event_data"]}
+
         candidates = [
             {
                 "smiles": c.smiles,
@@ -352,6 +366,7 @@ async def _replay_final(
                     "findings": findings,
                     "hypotheses": hypotheses,
                     "negative_controls": negative_controls,
+                    "prompt": investigation.prompt,
                 },
             }
         )

@@ -156,10 +156,11 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 - **Resistance data**: YAML-configured (`data/resistance/*.yaml`), extensible per domain
 - 6 control tools: `propose_hypothesis`, `design_experiment`, `evaluate_hypothesis`, `record_finding`, `record_negative_control`, `conclude_investigation`
 - SSE streaming for real-time investigation updates (12 event types)
+- **Event persistence**: all SSE events stored in SQLite `events` table; completed investigations replay full timeline on page reload
 - TanStack Router file-based routing in console
 - `MultiModelOrchestrator`: hypothesis-driven loop (formulate -> design -> execute -> evaluate per hypothesis)
 - `Orchestrator` is the single-model fallback (used when all models are the same)
-- `SqliteInvestigationRepository` persists investigations to SQLite (WAL mode)
+- `SqliteInvestigationRepository` persists investigations + events to SQLite (WAL mode)
 - `CostTracker` tracks per-model token usage with tiered pricing
 - SSE reconnection with exponential backoff (1s, 2s, 4s, max 3 retries)
 - Semantic Scholar client: exponential backoff retry (3 attempts, 1s/2s/4s) on 429 and timeout
@@ -169,7 +170,7 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 - Molecule API: `/molecule/depict` (SVG, cached 24h), `/molecule/conformer`, `/molecule/descriptors`, `/targets`
 - Toast notifications via `sonner` (completion + error events, dark-themed OKLCH colors)
 - Custom scrollbar CSS: 8px webkit + Firefox `scrollbar-width: thin` with OKLCH theme colors
-- Findings replay: `InvestigationCompleted` event carries `findings[]` so page reloads hydrate findings from SSE
+- `InvestigationCompleted` event carries `findings[]`, `hypotheses[]`, `negative_controls[]`, `prompt` for replay hydration
 - `CompletionSummaryCard` replaces `ActiveExperimentCard` post-completion (candidate + finding + hypothesis counts)
 - `HypothesisBoard`: kanban-style card grid showing hypothesis status (proposed/testing/supported/refuted/revised)
 - `NegativeControlPanel`: table of known-inactive compounds with pass/fail classification indicators
@@ -177,16 +178,18 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 - `LiveLabViewer` subscribes to SSE stream, renders molecular scene: protein cartoon + ligand sticks + score labels
 - SSE event → 3D action mapping: `dock_against_target` → ligand appears in binding pocket, `predict_candidates` → molecules color by probability, `completed` → top candidates glow
 - Interactive: rotate, zoom, click molecules for details; split-pane with Timeline
-- **Excalidraw investigation diagrams**: `@excalidraw/excalidraw` v0.18+ React component renders auto-generated visual maps from investigation data
-- `InvestigationDiagram`: converts hypothesis/experiment/finding relationships into Excalidraw elements using the skeleton transform API (`convertToExcalidrawElements`)
-- Professional rendering: `roughness: 0` (clean lines), `fontFamily: 2` (Helvetica), `strokeWidth: 2`, `fillStyle: "solid"`, Excalidraw semantic color palette
-- `label` prop on rectangles for bound text (not separate text elements) -- halves element count
-- Arrow binding via `start: { id }` / `end: { id }` with descriptive labels ("revised to", "tested by", "supports", "contradicts")
-- Dashed arrows for hypothesis revisions, solid arrows for experiment/finding links
-- Locked section titles ("HYPOTHESES", "EXPERIMENTS", "FINDINGS") as row headers
+- **React Flow investigation diagrams**: `@xyflow/react` node graph with custom `InvestigationNode` and `AnnotationNode` types
+- `InvestigationDiagram` lazy-loads React Flow via `React.lazy()` + `Suspense` (code-split ~188KB chunk)
+- `DiagramRenderer`: React Flow with `fitView`, `colorMode="dark"`, `Background`, `Controls`, `MiniMap`
+- `diagram-builder.ts` outputs React Flow `Node[]` + `Edge[]` with `smoothstep` edge routing
+- Dark-friendly palette: dark fills (`#1f2937`, `#14532d`, `#450a0a`), light text, visible strokes
+- Dashed edges for hypothesis revisions, solid `smoothstep` edges for experiment/finding links
+- Section labels as `annotation` node type, investigation data as `investigation` node type
 - Status-colored nodes: proposed (gray), testing (blue), supported (green), refuted (red), revised (orange)
-- Read-only auto-generated view during investigation; interactive editing post-completion
+- Read-only: `nodesDraggable={false}`, `nodesConnectable={false}`; built-in zoom/pan/minimap
 - `ErrorBoundary` wraps both LiveLabViewer and InvestigationDiagram to prevent page crashes
+- **Structured investigation report**: `InvestigationReport` component with 8 sections (Research Question, Executive Summary, Hypotheses & Outcomes, Methodology, Key Findings, Candidate Molecules, Model Validation, Cost & Performance)
+- Report replaces plain-text ReportViewer; shown only after completion with full audit trail
 
 ## Key Files (Investigation Context)
 
@@ -200,8 +203,8 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 | `investigation/domain/experiment.py` | Experiment entity + ExperimentStatus enum |
 | `investigation/domain/negative_control.py` | NegativeControl frozen dataclass |
 | `investigation/domain/events.py` | 12 domain events (Hypothesis*, Experiment*, NegativeControl*, Finding, Tool*, Thinking, Completed, Error) |
-| `investigation/domain/repository.py` | InvestigationRepository ABC |
-| `investigation/infrastructure/sqlite_repository.py` | SQLite implementation with hypothesis/experiment/negative_control serialization |
+| `investigation/domain/repository.py` | InvestigationRepository ABC (save_event, get_events for audit trail) |
+| `investigation/infrastructure/sqlite_repository.py` | SQLite implementation with hypothesis/experiment/negative_control/event serialization |
 | `investigation/infrastructure/anthropic_client.py` | Anthropic API adapter with retry |
 | `api/routes/investigation.py` | REST + SSE endpoints, 27-tool registry, auto-selects orchestrator |
 | `api/routes/molecule.py` | Molecule depiction, conformer, descriptors, targets endpoints |
@@ -237,12 +240,14 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 | `console/.../investigation/components/CompletionSummaryCard.tsx` | Post-completion card (candidate + finding + hypothesis counts) |
 | `console/.../shared/components/ui/Toaster.tsx` | Sonner toast wrapper with dark OKLCH theme |
 
-## Key Files (Live Lab + Diagrams)
+## Key Files (Live Lab + Diagrams + Report)
 
 | File | Purpose |
 |------|---------|
 | `console/.../investigation/components/LiveLabViewer.tsx` | 3Dmol.js scene driven by SSE events: proteins, ligands, scores in real-time |
 | `console/.../investigation/lib/scene-builder.ts` | Maps SSE events to 3Dmol.js operations (addModel, setStyle, addLabel, zoom) |
-| `console/.../investigation/components/InvestigationDiagram.tsx` | Excalidraw wrapper: converts investigation data to visual diagram |
-| `console/.../investigation/lib/diagram-builder.ts` | Transforms hypotheses/experiments/findings into Excalidraw elements (skeleton API with labels, bound arrows) |
+| `console/.../investigation/components/InvestigationDiagram.tsx` | Lazy-loaded React Flow wrapper with Suspense fallback |
+| `console/.../investigation/components/DiagramRenderer.tsx` | React Flow renderer with custom InvestigationNode/AnnotationNode types, minimap, controls |
+| `console/.../investigation/lib/diagram-builder.ts` | Transforms hypotheses/experiments/findings into React Flow Node[] + Edge[] |
+| `console/.../investigation/components/InvestigationReport.tsx` | Structured 8-section report (research question, summary, hypotheses, methodology, findings, candidates, validation, cost) |
 | `console/.../shared/components/ErrorBoundary.tsx` | Class-based error boundary wrapping LiveLabViewer and InvestigationDiagram |

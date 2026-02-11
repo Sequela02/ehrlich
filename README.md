@@ -93,7 +93,7 @@ All data sources are free and open-access.
 - **Console:** React 19, TypeScript 5.6+, Bun, Vite 7+, TanStack Router, 3Dmol.js
 - **AI:** Claude Opus 4.6 + Sonnet 4.5 + Haiku 4.5 (Anthropic API) with tool use
 - **Science:** RDKit, Chemprop, XGBoost, AutoDock Vina, Meeko, PyArrow
-- **Visualization:** 3Dmol.js (live 3D molecular scene), Excalidraw (investigation diagrams)
+- **Visualization:** 3Dmol.js (live 3D molecular scene), React Flow (investigation diagrams)
 - **Data:** ChEMBL, RCSB PDB, PubChem, EPA CompTox, Semantic Scholar (all free APIs)
 
 ## Quick Start
@@ -216,10 +216,12 @@ Server at :8000, Console at :3000.
 5. Watch the investigation unfold in real-time via SSE streaming
 6. See the Live Lab: 3D molecular scene updates as experiments run -- proteins load, ligands dock, candidates glow by score
 7. View ranked candidates with 2D structure thumbnails in the results table
-7. Click any candidate row to expand the detail panel with 3D conformer viewer, molecular properties, and Lipinski assessment
-8. Browse the hypothesis board showing formulated, tested, supported, and refuted hypotheses
-9. Explore the auto-generated investigation diagram: hypothesis map with evidence chains rendered via Excalidraw
-10. View past investigations in the history section on the home page
+8. Click any candidate row to expand the detail panel with 3D conformer viewer, molecular properties, and Lipinski assessment
+9. Browse the hypothesis board showing formulated, tested, supported, and refuted hypotheses
+10. Explore the auto-generated investigation diagram: SVG hypothesis map with status-colored nodes and evidence-chain arrows
+11. After completion, view the structured investigation report: research question, executive summary, hypotheses, methodology, findings, candidates, model validation, and cost breakdown
+12. Reload a completed investigation and see the full timeline replayed from stored events
+13. View past investigations in the history section on the home page
 
 ## Development
 

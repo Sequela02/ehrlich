@@ -12,6 +12,16 @@ interface SSEEventData {
   data: Record<string, unknown>;
 }
 
+// Tools that accept a `smiles` input parameter and should trigger molecule display
+const SMILES_INPUT_TOOLS = new Set([
+  "validate_smiles",
+  "compute_descriptors",
+  "compute_fingerprint",
+  "generate_3d",
+  "substructure_match",
+  "predict_admet",
+]);
+
 export function buildSceneUpdates(event: SSEEventData): SceneAction[] {
   const { type, data } = event;
 
@@ -32,13 +42,23 @@ export function buildSceneUpdates(event: SSEEventData): SceneAction[] {
       return actions;
     }
 
-    if (toolName === "search_protein_targets") {
-      return [];
+    if (toolName === "tanimoto_similarity") {
+      const actions: SceneAction[] = [];
+      const smilesA = toolInput.smiles_a as string | undefined;
+      const smilesB = toolInput.smiles_b as string | undefined;
+      if (smilesA) actions.push({ type: "addLigand", smiles: smilesA, style: "stick", color: "#a78bfa" });
+      if (smilesB) actions.push({ type: "addLigand", smiles: smilesB, style: "stick", color: "#22d3ee" });
+      return actions;
     }
 
-    if (toolName === "predict_candidates") {
-      return [];
+    if (SMILES_INPUT_TOOLS.has(toolName)) {
+      const smiles = toolInput.smiles as string | undefined;
+      if (smiles) {
+        return [{ type: "addLigand", smiles, style: "stick" }];
+      }
     }
+
+    return [];
   }
 
   if (type === "tool_result") {
@@ -58,6 +78,46 @@ export function buildSceneUpdates(event: SSEEventData): SceneAction[] {
           },
         ];
       }
+    }
+
+    if (toolName === "generate_3d") {
+      const energyMatch = preview.match(/"?energy"?\s*:\s*([-\d.]+)/i);
+      if (energyMatch) {
+        return [{
+          type: "addLabel",
+          text: `E = ${parseFloat(energyMatch[1]).toFixed(1)} kcal/mol`,
+          position: { x: 0, y: 3, z: 0 },
+          color: "#a78bfa",
+        }];
+      }
+    }
+
+    if (toolName === "compute_descriptors") {
+      const mwMatch = preview.match(/"?molecular_weight"?\s*:\s*([\d.]+)/i);
+      const qedMatch = preview.match(/"?qed"?\s*:\s*([\d.]+)/i);
+      const logpMatch = preview.match(/"?log_?p"?\s*:\s*([-\d.]+)/i);
+      const parts: string[] = [];
+      if (mwMatch) parts.push(`MW ${parseFloat(mwMatch[1]).toFixed(0)}`);
+      if (logpMatch) parts.push(`LogP ${parseFloat(logpMatch[1]).toFixed(1)}`);
+      if (qedMatch) parts.push(`QED ${parseFloat(qedMatch[1]).toFixed(2)}`);
+      if (parts.length > 0) {
+        return [{
+          type: "addLabel",
+          text: parts.join(" | "),
+          position: { x: 0, y: 3, z: 0 },
+          color: "#94a3b8",
+        }];
+      }
+    }
+
+    if (toolName === "search_compounds") {
+      const smilesMatches = [...preview.matchAll(/"?smiles"?\s*:\s*"([^"]+)"/gi)];
+      return smilesMatches.slice(0, 5).map((m) => ({
+        type: "addLigand" as const,
+        smiles: m[1],
+        style: "stick" as const,
+        color: "#38bdf8",
+      }));
     }
 
     if (toolName === "predict_candidates") {

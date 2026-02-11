@@ -8,6 +8,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- Auditability: SSE event persistence in SQLite `events` table -- all events stored during investigation, replayed on page reload
+- Auditability: `save_event()` / `get_events()` methods on `InvestigationRepository` interface and SQLite implementation
+- Auditability: `prompt` field included in `completed` SSE event during replay (research question visible in report)
+- Console: `InvestigationReport` -- structured 8-section report replacing plain-text ReportViewer (Research Question, Executive Summary, Hypotheses & Outcomes, Methodology, Key Findings, Candidate Molecules, Model Validation, Cost & Performance)
+- Console: `DiagramRenderer` -- React Flow (`@xyflow/react`) investigation diagram with custom node types, minimap, controls
+- Console: Dark-friendly diagram palette with dark fills and light text
+- Console: Diagram zoom, pan, and minimap via React Flow built-ins
+- Dependencies: `@xyflow/react` for node-graph diagrams
+
+### Changed
+
+- Console: `InvestigationDiagram` uses React Flow instead of Excalidraw (lazy-loaded, code-split ~188KB chunk)
+- Console: `diagram-builder.ts` outputs React Flow `Node[]` + `Edge[]` with `smoothstep` routing instead of Excalidraw skeletons
+- Console: Investigation diagram is always read-only (`nodesDraggable={false}`)
+- Console: Investigation page shows `FindingsPanel` during live investigation, full `InvestigationReport` after completion
+- Console: Completed investigation replay includes full timeline (all SSE events) instead of just final status
+- Server: `_replay_final()` yields stored events before completed event for full timeline reconstruction
+
+### Removed
+
+- Console: `ExcalidrawWrapper` component (replaced by `DiagramRenderer`)
+- Console: `ReportViewer` component (replaced by `InvestigationReport`)
+- Console: `@excalidraw/excalidraw` dependency removed from `package.json`
+
+---
+
+### Added
+
 - Domain-agnostic engine: RCSB PDB client for dynamic protein target discovery by organism/function/keyword
 - Domain-agnostic engine: PubChem PUG REST client for compound search by name/SMILES/similarity
 - Domain-agnostic engine: EPA CompTox CTX API client for environmental toxicity profiles (LD50, LC50, BCF, mutagenicity)

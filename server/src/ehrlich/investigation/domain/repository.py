@@ -19,3 +19,11 @@ class InvestigationRepository(ABC):
 
     @abstractmethod
     async def update(self, investigation: Investigation) -> None: ...
+
+    @abstractmethod
+    async def save_event(
+        self, investigation_id: str, event_type: str, event_data: str
+    ) -> None: ...
+
+    @abstractmethod
+    async def get_events(self, investigation_id: str) -> list[dict[str, str]]: ...

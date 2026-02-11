@@ -13,6 +13,7 @@ export function LiveLabViewer({ events, completed }: LiveLabViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<GLViewer | null>(null);
   const processedRef = useRef(0);
+  const seenSmilesRef = useRef(new Set<string>());
   const [ready, setReady] = useState(false);
   const [hasContent, setHasContent] = useState(false);
 
@@ -43,12 +44,15 @@ export function LiveLabViewer({ events, completed }: LiveLabViewerProps) {
     if (!ready || !viewerRef.current) return;
 
     const viewer = viewerRef.current;
+    const seen = seenSmilesRef.current;
     const newEvents = events.slice(processedRef.current);
     processedRef.current = events.length;
 
     for (const event of newEvents) {
       const actions = buildSceneUpdates({ type: event.event, data: event.data });
       for (const action of actions) {
+        if (action.type === "addLigand" && seen.has(action.smiles)) continue;
+        if (action.type === "addLigand") seen.add(action.smiles);
         applyAction(viewer, action);
         setHasContent(true);
       }
@@ -80,6 +84,19 @@ export function LiveLabViewer({ events, completed }: LiveLabViewerProps) {
   );
 }
 
+function addLigandModel(viewer: GLViewer, molblock: string, color?: string): void {
+  viewer.addModel(molblock, "mol");
+  const scheme = color
+    ? { prop: "elem", map: { C: color } }
+    : "greenCarbon";
+  viewer.setStyle(
+    { model: -1 },
+    { stick: { colorscheme: scheme as string } },
+  );
+  viewer.zoomTo({ model: -1 });
+  viewer.render();
+}
+
 function applyAction(viewer: GLViewer, action: SceneAction): void {
   switch (action.type) {
     case "addProtein": {
@@ -97,16 +114,16 @@ function applyAction(viewer: GLViewer, action: SceneAction): void {
     }
     case "addLigand": {
       if (action.molblock) {
-        viewer.addModel(action.molblock, "mol");
-        const scheme = action.color
-          ? { prop: "elem", map: { C: action.color } }
-          : "greenCarbon";
-        viewer.setStyle(
-          { model: -1 },
-          { stick: { colorscheme: scheme as string } },
-        );
-        viewer.zoomTo({ model: -1 });
-        viewer.render();
+        addLigandModel(viewer, action.molblock, action.color);
+      } else {
+        fetch(`/api/v1/molecule/conformer?smiles=${encodeURIComponent(action.smiles)}`)
+          .then((r) => r.json())
+          .then((data: { mol_block?: string }) => {
+            if (data.mol_block) {
+              addLigandModel(viewer, data.mol_block, action.color);
+            }
+          })
+          .catch(() => {});
       }
       break;
     }

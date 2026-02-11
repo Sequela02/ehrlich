@@ -26,9 +26,14 @@ export function CandidateTable({ candidates }: CandidateTableProps) {
 
   return (
     <div className="space-y-3">
-      <h3 className="border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-        Ranked Candidates
-      </h3>
+      <div>
+        <h3 className="border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          Ranked Candidates
+        </h3>
+        <p className="mt-1 pl-3 text-[11px] leading-relaxed text-muted-foreground/50">
+          Top molecules identified by the investigation. Click a row to view 3D structure, properties, and drug-likeness profile.
+        </p>
+      </div>
       {hasScores && (
         <div className="rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
           <span className="font-medium text-foreground/70">Score legend:</span>{" "}
@@ -195,7 +200,7 @@ function CandidateRowComponent({
             <ResistanceCell risk={candidate.resistance_risk} />
           </>
         )}
-        <td className="max-h-20 max-w-md overflow-y-auto px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+        <td className="min-w-[200px] max-w-lg px-3 py-2 text-xs leading-relaxed text-muted-foreground">
           {candidate.notes || "-"}
         </td>
       </tr>

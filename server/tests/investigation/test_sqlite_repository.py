@@ -145,3 +145,58 @@ class TestUpdate:
         retrieved = await repository.get_by_id(inv.id)
         assert retrieved is not None
         assert retrieved.cost_data["total_cost_usd"] == 3.5
+
+
+class TestEvents:
+    @pytest.mark.asyncio
+    async def test_save_and_get_events(self, repository: SqliteInvestigationRepository) -> None:
+        inv = Investigation(prompt="Test")
+        await repository.save(inv)
+
+        await repository.save_event(inv.id, "tool_called", '{"event":"tool_called","data":{}}')
+        await repository.save_event(inv.id, "tool_result", '{"event":"tool_result","data":{}}')
+
+        events = await repository.get_events(inv.id)
+        assert len(events) == 2
+        assert events[0]["event_type"] == "tool_called"
+        assert events[1]["event_type"] == "tool_result"
+
+    @pytest.mark.asyncio
+    async def test_events_ordered_by_insertion(
+        self, repository: SqliteInvestigationRepository
+    ) -> None:
+        inv = Investigation(prompt="Test")
+        await repository.save(inv)
+
+        for i in range(5):
+            await repository.save_event(inv.id, f"event_{i}", f'{{"n":{i}}}')
+
+        events = await repository.get_events(inv.id)
+        assert len(events) == 5
+        for i, ev in enumerate(events):
+            assert ev["event_type"] == f"event_{i}"
+
+    @pytest.mark.asyncio
+    async def test_events_filtered_by_investigation_id(
+        self, repository: SqliteInvestigationRepository
+    ) -> None:
+        inv1 = Investigation(prompt="First")
+        inv2 = Investigation(prompt="Second")
+        await repository.save(inv1)
+        await repository.save(inv2)
+
+        await repository.save_event(inv1.id, "tool_called", '{"data":"a"}')
+        await repository.save_event(inv2.id, "tool_called", '{"data":"b"}')
+        await repository.save_event(inv1.id, "thinking", '{"data":"c"}')
+
+        events1 = await repository.get_events(inv1.id)
+        events2 = await repository.get_events(inv2.id)
+        assert len(events1) == 2
+        assert len(events2) == 1
+
+    @pytest.mark.asyncio
+    async def test_get_events_empty(self, repository: SqliteInvestigationRepository) -> None:
+        inv = Investigation(prompt="Test")
+        await repository.save(inv)
+        events = await repository.get_events(inv.id)
+        assert events == []

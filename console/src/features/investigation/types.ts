@@ -117,6 +117,7 @@ export interface CompletedData {
   investigation_id: string;
   candidate_count: number;
   summary: string;
+  prompt?: string;
   cost: {
     input_tokens: number;
     output_tokens: number;

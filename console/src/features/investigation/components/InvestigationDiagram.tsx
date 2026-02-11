@@ -1,29 +1,33 @@
 import { lazy, Suspense, useMemo } from "react";
 import { Loader2 } from "lucide-react";
 import {
-  buildDiagramElements,
+  buildDiagramData,
   type HypothesisNode,
   type ExperimentNode,
   type FindingNode,
 } from "../lib/diagram-builder";
 
-const ExcalidrawWrapper = lazy(() => import("./ExcalidrawWrapper"));
+const LazyDiagram = lazy(() =>
+  import("./DiagramRenderer").then((m) => ({ default: m.DiagramRenderer })),
+);
+
+const LazyProvider = lazy(() =>
+  import("@xyflow/react").then((m) => ({ default: m.ReactFlowProvider })),
+);
 
 interface InvestigationDiagramProps {
   hypotheses: HypothesisNode[];
   experiments: ExperimentNode[];
   findings: FindingNode[];
-  completed: boolean;
 }
 
 export function InvestigationDiagram({
   hypotheses,
   experiments,
   findings,
-  completed,
 }: InvestigationDiagramProps) {
-  const skeletons = useMemo(
-    () => buildDiagramElements(hypotheses, experiments, findings),
+  const { nodes, edges } = useMemo(
+    () => buildDiagramData(hypotheses, experiments, findings),
     [hypotheses, experiments, findings],
   );
 
@@ -46,10 +50,9 @@ export function InvestigationDiagram({
           </div>
         }
       >
-        <ExcalidrawWrapper
-          skeletons={skeletons}
-          viewMode={!completed}
-        />
+        <LazyProvider>
+          <LazyDiagram nodes={nodes} edges={edges} />
+        </LazyProvider>
       </Suspense>
     </div>
   );

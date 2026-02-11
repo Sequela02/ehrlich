@@ -44,6 +44,7 @@ interface SSEState {
   findings: Finding[];
   candidates: CandidateRow[];
   summary: string;
+  prompt: string;
   cost: CostInfo | null;
   error: string | null;
   toolCallCount: number;
@@ -65,6 +66,7 @@ export function useSSE(url: string | null): SSEState {
   const [findings, setFindings] = useState<Finding[]>([]);
   const [candidates, setCandidates] = useState<CandidateRow[]>([]);
   const [summary, setSummary] = useState("");
+  const [prompt, setPrompt] = useState("");
   const [cost, setCost] = useState<CostInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [toolCallCount, setToolCallCount] = useState(0);
@@ -189,6 +191,7 @@ export function useSSE(url: string | null): SSEState {
       case "completed": {
         const d = parsed.data as unknown as CompletedData;
         setSummary(d.summary);
+        if (d.prompt) setPrompt(d.prompt);
         if (d.candidates) {
           setCandidates(d.candidates);
         }
@@ -297,6 +300,7 @@ export function useSSE(url: string | null): SSEState {
     findings,
     candidates,
     summary,
+    prompt,
     cost,
     error,
     toolCallCount,

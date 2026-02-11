@@ -14,9 +14,14 @@ export function HypothesisBoard({
 
   return (
     <div className="space-y-3">
-      <h3 className="border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-        Hypotheses ({hypotheses.length})
-      </h3>
+      <div>
+        <h3 className="border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          Hypotheses ({hypotheses.length})
+        </h3>
+        <p className="mt-1 pl-3 text-[11px] leading-relaxed text-muted-foreground/50">
+          Testable hypotheses formulated by the AI. Each is tested through experiments, then evaluated as supported, refuted, or revised.
+        </p>
+      </div>
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
         {hypotheses.map((h) => (
           <div
