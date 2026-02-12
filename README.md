@@ -37,8 +37,8 @@ Ehrlich uses a three-tier Claude model architecture for cost-efficient investiga
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesizes (3-5 calls)
-Sonnet 4.5 (Researcher) -- Executes experiments with 27 tools (10-20 calls)
-Haiku 4.5 (Summarizer)  -- Compresses large tool outputs >2000 chars (5-10 calls)
+Sonnet 4.5 (Researcher) -- Executes experiments with 30 tools (10-20 calls)
+Haiku 4.5 (Summarizer)  -- Compresses large outputs, classifies domains (5-10 calls)
 ```
 
 Cost: ~$3-4 per investigation (vs ~$11 with all-Opus).
@@ -52,10 +52,13 @@ Cost: ~$3-4 per investigation (vs ~$11 with all-Opus).
 | [PubChem](https://pubchem.ncbi.nlm.nih.gov/) | Compound search by target/activity/similarity | 100M+ compounds |
 | [EPA CompTox](https://www.epa.gov/comptox-tools) | Environmental toxicity, bioaccumulation, fate | 1M+ chemicals |
 | [Semantic Scholar](https://www.semanticscholar.org/) | Scientific literature search | 200M+ papers |
+| [UniProt](https://www.uniprot.org/) | Protein function, disease associations, GO terms | 250M+ sequences |
+| [Open Targets](https://platform.opentargets.org/) | Disease-target associations (scored evidence) | 60K+ targets |
+| [GtoPdb](https://www.guidetopharmacology.org/) | Expert-curated pharmacology (pKi, pIC50) | 11K+ ligands |
 
 All data sources are free and open-access.
 
-## 27 Tools
+## 30 Tools
 
 | Context | Tool | Description |
 |---------|------|-------------|
@@ -80,6 +83,9 @@ All data sources are free and open-access.
 | Simulation | `predict_admet` | Drug-likeness profiling |
 | Simulation | `fetch_toxicity_profile` | EPA CompTox environmental toxicity |
 | Simulation | `assess_resistance` | Resistance mutation scoring |
+| Simulation | `get_protein_annotation` | UniProt protein function and disease links |
+| Simulation | `search_disease_targets` | Open Targets disease-target associations |
+| Analysis | `search_pharmacology` | GtoPdb curated receptor/ligand interactions |
 | Investigation | `propose_hypothesis` | Register testable hypothesis |
 | Investigation | `design_experiment` | Plan experiment with tool sequence |
 | Investigation | `evaluate_hypothesis` | Assess outcome with confidence score |
@@ -200,6 +206,9 @@ Server at :8000, Console at :3000.
 | `finding_recorded` | Scientific finding captured |
 | `thinking` | Model reasoning text |
 | `output_summarized` | Haiku compressed a large output |
+| `phase_changed` | Investigation phase transition (1-5) |
+| `cost_update` | Progressive cost/token snapshot |
+| `hypothesis_approval_requested` | Awaiting user approval of hypotheses |
 | `completed` | Investigation finished with candidates and cost |
 | `error` | Error occurred |
 
@@ -237,7 +246,7 @@ uv run mypy src/ehrlich/                                 # Type check
 ### Console Commands
 
 ```bash
-bun test          # Vitest
+bunx vitest run   # Vitest
 bun run build     # vite build (generates routes + bundles)
 bun run typecheck # tsc --noEmit (run after build to ensure route types exist)
 ```
@@ -251,6 +260,10 @@ bun run typecheck # tsc --noEmit (run after build to ensure route types exist)
 | Type checking | mypy (strict) | Zero errors |
 | Test coverage | pytest-cov | 80% minimum |
 | TypeScript | tsc --noEmit | Zero errors |
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, architecture overview, and code conventions.
 
 ## License
 
