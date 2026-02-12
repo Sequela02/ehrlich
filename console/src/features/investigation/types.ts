@@ -215,6 +215,21 @@ export interface CandidateRow {
   resistance_risk?: string;
 }
 
+export interface InvestigationDetail {
+  id: string;
+  prompt: string;
+  status: string;
+  hypotheses: Hypothesis[];
+  experiments: Experiment[];
+  findings: Finding[];
+  candidates: CandidateRow[];
+  negative_controls: NegativeControl[];
+  citations: string[];
+  summary: string;
+  created_at: string;
+  cost_data: Record<string, unknown>;
+}
+
 export interface ModelCost {
   input_tokens: number;
   output_tokens: number;
