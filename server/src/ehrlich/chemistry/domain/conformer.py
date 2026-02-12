@@ -1,14 +1,3 @@
-from __future__ import annotations
+from ehrlich.kernel.conformer import Conformer3D
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from ehrlich.kernel.types import MolBlock
-
-
-@dataclass(frozen=True)
-class Conformer3D:
-    mol_block: MolBlock
-    energy: float = 0.0
-    num_atoms: int = 0
+__all__ = ["Conformer3D"]

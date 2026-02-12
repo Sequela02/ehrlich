@@ -9,7 +9,7 @@ from ehrlich.prediction.application.prediction_service import PredictionService
 from ehrlich.prediction.infrastructure.model_store import ModelStore
 from ehrlich.prediction.infrastructure.xgboost_adapter import XGBoostAdapter
 
-_rdkit = RDKitAdapter()
+_rdkit: RDKitAdapter = RDKitAdapter()
 _xgboost = XGBoostAdapter()
 _model_store = ModelStore()
 _dataset_repo = ChEMBLLoader()

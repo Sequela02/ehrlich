@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { PromptInput, InvestigationList, TemplateCards } from "@/features/investigation/components";
 import { useInvestigations } from "@/features/investigation/hooks/use-investigations";
+import { useStats } from "@/features/investigation/hooks/use-stats";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -9,6 +10,7 @@ export const Route = createFileRoute("/")({
 
 function HomePage() {
   const { data: investigations } = useInvestigations();
+  const { data: stats } = useStats();
   const [prompt, setPrompt] = useState("");
 
   return (
@@ -19,7 +21,9 @@ function HomePage() {
           AI-powered scientific discovery engine
         </p>
         <p className="font-mono text-xs text-muted-foreground/70">
-          30 tools &middot; 5 phases &middot; multi-model architecture
+          {stats
+            ? `${stats.tool_count} tools \u00b7 ${stats.phase_count} phases \u00b7 ${stats.domain_count} domains \u00b7 ${stats.data_source_count} data sources`
+            : "loading\u2026"}
         </p>
       </div>
       <PromptInput value={prompt} onChange={setPrompt} />

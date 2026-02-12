@@ -11,11 +11,18 @@ from ehrlich.simulation.domain.resistance_assessment import MutationRisk, Resist
 from ehrlich.simulation.infrastructure.vina_adapter import VinaAdapter, interpret_energy
 
 if TYPE_CHECKING:
-    from ehrlich.chemistry.infrastructure.rdkit_adapter import RDKitAdapter
+    from ehrlich.kernel.chemistry_port import ChemistryPort
     from ehrlich.kernel.types import SMILES
     from ehrlich.simulation.domain.admet_profile import ADMETProfile
+    from ehrlich.simulation.domain.protein_annotation import ProteinAnnotation
     from ehrlich.simulation.domain.protein_target import ProteinTarget
-    from ehrlich.simulation.domain.repository import ProteinTargetRepository, ToxicityRepository
+    from ehrlich.simulation.domain.repository import (
+        ProteinAnnotationRepository,
+        ProteinTargetRepository,
+        TargetAssociationRepository,
+        ToxicityRepository,
+    )
+    from ehrlich.simulation.domain.target_association import TargetAssociation
     from ehrlich.simulation.domain.toxicity_profile import ToxicityProfile
     from ehrlich.simulation.infrastructure.pkcsm_client import PkCSMClient
     from ehrlich.simulation.infrastructure.protein_store import ProteinStore
@@ -48,11 +55,13 @@ class SimulationService:
     def __init__(
         self,
         protein_store: ProteinStore,
-        rdkit: RDKitAdapter,
+        rdkit: ChemistryPort,
         vina: VinaAdapter,
         admet_client: PkCSMClient,
         rcsb_client: ProteinTargetRepository | None = None,
         comptox_client: ToxicityRepository | None = None,
+        annotation_repo: ProteinAnnotationRepository | None = None,
+        association_repo: TargetAssociationRepository | None = None,
         resistance_yaml: Path | None = None,
     ) -> None:
         self._proteins = protein_store
@@ -61,6 +70,8 @@ class SimulationService:
         self._admet = admet_client
         self._rcsb = rcsb_client
         self._comptox = comptox_client
+        self._annotations = annotation_repo
+        self._associations = association_repo
         mutations, patterns = _load_resistance_data(resistance_yaml or _RESISTANCE_YAML)
         self._known_mutations = mutations
         self._resistance_patterns = patterns
@@ -69,6 +80,23 @@ class SimulationService:
         self, query: str, organism: str = "", limit: int = 10
     ) -> list[ProteinTarget]:
         return await self._proteins.search(query, organism, limit)
+
+    async def list_targets(self) -> list[ProteinTarget]:
+        return await self._proteins.list_targets()
+
+    async def get_protein_annotation(
+        self, query: str, organism: str = ""
+    ) -> list[ProteinAnnotation]:
+        if self._annotations is None:
+            return []
+        return await self._annotations.search(query, organism)
+
+    async def search_disease_targets(
+        self, disease: str, limit: int = 10
+    ) -> list[TargetAssociation]:
+        if self._associations is None:
+            return []
+        return await self._associations.search(disease, limit)
 
     async def fetch_toxicity(self, identifier: str) -> ToxicityProfile | None:
         if self._comptox is None:

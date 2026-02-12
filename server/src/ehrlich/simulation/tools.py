@@ -31,6 +31,8 @@ _service = SimulationService(
     admet_client=_admet_client,
     rcsb_client=_rcsb_client,
     comptox_client=_comptox_client,
+    annotation_repo=_uniprot_client,
+    association_repo=_opentargets_client,
 )
 
 
@@ -95,7 +97,7 @@ async def dock_against_target(smiles: str, target_id: str) -> str:
     try:
         result = await _service.dock(SMILES(smiles), target_id)
     except TargetNotFoundError:
-        available = await _protein_store.list_targets()
+        available = await _service.list_targets()
         ids = [t.pdb_id for t in available]
         return json.dumps({"error": f"Unknown target: {target_id}", "available_targets": ids})
     except InvalidSMILESError as e:
@@ -138,7 +140,7 @@ async def assess_resistance(smiles: str, target_id: str) -> str:
     try:
         result = await _service.assess_resistance(SMILES(smiles), target_id)
     except TargetNotFoundError:
-        available = await _protein_store.list_targets()
+        available = await _service.list_targets()
         ids = [t.pdb_id for t in available]
         return json.dumps({"error": f"Unknown target: {target_id}", "available_targets": ids})
     except InvalidSMILESError as e:
@@ -166,7 +168,7 @@ async def assess_resistance(smiles: str, target_id: str) -> str:
 async def get_protein_annotation(query: str, organism: str = "") -> str:
     """Get protein annotations from UniProt."""
     try:
-        annotations = await _uniprot_client.search(query, organism)
+        annotations = await _service.get_protein_annotation(query, organism)
     except ExternalServiceError as e:
         return json.dumps({"error": f"UniProt search failed: {e.detail}", "query": query})
     return json.dumps(
@@ -193,7 +195,7 @@ async def get_protein_annotation(query: str, organism: str = "") -> str:
 async def search_disease_targets(disease: str, limit: int = 10) -> str:
     """Search disease-target associations via Open Targets."""
     try:
-        associations = await _opentargets_client.search(disease, limit)
+        associations = await _service.search_disease_targets(disease, limit)
     except ExternalServiceError as e:
         return json.dumps({"error": f"Open Targets search failed: {e.detail}", "disease": disease})
     return json.dumps(

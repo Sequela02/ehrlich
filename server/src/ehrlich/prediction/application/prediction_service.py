@@ -12,8 +12,8 @@ from ehrlich.prediction.domain.trained_model import TrainedModel
 
 if TYPE_CHECKING:
     from ehrlich.analysis.domain.repository import DatasetRepository
-    from ehrlich.chemistry.domain.fingerprint import Fingerprint
-    from ehrlich.chemistry.infrastructure.rdkit_adapter import RDKitAdapter
+    from ehrlich.kernel.chemistry_port import ChemistryPort
+    from ehrlich.kernel.fingerprint import Fingerprint
     from ehrlich.kernel.types import SMILES
     from ehrlich.prediction.domain.repository import ModelRepository
     from ehrlich.prediction.infrastructure.xgboost_adapter import XGBoostAdapter
@@ -26,7 +26,7 @@ class PredictionService:
         self,
         model_repo: ModelRepository,
         dataset_repo: DatasetRepository,
-        rdkit: RDKitAdapter,
+        rdkit: ChemistryPort,
         xgboost: XGBoostAdapter,
     ) -> None:
         self._model_repo = model_repo

@@ -1,13 +1,22 @@
-from ehrlich.chemistry.domain.conformer import Conformer3D
-from ehrlich.chemistry.domain.descriptors import MolecularDescriptors
-from ehrlich.chemistry.domain.fingerprint import Fingerprint
-from ehrlich.chemistry.infrastructure.rdkit_adapter import RDKitAdapter
-from ehrlich.kernel.types import SMILES, InChIKey
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ehrlich.kernel.chemistry_port import ChemistryPort
+    from ehrlich.kernel.conformer import Conformer3D
+    from ehrlich.kernel.descriptors import MolecularDescriptors
+    from ehrlich.kernel.fingerprint import Fingerprint
+    from ehrlich.kernel.types import SMILES, InChIKey
 
 
 class ChemistryService:
-    def __init__(self, adapter: RDKitAdapter | None = None) -> None:
-        self._adapter = adapter or RDKitAdapter()
+    def __init__(self, adapter: ChemistryPort | None = None) -> None:
+        if adapter is None:
+            from ehrlich.chemistry.infrastructure.rdkit_adapter import RDKitAdapter
+
+            adapter = RDKitAdapter()
+        self._adapter = adapter
 
     def validate_smiles(self, smiles: SMILES) -> bool:
         return self._adapter.validate_smiles(smiles)

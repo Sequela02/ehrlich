@@ -10,6 +10,14 @@ class DatasetRepository(ABC):
     async def load(self, target: str, threshold: float = 1.0) -> Dataset: ...
 
     @abstractmethod
+    async def search_bioactivity(
+        self,
+        target: str,
+        assay_types: list[str] | None = None,
+        threshold: float = 1.0,
+    ) -> Dataset: ...
+
+    @abstractmethod
     async def list_targets(self) -> list[str]: ...
 
 

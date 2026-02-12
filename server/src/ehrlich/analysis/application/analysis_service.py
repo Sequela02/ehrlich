@@ -7,12 +7,12 @@ import numpy as np
 from scipy import stats
 
 from ehrlich.analysis.domain.enrichment import EnrichmentResult
-from ehrlich.chemistry.infrastructure.rdkit_adapter import RDKitAdapter
 
 if TYPE_CHECKING:
     from ehrlich.analysis.domain.compound import CompoundSearchResult
     from ehrlich.analysis.domain.dataset import Dataset
     from ehrlich.analysis.domain.repository import CompoundSearchRepository, DatasetRepository
+    from ehrlich.kernel.chemistry_port import ChemistryPort
 
 logger = logging.getLogger(__name__)
 
@@ -35,10 +35,15 @@ class AnalysisService:
         self,
         repository: DatasetRepository,
         compound_repo: CompoundSearchRepository | None = None,
+        chemistry: ChemistryPort | None = None,
     ) -> None:
         self._repository = repository
         self._compound_repo = compound_repo
-        self._adapter = RDKitAdapter()
+        if chemistry is None:
+            from ehrlich.chemistry.infrastructure.rdkit_adapter import RDKitAdapter
+
+            chemistry = RDKitAdapter()
+        self._adapter = chemistry
 
     async def search_compounds(self, query: str, limit: int = 10) -> list[CompoundSearchResult]:
         if self._compound_repo is None:
@@ -54,6 +59,14 @@ class AnalysisService:
 
     async def explore(self, target: str, threshold: float = 1.0) -> Dataset:
         return await self._repository.load(target, threshold)
+
+    async def search_bioactivity(
+        self,
+        target: str,
+        assay_types: list[str] | None = None,
+        threshold: float = 1.0,
+    ) -> Dataset:
+        return await self._repository.search_bioactivity(target, assay_types, threshold)
 
     async def analyze_substructures(self, dataset: Dataset) -> list[EnrichmentResult]:
         if dataset.size == 0:

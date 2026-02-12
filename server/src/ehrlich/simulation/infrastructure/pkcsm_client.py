@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING
 from ehrlich.simulation.domain.admet_profile import ADMETProfile
 
 if TYPE_CHECKING:
-    from ehrlich.chemistry.domain.descriptors import MolecularDescriptors
-    from ehrlich.chemistry.infrastructure.rdkit_adapter import RDKitAdapter
+    from ehrlich.kernel.chemistry_port import ChemistryPort
+    from ehrlich.kernel.descriptors import MolecularDescriptors
     from ehrlich.kernel.types import SMILES
 
 # Mutagenic substructure alerts (SMARTS)
@@ -31,7 +31,7 @@ class PkCSMClient:
     as the primary (and currently only) implementation.
     """
 
-    def __init__(self, rdkit: RDKitAdapter) -> None:
+    def __init__(self, rdkit: ChemistryPort) -> None:
         self._rdkit = rdkit
 
     async def predict(self, smiles: SMILES) -> ADMETProfile:

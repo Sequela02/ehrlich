@@ -10,6 +10,7 @@ _loader = ChEMBLLoader()
 _pubchem = PubChemClient()
 _gtopdb = GtoPdbClient()
 _service = AnalysisService(repository=_loader, compound_repo=_pubchem)
+_pharmacology = _gtopdb
 
 
 async def explore_dataset(target: str, threshold: float = 1.0) -> str:
@@ -77,7 +78,7 @@ async def search_bioactivity(
     """Search ChEMBL bioactivity data with flexible assay types."""
     types_list = [t.strip() for t in assay_types.split(",")]
     try:
-        dataset = await _loader.search_bioactivity(target, types_list, threshold)
+        dataset = await _service.search_bioactivity(target, types_list, threshold)
     except ExternalServiceError as e:
         return json.dumps({"error": f"ChEMBL API error: {e.detail}", "target": target})
     if dataset.size == 0:
@@ -139,7 +140,7 @@ async def compute_properties(target: str, threshold: float = 1.0) -> str:
 async def search_pharmacology(target: str, family: str = "") -> str:
     """Search pharmacological data from Guide to Pharmacology."""
     try:
-        entries = await _gtopdb.search(target, family)
+        entries = await _pharmacology.search(target, family)
     except ExternalServiceError as e:
         return json.dumps({"error": f"GtoPdb search failed: {e.detail}", "target": target})
     return json.dumps(

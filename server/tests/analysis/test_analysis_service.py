@@ -15,6 +15,14 @@ class MockDatasetRepository(DatasetRepository):
             return self._dataset
         return Dataset(name="mock", target=target)
 
+    async def search_bioactivity(
+        self,
+        target: str,
+        assay_types: list[str] | None = None,
+        threshold: float = 1.0,
+    ) -> Dataset:
+        return await self.load(target, threshold)
+
     async def list_targets(self) -> list[str]:
         return ["mock_target"]
 
