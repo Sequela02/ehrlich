@@ -30,6 +30,7 @@ const EVENT_TYPES: SSEEventType[] = [
   "output_summarized",
   "phase_changed",
   "cost_update",
+  "hypothesis_approval_requested",
 ];
 
 const MAX_RETRIES = 3;
@@ -51,6 +52,8 @@ interface SSEState {
   prompt: string;
   cost: CostInfo | null;
   currentPhase: PhaseInfo | null;
+  approvalPending: boolean;
+  pendingApprovalHypotheses: { id: string; statement: string; rationale: string }[];
   error: string | null;
   toolCallCount: number;
   activeToolName: string;
@@ -75,6 +78,10 @@ export function useSSE(url: string | null): SSEState {
   const [prompt, setPrompt] = useState("");
   const [cost, setCost] = useState<CostInfo | null>(null);
   const [currentPhase, setCurrentPhase] = useState<PhaseInfo | null>(null);
+  const [approvalPending, setApprovalPending] = useState(false);
+  const [pendingApprovalHypotheses, setPendingApprovalHypotheses] = useState<
+    { id: string; statement: string; rationale: string }[]
+  >([]);
   const [error, setError] = useState<string | null>(null);
   const [toolCallCount, setToolCallCount] = useState(0);
   const [activeToolName, setActiveToolName] = useState("");
@@ -224,6 +231,12 @@ export function useSSE(url: string | null): SSEState {
           description: parsed.data.description as string,
         });
         break;
+      case "hypothesis_approval_requested":
+        setPendingApprovalHypotheses(
+          parsed.data.hypotheses as { id: string; statement: string; rationale: string }[],
+        );
+        setApprovalPending(true);
+        break;
       case "cost_update":
         setCost({
           inputTokens: parsed.data.input_tokens as number,
@@ -349,6 +362,8 @@ export function useSSE(url: string | null): SSEState {
     prompt,
     cost,
     currentPhase,
+    approvalPending,
+    pendingApprovalHypotheses,
     error,
     toolCallCount,
     activeToolName,

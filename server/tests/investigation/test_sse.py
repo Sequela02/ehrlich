@@ -5,6 +5,7 @@ from ehrlich.investigation.domain.events import (
     ExperimentCompleted,
     ExperimentStarted,
     FindingRecorded,
+    HypothesisApprovalRequested,
     HypothesisEvaluated,
     HypothesisFormulated,
     InvestigationCompleted,
@@ -185,6 +186,19 @@ class TestDomainEventToSSE:
         assert sse.data["input_tokens"] == 5000
         assert sse.data["total_cost_usd"] == 0.1275
         assert sse.data["tool_calls"] == 3
+
+    def test_hypothesis_approval_requested(self) -> None:
+        event = HypothesisApprovalRequested(
+            hypotheses=[
+                {"id": "h1", "statement": "Test hypothesis", "rationale": "Evidence"},
+            ],
+            investigation_id="inv-1",
+        )
+        sse = domain_event_to_sse(event)
+        assert sse is not None
+        assert sse.event == SSEEventType.HYPOTHESIS_APPROVAL_REQUESTED
+        assert len(sse.data["hypotheses"]) == 1
+        assert sse.data["hypotheses"][0]["id"] == "h1"
 
     def test_unknown_event_returns_none(self) -> None:
         event = DomainEvent()

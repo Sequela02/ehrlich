@@ -15,6 +15,7 @@ import {
   LiveLabViewer,
   InvestigationDiagram,
 } from "@/features/investigation/components";
+import { HypothesisApprovalCard } from "@/features/investigation/components/HypothesisApprovalCard";
 import { FindingsPanel } from "@/features/investigation/components/FindingsPanel";
 import { InvestigationReport } from "@/features/investigation/components/InvestigationReport";
 import { useSSE } from "@/features/investigation/hooks/use-sse";
@@ -45,6 +46,8 @@ function InvestigationPage() {
     prompt,
     cost,
     currentPhase,
+    approvalPending,
+    pendingApprovalHypotheses,
     error,
     activeToolName,
     experimentToolCount,
@@ -149,6 +152,12 @@ function InvestigationPage() {
             candidateCount={candidates.length}
             findingCount={findings.length}
             hypothesisCount={hypotheses.length}
+          />
+        ) : approvalPending ? (
+          <HypothesisApprovalCard
+            investigationId={id}
+            hypotheses={pendingApprovalHypotheses}
+            onApproved={() => {}}
           />
         ) : (
           <ActiveExperimentCard

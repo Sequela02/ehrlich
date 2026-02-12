@@ -12,7 +12,8 @@ export type SSEEventType =
   | "completed"
   | "output_summarized"
   | "phase_changed"
-  | "cost_update";
+  | "cost_update"
+  | "hypothesis_approval_requested";
 
 export interface SSEEvent {
   event: SSEEventType;
@@ -160,6 +161,11 @@ export interface PhaseInfo {
   phase: number;
   name: string;
   description: string;
+}
+
+export interface HypothesisApprovalData {
+  hypotheses: { id: string; statement: string; rationale: string }[];
+  investigation_id: string;
 }
 
 export interface CostUpdateData {

@@ -61,6 +61,7 @@ router = APIRouter(tags=["investigation"])
 
 _repository: SqliteInvestigationRepository | None = None
 _active_investigations: dict[str, Investigation] = {}
+_active_orchestrators: dict[str, MultiModelOrchestrator] = {}
 _subscribers: dict[str, list[asyncio.Queue[dict[str, str] | None]]] = {}
 
 
@@ -197,6 +198,23 @@ async def start_investigation(request: InvestigateRequest) -> InvestigateRespons
     return InvestigateResponse(id=investigation.id, status=investigation.status.value)
 
 
+class ApproveRequest(BaseModel):
+    approved_ids: list[str]
+    rejected_ids: list[str] = []
+
+
+@router.post("/investigate/{investigation_id}/approve")
+async def approve_hypotheses(
+    investigation_id: str,
+    request: ApproveRequest,
+) -> dict[str, str]:
+    orchestrator = _active_orchestrators.get(investigation_id)
+    if orchestrator is None:
+        raise HTTPException(status_code=404, detail="No active orchestrator")
+    orchestrator.approve_hypotheses(request.approved_ids, request.rejected_ids)
+    return {"status": "approved"}
+
+
 @router.get("/investigate/{investigation_id}/stream")
 async def stream_investigation(investigation_id: str) -> EventSourceResponse:
     repo = _get_repository()
@@ -229,6 +247,7 @@ async def stream_investigation(investigation_id: str) -> EventSourceResponse:
     _subscribers[investigation.id] = []
 
     orchestrator = _create_orchestrator(settings, registry)
+    _active_orchestrators[investigation.id] = orchestrator
 
     async def event_generator() -> AsyncGenerator[dict[str, str], None]:
         try:
@@ -244,6 +263,7 @@ async def stream_investigation(investigation_id: str) -> EventSourceResponse:
                         SSEEventType.COMPLETED,
                         SSEEventType.ERROR,
                         SSEEventType.COST_UPDATE,
+                        SSEEventType.HYPOTHESIS_APPROVAL_REQUESTED,
                     ):
                         await repo.save_event(
                             investigation.id,
@@ -256,6 +276,7 @@ async def stream_investigation(investigation_id: str) -> EventSourceResponse:
             _end_broadcast(investigation.id)
             await repo.update(investigation)
             _active_investigations.pop(investigation.id, None)
+            _active_orchestrators.pop(investigation.id, None)
 
     return EventSourceResponse(event_generator())
 
@@ -272,6 +293,7 @@ def _create_orchestrator(settings: Any, registry: ToolRegistry) -> MultiModelOrc
         registry=registry,
         max_iterations_per_experiment=settings.max_iterations_per_experiment,
         summarizer_threshold=settings.summarizer_threshold,
+        require_approval=True,
     )
 
 

@@ -97,6 +97,12 @@ class OutputSummarized(DomainEvent):
 
 
 @dataclass(frozen=True)
+class HypothesisApprovalRequested(DomainEvent):
+    hypotheses: list[dict[str, str]] = field(default_factory=list)
+    investigation_id: str = ""
+
+
+@dataclass(frozen=True)
 class PhaseChanged(DomainEvent):
     phase: int = 0
     name: str = ""

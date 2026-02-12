@@ -22,6 +22,7 @@ from ehrlich.investigation.domain.events import (
     ExperimentCompleted,
     ExperimentStarted,
     FindingRecorded,
+    HypothesisApprovalRequested,
     HypothesisEvaluated,
     HypothesisFormulated,
     InvestigationCompleted,
@@ -80,6 +81,7 @@ class MultiModelOrchestrator:
         max_iterations_per_experiment: int = 10,
         max_hypotheses: int = 6,
         summarizer_threshold: int = 2000,
+        require_approval: bool = False,
     ) -> None:
         self._director = director
         self._researcher = researcher
@@ -88,8 +90,23 @@ class MultiModelOrchestrator:
         self._max_iterations_per_experiment = max_iterations_per_experiment
         self._max_hypotheses = max_hypotheses
         self._summarizer_threshold = summarizer_threshold
+        self._require_approval = require_approval
         self._cache = ToolCache()
         self._state_lock = asyncio.Lock()
+        self._approval_event = asyncio.Event()
+        self._investigation: Investigation | None = None
+
+    def approve_hypotheses(
+        self,
+        approved_ids: list[str],
+        rejected_ids: list[str],
+    ) -> None:
+        """Called by API to approve/reject hypotheses and unblock the loop."""
+        if self._investigation:
+            for h in self._investigation.hypotheses:
+                if h.id in rejected_ids:
+                    h.status = HypothesisStatus.REJECTED
+        self._approval_event.set()
 
     def _cost_event(self, cost: CostTracker, investigation_id: str) -> CostUpdate:
         return CostUpdate(
@@ -156,6 +173,23 @@ class MultiModelOrchestrator:
             # Store negative control suggestions for later
             neg_control_suggestions = formulation.get("negative_controls", [])
             yield self._cost_event(cost, investigation.id)
+
+            # Request user approval before testing
+            if self._require_approval:
+                self._investigation = investigation
+                yield HypothesisApprovalRequested(
+                    hypotheses=[
+                        {"id": h.id, "statement": h.statement, "rationale": h.rationale}
+                        for h in investigation.hypotheses
+                        if h.status == HypothesisStatus.PROPOSED
+                    ],
+                    investigation_id=investigation.id,
+                )
+                try:
+                    await asyncio.wait_for(self._approval_event.wait(), timeout=300)
+                except TimeoutError:
+                    logger.info("Approval timeout, auto-approving all hypotheses")
+                self._approval_event.clear()
 
             # 3. Hypothesis loop -- batched parallel execution
             yield PhaseChanged(

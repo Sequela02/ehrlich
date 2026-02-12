@@ -11,6 +11,7 @@ class HypothesisStatus(StrEnum):
     SUPPORTED = "supported"
     REFUTED = "refuted"
     REVISED = "revised"
+    REJECTED = "rejected"
 
 
 @dataclass

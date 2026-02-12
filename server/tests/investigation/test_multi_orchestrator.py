@@ -578,7 +578,6 @@ class TestFullFlow:
             registry=_build_registry(),
             max_iterations_per_experiment=5,
         )
-
         investigation = Investigation(prompt="Find antimicrobials for MRSA")
         events = [e async for e in orchestrator.run(investigation)]
 

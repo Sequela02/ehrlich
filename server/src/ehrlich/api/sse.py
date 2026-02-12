@@ -9,6 +9,7 @@ from ehrlich.investigation.domain.events import (
     ExperimentCompleted,
     ExperimentStarted,
     FindingRecorded,
+    HypothesisApprovalRequested,
     HypothesisEvaluated,
     HypothesisFormulated,
     InvestigationCompleted,
@@ -37,6 +38,7 @@ class SSEEventType(StrEnum):
     OUTPUT_SUMMARIZED = "output_summarized"
     PHASE_CHANGED = "phase_changed"
     COST_UPDATE = "cost_update"
+    HYPOTHESIS_APPROVAL_REQUESTED = "hypothesis_approval_requested"
 
 
 @dataclass(frozen=True)
@@ -178,6 +180,14 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
                 "phase": event.phase,
                 "name": event.name,
                 "description": event.description,
+                "investigation_id": event.investigation_id,
+            },
+        )
+    if isinstance(event, HypothesisApprovalRequested):
+        return SSEEvent(
+            event=SSEEventType.HYPOTHESIS_APPROVAL_REQUESTED,
+            data={
+                "hypotheses": event.hypotheses,
                 "investigation_id": event.investigation_id,
             },
         )
