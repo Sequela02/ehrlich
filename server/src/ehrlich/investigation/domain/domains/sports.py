@@ -10,10 +10,12 @@ SPORTS_SCIENCE = DomainConfig(
     identifier_type="protocol",
     identifier_label="Protocol",
     candidate_label="Training Protocols",
-    tool_tags=frozenset({
-        "sports",
-        "literature",
-    }),
+    tool_tags=frozenset(
+        {
+            "sports",
+            "literature",
+        }
+    ),
     score_definitions=(
         ScoreDefinition(
             key="evidence_score",
@@ -102,6 +104,15 @@ advantage or conflicting high-heterogeneity results",
     "hypothesis_type": "physiological",
     "prior_confidence": 0.70
   }}
+],
+"negative_controls": [
+  {{"identifier": "Passive stretching only", "name": "Static stretching control", \
+"source": "No cardiovascular stimulus; expected no VO2max change"}}
+],
+"positive_controls": [
+  {{"identifier": "Tabata 4x4 HIIT protocol", "name": "Tabata protocol", \
+"known_activity": "VO2max improvement d=0.8-1.2 in multiple meta-analyses", \
+"source": "Gold standard HIIT protocol with large, consistent effect sizes"}}
 ]
 </hypotheses>
 </example>
@@ -127,6 +138,15 @@ inconsistent findings across studies",
     "hypothesis_type": "epidemiological",
     "prior_confidence": 0.65
   }}
+],
+"negative_controls": [
+  {{"identifier": "Flexibility-only program", "name": "Stretching control", \
+"source": "No neuromuscular component; expected no ACL risk reduction"}}
+],
+"positive_controls": [
+  {{"identifier": "FIFA 11+ neuromuscular warm-up", "name": "FIFA 11+", \
+"known_activity": "ACL injury risk reduction RR=0.35-0.50 in RCTs", \
+"source": "WHO-endorsed program with strong meta-analytic evidence"}}
 ]
 </hypotheses>
 </example>

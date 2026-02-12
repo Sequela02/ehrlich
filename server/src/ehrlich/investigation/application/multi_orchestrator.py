@@ -40,6 +40,7 @@ from ehrlich.investigation.domain.events import (
     NegativeControlRecorded,
     OutputSummarized,
     PhaseChanged,
+    PositiveControlRecorded,
     Thinking,
     ToolCalled,
     ToolResultEvent,
@@ -49,6 +50,7 @@ from ehrlich.investigation.domain.finding import Finding
 from ehrlich.investigation.domain.hypothesis import Hypothesis, HypothesisStatus
 from ehrlich.investigation.domain.investigation import Investigation, InvestigationStatus
 from ehrlich.investigation.domain.negative_control import NegativeControl
+from ehrlich.investigation.domain.positive_control import PositiveControl
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -271,8 +273,9 @@ class MultiModelOrchestrator:
                     investigation_id=investigation.id,
                 )
 
-            # Store negative control suggestions for later
+            # Store control suggestions for later
             neg_control_suggestions = formulation.get("negative_controls", [])
+            pos_control_suggestions = formulation.get("positive_controls", [])
             yield self._cost_event(cost, investigation.id)
 
             # Request user approval before testing
@@ -491,11 +494,11 @@ class MultiModelOrchestrator:
 
                 yield self._cost_event(cost, investigation.id)
 
-            # 5. Negative controls (from director suggestions)
+            # 5. Controls validation (from director suggestions)
             yield PhaseChanged(
                 phase=5,
-                name="Negative Controls",
-                description="Validating model predictions with known-inactive compounds",
+                name="Controls Validation",
+                description="Validating model with positive and negative controls",
                 investigation_id=investigation.id,
             )
             for nc_data in neg_control_suggestions:
@@ -520,6 +523,30 @@ class MultiModelOrchestrator:
                         investigation_id=investigation.id,
                     )
 
+            for pc_data in pos_control_suggestions:
+                pc_identifier = pc_data.get("identifier", "")
+                pc_name = pc_data.get("name", "")
+                known_activity = pc_data.get("known_activity", "")
+                pc_source = pc_data.get("source", "")
+                if pc_identifier:
+                    pos_control = PositiveControl(
+                        identifier=pc_identifier,
+                        identifier_type=pc_data.get("identifier_type", ""),
+                        name=pc_name,
+                        known_activity=known_activity,
+                        source=pc_source,
+                    )
+                    investigation.add_positive_control(pos_control)
+                    yield PositiveControlRecorded(
+                        identifier=pc_identifier,
+                        identifier_type=pos_control.identifier_type,
+                        name=pc_name,
+                        known_activity=known_activity,
+                        score=0.0,
+                        correctly_classified=True,
+                        investigation_id=investigation.id,
+                    )
+
             # 6. Director synthesizes
             yield PhaseChanged(
                 phase=6,
@@ -539,6 +566,10 @@ class MultiModelOrchestrator:
                 f"- {nc.name}: score={nc.score}, correct={nc.correctly_classified}"
                 for nc in investigation.negative_controls
             )
+            pc_text = "\n".join(
+                f"- {pc.name}: known_activity={pc.known_activity}, score={pc.score}"
+                for pc in investigation.positive_controls
+            )
 
             synthesis_prompt = (
                 build_synthesis_prompt(self._active_config)
@@ -552,10 +583,17 @@ class MultiModelOrchestrator:
                 f"Hypothesis outcomes:\n{hypothesis_text}\n\n"
                 f"All findings:\n{all_findings_text}\n\n"
                 f"Negative controls:\n{nc_text or 'None recorded'}\n\n"
+                f"Positive controls:\n{pc_text or 'None recorded'}\n\n"
                 f"Synthesize final report.",
             )
 
             # Apply synthesis
+            validation_quality = synthesis.get("model_validation_quality", "insufficient")
+            logger.info(
+                "Investigation %s model_validation_quality: %s",
+                investigation.id,
+                validation_quality,
+            )
             investigation.summary = synthesis.get("summary", "")
             raw_candidates = synthesis.get("candidates") or []
             candidates = [
@@ -628,6 +666,18 @@ class MultiModelOrchestrator:
                 }
                 for nc in investigation.negative_controls
             ]
+            pc_dicts = [
+                {
+                    "identifier": pc.identifier,
+                    "identifier_type": pc.identifier_type,
+                    "name": pc.name,
+                    "known_activity": pc.known_activity,
+                    "score": pc.score,
+                    "correctly_classified": pc.correctly_classified,
+                    "source": pc.source,
+                }
+                for pc in investigation.positive_controls
+            ]
             yield InvestigationCompleted(
                 investigation_id=investigation.id,
                 candidate_count=len(candidates),
@@ -637,6 +687,7 @@ class MultiModelOrchestrator:
                 findings=finding_dicts,
                 hypotheses=hypothesis_dicts,
                 negative_controls=nc_dicts,
+                positive_controls=pc_dicts,
             )
 
         except Exception as e:

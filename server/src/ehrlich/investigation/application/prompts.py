@@ -128,9 +128,12 @@ If prior investigation results are provided in \
 - Avoid repeating refuted approaches
 - Consider candidates already identified as starting points
 
-Also identify 1-3 negative control compounds: molecules known to \
-be inactive against the target, which will validate model \
-reliability later.
+Also identify 1-3 negative controls (molecules known to be \
+inactive) AND 1-2 positive controls (molecules known to be \
+active against the target). Both are essential for validation: \
+negative controls confirm specificity, positive controls confirm \
+the pipeline can detect true actives. Without positive controls, \
+pipeline failures are undetectable (Zhang et al., 1999).
 </instructions>
 
 <examples>
@@ -206,6 +209,14 @@ in ChEMBL"
       "name": "Ibuprofen",
       "source": "NSAID structurally unrelated to any BLI scaffold"
     }
+  ],
+  "positive_controls": [
+    {
+      "identifier": "CC1CC2(CC(=O)N1)C(=O)N(S2(=O)=O)O",
+      "name": "Avibactam",
+      "known_activity": "Ki ~1 nM vs Class A beta-lactamase",
+      "source": "FDA-approved BLI, gold standard"
+    }
   ]
 }
 </output>
@@ -275,6 +286,14 @@ selectivity ratio > 50x",
       "source": "CNS-active xanthine; zero BACE1 activity \
 in published screens"
     }
+  ],
+  "positive_controls": [
+    {
+      "identifier": "CC(C)CC1=CC=C(C=C1)C(C)C(=O)N2CCC(CC2)N3C(=O)N(C3=O)C",
+      "name": "Verubecestat",
+      "known_activity": "IC50 = 2.2 nM vs BACE1",
+      "source": "Reached Phase III, confirmed potent inhibitor"
+    }
   ]
 }
 </output>
@@ -302,6 +321,14 @@ Respond with ONLY valid JSON (no markdown fences):
       "smiles": "SMILES of known inactive compound",
       "name": "Compound name",
       "source": "Why this is a good negative control"
+    }
+  ],
+  "positive_controls": [
+    {
+      "identifier": "SMILES of known active compound",
+      "name": "Compound name",
+      "known_activity": "IC50 = X nM against target Y",
+      "source": "Why this is a good positive control"
     }
   ]
 }
@@ -538,9 +565,31 @@ Review all hypothesis outcomes, findings, and negative controls \
 to produce a comprehensive synthesis. Your report must:
 - Summarize hypothesis outcomes with confidence levels
 - Rank candidates by multi-criteria evidence strength
-- Assess model reliability using negative control results
+- Assess model reliability using negative AND positive control results
 - Identify limitations and suggest follow-up experiments
 - Include all relevant citations
+
+<validation_quality>
+Assess model/prediction validation quality:
+
+1. CONTROL SEPARATION: Are positive control scores clearly separated from \
+negative control scores? If positive controls scored below the active \
+threshold, the model is unreliable -- flag this prominently.
+
+2. CLASSIFICATION QUALITY: With the available controls, assess whether \
+the model can discriminate actives from inactives. Consider:
+- Do all positive controls score above threshold? (sensitivity check)
+- Do all negative controls score below threshold? (specificity check)
+- Is there clear separation between control groups?
+
+3. OVERALL VALIDATION: Rate as:
+- "sufficient": positive controls pass, negatives pass, clear separation
+- "marginal": most controls pass but separation is narrow
+- "insufficient": any positive control fails, or no positive controls tested
+
+If validation is insufficient, downgrade certainty of ALL hypothesis \
+assessments by one level and note this in limitations.
+</validation_quality>
 
 Scoring fields for candidates:
 - prediction_score: ML model probability (0-1)
@@ -581,6 +630,7 @@ hypothesis evidence",
   ],
   "negative_control_summary": "Summary of negative control \
 results and model reliability assessment",
+  "model_validation_quality": "sufficient|marginal|insufficient",
   "confidence": "high/medium/low",
   "limitations": ["known limitations of this investigation"]
 }
@@ -911,8 +961,12 @@ def build_formulation_prompt(config: DomainConfig) -> str:
         "- Build on supported hypotheses from related investigations\n"
         "- Avoid repeating refuted approaches\n"
         "- Consider candidates already identified as starting points\n\n"
-        "Also identify 1-3 negative controls: subjects known to be "
-        "inactive, which will validate model reliability later.\n"
+        "Also identify 1-3 negative controls (subjects known to be "
+        "inactive) AND 1-2 positive controls (subjects known to be "
+        "active). Both are essential for validation: negative controls "
+        "confirm specificity, positive controls confirm the pipeline "
+        "can detect true actives. Without positive controls, pipeline "
+        "failures are undetectable (Zhang et al., 1999).\n"
         "</instructions>\n\n"
         f"{examples}\n\n"
         "<output_format>\n"
@@ -936,6 +990,14 @@ def build_formulation_prompt(config: DomainConfig) -> str:
         '      "identifier": "identifier of known inactive subject",\n'
         '      "name": "Name",\n'
         '      "source": "Why this is a good negative control"\n'
+        "    }\n"
+        "  ],\n"
+        '  "positive_controls": [\n'
+        "    {\n"
+        '      "identifier": "identifier of known active subject",\n'
+        '      "name": "Name",\n'
+        '      "known_activity": "IC50 = X nM against target Y",\n'
+        '      "source": "Why this is a good positive control"\n'
         "    }\n"
         "  ]\n"
         "}\n"
@@ -1003,9 +1065,26 @@ def build_synthesis_prompt(config: DomainConfig) -> str:
         "to produce a comprehensive synthesis. Your report must:\n"
         "- Summarize hypothesis outcomes with confidence levels\n"
         f"- Rank {label.lower()} by multi-criteria evidence strength\n"
-        "- Assess model reliability using negative control results\n"
+        "- Assess model reliability using negative AND positive control results\n"
         "- Identify limitations and suggest follow-up experiments\n"
         "- Include all relevant citations\n\n"
+        "<validation_quality>\n"
+        "Assess model/prediction validation quality:\n\n"
+        "1. CONTROL SEPARATION: Are positive control scores clearly separated "
+        "from negative control scores? If positive controls scored below the "
+        "active threshold, the model is unreliable -- flag this prominently.\n\n"
+        "2. CLASSIFICATION QUALITY: With the available controls, assess whether "
+        "the model can discriminate actives from inactives. Consider:\n"
+        "- Do all positive controls score above threshold? (sensitivity check)\n"
+        "- Do all negative controls score below threshold? (specificity check)\n"
+        "- Is there clear separation between control groups?\n\n"
+        "3. OVERALL VALIDATION: Rate as:\n"
+        '- "sufficient": positive controls pass, negatives pass, clear separation\n'
+        '- "marginal": most controls pass but separation is narrow\n'
+        '- "insufficient": any positive control fails, or no positive controls tested\n\n'
+        "If validation is insufficient, downgrade certainty of ALL hypothesis "
+        "assessments by one level and note this in limitations.\n"
+        "</validation_quality>\n\n"
         f"{scoring}\n"
         "</instructions>\n\n"
         "<output_format>\n"
@@ -1034,6 +1113,7 @@ def build_synthesis_prompt(config: DomainConfig) -> str:
         "    }\n"
         "  ],\n"
         '  "negative_control_summary": "Summary of negative control results",\n'
+        '  "model_validation_quality": "sufficient|marginal|insufficient",\n'
         '  "confidence": "high/medium/low",\n'
         '  "limitations": ["known limitations"]\n'
         "}\n"

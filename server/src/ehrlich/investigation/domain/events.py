@@ -71,6 +71,17 @@ class NegativeControlRecorded(DomainEvent):
 
 
 @dataclass(frozen=True)
+class PositiveControlRecorded(DomainEvent):
+    identifier: str = ""
+    identifier_type: str = ""
+    name: str = ""
+    known_activity: str = ""
+    score: float = 0.0
+    correctly_classified: bool = True
+    investigation_id: str = ""
+
+
+@dataclass(frozen=True)
 class ToolCalled(DomainEvent):
     tool_name: str = ""
     tool_input: dict[str, Any] = field(default_factory=dict)
@@ -165,6 +176,7 @@ class InvestigationCompleted(DomainEvent):
     findings: list[dict[str, Any]] = field(default_factory=list)
     hypotheses: list[dict[str, Any]] = field(default_factory=list)
     negative_controls: list[dict[str, Any]] = field(default_factory=list)
+    positive_controls: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

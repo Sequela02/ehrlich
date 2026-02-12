@@ -10,13 +10,15 @@ MOLECULAR_SCIENCE = DomainConfig(
     identifier_type="smiles",
     identifier_label="SMILES",
     candidate_label="Candidate Molecules",
-    tool_tags=frozenset({
-        "chemistry",
-        "analysis",
-        "prediction",
-        "simulation",
-        "literature",
-    }),
+    tool_tags=frozenset(
+        {
+            "chemistry",
+            "analysis",
+            "prediction",
+            "simulation",
+            "literature",
+        }
+    ),
     score_definitions=(
         ScoreDefinition(
             key="prediction_score",
@@ -136,6 +138,11 @@ binding vs controls; Ki > 500 nM",
   "negative_controls": [
     {"identifier": "CC(=O)Oc1ccccc1C(=O)O", "name": "Aspirin", \
 "source": "Non-antimicrobial NSAID"}
+  ],
+  "positive_controls": [
+    {"identifier": "CC1CC2(CC(=O)N1)C(=O)N(S2(=O)=O)O", "name": "Avibactam", \
+"known_activity": "Ki ~1 nM vs Class A beta-lactamase", \
+"source": "FDA-approved BLI, gold standard"}
   ]
 }
 </output>
@@ -171,6 +178,11 @@ bioactive conformation, reducing entropic penalty",
   "negative_controls": [
     {"identifier": "CN1C=NC2=C1C(=O)N(C(=O)N2C)C", "name": "Caffeine", \
 "source": "Zero BACE1 activity in published screens"}
+  ],
+  "positive_controls": [
+    {"identifier": "CC(C)CC1=CC=C(C=C1)C(C)C(=O)N2CCC(CC2)N3C(=O)N(C3=O)C", \
+"name": "Verubecestat", "known_activity": "IC50 = 2.2 nM vs BACE1", \
+"source": "Reached Phase III, confirmed potent inhibitor"}
   ]
 }
 </output>

@@ -13,6 +13,7 @@ from ehrlich.investigation.domain.events import (
     LiteratureSurveyCompleted,
     NegativeControlRecorded,
     PhaseChanged,
+    PositiveControlRecorded,
     Thinking,
     ToolCalled,
     ToolResultEvent,
@@ -106,6 +107,24 @@ class TestDomainEventToSSE:
         sse = domain_event_to_sse(event)
         assert sse is not None
         assert sse.event == SSEEventType.NEGATIVE_CONTROL
+        assert sse.data["correctly_classified"] is True
+
+    def test_positive_control(self) -> None:
+        event = PositiveControlRecorded(
+            identifier="CC(=O)O",
+            identifier_type="smiles",
+            name="Avibactam",
+            known_activity="Ki ~1 nM",
+            score=0.92,
+            correctly_classified=True,
+            investigation_id="inv-1",
+        )
+        sse = domain_event_to_sse(event)
+        assert sse is not None
+        assert sse.event == SSEEventType.POSITIVE_CONTROL
+        assert sse.data["name"] == "Avibactam"
+        assert sse.data["known_activity"] == "Ki ~1 nM"
+        assert sse.data["score"] == 0.92
         assert sse.data["correctly_classified"] is True
 
     def test_tool_called(self) -> None:

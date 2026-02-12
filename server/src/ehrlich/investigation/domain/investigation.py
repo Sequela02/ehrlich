@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from ehrlich.investigation.domain.finding import Finding
     from ehrlich.investigation.domain.hypothesis import Hypothesis
     from ehrlich.investigation.domain.negative_control import NegativeControl
+    from ehrlich.investigation.domain.positive_control import PositiveControl
 
 
 class InvestigationStatus(StrEnum):
@@ -33,6 +34,7 @@ class Investigation:
     findings: list[Finding] = field(default_factory=list)
     candidates: list[Candidate] = field(default_factory=list)
     negative_controls: list[NegativeControl] = field(default_factory=list)
+    positive_controls: list[PositiveControl] = field(default_factory=list)
     citations: list[str] = field(default_factory=list)
     summary: str = ""
     domain: str = ""
@@ -68,3 +70,6 @@ class Investigation:
 
     def add_negative_control(self, control: NegativeControl) -> None:
         self.negative_controls.append(control)
+
+    def add_positive_control(self, control: PositiveControl) -> None:
+        self.positive_controls.append(control)

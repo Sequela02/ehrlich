@@ -19,6 +19,7 @@ from ehrlich.investigation.domain.events import (
     NegativeControlRecorded,
     OutputSummarized,
     PhaseChanged,
+    PositiveControlRecorded,
     Thinking,
     ToolCalled,
     ToolResultEvent,
@@ -31,6 +32,7 @@ class SSEEventType(StrEnum):
     EXPERIMENT_COMPLETED = "experiment_completed"
     HYPOTHESIS_EVALUATED = "hypothesis_evaluated"
     NEGATIVE_CONTROL = "negative_control"
+    POSITIVE_CONTROL = "positive_control"
     TOOL_CALLED = "tool_called"
     TOOL_RESULT = "tool_result"
     FINDING_RECORDED = "finding_recorded"
@@ -125,6 +127,19 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
                 "investigation_id": event.investigation_id,
             },
         )
+    if isinstance(event, PositiveControlRecorded):
+        return SSEEvent(
+            event=SSEEventType.POSITIVE_CONTROL,
+            data={
+                "identifier": event.identifier,
+                "identifier_type": event.identifier_type,
+                "name": event.name,
+                "known_activity": event.known_activity,
+                "score": event.score,
+                "correctly_classified": event.correctly_classified,
+                "investigation_id": event.investigation_id,
+            },
+        )
     if isinstance(event, ToolCalled):
         return SSEEvent(
             event=SSEEventType.TOOL_CALLED,
@@ -182,6 +197,7 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
                 "findings": event.findings,
                 "hypotheses": event.hypotheses,
                 "negative_controls": event.negative_controls,
+                "positive_controls": event.positive_controls,
             },
         )
     if isinstance(event, OutputSummarized):

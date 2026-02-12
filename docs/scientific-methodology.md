@@ -254,11 +254,9 @@ Orchestrator wiring:
 
 ---
 
-### Phase 5: Negative Controls & Model Validation -- RESEARCHED
+### Phase 5: Negative Controls & Model Validation -- UPGRADED
 
-**Status:** Research complete. See [negative-controls-research.md](../research/negative-controls-research.md). Grounded in 33 verified sources. Implementation pending.
-
-**Current state:** Basic pass/fail classification with configurable threshold (default 0.5). Generic `NegativeControl` entity with `identifier`/`score`/`threshold`. No positive controls, no statistical metrics (MCC, AUROC, Z').
+**Status:** Complete. Grounded in 33 verified sources. See [negative-controls-research.md](../research/negative-controls-research.md).
 
 **Sources:**
 - Zhang et al. (1999) -- Z-factor / Z' statistic for assay quality separation
@@ -286,12 +284,42 @@ Orchestrator wiring:
 | 7 | Applicability Domain | Max Tanimoto to nearest training compound; Tc < 0.35 = outside AD warning |
 | 8 | Scaffold-Split Validation | Bemis-Murcko + clustering splits; report both for honest generalizability assessment |
 
+**Implementation:**
+```
+PositiveControl entity fields:
+  identifier        -- identifier of known active subject
+  identifier_type   -- type (smiles, protocol, etc.)
+  name              -- display name
+  known_activity    -- quantitative activity (e.g. "Ki ~1 nM vs Class A beta-lactamase")
+  source            -- provenance justification
+  score             -- model prediction score
+  expected_active   -- always True (known active)
+  correctly_classified  -- property: score >= 0.5
+
+Director formulation prompt:
+  Now outputs positive_controls alongside negative_controls
+  Guidance: 1-2 positive controls per investigation
+  Both molecular and sports domain examples updated
+
+Director synthesis prompt:
+  <validation_quality> section assesses control separation, classification quality
+  model_validation_quality field: "sufficient" | "marginal" | "insufficient"
+  Insufficient validation downgrades all hypothesis certainty by one level
+
+Orchestrator wiring:
+  - Phase 3: stores pos_control_suggestions from formulation output
+  - Phase 5: records PositiveControl entities + PositiveControlRecorded events
+  - Phase 6: includes positive control text in synthesis context
+  - InvestigationCompleted event carries positive_controls list
+
+PositiveControlRecorded domain event → positive_control SSE event type
+```
+
 **Key design decisions:**
-- Positive controls are as important as negative controls -- without them, pipeline failures are undetectable
-- MCC replaces accuracy as primary classification metric (Chicco & Jurman, 2020 consensus)
-- Threshold calibration from data replaces arbitrary 0.5 cutoff
-- Z' concept adapted from wet-lab HTS to measure prediction score separation
-- Conformal prediction preferred over binary AD methods for compound-specific confidence intervals
+- Positive controls are as important as negative controls -- without them, pipeline failures are undetectable (Zhang et al., 1999)
+- Validation quality rating (sufficient/marginal/insufficient) gates certainty assessment -- insufficient validation downgrades all hypothesis certainty
+- Property-matching guidance lives in prompts rather than enforced in code -- the Director is responsible for selecting appropriate controls
+- `PositiveControl` mirrors `NegativeControl` pattern for consistency -- frozen dataclass with `correctly_classified` property
 
 ---
 
