@@ -24,6 +24,7 @@ from ehrlich.investigation.domain.events import (
     ToolCalled,
     ToolResultEvent,
     ValidationMetricsComputed,
+    VisualizationRendered,
 )
 
 
@@ -47,6 +48,7 @@ class SSEEventType(StrEnum):
     DOMAIN_DETECTED = "domain_detected"
     LITERATURE_SURVEY_COMPLETED = "literature_survey_completed"
     VALIDATION_METRICS = "validation_metrics"
+    VISUALIZATION = "visualization"
 
 
 @dataclass(frozen=True)
@@ -264,6 +266,19 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
                 "negative_control_count": event.negative_control_count,
                 "positive_mean": event.positive_mean,
                 "negative_mean": event.negative_mean,
+                "investigation_id": event.investigation_id,
+            },
+        )
+    if isinstance(event, VisualizationRendered):
+        return SSEEvent(
+            event=SSEEventType.VISUALIZATION,
+            data={
+                "viz_type": event.viz_type,
+                "title": event.title,
+                "data": event.data,
+                "config": event.config,
+                "domain": event.domain,
+                "experiment_id": event.experiment_id,
                 "investigation_id": event.investigation_id,
             },
         )

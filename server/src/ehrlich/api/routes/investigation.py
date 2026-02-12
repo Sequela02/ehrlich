@@ -46,6 +46,14 @@ from ehrlich.investigation.tools import (
     record_negative_control,
     search_prior_research,
 )
+from ehrlich.investigation.tools_viz import (
+    render_admet_radar,
+    render_binding_scatter,
+    render_evidence_matrix,
+    render_forest_plot,
+    render_muscle_heatmap,
+    render_training_timeline,
+)
 from ehrlich.literature.tools import get_reference, search_citations, search_literature
 from ehrlich.prediction.tools import cluster_compounds, predict_candidates, train_model
 from ehrlich.simulation.tools import (
@@ -141,6 +149,10 @@ def _build_registry() -> ToolRegistry:
     _sports_nutrition = frozenset({"sports", "nutrition"})
     _sports_clinical = frozenset({"sports", "clinical"})
     _sports_safety = frozenset({"sports", "safety"})
+    _viz = frozenset({"visualization"})
+    _chem_viz = frozenset({"chemistry", "visualization"})
+    _sim_viz = frozenset({"simulation", "visualization"})
+    _sports_viz = frozenset({"sports", "visualization"})
 
     tagged_tools: list[tuple[str, Any, frozenset[str] | None]] = [
         # Chemistry (6)
@@ -184,6 +196,13 @@ def _build_registry() -> ToolRegistry:
         ("search_supplement_labels", search_supplement_labels, _sports_nutrition),
         ("search_nutrient_data", search_nutrient_data, _sports_nutrition),
         ("search_supplement_safety", search_supplement_safety, _sports_safety),
+        # Visualization (6)
+        ("render_binding_scatter", render_binding_scatter, _chem_viz),
+        ("render_admet_radar", render_admet_radar, _sim_viz),
+        ("render_training_timeline", render_training_timeline, _sports_viz),
+        ("render_muscle_heatmap", render_muscle_heatmap, _sports_viz),
+        ("render_forest_plot", render_forest_plot, _viz),
+        ("render_evidence_matrix", render_evidence_matrix, _viz),
         # Investigation control (7) -- universal, no tags
         ("record_finding", record_finding, None),
         ("conclude_investigation", conclude_investigation, None),

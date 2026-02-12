@@ -178,6 +178,17 @@ class LiteratureSurveyCompleted(DomainEvent):
 
 
 @dataclass(frozen=True)
+class VisualizationRendered(DomainEvent):
+    investigation_id: str = ""
+    experiment_id: str = ""
+    viz_type: str = ""
+    title: str = ""
+    data: dict[str, Any] = field(default_factory=dict)
+    config: dict[str, Any] = field(default_factory=dict)
+    domain: str = ""
+
+
+@dataclass(frozen=True)
 class InvestigationCompleted(DomainEvent):
     investigation_id: str = ""
     candidate_count: int = 0

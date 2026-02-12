@@ -46,6 +46,7 @@ from ehrlich.investigation.domain.events import (
     ToolCalled,
     ToolResultEvent,
     ValidationMetricsComputed,
+    VisualizationRendered,
 )
 from ehrlich.investigation.domain.experiment import Experiment, ExperimentStatus
 from ehrlich.investigation.domain.finding import Finding
@@ -1048,6 +1049,13 @@ class MultiModelOrchestrator:
                     investigation_id=investigation.id,
                 )
 
+                # Emit visualization event if tool returned viz payload
+                viz_event = self._maybe_viz_event(
+                    result_str, "", investigation.id
+                )
+                if viz_event is not None:
+                    yield viz_event
+
                 if tool_name == "record_finding":
                     finding = Finding(
                         title=tool_input.get("title", ""),
@@ -1240,6 +1248,13 @@ class MultiModelOrchestrator:
                     investigation_id=investigation.id,
                 )
 
+                # Emit visualization event if tool returned viz payload
+                viz_event = self._maybe_viz_event(
+                    result_str, experiment.id, investigation.id
+                )
+                if viz_event is not None:
+                    yield viz_event
+
                 if tool_name == "record_finding":
                     h_id = tool_input.get("hypothesis_id", hypothesis.id)
                     e_type = tool_input.get("evidence_type", "neutral")
@@ -1358,6 +1373,29 @@ class MultiModelOrchestrator:
             yield item
 
         await asyncio.gather(*tasks, return_exceptions=True)
+
+    @staticmethod
+    def _maybe_viz_event(
+        result_str: str,
+        experiment_id: str,
+        investigation_id: str,
+    ) -> VisualizationRendered | None:
+        """If a tool result contains viz_type, build a VisualizationRendered event."""
+        try:
+            data = json.loads(result_str)
+        except (json.JSONDecodeError, TypeError):
+            return None
+        if not isinstance(data, dict) or "viz_type" not in data:
+            return None
+        return VisualizationRendered(
+            investigation_id=investigation_id,
+            experiment_id=experiment_id,
+            viz_type=data["viz_type"],
+            title=data.get("title", ""),
+            data=data.get("data", {}),
+            config=data.get("config", {}),
+            domain=data.get("config", {}).get("domain", ""),
+        )
 
     async def _dispatch_tool(
         self,

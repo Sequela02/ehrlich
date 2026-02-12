@@ -17,7 +17,7 @@ DDD monorepo: `server/` (Python 3.12) + `console/` (React 19 / TypeScript / Bun)
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, designs experiments, evaluates evidence, synthesizes (NO tools)
-Sonnet 4.5 (Researcher) -- Executes experiments with 42 tools (parallel: 2 experiments per batch)
+Sonnet 4.5 (Researcher) -- Executes experiments with 48 tools (parallel: 2 experiments per batch)
 Haiku 4.5 (Summarizer)  -- Compresses large tool outputs (>2000 chars), PICO decomposition, evidence grading
 ```
 
@@ -112,7 +112,7 @@ Types: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`
 
 Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation, sports, investigation, api, console, mol, data, ci, docs, infra
 
-## Tools (42 Total)
+## Tools (48 Total)
 
 ### Chemistry (6) -- RDKit cheminformatics, domain-agnostic
 - `validate_smiles` -- Validate SMILES string
@@ -161,6 +161,14 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - `search_nutrient_data` -- USDA FoodData Central nutrient profiles
 - `search_supplement_safety` -- OpenFDA CAERS adverse event reports for supplements
 
+### Visualization (6) -- Domain-specific interactive charts
+- `render_binding_scatter` -- Scatter plot of compound binding affinities (Recharts)
+- `render_admet_radar` -- Radar chart of ADMET/drug-likeness properties (Recharts)
+- `render_training_timeline` -- Training load timeline with ACWR danger zones (Recharts)
+- `render_muscle_heatmap` -- Anatomical body diagram with muscle activation/risk (Custom SVG)
+- `render_forest_plot` -- Forest plot for meta-analysis results (Visx)
+- `render_evidence_matrix` -- Hypothesis-by-evidence heatmap (Visx)
+
 ### Investigation (7) -- Hypothesis lifecycle + self-referential
 - `propose_hypothesis` -- Register testable hypothesis
 - `design_experiment` -- Plan experiment with tool sequence
@@ -192,8 +200,9 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - **Multi-domain investigations**: `DomainRegistry.detect()` returns `list[DomainConfig]` for cross-domain research; `merge_domain_configs()` creates synthetic merged config with union of tool_tags, concatenated score_definitions, joined prompt examples; `DomainDisplayConfig.domains` carries sub-domain list to frontend
 - **Self-referential research**: `search_prior_research` tool queries FTS5 full-text index of past investigation findings; indexed on completion via `_rebuild_fts()`; intercepted in orchestrator `_dispatch_tool()` and routed to `SqliteInvestigationRepository.search_findings()`; "ehrlich" source type on findings links to past investigations
 - **MCP bridge**: Optional `MCPBridge` connects to external MCP servers (e.g. Excalidraw for visual summaries); tools registered dynamically via `ToolRegistry.register_mcp_tools()`; lifecycle managed by orchestrator (connect on start, disconnect on completion); enabled via `EHRLICH_MCP_EXCALIDRAW=true` env var
-- **Tool tagging**: Tools tagged with frozenset domain tags (chemistry, analysis, prediction, simulation, sports, nutrition, clinical, safety, literature); investigation control tools are universal (no tags); researcher sees only domain-relevant tools
-- SSE streaming for real-time investigation updates (19 event types)
+- **Tool tagging**: Tools tagged with frozenset domain tags (chemistry, analysis, prediction, simulation, sports, nutrition, clinical, safety, literature, visualization); investigation control tools are universal (no tags); researcher sees only domain-relevant tools
+- **Visualization tools**: 6 tools return structured `VisualizationPayload` JSON; orchestrator intercepts via `_maybe_viz_event()` and emits `VisualizationRendered` SSE event; frontend `VizRegistry` maps `viz_type` to lazy-loaded React component; `VisualizationPanel` renders charts in investigation page + report
+- SSE streaming for real-time investigation updates (20 event types)
 - **Phase progress indicator**: `PhaseChanged` event tracks 6 orchestrator phases (Classification & PICO → Literature Survey → Formulation → Hypothesis Testing → Negative Controls → Synthesis); frontend renders 6-segment progress bar
 - **Literature survey methodology**: PICO decomposition + domain classification merged into single Haiku call; structured search protocol with citation chasing (snowballing); 6-level evidence hierarchy on findings; GRADE-adapted body-of-evidence grading (high/moderate/low/very_low) via Haiku; AMSTAR-2-adapted self-assessment; `LiteratureSurveyCompleted` event carries PICO, search stats, grade for PRISMA-lite transparency
 - **Streaming cost indicator**: `CostUpdate` event yields cost snapshots after each phase/batch; `CostBadge` updates progressively (not just at completion)
@@ -256,16 +265,18 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 | `investigation/domain/positive_control.py` | PositiveControl frozen dataclass (known active, correctly_classified >= 0.5) |
 | `investigation/domain/validation.py` | Z'-factor assay quality metric (compute_z_prime, AssayQualityMetrics) |
 | `investigation/domain/candidate.py` | Candidate dataclass (identifier, identifier_type, name, rank, priority, notes, scores dict, attributes dict) |
-| `investigation/domain/events.py` | 19 domain events (Hypothesis*, HypothesisApproval*, Experiment*, NegativeControl*, PositiveControl*, ValidationMetricsComputed, DomainDetected, Finding, LiteratureSurveyCompleted, Tool*, Thinking, PhaseChanged, CostUpdate, Completed, Error) |
+| `investigation/domain/events.py` | 20 domain events (Hypothesis*, HypothesisApproval*, Experiment*, NegativeControl*, PositiveControl*, ValidationMetricsComputed, VisualizationRendered, DomainDetected, Finding, LiteratureSurveyCompleted, Tool*, Thinking, PhaseChanged, CostUpdate, Completed, Error) |
+| `investigation/domain/visualization.py` | VisualizationPayload frozen dataclass (viz_type, title, data, config, domain) |
+| `investigation/tools_viz.py` | 6 visualization tools: binding scatter, ADMET radar, training timeline, muscle heatmap, forest plot, evidence matrix |
 | `investigation/domain/repository.py` | InvestigationRepository ABC (save_event, get_events for audit trail) |
 | `investigation/infrastructure/sqlite_repository.py` | SQLite implementation with hypothesis/experiment/negative_control/event serialization + FTS5 findings search |
 | `investigation/infrastructure/anthropic_client.py` | Anthropic API adapter with retry |
 | `investigation/infrastructure/mcp_bridge.py` | MCP client bridge: connects to external MCP servers (stdio/SSE/streamable_http), routes tool calls |
 | `investigation/domain/mcp_config.py` | `MCPServerConfig` frozen dataclass for MCP server connection config |
-| `api/routes/investigation.py` | REST + SSE endpoints, 42-tool registry with domain tagging, domain registry, MCP bridge |
+| `api/routes/investigation.py` | REST + SSE endpoints, 48-tool registry with domain tagging, domain registry, MCP bridge |
 | `api/routes/methodology.py` | GET /methodology endpoint: phases, domains, tools, data sources, models |
 | `api/routes/molecule.py` | Molecule depiction, conformer, descriptors, targets endpoints |
-| `api/sse.py` | Domain event to SSE conversion (19 types) |
+| `api/sse.py` | Domain event to SSE conversion (20 types) |
 
 ## Key Files (Data Source Clients)
 
@@ -343,6 +354,25 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 | `api/routes/stats.py` | GET /stats endpoint: aggregate counts (tools, domains, phases, data sources, events) |
 | `console/src/routes/methodology.tsx` | Methodology page: phases, models, domains, tools, data sources |
 | `console/src/features/investigation/hooks/use-methodology.ts` | React hook for fetching methodology data |
+
+## Key Files (Visualization System)
+
+| File | Purpose |
+|------|---------|
+| `investigation/domain/visualization.py` | `VisualizationPayload` frozen dataclass |
+| `investigation/tools_viz.py` | 6 viz tools: binding scatter, ADMET radar, training timeline, muscle heatmap, forest plot, evidence matrix |
+| `investigation/domain/events.py` | `VisualizationRendered` event (viz_type, title, data, config, domain) |
+| `console/.../visualization/VizRegistry.tsx` | Lazy-loaded component registry mapping viz_type to React component |
+| `console/.../visualization/VisualizationPanel.tsx` | Grid layout rendering multiple visualizations |
+| `console/.../visualization/theme.ts` | OKLCH color tokens for charts |
+| `console/.../visualization/charts/BindingScatter.tsx` | Recharts ScatterChart for compound affinities |
+| `console/.../visualization/charts/ADMETRadar.tsx` | Recharts RadarChart for ADMET profiles |
+| `console/.../visualization/charts/TrainingTimeline.tsx` | Recharts ComposedChart with ACWR danger zones + Brush |
+| `console/.../visualization/charts/ForestPlot.tsx` | Visx custom forest plot for meta-analysis |
+| `console/.../visualization/charts/EvidenceMatrix.tsx` | Visx HeatmapRect with diverging OKLCH color scale |
+| `console/.../visualization/anatomy/BodyDiagram.tsx` | Custom SVG anatomical body diagram with muscle heatmap |
+| `console/.../visualization/anatomy/body-paths.ts` | SVG path data for front/back anatomical views |
+| `console/.../visualization/anatomy/color-scale.ts` | OKLCH intensity color interpolation (activation + risk modes) |
 
 ## Key Files (Domain Configuration)
 

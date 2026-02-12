@@ -41,7 +41,7 @@ Ehrlich uses a three-tier Claude model architecture for cost-efficient investiga
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesizes (3-5 calls)
     │                       NO tool access, structured JSON responses only
     │
-    ├── Sonnet 4.5 (Researcher) -- Executes experiments with 42 domain-filtered tools (10-20 calls, parallel x2)
+    ├── Sonnet 4.5 (Researcher) -- Executes experiments with 48 domain-filtered tools (10-20 calls, parallel x2)
     │                               Tool-calling loop with max_iterations_per_experiment guard
     │
     └── Haiku 4.5 (Summarizer)  -- Compresses large tool outputs >2000 chars, PICO+classification, evidence grading
@@ -172,7 +172,7 @@ api/ -> investigation/application/ only
    e. If revised: new hypothesis spawned with parent link
 9. **Negative controls** recorded from formulation suggestions
 10. **Director** synthesizes final report with candidates, citations, cost
-11. All events stream via SSE (19 event types) to Console in real-time
+11. All events stream via SSE (20 event types) to Console in real-time
     - `DomainDetected` sends display config (score columns, visualization type) to frontend
     - `FindingRecorded` includes evidence + source provenance (source_type, source_id) + evidence_level (1-6)
     - `LiteratureSurveyCompleted` carries PICO, search stats, evidence grade, self-assessment

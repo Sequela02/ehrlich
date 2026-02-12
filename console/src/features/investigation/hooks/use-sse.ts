@@ -16,6 +16,7 @@ import type {
   SSEEvent,
   SSEEventType,
   ValidationMetricsData,
+  VisualizationData,
 } from "../types";
 
 const EVENT_TYPES: SSEEventType[] = [
@@ -37,6 +38,7 @@ const EVENT_TYPES: SSEEventType[] = [
   "domain_detected",
   "literature_survey_completed",
   "validation_metrics",
+  "visualization",
 ];
 
 const MAX_RETRIES = 3;
@@ -68,6 +70,7 @@ interface SSEState {
   activeToolName: string;
   experimentToolCount: number;
   experimentFindingCount: number;
+  visualizations: VisualizationData[];
   diagramUrl: string | null;
 }
 
@@ -102,6 +105,7 @@ export function useSSE(url: string | null): SSEState {
   const [activeToolName, setActiveToolName] = useState("");
   const [experimentToolCount, setExperimentToolCount] = useState(0);
   const [experimentFindingCount, setExperimentFindingCount] = useState(0);
+  const [visualizations, setVisualizations] = useState<VisualizationData[]>([]);
   const [diagramUrl, setDiagramUrl] = useState<string | null>(null);
   const sourceRef = useRef<EventSource | null>(null);
   const attemptRef = useRef(0);
@@ -287,6 +291,12 @@ export function useSSE(url: string | null): SSEState {
       case "validation_metrics":
         setValidationMetrics(parsed.data as unknown as ValidationMetricsData);
         break;
+      case "visualization":
+        setVisualizations((prev) => [
+          ...prev,
+          parsed.data as unknown as VisualizationData,
+        ]);
+        break;
       case "completed": {
         const d = parsed.data as unknown as CompletedData;
         setSummary(d.summary);
@@ -419,6 +429,7 @@ export function useSSE(url: string | null): SSEState {
     activeToolName,
     experimentToolCount,
     experimentFindingCount,
+    visualizations,
     diagramUrl,
   };
 }

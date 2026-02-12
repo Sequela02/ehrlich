@@ -44,7 +44,7 @@ Ehrlich uses a three-tier Claude model architecture for cost-efficient investiga
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesizes (3-5 calls)
-Sonnet 4.5 (Researcher) -- Executes experiments with 42 tools (10-20 calls)
+Sonnet 4.5 (Researcher) -- Executes experiments with 48 tools (10-20 calls)
 Haiku 4.5 (Summarizer)  -- Compresses large outputs, classifies domains (5-10 calls)
 ```
 
@@ -69,7 +69,7 @@ Cost: ~$3-4 per investigation (vs ~$11 with all-Opus).
 
 All data sources are free and open-access.
 
-## 42 Tools
+## 48 Tools
 
 | Context | Tool | Description |
 |---------|------|-------------|
@@ -108,6 +108,12 @@ All data sources are free and open-access.
 | Sports | `search_supplement_labels` | NIH DSLD supplement product ingredient lookup |
 | Sports | `search_nutrient_data` | USDA FoodData Central nutrient profiles |
 | Sports | `search_supplement_safety` | OpenFDA CAERS adverse event reports |
+| Visualization | `render_binding_scatter` | Scatter plot of compound binding affinities |
+| Visualization | `render_admet_radar` | Radar chart of ADMET/drug-likeness properties |
+| Visualization | `render_training_timeline` | Training load timeline with ACWR danger zones |
+| Visualization | `render_muscle_heatmap` | Anatomical body diagram with muscle activation |
+| Visualization | `render_forest_plot` | Forest plot for meta-analysis results |
+| Visualization | `render_evidence_matrix` | Hypothesis-by-evidence support/contradiction heatmap |
 | Investigation | `propose_hypothesis` | Register testable hypothesis |
 | Investigation | `design_experiment` | Plan experiment with tool sequence |
 | Investigation | `evaluate_hypothesis` | Assess outcome with confidence score |

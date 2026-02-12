@@ -342,7 +342,7 @@ Cost-efficient multi-model orchestration, persistence, and UI polish.
 ### 8C. Multi-Model Orchestrator
 - [x] `MultiModelOrchestrator` with hypothesis-driven Director-Worker-Summarizer pattern
 - [x] Director (Opus) formulates hypotheses, designs experiments, evaluates evidence, synthesizes -- NO tool access
-- [x] Researcher (Sonnet) executes experiments with 38 domain-filtered tools (max 10 iterations per experiment)
+- [x] Researcher (Sonnet) executes experiments with 48 domain-filtered tools (max 10 iterations per experiment)
 - [x] Summarizer (Haiku) compresses large outputs exceeding threshold
 - [x] 7 prompts: director formulation/experiment/evaluation/synthesis, researcher experiment, scientist, summarizer
 - [x] Auto-fallback to single-model Orchestrator when researcher == director
@@ -668,7 +668,7 @@ Expose Ehrlich as a tool server for Claude Code / Claude Desktop via Model Conte
 ### 12A. MCP Transport
 - [ ] Stdio transport for Claude Code integration
 - [ ] SSE transport for Claude Desktop / remote clients
-- [ ] Tool registration: expose all 38 Ehrlich tools as MCP tools
+- [ ] Tool registration: expose all 48 Ehrlich tools as MCP tools
 
 ### 12B. Investigation Tool
 - [ ] `start_investigation(prompt, organism)` -- kick off full investigation, return ID

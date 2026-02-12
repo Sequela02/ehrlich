@@ -20,6 +20,7 @@ import { FindingsPanel } from "@/features/investigation/components/FindingsPanel
 import { InvestigationReport } from "@/features/investigation/components/InvestigationReport";
 import { useSSE } from "@/features/investigation/hooks/use-sse";
 import type { HypothesisNode, ExperimentNode, FindingNode } from "@/features/investigation/lib/diagram-builder";
+import VisualizationPanel from "@/features/visualization/VisualizationPanel";
 
 export const Route = createFileRoute("/investigation/$id")({
   component: InvestigationPage,
@@ -54,11 +55,19 @@ function InvestigationPage() {
     activeToolName,
     experimentToolCount,
     experimentFindingCount,
+    visualizations,
     diagramUrl,
   } = useSSE(streamUrl);
 
-  const showLabView = !domainConfig || domainConfig.visualization_type === "molecular";
-  const [activeTab, setActiveTab] = useState<ViewTab>("lab");
+  const showLabView = domainConfig?.visualization_type === "molecular";
+  const [activeTab, setActiveTab] = useState<ViewTab>("diagram");
+
+  // Switch to lab view once domain is confirmed as molecular
+  useEffect(() => {
+    if (domainConfig?.visualization_type === "molecular") {
+      setActiveTab("lab");
+    }
+  }, [domainConfig]);
   const [activeExperimentId, setActiveExperimentId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const sidebarTimelineRef = useRef<HTMLDivElement>(null);
@@ -273,6 +282,8 @@ function InvestigationPage() {
                 </section>
               )}
 
+              <VisualizationPanel visualizations={visualizations} />
+
               <section>
                 <FindingsPanel findings={findings} />
               </section>
@@ -375,6 +386,8 @@ function InvestigationPage() {
                   </ErrorBoundary>
                 </section>
               )}
+
+              <VisualizationPanel visualizations={visualizations} />
 
               {/* Structured report: follows scientific method workflow */}
               <InvestigationReport

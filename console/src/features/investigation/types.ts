@@ -16,7 +16,8 @@ export type SSEEventType =
   | "hypothesis_approval_requested"
   | "domain_detected"
   | "literature_survey_completed"
-  | "validation_metrics";
+  | "validation_metrics"
+  | "visualization";
 
 export interface SSEEvent {
   event: SSEEventType;
@@ -290,6 +291,16 @@ export interface DomainDisplayConfig {
   score_columns: ScoreColumnConfig[];
   attribute_keys: string[];
   domains?: DomainDisplayConfig[];
+}
+
+export interface VisualizationData {
+  viz_type: string;
+  title: string;
+  data: Record<string, unknown>;
+  config: Record<string, unknown>;
+  domain?: string;
+  experiment_id?: string;
+  investigation_id: string;
 }
 
 export interface InvestigationDetail {
