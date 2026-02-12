@@ -591,6 +591,84 @@ If validation is insufficient, downgrade certainty of ALL hypothesis \
 assessments by one level and note this in limitations.
 </validation_quality>
 
+<certainty_grading>
+For each hypothesis assessment, assign a GRADE-adapted certainty level:
+- high: Multiple concordant methods, strong controls, large effect sizes, \
+evidence from tiers 1-3
+- moderate: Some concordance, adequate controls, moderate effect sizes
+- low: Few methods, weak controls, small or inconsistent effects
+- very_low: Single method, no controls, conflicting evidence
+
+Five domains that DOWNGRADE certainty:
+1. Risk of bias: poor model validation, outside applicability domain
+2. Inconsistency: methods disagree (docking vs ML vs literature)
+3. Indirectness: evidence from different target/species/assay than asked
+4. Imprecision: wide confidence intervals, small sample sizes
+5. Publication bias: database coverage gaps, missing negative results
+
+Three domains that can UPGRADE (for computational evidence):
+1. Large effect: very strong activity (>10-fold over baseline)
+2. Dose-response: clear SAR gradient across compound series
+3. Conservative prediction: result holds despite known biases
+
+Name which domains caused downgrading or upgrading in certainty_reasoning.
+</certainty_grading>
+
+<recommendation_strength>
+Assign each candidate a priority tier based on certainty, evidence, and risk:
+
+Priority 1 (Strong Advance): High or moderate certainty. Multiple supported \
+hypotheses. Concordant docking + ML + ADMET. Controls pass. Large effects. \
+Action: queue for experimental testing.
+
+Priority 2 (Conditional Advance): Moderate or low certainty. 1-2 supported \
+hypotheses. Some method concordance. Adequate controls. \
+Action: additional computational validation before synthesis.
+
+Priority 3 (Watchlist): Low certainty. Partial support, limited methods, \
+or borderline activity. \
+Action: investigate further computationally; low resource priority.
+
+Priority 4 (Do Not Advance): Very low certainty. Refuted hypotheses, \
+control failures, contradictory evidence, or safety flags. \
+Action: archive; redirect effort.
+</recommendation_strength>
+
+<limitations_taxonomy>
+Report limitations using these four categories:
+- methodology: model limitations, scoring function inaccuracy, \
+conformational sampling, feature representation
+- data: database coverage gaps, assay heterogeneity, activity cliffs, \
+publication bias, missing data types
+- scope: in silico only, limited chemical space, time-bound investigation, \
+single-target focus
+- interpretation: docking scores are rank-ordering not absolute affinity, \
+ML probabilities need calibration, resistance based on known mutations only
+</limitations_taxonomy>
+
+<knowledge_gaps>
+Identify what evidence was NOT collected during this investigation. \
+Construct a conceptual evidence map: for each hypothesis, which evidence \
+types are present and which are missing?
+
+Classify each gap:
+- evidence: no data available (e.g. no crystal structure for docking)
+- quality: data exists but low quality (e.g. only IC50, no Ki)
+- consistency: conflicting results across methods
+- scope: evidence exists but for different context (e.g. mouse not human)
+- temporal: evidence outdated (e.g. resistance data from >5 years ago)
+</knowledge_gaps>
+
+<follow_up>
+Recommend specific next experiments prioritized by impact on confidence. \
+For each recommendation, specify:
+- What to do and why it matters
+- Whether it is computational (can be done in a follow-up investigation) \
+or experimental (requires wet-lab work)
+- Impact level: critical (blocks all recommendations), high (affects \
+primary recommendation), medium (improves confidence), low (informational)
+</follow_up>
+
 Scoring fields for candidates:
 - prediction_score: ML model probability (0-1)
 - docking_score: binding affinity in kcal/mol (negative = \
@@ -607,15 +685,14 @@ Respond with ONLY valid JSON (no markdown fences):
 hypothesis outcomes and key discoveries",
   "candidates": [
     {
-      "smiles": "SMILES string",
+      "identifier": "identifier string",
+      "identifier_type": "smiles",
       "name": "compound name",
-      "rationale": "why this candidate is promising, linked to \
-hypothesis evidence",
+      "rationale": "why this candidate is promising",
       "rank": 1,
-      "prediction_score": 0.87,
-      "docking_score": -8.5,
-      "admet_score": 0.72,
-      "resistance_risk": "low"
+      "priority": 1,
+      "scores": {},
+      "attributes": {}
     }
   ],
   "citations": ["DOI or reference strings"],
@@ -625,6 +702,8 @@ hypothesis evidence",
       "statement": "the hypothesis",
       "status": "supported|refuted|revised",
       "confidence": 0.85,
+      "certainty": "high|moderate|low|very_low",
+      "certainty_reasoning": "downgraded by X, upgraded by Y",
       "key_evidence": "summary of evidence"
     }
   ],
@@ -632,7 +711,25 @@ hypothesis evidence",
 results and model reliability assessment",
   "model_validation_quality": "sufficient|marginal|insufficient",
   "confidence": "high/medium/low",
-  "limitations": ["known limitations of this investigation"]
+  "limitations": [
+    {
+      "category": "methodology|data|scope|interpretation",
+      "description": "specific limitation"
+    }
+  ],
+  "knowledge_gaps": [
+    {
+      "gap_type": "evidence|quality|consistency|scope|temporal",
+      "description": "what is missing and why it matters"
+    }
+  ],
+  "follow_up_experiments": [
+    {
+      "description": "what to do next",
+      "impact": "critical|high|medium|low",
+      "type": "computational|experimental"
+    }
+  ]
 }
 </output_format>"""
 
@@ -1054,7 +1151,12 @@ def build_experiment_prompt(config: DomainConfig) -> str:
 
 
 def build_synthesis_prompt(config: DomainConfig) -> str:
-    """Build Director synthesis prompt adapted to the domain config."""
+    """Build Director synthesis prompt adapted to the domain config.
+
+    Includes GRADE-adapted certainty grading, recommendation strength (priority
+    tiers 1-4), structured limitations taxonomy, knowledge gap analysis, and
+    follow-up experiment recommendations.
+    """
     scoring = config.synthesis_scoring_instructions or ""
     label = config.candidate_label or "Candidates"
     return (
@@ -1085,6 +1187,69 @@ def build_synthesis_prompt(config: DomainConfig) -> str:
         "If validation is insufficient, downgrade certainty of ALL hypothesis "
         "assessments by one level and note this in limitations.\n"
         "</validation_quality>\n\n"
+        "<certainty_grading>\n"
+        "For each hypothesis assessment, assign a GRADE-adapted certainty level:\n"
+        "- high: Multiple concordant methods, strong controls, large effect sizes, "
+        "evidence from tiers 1-3\n"
+        "- moderate: Some concordance, adequate controls, moderate effect sizes\n"
+        "- low: Few methods, weak controls, small or inconsistent effects\n"
+        "- very_low: Single method, no controls, conflicting evidence\n\n"
+        "Five domains that DOWNGRADE certainty:\n"
+        "1. Risk of bias: poor model validation, outside applicability domain\n"
+        "2. Inconsistency: methods disagree (docking vs ML vs literature)\n"
+        "3. Indirectness: evidence from different target/species/assay than asked\n"
+        "4. Imprecision: wide confidence intervals, small sample sizes\n"
+        "5. Publication bias: database coverage gaps, missing negative results\n\n"
+        "Three domains that can UPGRADE (for computational evidence):\n"
+        "1. Large effect: very strong activity (>10-fold over baseline)\n"
+        "2. Dose-response: clear SAR gradient across compound series\n"
+        "3. Conservative prediction: result holds despite known biases\n\n"
+        "Name which domains caused downgrading or upgrading in certainty_reasoning.\n"
+        "</certainty_grading>\n\n"
+        "<recommendation_strength>\n"
+        "Assign each candidate a priority tier based on certainty, evidence, and risk:\n\n"
+        "Priority 1 (Strong Advance): High or moderate certainty. Multiple supported "
+        "hypotheses. Concordant methods. Controls pass. Large effects. "
+        "Action: queue for experimental testing.\n\n"
+        "Priority 2 (Conditional Advance): Moderate or low certainty. 1-2 supported "
+        "hypotheses. Some method concordance. Adequate controls. "
+        "Action: additional computational validation.\n\n"
+        "Priority 3 (Watchlist): Low certainty. Partial support, limited methods, "
+        "or borderline activity. "
+        "Action: investigate further computationally; low resource priority.\n\n"
+        "Priority 4 (Do Not Advance): Very low certainty. Refuted hypotheses, "
+        "control failures, contradictory evidence, or safety flags. "
+        "Action: archive; redirect effort.\n"
+        "</recommendation_strength>\n\n"
+        "<limitations_taxonomy>\n"
+        "Report limitations using these four categories:\n"
+        "- methodology: model limitations, scoring function inaccuracy, "
+        "conformational sampling, feature representation\n"
+        "- data: database coverage gaps, assay heterogeneity, activity cliffs, "
+        "publication bias, missing data types\n"
+        "- scope: in silico only, limited chemical space, time-bound investigation, "
+        "single-target focus\n"
+        "- interpretation: scores are rank-ordering not absolute, "
+        "ML probabilities need calibration, predictions based on known data only\n"
+        "</limitations_taxonomy>\n\n"
+        "<knowledge_gaps>\n"
+        "Identify what evidence was NOT collected during this investigation. "
+        "Construct a conceptual evidence map: for each hypothesis, which evidence "
+        "types are present and which are missing?\n\n"
+        "Classify each gap:\n"
+        "- evidence: no data available\n"
+        "- quality: data exists but low quality\n"
+        "- consistency: conflicting results across methods\n"
+        "- scope: evidence exists but for different context\n"
+        "- temporal: evidence outdated\n"
+        "</knowledge_gaps>\n\n"
+        "<follow_up>\n"
+        "Recommend specific next experiments prioritized by impact on confidence. "
+        "For each recommendation, specify:\n"
+        "- What to do and why it matters\n"
+        "- Whether it is computational or experimental\n"
+        "- Impact level: critical, high, medium, or low\n"
+        "</follow_up>\n\n"
         f"{scoring}\n"
         "</instructions>\n\n"
         "<output_format>\n"
@@ -1098,6 +1263,7 @@ def build_synthesis_prompt(config: DomainConfig) -> str:
         '      "name": "name",\n'
         '      "rationale": "why this candidate is promising",\n'
         '      "rank": 1,\n'
+        '      "priority": 1,\n'
         '      "scores": {},\n'
         '      "attributes": {}\n'
         "    }\n"
@@ -1109,13 +1275,33 @@ def build_synthesis_prompt(config: DomainConfig) -> str:
         '      "statement": "the hypothesis",\n'
         '      "status": "supported|refuted|revised",\n'
         '      "confidence": 0.85,\n'
+        '      "certainty": "high|moderate|low|very_low",\n'
+        '      "certainty_reasoning": "downgraded by X, upgraded by Y",\n'
         '      "key_evidence": "summary of evidence"\n'
         "    }\n"
         "  ],\n"
         '  "negative_control_summary": "Summary of negative control results",\n'
         '  "model_validation_quality": "sufficient|marginal|insufficient",\n'
         '  "confidence": "high/medium/low",\n'
-        '  "limitations": ["known limitations"]\n'
+        '  "limitations": [\n'
+        "    {\n"
+        '      "category": "methodology|data|scope|interpretation",\n'
+        '      "description": "specific limitation"\n'
+        "    }\n"
+        "  ],\n"
+        '  "knowledge_gaps": [\n'
+        "    {\n"
+        '      "gap_type": "evidence|quality|consistency|scope|temporal",\n'
+        '      "description": "what is missing and why it matters"\n'
+        "    }\n"
+        "  ],\n"
+        '  "follow_up_experiments": [\n'
+        "    {\n"
+        '      "description": "what to do next",\n'
+        '      "impact": "critical|high|medium|low",\n'
+        '      "type": "computational|experimental"\n'
+        "    }\n"
+        "  ]\n"
         "}\n"
         "</output_format>"
     )

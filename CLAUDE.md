@@ -165,7 +165,7 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, sports,
 - Repository interfaces are ABCs in `domain/repository.py`
 - Infrastructure adapters implement repository ABCs
 - Tool functions in `tools.py` are the boundary between Claude and application services
-- **Hypothesis-driven investigation loop**: formulate hypotheses (with predictions, criteria, scope, prior confidence), design structured experiment protocols (variables, controls, confounders, analysis plan, criteria), execute tools with methodology guidance (sensitivity, AD, UQ, verification, negative results), evaluate with scientific methodology (evidence hierarchy, effect size thresholds, Bayesian updating, contradiction resolution, convergence check, certainty_of_evidence grading), revise/reject, synthesize
+- **Hypothesis-driven investigation loop**: formulate hypotheses (with predictions, criteria, scope, prior confidence), design structured experiment protocols (variables, controls, confounders, analysis plan, criteria), execute tools with methodology guidance (sensitivity, AD, UQ, verification, negative results), evaluate with scientific methodology (evidence hierarchy, effect size thresholds, Bayesian updating, contradiction resolution, convergence check, certainty_of_evidence grading), revise/reject, synthesize with GRADE certainty grading (5 downgrading + 3 upgrading domains), priority tiers (1-4), structured limitations taxonomy, knowledge gap analysis, and follow-up experiment recommendations
 - **Domain-agnostic prompts**: Director infers domain from user's research question, adapts scientific context
 - **Evidence-linked findings**: every finding references a `hypothesis_id` + `evidence_type` (supporting/contradicting/neutral)
 - **Negative controls**: validate model predictions with known-inactive compounds (`NegativeControl` entity)
@@ -233,11 +233,12 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, sports,
 | `investigation/application/multi_orchestrator.py` | Hypothesis-driven Director-Worker-Summarizer orchestrator |
 | `investigation/application/cost_tracker.py` | Per-model cost tracking with tiered pricing |
 | `investigation/application/tool_cache.py` | In-memory TTL cache for tool results (deterministic + API) |
-| `investigation/application/prompts.py` | Domain-adaptive prompts: PICO+classification, literature survey, assessment, director (4 phases with experiment methodology + evidence evaluation with hierarchy/effect sizes/Bayesian updating/contradiction resolution/convergence), researcher (with sensitivity/AD/UQ methodology), summarizer |
+| `investigation/application/prompts.py` | Domain-adaptive prompts: PICO+classification, literature survey, assessment, director (4 phases with experiment methodology + evidence evaluation with hierarchy/effect sizes/Bayesian updating/contradiction resolution/convergence + synthesis with GRADE certainty/priority tiers/knowledge gaps/follow-up), researcher (with sensitivity/AD/UQ methodology), summarizer |
 | `investigation/domain/hypothesis.py` | Hypothesis entity (statement, rationale, prediction, null_prediction, success/failure_criteria, scope, hypothesis_type, prior_confidence, confidence, certainty_of_evidence) + HypothesisStatus + HypothesisType enums |
 | `investigation/domain/experiment.py` | Experiment entity (description, tool_plan, independent_variable, dependent_variable, controls, confounders, analysis_plan, success_criteria, failure_criteria) + ExperimentStatus enum |
 | `investigation/domain/negative_control.py` | NegativeControl frozen dataclass |
 | `investigation/domain/positive_control.py` | PositiveControl frozen dataclass (known active, correctly_classified >= 0.5) |
+| `investigation/domain/candidate.py` | Candidate dataclass (identifier, identifier_type, name, rank, priority, notes, scores dict, attributes dict) |
 | `investigation/domain/events.py` | 18 domain events (Hypothesis*, HypothesisApproval*, Experiment*, NegativeControl*, PositiveControl*, DomainDetected, Finding, LiteratureSurveyCompleted, Tool*, Thinking, PhaseChanged, CostUpdate, Completed, Error) |
 | `investigation/domain/repository.py` | InvestigationRepository ABC (save_event, get_events for audit trail) |
 | `investigation/infrastructure/sqlite_repository.py` | SQLite implementation with hypothesis/experiment/negative_control/event serialization |

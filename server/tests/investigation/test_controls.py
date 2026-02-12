@@ -1,3 +1,4 @@
+from ehrlich.investigation.domain.candidate import Candidate
 from ehrlich.investigation.domain.events import PositiveControlRecorded
 from ehrlich.investigation.domain.investigation import Investigation
 from ehrlich.investigation.domain.negative_control import NegativeControl
@@ -95,3 +96,34 @@ class TestPositiveControlRecordedEvent:
         assert event.known_activity == ""
         assert event.score == 0.0
         assert event.correctly_classified is True
+
+
+class TestCandidatePriority:
+    def test_priority_defaults_to_zero(self) -> None:
+        c = Candidate(identifier="CC(=O)O")
+        assert c.priority == 0
+
+    def test_priority_stores_value(self) -> None:
+        c = Candidate(identifier="CC(=O)O", priority=1)
+        assert c.priority == 1
+
+    def test_priority_accepts_all_tiers(self) -> None:
+        for tier in range(5):
+            c = Candidate(identifier="CC(=O)O", priority=tier)
+            assert c.priority == tier
+
+    def test_candidate_with_all_fields(self) -> None:
+        c = Candidate(
+            identifier="CC(=O)O",
+            identifier_type="smiles",
+            name="Aspirin",
+            rank=1,
+            priority=2,
+            notes="Test rationale",
+            scores={"prediction_score": 0.85},
+            attributes={"resistance_risk": "low"},
+        )
+        assert c.identifier == "CC(=O)O"
+        assert c.rank == 1
+        assert c.priority == 2
+        assert c.scores["prediction_score"] == 0.85

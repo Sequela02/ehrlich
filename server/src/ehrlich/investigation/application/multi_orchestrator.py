@@ -603,6 +603,7 @@ class MultiModelOrchestrator:
                     name=c.get("name", ""),
                     notes=c.get("rationale", c.get("notes", "")),
                     rank=c.get("rank", i + 1),
+                    priority=c.get("priority", 0),
                     scores={
                         k: float(v)
                         for k, v in c.get("scores", {}).items()
@@ -624,6 +625,7 @@ class MultiModelOrchestrator:
                     "identifier_type": c.identifier_type,
                     "name": c.name,
                     "rank": c.rank,
+                    "priority": c.priority,
                     "notes": c.notes,
                     "scores": c.scores,
                     "attributes": c.attributes,

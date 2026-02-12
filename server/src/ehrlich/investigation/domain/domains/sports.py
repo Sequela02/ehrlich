@@ -185,5 +185,11 @@ For each training protocol candidate, provide:
 - confidence (0-1): confidence in the recommendation considering heterogeneity
 - sport: target sport or population
 - training_type: type of training (HIIT, strength, plyometric, etc.)
-- evidence_level: evidence quality grade (A/B/C/D)""",
+- evidence_level: evidence quality grade (A/B/C/D)
+
+Priority assignment:
+- Priority 1: evidence_score > 0.7 AND effect_size > 0.5 AND evidence_level A/B
+- Priority 2: meets 2 of 3 criteria above
+- Priority 3: meets 1 criterion or limited evidence
+- Priority 4: contradictory evidence or insufficient data""",
 )

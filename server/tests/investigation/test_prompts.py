@@ -1,12 +1,14 @@
 from ehrlich.investigation.application.prompts import (
     DIRECTOR_EVALUATION_PROMPT,
     DIRECTOR_EXPERIMENT_PROMPT,
+    DIRECTOR_SYNTHESIS_PROMPT,
     RESEARCHER_EXPERIMENT_PROMPT,
     build_experiment_prompt,
     build_literature_assessment_prompt,
     build_literature_survey_prompt,
     build_pico_and_classification_prompt,
     build_researcher_prompt,
+    build_synthesis_prompt,
 )
 from ehrlich.investigation.domain.domains.molecular import MOLECULAR_SCIENCE
 from ehrlich.investigation.domain.domains.sports import SPORTS_SCIENCE
@@ -157,3 +159,110 @@ class TestDirectorEvaluationPrompt:
     def test_has_control_validation(self) -> None:
         assert "positive controls" in DIRECTOR_EVALUATION_PROMPT
         assert "negative controls" in DIRECTOR_EVALUATION_PROMPT
+
+
+class TestDirectorSynthesisPrompt:
+    def test_static_prompt_has_certainty_grading(self) -> None:
+        assert "certainty_grading" in DIRECTOR_SYNTHESIS_PROMPT
+        assert "DOWNGRADE" in DIRECTOR_SYNTHESIS_PROMPT
+        assert "UPGRADE" in DIRECTOR_SYNTHESIS_PROMPT
+
+    def test_static_prompt_has_recommendation_strength(self) -> None:
+        assert "recommendation_strength" in DIRECTOR_SYNTHESIS_PROMPT
+        assert "Priority 1" in DIRECTOR_SYNTHESIS_PROMPT
+        assert "Priority 4" in DIRECTOR_SYNTHESIS_PROMPT
+
+    def test_static_prompt_has_limitations_taxonomy(self) -> None:
+        assert "limitations_taxonomy" in DIRECTOR_SYNTHESIS_PROMPT
+        assert "methodology" in DIRECTOR_SYNTHESIS_PROMPT
+        assert "interpretation" in DIRECTOR_SYNTHESIS_PROMPT
+
+    def test_static_prompt_has_knowledge_gaps(self) -> None:
+        assert "knowledge_gaps" in DIRECTOR_SYNTHESIS_PROMPT
+        assert "evidence map" in DIRECTOR_SYNTHESIS_PROMPT
+
+    def test_static_prompt_has_follow_up(self) -> None:
+        assert "follow_up" in DIRECTOR_SYNTHESIS_PROMPT
+        assert "computational" in DIRECTOR_SYNTHESIS_PROMPT
+        assert "experimental" in DIRECTOR_SYNTHESIS_PROMPT
+
+    def test_static_prompt_output_has_priority(self) -> None:
+        assert '"priority"' in DIRECTOR_SYNTHESIS_PROMPT
+
+    def test_static_prompt_output_has_certainty(self) -> None:
+        assert '"certainty"' in DIRECTOR_SYNTHESIS_PROMPT
+        assert '"certainty_reasoning"' in DIRECTOR_SYNTHESIS_PROMPT
+
+    def test_static_prompt_output_has_knowledge_gaps_field(self) -> None:
+        assert '"knowledge_gaps"' in DIRECTOR_SYNTHESIS_PROMPT
+        assert '"gap_type"' in DIRECTOR_SYNTHESIS_PROMPT
+
+    def test_static_prompt_output_has_follow_up_field(self) -> None:
+        assert '"follow_up_experiments"' in DIRECTOR_SYNTHESIS_PROMPT
+        assert '"impact"' in DIRECTOR_SYNTHESIS_PROMPT
+
+    def test_static_prompt_retains_confidence(self) -> None:
+        assert '"confidence": "high/medium/low"' in DIRECTOR_SYNTHESIS_PROMPT
+
+
+class TestBuildSynthesisPrompt:
+    def test_molecular_has_certainty_grading(self) -> None:
+        prompt = build_synthesis_prompt(MOLECULAR_SCIENCE)
+        assert "certainty_grading" in prompt
+        assert "DOWNGRADE" in prompt
+
+    def test_molecular_has_recommendation_strength(self) -> None:
+        prompt = build_synthesis_prompt(MOLECULAR_SCIENCE)
+        assert "recommendation_strength" in prompt
+        assert "Priority 1" in prompt
+
+    def test_molecular_has_knowledge_gaps(self) -> None:
+        prompt = build_synthesis_prompt(MOLECULAR_SCIENCE)
+        assert "knowledge_gaps" in prompt
+
+    def test_molecular_has_follow_up(self) -> None:
+        prompt = build_synthesis_prompt(MOLECULAR_SCIENCE)
+        assert "follow_up" in prompt
+
+    def test_molecular_output_has_priority(self) -> None:
+        prompt = build_synthesis_prompt(MOLECULAR_SCIENCE)
+        assert '"priority"' in prompt
+
+    def test_molecular_output_has_certainty_fields(self) -> None:
+        prompt = build_synthesis_prompt(MOLECULAR_SCIENCE)
+        assert '"certainty"' in prompt
+        assert '"certainty_reasoning"' in prompt
+
+    def test_molecular_output_has_structured_limitations(self) -> None:
+        prompt = build_synthesis_prompt(MOLECULAR_SCIENCE)
+        assert '"category"' in prompt
+
+    def test_molecular_has_priority_criteria(self) -> None:
+        prompt = build_synthesis_prompt(MOLECULAR_SCIENCE)
+        assert "prediction_score > 0.7" in prompt
+        assert "docking_score < -7" in prompt
+
+    def test_sports_has_certainty_grading(self) -> None:
+        prompt = build_synthesis_prompt(SPORTS_SCIENCE)
+        assert "certainty_grading" in prompt
+
+    def test_sports_has_priority_criteria(self) -> None:
+        prompt = build_synthesis_prompt(SPORTS_SCIENCE)
+        assert "evidence_score > 0.7" in prompt
+        assert "effect_size > 0.5" in prompt
+
+    def test_sports_output_has_priority(self) -> None:
+        prompt = build_synthesis_prompt(SPORTS_SCIENCE)
+        assert '"priority"' in prompt
+
+    def test_uses_domain_identifier_type(self) -> None:
+        prompt = build_synthesis_prompt(MOLECULAR_SCIENCE)
+        assert '"identifier_type": "smiles"' in prompt
+        prompt_sports = build_synthesis_prompt(SPORTS_SCIENCE)
+        assert '"identifier_type": "protocol"' in prompt_sports
+
+    def test_uses_domain_candidate_label(self) -> None:
+        prompt = build_synthesis_prompt(MOLECULAR_SCIENCE)
+        assert "candidate molecules" in prompt.lower()
+        prompt_sports = build_synthesis_prompt(SPORTS_SCIENCE)
+        assert "training protocols" in prompt_sports.lower()

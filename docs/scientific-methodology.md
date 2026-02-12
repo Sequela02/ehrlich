@@ -323,11 +323,9 @@ PositiveControlRecorded domain event → positive_control SSE event type
 
 ---
 
-### Phase 6: Synthesis -- RESEARCHED
+### Phase 6: Synthesis -- UPGRADED
 
-**Status:** Research complete. See [synthesis-research.md](../research/synthesis-research.md). Grounded in 29 verified sources. Implementation pending.
-
-**Current state:** Director summarizes all results into a structured report with candidates, hypothesis assessments, negative control summary, and limitations list. No formal certainty grading, no structured candidate ranking method, no knowledge gap analysis.
+**Status:** Complete. Grounded in 29 verified sources. See [synthesis-research.md](../research/synthesis-research.md).
 
 **Sources:**
 - Guyatt et al. (2008) -- GRADE: certainty of evidence (high/moderate/low/very low) with 5 downgrading + 3 upgrading domains
@@ -361,12 +359,35 @@ PositiveControlRecorded domain event → positive_control SSE event type
 | 9 | Summary of Findings Table | Per-hypothesis tabular summary with certainty level, evidence count, effect sizes, interpretation |
 | 10 | Model Validation Summary | Aggregate control results + validation metrics + AD coverage into single quality statement |
 
+**Implementation:**
+```
+Director synthesis prompt: +6 methodology sections
+  (CERTAINTY_GRADING, RECOMMENDATION_STRENGTH, LIMITATIONS_TAXONOMY,
+   KNOWLEDGE_GAPS, FOLLOW_UP, VALIDATION_QUALITY)
+
+Synthesis output format: structured fields replacing free-text
+  - hypothesis_assessments[].certainty (GRADE-adapted level)
+  - hypothesis_assessments[].certainty_reasoning (domain reasoning)
+  - candidates[].priority (1-4 recommendation tier)
+  - limitations[] as {category, description} instead of plain strings
+  - knowledge_gaps[] with gap_type classification
+  - follow_up_experiments[] with impact and type
+  - model_validation_quality (sufficient/marginal/insufficient)
+
+Candidate entity: +priority field (int, 0-4)
+
+Domain configs: priority assignment criteria per domain
+  - Molecular: prediction_score + docking_score + ADMET
+  - Sports: evidence_score + effect_size + evidence_level
+```
+
 **Key design decisions:**
-- GRADE framework adapted from clinical medicine to computational molecular discovery (5 downgrading domains mapped to: model validation quality, method inconsistency, evidence indirectness, imprecision, and database coverage gaps)
-- Desirability functions (Derringer-Suich) preferred over hard cutoffs for candidate ranking -- QED demonstrates this works well for drug-likeness
+- GRADE framework adapted from clinical medicine to computational discovery (5 downgrading + 3 upgrading domains mapped to computational equivalents)
 - Structured narrative synthesis (SWiM) is the appropriate paradigm since Ehrlich combines heterogeneous evidence types that cannot be meta-analyzed
-- Knowledge gap map is a novel addition: hypothesis-vs-evidence-type matrix revealing what evidence is missing
-- Four-tier recommendation strength (Priority 1-4) replaces binary "advance/don't advance"
+- Four-tier recommendation strength (Priority 1-4) replaces binary advance/don't advance
+- Structured limitations taxonomy replaces free-text list for auditability
+- Knowledge gap map is a novel addition revealing what evidence is missing
+- Desirability scoring guidance in prompts rather than hard-coded computation (Director applies soft reasoning)
 
 ## Process
 

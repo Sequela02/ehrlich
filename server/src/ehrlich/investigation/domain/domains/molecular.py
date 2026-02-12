@@ -237,5 +237,11 @@ Scoring fields for candidates:
 - admet_score: overall drug-likeness (0-1)
 Attributes:
 - resistance_risk: mutation risk ("low", "medium", "high")
-Use 0.0 or "unknown" if a score was not computed.""",
+Use 0.0 or "unknown" if a score was not computed.
+
+Priority assignment:
+- Priority 1: prediction_score > 0.7 AND docking_score < -7 AND passes ADMET
+- Priority 2: meets 2 of 3 criteria above
+- Priority 3: meets 1 criterion or borderline values
+- Priority 4: fails all criteria or has safety flags""",
 )
