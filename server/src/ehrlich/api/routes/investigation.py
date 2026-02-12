@@ -43,7 +43,7 @@ from ehrlich.investigation.tools import (
     record_finding,
     record_negative_control,
 )
-from ehrlich.literature.tools import get_reference, search_literature
+from ehrlich.literature.tools import get_reference, search_citations, search_literature
 from ehrlich.prediction.tools import cluster_compounds, predict_candidates, train_model
 from ehrlich.simulation.tools import (
     assess_resistance,
@@ -140,9 +140,10 @@ def _build_registry() -> ToolRegistry:
         ("tanimoto_similarity", tanimoto_similarity, _chem),
         ("generate_3d", generate_3d, _chem),
         ("substructure_match", substructure_match, _chem),
-        # Literature (2)
+        # Literature (3)
         ("search_literature", search_literature, _lit),
         ("get_reference", get_reference, _lit),
+        ("search_citations", search_citations, _lit),
         # Analysis (6)
         ("explore_dataset", explore_dataset, _analysis),
         ("search_compounds", search_compounds, _analysis),

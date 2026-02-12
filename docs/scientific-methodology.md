@@ -62,13 +62,63 @@ Hypothesis entity fields:
 
 ---
 
-### Phase 2: Literature Survey -- RESEARCHED
+### Phase 2: Literature Survey -- UPGRADED
 
-**Status:** Research complete. See [literature-survey-research.md](../research/literature-survey-research.md). Implementation pending.
+**Status:** Complete. Grounded in 27 verified sources. Rapid scoping review methodology (Arksey & O'Malley 2005, Cochrane 2020).
 
-**Current state:** Basic "search and summarize" via Semantic Scholar.
+**Sources:**
+- Arksey & O'Malley (2005) -- Scoping review framework (5 stages)
+- Greenhalgh & Peacock (2005) -- Citation chasing (snowballing): 51% of sources come from non-database strategies
+- PRISMA 2020 (Page et al., 2021) -- Transparent search reporting
+- GRADE (Guyatt et al., 2008) -- Body-of-evidence certainty grading (high/moderate/low/very_low)
+- AMSTAR 2 (Shea et al., 2017) -- Critical appraisal of systematic reviews
+- Oxford CEBM (2011) -- 6-level evidence hierarchy (systematic review → expert opinion)
 
-**Research covers:** Systematic review methodology (PRISMA), search strategies, evidence grading, bias assessment, inclusion/exclusion criteria, rapid scoping review adaptation for AI-driven discovery.
+**10 Universal Components (all experts converge on):**
+
+| # | Component | Description |
+|---|-----------|-------------|
+| 1 | PICO Decomposition | Population, Intervention, Comparison, Outcome from research question |
+| 2 | Multi-Strategy Search | Database queries + citation chasing + dataset exploration |
+| 3 | Citation Chasing | Forward/backward snowballing via references and citing papers |
+| 4 | Evidence Hierarchy | 6-level grading per finding (1=systematic review → 6=expert opinion) |
+| 5 | Saturation Rule | Stop when additional queries yield <2 new unique results |
+| 6 | Source Provenance | Every finding tracked to API source (ChEMBL, PDB, DOI, etc.) |
+| 7 | Body-of-Evidence Grading | GRADE-adapted aggregate grade (high/moderate/low/very_low) |
+| 8 | Quality Self-Assessment | AMSTAR-2-adapted check against 4 rapid-review quality domains |
+| 9 | Structured Context | XML-formatted PICO + graded findings passed to hypothesis formulation |
+| 10 | Transparent Documentation | `LiteratureSurveyCompleted` event with search stats for audit trail |
+
+**Implementation:**
+```
+Pipeline order: Classification+PICO → Literature Survey → Formulation (was: Literature → Classification → Formulation)
+
+Phase 1 (Haiku): Merged PICO decomposition + domain classification in single call
+  Output: {domain, population, intervention, comparison, outcome, search_terms}
+
+Phase 2 (Sonnet researcher + Haiku):
+  A. Structured search with domain-filtered tools + citation chasing (search_citations tool)
+  B. Findings recorded with evidence_level (1-6) and source provenance
+  C. Body-of-evidence grading via Haiku (GRADE-adapted)
+  D. Self-assessment against 4 AMSTAR-2-adapted quality domains
+  E. LiteratureSurveyCompleted event emitted with PICO, stats, grade, assessment
+
+Formulation context: Structured XML replaces raw text summary
+  <literature_survey>
+    <pico population="..." intervention="..." comparison="..." outcome="..."/>
+    <evidence_grade>moderate</evidence_grade>
+    <search_stats queries="5" total="47" included="12"/>
+    <findings>...</findings>
+  </literature_survey>
+```
+
+**Key design decisions:**
+- PICO + domain classification merged into single Haiku call (eliminates one API call, makes literature survey domain-aware from start)
+- Pipeline reordered: classify first, then literature, so researcher gets domain-filtered tools
+- `search_citations` tool for snowballing (Greenhalgh & Peacock: 51% of sources from non-database strategies)
+- `evidence_level` on Finding entity (int, 0=unrated, 1-6 per hierarchy) -- not a boolean, supports granular grading
+- Body-of-evidence grading via separate Haiku call after search (not during) -- separates data collection from assessment
+- Structured XML context replaces raw `literature_summary[:3000]` -- Director receives typed, parseable literature data
 
 ---
 

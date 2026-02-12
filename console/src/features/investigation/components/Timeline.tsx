@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  BookOpen,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
@@ -291,6 +292,56 @@ function TimelineEntry({
           {event.data.summarized_length as number} chars
         </div>
       );
+
+    case "literature_survey_completed": {
+      const pico = event.data.pico as Record<string, string> | undefined;
+      const grade = event.data.evidence_grade as string;
+      const queries = event.data.search_queries as number;
+      const total = event.data.total_results as number;
+      const included = event.data.included_results as number;
+      const gradeColor =
+        grade === "high"
+          ? "bg-secondary/20 text-secondary"
+          : grade === "moderate"
+            ? "bg-accent/20 text-accent"
+            : grade === "low"
+              ? "bg-orange-500/20 text-orange-400"
+              : "bg-destructive/20 text-destructive";
+      return (
+        <div
+          className="my-2 cursor-pointer rounded-md border border-primary/30 bg-primary/5 px-3 py-2"
+          onClick={onToggle}
+        >
+          <div className="flex items-center gap-2 text-xs font-medium text-primary">
+            <BookOpen className="h-3.5 w-3.5 shrink-0" />
+            Literature Survey Complete
+            <span className="ml-auto font-mono text-[10px] tabular-nums text-muted-foreground/50">
+              {queries} queries | {total} found | {included} included
+            </span>
+            {grade && (
+              <span className={cn("rounded px-1.5 py-0.5 font-mono text-[9px] uppercase", gradeColor)}>
+                {grade}
+              </span>
+            )}
+            <ExpandToggle isExpanded={isExpanded} onClick={onToggle} />
+          </div>
+          {isExpanded && pico && (
+            <div className="mt-2 flex flex-wrap gap-1.5 pl-5">
+              {Object.entries(pico).map(([key, value]) =>
+                key !== "search_terms" && value ? (
+                  <span
+                    key={key}
+                    className="rounded bg-muted/40 px-2 py-0.5 text-[10px] text-muted-foreground"
+                  >
+                    <span className="font-medium uppercase tracking-wider">{key[0]}</span>: {value}
+                  </span>
+                ) : null,
+              )}
+            </div>
+          )}
+        </div>
+      );
+    }
 
     case "error":
       return (

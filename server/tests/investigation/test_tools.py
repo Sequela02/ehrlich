@@ -90,6 +90,28 @@ class TestEvaluateHypothesis:
         assert result["confidence"] == 0.85
 
 
+class TestRecordFindingWithEvidenceLevel:
+    @pytest.mark.asyncio
+    async def test_accepts_evidence_level(self) -> None:
+        from ehrlich.investigation.tools import record_finding
+
+        result = json.loads(
+            await record_finding(
+                "Meta-analysis result",
+                "Pooled effect size 0.8",
+                evidence_level=1,
+            )
+        )
+        assert result["status"] == "recorded"
+
+    @pytest.mark.asyncio
+    async def test_default_evidence_level_zero(self) -> None:
+        from ehrlich.investigation.tools import record_finding
+
+        result = json.loads(await record_finding("Test", "Detail"))
+        assert result["status"] == "recorded"
+
+
 class TestRecordNegativeControl:
     @pytest.mark.asyncio
     async def test_returns_recorded_status(self) -> None:

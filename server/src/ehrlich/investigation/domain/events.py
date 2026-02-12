@@ -94,6 +94,7 @@ class FindingRecorded(DomainEvent):
     evidence: str = ""
     source_type: str = ""
     source_id: str = ""
+    evidence_level: int = 0
     investigation_id: str = ""
 
 
@@ -133,6 +134,17 @@ class CostUpdate(DomainEvent):
 class DomainDetected(DomainEvent):
     domain: str = ""
     display_config: dict[str, Any] = field(default_factory=dict)
+    investigation_id: str = ""
+
+
+@dataclass(frozen=True)
+class LiteratureSurveyCompleted(DomainEvent):
+    pico: dict[str, str] = field(default_factory=dict)
+    search_queries: int = 0
+    total_results: int = 0
+    included_results: int = 0
+    evidence_grade: str = ""
+    assessment: str = ""
     investigation_id: str = ""
 
 

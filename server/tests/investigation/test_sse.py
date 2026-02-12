@@ -10,6 +10,7 @@ from ehrlich.investigation.domain.events import (
     HypothesisFormulated,
     InvestigationCompleted,
     InvestigationError,
+    LiteratureSurveyCompleted,
     NegativeControlRecorded,
     PhaseChanged,
     Thinking,
@@ -220,3 +221,42 @@ class TestDomainEventToSSE:
         parsed = json.loads(formatted)
         assert parsed["event"] == "hypothesis_formulated"
         assert parsed["data"]["hypothesis_id"] == "h1"
+
+    def test_finding_recorded_with_evidence_level(self) -> None:
+        event = FindingRecorded(
+            title="Meta-analysis result",
+            detail="Pooled effect size 0.8",
+            hypothesis_id="h1",
+            evidence_type="supporting",
+            evidence_level=1,
+            investigation_id="inv-1",
+        )
+        sse = domain_event_to_sse(event)
+        assert sse is not None
+        assert sse.event == SSEEventType.FINDING_RECORDED
+        assert sse.data["evidence_level"] == 1
+
+    def test_literature_survey_completed(self) -> None:
+        event = LiteratureSurveyCompleted(
+            pico={
+                "population": "MRSA strains",
+                "intervention": "beta-lactamase inhibitors",
+                "comparison": "existing treatments",
+                "outcome": "MIC reduction",
+            },
+            search_queries=5,
+            total_results=47,
+            included_results=12,
+            evidence_grade="moderate",
+            assessment="3 of 4 quality domains met",
+            investigation_id="inv-1",
+        )
+        sse = domain_event_to_sse(event)
+        assert sse is not None
+        assert sse.event == SSEEventType.LITERATURE_SURVEY_COMPLETED
+        assert sse.data["pico"]["population"] == "MRSA strains"
+        assert sse.data["search_queries"] == 5
+        assert sse.data["total_results"] == 47
+        assert sse.data["included_results"] == 12
+        assert sse.data["evidence_grade"] == "moderate"
+        assert sse.data["assessment"] == "3 of 4 quality domains met"

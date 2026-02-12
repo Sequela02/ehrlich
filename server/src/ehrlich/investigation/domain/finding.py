@@ -13,3 +13,4 @@ class Finding:
     confidence: float = 0.0
     source_type: str = ""
     source_id: str = ""
+    evidence_level: int = 0

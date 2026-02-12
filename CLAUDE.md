@@ -17,8 +17,8 @@ DDD monorepo: `server/` (Python 3.12) + `console/` (React 19 / TypeScript / Bun)
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, designs experiments, evaluates evidence, synthesizes (NO tools)
-Sonnet 4.5 (Researcher) -- Executes experiments with 36 tools (parallel: 2 experiments per batch)
-Haiku 4.5 (Summarizer)  -- Compresses large tool outputs (>2000 chars)
+Sonnet 4.5 (Researcher) -- Executes experiments with 37 tools (parallel: 2 experiments per batch)
+Haiku 4.5 (Summarizer)  -- Compresses large tool outputs (>2000 chars), PICO decomposition, evidence grading
 ```
 
 Always uses `MultiModelOrchestrator`. Hypotheses tested in parallel batches of 2.
@@ -105,7 +105,7 @@ Types: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`
 
 Scopes: kernel, literature, chemistry, analysis, prediction, simulation, sports, investigation, api, console, mol, data, ci, docs, infra
 
-## Tools (36 Total)
+## Tools (37 Total)
 
 ### Chemistry (6) -- RDKit cheminformatics, domain-agnostic
 - `validate_smiles` -- Validate SMILES string
@@ -115,8 +115,9 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, sports,
 - `generate_3d` -- 3D conformer with MMFF94 optimization
 - `substructure_match` -- SMARTS/SMILES substructure search
 
-### Literature (2) -- Semantic Scholar
+### Literature (3) -- Semantic Scholar
 - `search_literature` -- Paper search (title, authors, year, DOI, abstract, citations)
+- `search_citations` -- Citation chasing (snowballing) via references/citing papers
 - `get_reference` -- Curated reference lookup by key or DOI
 
 ### Analysis (6) -- ChEMBL + PubChem + GtoPdb
@@ -175,8 +176,9 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, sports,
 - 6 control tools: `propose_hypothesis`, `design_experiment`, `evaluate_hypothesis`, `record_finding`, `record_negative_control`, `conclude_investigation`
 - **Domain configuration**: `DomainConfig` defines per-domain tool tags, score definitions, prompt examples, visualization type; `DomainRegistry` auto-detects domain from classification; `DomainDetected` SSE event sends display config to frontend
 - **Tool tagging**: Tools tagged with frozenset domain tags (chemistry, analysis, prediction, simulation, sports, literature); investigation control tools are universal (no tags); researcher sees only domain-relevant tools
-- SSE streaming for real-time investigation updates (16 event types)
-- **Phase progress indicator**: `PhaseChanged` event tracks 5 orchestrator phases (Literature Survey → Formulation → Hypothesis Testing → Negative Controls → Synthesis); frontend renders 5-segment progress bar
+- SSE streaming for real-time investigation updates (17 event types)
+- **Phase progress indicator**: `PhaseChanged` event tracks 6 orchestrator phases (Classification & PICO → Literature Survey → Formulation → Hypothesis Testing → Negative Controls → Synthesis); frontend renders 6-segment progress bar
+- **Literature survey methodology**: PICO decomposition + domain classification merged into single Haiku call; structured search protocol with citation chasing (snowballing); 6-level evidence hierarchy on findings; GRADE-adapted body-of-evidence grading (high/moderate/low/very_low) via Haiku; AMSTAR-2-adapted self-assessment; `LiteratureSurveyCompleted` event carries PICO, search stats, grade for PRISMA-lite transparency
 - **Streaming cost indicator**: `CostUpdate` event yields cost snapshots after each phase/batch; `CostBadge` updates progressively (not just at completion)
 - **Investigation templates**: 6 cross-domain prompts (4 molecular + 2 sports science) on home page via `TemplateCards` with domain badges
 - **Citation provenance**: `source_type` + `source_id` on findings, rendered as clickable badges linking to ChEMBL, PDB, DOI, PubChem, UniProt, Open Targets
@@ -229,17 +231,17 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, sports,
 | `investigation/application/multi_orchestrator.py` | Hypothesis-driven Director-Worker-Summarizer orchestrator |
 | `investigation/application/cost_tracker.py` | Per-model cost tracking with tiered pricing |
 | `investigation/application/tool_cache.py` | In-memory TTL cache for tool results (deterministic + API) |
-| `investigation/application/prompts.py` | Domain-adaptive prompts: scientist, director (4 phases), researcher, summarizer |
+| `investigation/application/prompts.py` | Domain-adaptive prompts: PICO+classification, literature survey, assessment, director (4 phases), researcher, summarizer |
 | `investigation/domain/hypothesis.py` | Hypothesis entity (statement, rationale, prediction, null_prediction, success/failure_criteria, scope, hypothesis_type, prior_confidence, confidence) + HypothesisStatus + HypothesisType enums |
 | `investigation/domain/experiment.py` | Experiment entity + ExperimentStatus enum |
 | `investigation/domain/negative_control.py` | NegativeControl frozen dataclass |
-| `investigation/domain/events.py` | 16 domain events (Hypothesis*, HypothesisApproval*, Experiment*, NegativeControl*, DomainDetected, Finding, Tool*, Thinking, PhaseChanged, CostUpdate, Completed, Error) |
+| `investigation/domain/events.py` | 17 domain events (Hypothesis*, HypothesisApproval*, Experiment*, NegativeControl*, DomainDetected, Finding, LiteratureSurveyCompleted, Tool*, Thinking, PhaseChanged, CostUpdate, Completed, Error) |
 | `investigation/domain/repository.py` | InvestigationRepository ABC (save_event, get_events for audit trail) |
 | `investigation/infrastructure/sqlite_repository.py` | SQLite implementation with hypothesis/experiment/negative_control/event serialization |
 | `investigation/infrastructure/anthropic_client.py` | Anthropic API adapter with retry |
-| `api/routes/investigation.py` | REST + SSE endpoints, 36-tool registry with domain tagging, domain registry |
+| `api/routes/investigation.py` | REST + SSE endpoints, 37-tool registry with domain tagging, domain registry |
 | `api/routes/molecule.py` | Molecule depiction, conformer, descriptors, targets endpoints |
-| `api/sse.py` | Domain event to SSE conversion (16 types) |
+| `api/sse.py` | Domain event to SSE conversion (17 types) |
 
 ## Key Files (Data Source Clients)
 

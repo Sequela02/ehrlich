@@ -43,7 +43,7 @@ Ehrlich uses a three-tier Claude model architecture for cost-efficient investiga
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesizes (3-5 calls)
-Sonnet 4.5 (Researcher) -- Executes experiments with 36 tools (10-20 calls)
+Sonnet 4.5 (Researcher) -- Executes experiments with 37 tools (10-20 calls)
 Haiku 4.5 (Summarizer)  -- Compresses large outputs, classifies domains (5-10 calls)
 ```
 
@@ -64,7 +64,7 @@ Cost: ~$3-4 per investigation (vs ~$11 with all-Opus).
 
 All data sources are free and open-access.
 
-## 36 Tools
+## 37 Tools
 
 | Context | Tool | Description |
 |---------|------|-------------|
@@ -75,6 +75,7 @@ All data sources are free and open-access.
 | Chemistry | `generate_3d` | 3D conformer with MMFF94 optimization |
 | Chemistry | `substructure_match` | SMARTS/SMILES substructure search |
 | Literature | `search_literature` | Semantic Scholar paper search |
+| Literature | `search_citations` | Citation chasing (snowballing) via references/citing |
 | Literature | `get_reference` | Curated reference lookup |
 | Analysis | `explore_dataset` | Load ChEMBL bioactivity data for any target |
 | Analysis | `search_bioactivity` | Flexible ChEMBL query (any assay type) |
@@ -215,10 +216,11 @@ Server at :8000, Console at :3000.
 | `negative_control` | Model validation result |
 | `tool_called` | Tool invocation with inputs |
 | `tool_result` | Tool output preview |
-| `finding_recorded` | Scientific finding captured |
+| `finding_recorded` | Scientific finding with evidence level |
 | `thinking` | Model reasoning text |
 | `output_summarized` | Haiku compressed a large output |
-| `phase_changed` | Investigation phase transition (1-5) |
+| `literature_survey_completed` | PICO, search stats, evidence grade |
+| `phase_changed` | Investigation phase transition (1-6) |
 | `cost_update` | Progressive cost/token snapshot |
 | `hypothesis_approval_requested` | Awaiting user approval of hypotheses |
 | `domain_detected` | Domain identified with display config |

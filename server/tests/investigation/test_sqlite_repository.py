@@ -201,3 +201,46 @@ class TestEvents:
         await repository.save(inv)
         events = await repository.get_events(inv.id)
         assert events == []
+
+
+class TestEvidenceLevelRoundtrip:
+    @pytest.mark.asyncio
+    async def test_finding_evidence_level_persists(
+        self, repository: SqliteInvestigationRepository
+    ) -> None:
+        inv = Investigation(prompt="Test")
+        await repository.save(inv)
+
+        inv.record_finding(
+            Finding(
+                title="Systematic review",
+                detail="Meta-analysis shows pooled effect",
+                hypothesis_id="h1",
+                evidence_type="supporting",
+                evidence_level=1,
+            )
+        )
+        inv.record_finding(
+            Finding(
+                title="Case series",
+                detail="5 patients observed",
+                hypothesis_id="h1",
+                evidence_type="neutral",
+                evidence_level=5,
+            )
+        )
+        inv.record_finding(
+            Finding(
+                title="Unrated finding",
+                detail="No level assigned",
+                evidence_level=0,
+            )
+        )
+        await repository.update(inv)
+
+        retrieved = await repository.get_by_id(inv.id)
+        assert retrieved is not None
+        assert len(retrieved.findings) == 3
+        assert retrieved.findings[0].evidence_level == 1
+        assert retrieved.findings[1].evidence_level == 5
+        assert retrieved.findings[2].evidence_level == 0

@@ -14,7 +14,8 @@ export type SSEEventType =
   | "phase_changed"
   | "cost_update"
   | "hypothesis_approval_requested"
-  | "domain_detected";
+  | "domain_detected"
+  | "literature_survey_completed";
 
 export interface SSEEvent {
   event: SSEEventType;
@@ -131,6 +132,17 @@ export interface FindingRecordedData {
   evidence?: string;
   source_type?: string;
   source_id?: string;
+  evidence_level?: number;
+  investigation_id: string;
+}
+
+export interface LiteratureSurveyCompletedData {
+  pico: Record<string, string>;
+  search_queries: number;
+  total_results: number;
+  included_results: number;
+  evidence_grade: string;
+  assessment: string;
   investigation_id: string;
 }
 
@@ -221,6 +233,7 @@ export interface Finding {
   evidence?: string;
   source_type?: string;
   source_id?: string;
+  evidence_level?: number;
 }
 
 export interface CandidateRow {

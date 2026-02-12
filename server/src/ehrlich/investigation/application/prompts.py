@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from ehrlich.investigation.domain.domain_config import DomainConfig
@@ -577,17 +577,135 @@ _DEFAULT_CATEGORIES = frozenset({
 })
 
 
-def build_domain_classification_prompt(
+def build_pico_and_classification_prompt(
     categories: frozenset[str] | None = None,
 ) -> str:
-    """Build a domain classification prompt from registered categories."""
+    """Build a combined domain classification + PICO decomposition prompt.
+
+    Single Haiku call replaces the old separate classification step.
+    Produces domain category AND PICO framework for the literature survey.
+    """
     cats = categories or _DEFAULT_CATEGORIES
     cats_with_other = cats | {"other"}
     cat_str = ", ".join(sorted(cats_with_other))
     return (
-        "Classify this research prompt into exactly one domain category.\n\n"
+        "You are a scientific research analyst. Given a research prompt, "
+        "perform TWO tasks:\n\n"
+        "1. CLASSIFY the research domain into exactly one category.\n"
+        "2. DECOMPOSE the research question using the PICO framework "
+        "(Population, Intervention, Comparison, Outcome).\n\n"
         f"<categories>\n{cat_str}\n</categories>\n\n"
-        "Respond with ONLY the category name, nothing else."
+        "<instructions>\n"
+        "- Population: the subjects, organisms, or systems under study\n"
+        "- Intervention: the treatment, compound, protocol, or variable being tested\n"
+        "- Comparison: the control, baseline, or alternative being compared against\n"
+        "- Outcome: the measurable result or endpoint of interest\n"
+        "- Search terms: 3-5 broad search queries for literature discovery\n"
+        "</instructions>\n\n"
+        "<output_format>\n"
+        "Respond with ONLY valid JSON (no markdown fences):\n"
+        "{\n"
+        '  "domain": "category_name",\n'
+        '  "population": "description of subjects/systems",\n'
+        '  "intervention": "treatment/variable under study",\n'
+        '  "comparison": "control/baseline",\n'
+        '  "outcome": "measurable endpoint",\n'
+        '  "search_terms": ["broad query 1", "broad query 2", "broad query 3"]\n'
+        "}\n"
+        "</output_format>"
+    )
+
+
+def build_literature_survey_prompt(config: DomainConfig | None, pico: dict[str, Any]) -> str:
+    """Build structured literature survey prompt with PICO context.
+
+    Researcher gets domain-filtered tools and a structured protocol
+    instead of the old throwaway 'search 3-6 times' instruction.
+    """
+    pop = pico.get("population", "")
+    interv = pico.get("intervention", "")
+    comp = pico.get("comparison", "")
+    outcome = pico.get("outcome", "")
+    terms = pico.get("search_terms", [])
+    terms_str = ", ".join(f'"{t}"' for t in terms) if isinstance(terms, list) else str(terms)
+
+    return (
+        "You are a research scientist conducting a rapid scoping review "
+        "(Arksey & O'Malley 2005) to map the evidence landscape.\n\n"
+        "<pico_framework>\n"
+        f"  Population: {pop}\n"
+        f"  Intervention: {interv}\n"
+        f"  Comparison: {comp}\n"
+        f"  Outcome: {outcome}\n"
+        f"  Initial search terms: {terms_str}\n"
+        "</pico_framework>\n\n"
+        "<search_protocol>\n"
+        "Execute a multi-strategy search:\n\n"
+        "1. DATABASE QUERIES: Use `search_literature` with broad terms first, "
+        "then narrow based on results. Use `explore_dataset` or domain-specific "
+        "search tools to find quantitative data.\n\n"
+        "2. CITATION CHASING: For key papers found in step 1, use "
+        "`search_citations` to find referenced and citing papers. "
+        "Greenhalgh & Peacock (2005) found 51% of sources come from snowballing.\n\n"
+        "3. SATURATION RULE: Stop when additional queries yield fewer than "
+        "2 new unique results not already covered by previous searches.\n"
+        "</search_protocol>\n\n"
+        "<evidence_grading>\n"
+        "When recording findings with `record_finding`, assign an evidence_level:\n"
+        "  1 = Systematic review / meta-analysis\n"
+        "  2 = Randomized controlled trial / large-scale validated study\n"
+        "  3 = Cohort study / prospective observational\n"
+        "  4 = Case-control study / retrospective analysis\n"
+        "  5 = Case series / computational prediction / ML model\n"
+        "  6 = Expert opinion / mechanistic reasoning\n"
+        "  0 = Not applicable / unrated\n"
+        "</evidence_grading>\n\n"
+        "<rules>\n"
+        "1. Record every significant finding with `record_finding` including "
+        "evidence_level, source_type, and source_id.\n"
+        "2. Use at least 2 different search strategies (database + citation chasing).\n"
+        "3. Cite papers by DOI when referencing literature.\n"
+        "4. Be quantitative: report exact numbers, effect sizes, sample sizes.\n"
+        "5. Do NOT call `propose_hypothesis`, `design_experiment`, "
+        "`evaluate_hypothesis`, or `conclude_investigation`.\n"
+        "6. Stop after 6-10 tool calls or when search saturation is reached.\n"
+        "</rules>"
+    )
+
+
+def build_literature_assessment_prompt() -> str:
+    """Build Haiku prompt for body-of-evidence grading after literature survey.
+
+    GRADE-adapted grading + AMSTAR-2-adapted self-assessment.
+    """
+    return (
+        "You are a scientific evidence assessor. Given the findings from a "
+        "literature survey, grade the overall body of evidence and assess "
+        "the quality of the review process.\n\n"
+        "<evidence_grading>\n"
+        "Grade the body of evidence using GRADE-adapted criteria:\n"
+        "- high: Consistent results from multiple high-quality studies (levels 1-2)\n"
+        "- moderate: Results from well-designed studies with minor limitations\n"
+        "- low: Results from observational studies or studies with significant limitations\n"
+        "- very_low: Expert opinion only or severely limited evidence\n"
+        "</evidence_grading>\n\n"
+        "<self_assessment>\n"
+        "Assess the review process against 4 rapid-review quality domains "
+        "(adapted from AMSTAR 2):\n"
+        "1. Protocol-guided search (PICO framework used)\n"
+        "2. Multi-source search (more than 1 search strategy used)\n"
+        "3. Evidence quality assessed (evidence levels assigned to findings)\n"
+        "4. Transparent documentation (findings recorded with source provenance)\n"
+        "Report which domains were satisfied and which were not.\n"
+        "</self_assessment>\n\n"
+        "<output_format>\n"
+        "Respond with ONLY valid JSON (no markdown fences):\n"
+        "{\n"
+        '  "evidence_grade": "high|moderate|low|very_low",\n'
+        '  "reasoning": "Brief justification for the grade",\n'
+        '  "assessment": "Summary of which quality domains were met"\n'
+        "}\n"
+        "</output_format>"
     )
 
 

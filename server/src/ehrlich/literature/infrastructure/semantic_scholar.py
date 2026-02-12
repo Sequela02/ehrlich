@@ -114,6 +114,104 @@ class SemanticScholarClient(PaperSearchRepository):
             "SemanticScholar", f"DOI lookup failed after {_MAX_RETRIES} attempts: {last_error}"
         )
 
+    async def get_references(self, paper_id: str, limit: int = 10) -> list[Paper]:
+        last_error: Exception | None = None
+        for attempt in range(_MAX_RETRIES):
+            try:
+                resp = await self._client.get(
+                    f"/paper/{paper_id}/references",
+                    params={"fields": _FIELDS, "limit": min(limit, 100)},
+                )
+                if resp.status_code == 429:
+                    delay = _BASE_DELAY * (2**attempt)
+                    logger.warning(
+                        "SemanticScholar refs rate limited (%d/%d), retry in %.1fs",
+                        attempt + 1,
+                        _MAX_RETRIES,
+                        delay,
+                    )
+                    if attempt < _MAX_RETRIES - 1:
+                        await asyncio.sleep(delay)
+                        continue
+                    raise ExternalServiceError("SemanticScholar", "Rate limit exceeded")
+                resp.raise_for_status()
+                data = resp.json()
+                papers = []
+                for item in data.get("data", []):
+                    cited = item.get("citedPaper")
+                    if cited and cited.get("title"):
+                        papers.append(self._to_paper(cited))
+                return papers
+            except httpx.TimeoutException as e:
+                last_error = e
+                delay = _BASE_DELAY * (2**attempt)
+                logger.warning(
+                    "SemanticScholar references timeout (attempt %d/%d), retrying in %.1fs",
+                    attempt + 1,
+                    _MAX_RETRIES,
+                    delay,
+                )
+                if attempt < _MAX_RETRIES - 1:
+                    await asyncio.sleep(delay)
+                    continue
+            except httpx.HTTPStatusError as e:
+                raise ExternalServiceError(
+                    "SemanticScholar", f"HTTP {e.response.status_code}"
+                ) from e
+        raise ExternalServiceError(
+            "SemanticScholar",
+            f"References lookup failed after {_MAX_RETRIES} attempts: {last_error}",
+        )
+
+    async def get_citing(self, paper_id: str, limit: int = 10) -> list[Paper]:
+        last_error: Exception | None = None
+        for attempt in range(_MAX_RETRIES):
+            try:
+                resp = await self._client.get(
+                    f"/paper/{paper_id}/citations",
+                    params={"fields": _FIELDS, "limit": min(limit, 100)},
+                )
+                if resp.status_code == 429:
+                    delay = _BASE_DELAY * (2**attempt)
+                    logger.warning(
+                        "SemanticScholar cites rate limited (%d/%d), retry in %.1fs",
+                        attempt + 1,
+                        _MAX_RETRIES,
+                        delay,
+                    )
+                    if attempt < _MAX_RETRIES - 1:
+                        await asyncio.sleep(delay)
+                        continue
+                    raise ExternalServiceError("SemanticScholar", "Rate limit exceeded")
+                resp.raise_for_status()
+                data = resp.json()
+                papers = []
+                for item in data.get("data", []):
+                    citing = item.get("citingPaper")
+                    if citing and citing.get("title"):
+                        papers.append(self._to_paper(citing))
+                return papers
+            except httpx.TimeoutException as e:
+                last_error = e
+                delay = _BASE_DELAY * (2**attempt)
+                logger.warning(
+                    "SemanticScholar citations timeout (attempt %d/%d), retrying in %.1fs",
+                    attempt + 1,
+                    _MAX_RETRIES,
+                    delay,
+                )
+                if attempt < _MAX_RETRIES - 1:
+                    await asyncio.sleep(delay)
+                    continue
+            except httpx.HTTPStatusError as e:
+                raise ExternalServiceError(
+                    "SemanticScholar", f"HTTP {e.response.status_code}"
+                ) from e
+        raise ExternalServiceError(
+            "SemanticScholar",
+            f"Citations lookup failed after {_MAX_RETRIES} attempts: {last_error}",
+        )
+
     @staticmethod
     def _to_paper(data: dict[str, object]) -> Paper:
         authors_raw = data.get("authors", [])

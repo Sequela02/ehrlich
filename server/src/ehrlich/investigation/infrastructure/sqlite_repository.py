@@ -212,6 +212,7 @@ def _finding_to_dict(f: Finding) -> dict[str, Any]:
         "confidence": f.confidence,
         "source_type": f.source_type,
         "source_id": f.source_id,
+        "evidence_level": f.evidence_level,
     }
 
 
@@ -287,6 +288,7 @@ def _from_row(row: Any) -> Investigation:
             confidence=f.get("confidence", 0.0),
             source_type=f.get("source_type", ""),
             source_id=f.get("source_id", ""),
+            evidence_level=f.get("evidence_level", 0),
         )
         for f in findings_raw
     ]

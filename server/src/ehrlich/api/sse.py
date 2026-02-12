@@ -15,6 +15,7 @@ from ehrlich.investigation.domain.events import (
     HypothesisFormulated,
     InvestigationCompleted,
     InvestigationError,
+    LiteratureSurveyCompleted,
     NegativeControlRecorded,
     OutputSummarized,
     PhaseChanged,
@@ -41,6 +42,7 @@ class SSEEventType(StrEnum):
     COST_UPDATE = "cost_update"
     HYPOTHESIS_APPROVAL_REQUESTED = "hypothesis_approval_requested"
     DOMAIN_DETECTED = "domain_detected"
+    LITERATURE_SURVEY_COMPLETED = "literature_survey_completed"
 
 
 @dataclass(frozen=True)
@@ -147,6 +149,7 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
                 "evidence": event.evidence,
                 "source_type": event.source_type,
                 "source_id": event.source_id,
+                "evidence_level": event.evidence_level,
                 "investigation_id": event.investigation_id,
             },
         )
@@ -208,6 +211,19 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
             data={
                 "domain": event.domain,
                 "display_config": event.display_config,
+                "investigation_id": event.investigation_id,
+            },
+        )
+    if isinstance(event, LiteratureSurveyCompleted):
+        return SSEEvent(
+            event=SSEEventType.LITERATURE_SURVEY_COMPLETED,
+            data={
+                "pico": event.pico,
+                "search_queries": event.search_queries,
+                "total_results": event.total_results,
+                "included_results": event.included_results,
+                "evidence_grade": event.evidence_grade,
+                "assessment": event.assessment,
                 "investigation_id": event.investigation_id,
             },
         )

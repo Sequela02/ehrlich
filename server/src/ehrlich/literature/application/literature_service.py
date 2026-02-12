@@ -28,6 +28,27 @@ class LiteratureService:
                 return await self._fallback.search(query, limit)
             return []
 
+    async def search_citations(
+        self,
+        paper_id: str,
+        direction: str = "both",
+        limit: int = 10,
+    ) -> list[Paper]:
+        papers: list[Paper] = []
+        try:
+            if direction in ("references", "both"):
+                papers.extend(await self._primary.get_references(paper_id, limit))
+            if direction in ("citing", "both"):
+                papers.extend(await self._primary.get_citing(paper_id, limit))
+        except ExternalServiceError:
+            logger.warning("Citation search failed for %s", paper_id)
+            if self._fallback:
+                if direction in ("references", "both"):
+                    papers.extend(await self._fallback.get_references(paper_id, limit))
+                if direction in ("citing", "both"):
+                    papers.extend(await self._fallback.get_citing(paper_id, limit))
+        return papers
+
     async def get_reference(self, key_or_doi: str) -> Paper | None:
         paper = self._references.find_by_key(key_or_doi)
         if paper:

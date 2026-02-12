@@ -209,7 +209,7 @@ The core: Claude as an autonomous scientist.
 - [x] Tests: mock API, verify request/response handling
 
 ### 5B. Tool Registry
-- [x] Register all tools from all contexts (6 chemistry, 2 literature, 6 analysis, 3 prediction, 7 simulation, 6 sports, 6 investigation control -- 36 total)
+- [x] Register all tools from all contexts (6 chemistry, 3 literature, 6 analysis, 3 prediction, 7 simulation, 6 sports, 6 investigation control -- 37 total)
 - [x] Auto-generate JSON Schema from Python type hints + docstrings
 - [x] `get(name)` -> callable, `list_tools()` -> all registered tools, `list_schemas()` -> Anthropic-compatible schemas
 - [x] Schema format matches Anthropic tool_use specification
@@ -342,7 +342,7 @@ Cost-efficient multi-model orchestration, persistence, and UI polish.
 ### 8C. Multi-Model Orchestrator
 - [x] `MultiModelOrchestrator` with hypothesis-driven Director-Worker-Summarizer pattern
 - [x] Director (Opus) formulates hypotheses, designs experiments, evaluates evidence, synthesizes -- NO tool access
-- [x] Researcher (Sonnet) executes experiments with 36 domain-filtered tools (max 10 iterations per experiment)
+- [x] Researcher (Sonnet) executes experiments with 37 domain-filtered tools (max 10 iterations per experiment)
 - [x] Summarizer (Haiku) compresses large outputs exceeding threshold
 - [x] 7 prompts: director formulation/experiment/evaluation/synthesis, researcher experiment, scientist, summarizer
 - [x] Auto-fallback to single-model Orchestrator when researcher == director
@@ -453,7 +453,7 @@ Phase 2A-D    Phase 2E-G
            |
      Phase 10A (Hypothesis-Driven Engine) -- DONE
            |
-     Scientific Methodology Upgrade (cross-cutting) -- Phase 1 DONE, Phases 2-6 RESEARCHED
+     Scientific Methodology Upgrade (cross-cutting) -- Phases 1-2 DONE, Phases 3-6 RESEARCHED
            |
      Domain-Agnostic Generalization -- DONE
            |
@@ -469,7 +469,7 @@ Grounding every phase of the investigation workflow in established scientific me
 | # | Phase | Status |
 |---|-------|--------|
 | 1 | Hypothesis Formulation (Popper, Platt, Feynman, Bayesian) | DONE |
-| 2 | Literature Survey (PRISMA, evidence grading, bias assessment) | RESEARCHED |
+| 2 | Literature Survey (PICO, citation chasing, GRADE, AMSTAR-2) | DONE |
 | 3 | Experiment Design (Fisher, controls, statistical power) | RESEARCHED |
 | 4 | Evidence Evaluation (evidence hierarchy, GRADE, effect sizes) | RESEARCHED |
 | 5 | Negative Controls (sensitivity/specificity, ROC, Z-factor) | RESEARCHED |
@@ -629,7 +629,7 @@ Expose Ehrlich as a tool server for Claude Code / Claude Desktop via Model Conte
 ### 12A. MCP Transport
 - [ ] Stdio transport for Claude Code integration
 - [ ] SSE transport for Claude Desktop / remote clients
-- [ ] Tool registration: expose all 36 Ehrlich tools as MCP tools
+- [ ] Tool registration: expose all 37 Ehrlich tools as MCP tools
 
 ### 12B. Investigation Tool
 - [ ] `start_investigation(prompt, organism)` -- kick off full investigation, return ID

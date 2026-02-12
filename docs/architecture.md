@@ -38,10 +38,10 @@ Ehrlich uses a three-tier Claude model architecture for cost-efficient investiga
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesizes (3-5 calls)
     │                       NO tool access, structured JSON responses only
     │
-    ├── Sonnet 4.5 (Researcher) -- Executes experiments with 36 domain-filtered tools (10-20 calls, parallel x2)
+    ├── Sonnet 4.5 (Researcher) -- Executes experiments with 37 domain-filtered tools (10-20 calls, parallel x2)
     │                               Tool-calling loop with max_iterations_per_experiment guard
     │
-    └── Haiku 4.5 (Summarizer)  -- Compresses large tool outputs >2000 chars, classifies domains
+    └── Haiku 4.5 (Summarizer)  -- Compresses large tool outputs >2000 chars, PICO+classification, evidence grading
                                     Reduces context bloat, preserves key scientific data
 ```
 
@@ -49,9 +49,9 @@ Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesize
 
 ### Flow (Hypothesis-Driven)
 
-1. **Literature Survey** -- Haiku researcher searches papers and datasets
-2. **Domain Classification** -- Haiku classifies prompt into domain taxonomy, queries past investigations
-3. **Hypothesis Formulation** -- Opus Director formulates 2-4 hypotheses with predictions, criteria, scope, Bayesian priors (grounded in Popper, Platt, Feynman, Bayesian frameworks -- see `docs/scientific-methodology.md`)
+1. **Classification & PICO** -- Haiku decomposes prompt into PICO framework (Population, Intervention, Comparison, Outcome) and classifies domain in a single call
+2. **Literature Survey** -- Sonnet researcher conducts structured search with domain-filtered tools, citation chasing (snowballing), evidence-level grading; Haiku grades body-of-evidence (GRADE-adapted) and self-assesses quality (AMSTAR-2-adapted)
+3. **Hypothesis Formulation** -- Opus Director formulates 2-4 hypotheses with predictions, criteria, scope, Bayesian priors (grounded in Popper, Platt, Feynman, Bayesian frameworks -- see `docs/scientific-methodology.md`); receives structured XML literature context (PICO + graded findings)
 4. **User Approval Gate** -- User approves/rejects hypotheses before testing begins (5-min auto-approve timeout)
 5. **Experiment Design + Execution** -- Director designs experiments, 2 Sonnet researchers execute in parallel per batch (max 10 tool calls each)
 6. **Hypothesis Evaluation** -- Director compares findings against pre-defined success/failure criteria (objective, not subjective)
@@ -139,10 +139,10 @@ api/ -> investigation/application/ only
 
 1. User submits research prompt via Console (or selects a template)
 2. API creates Investigation, persists to SQLite, starts MultiModelOrchestrator
-3. **Haiku** classifies prompt into domain taxonomy, queries past completed investigations in same domain
+3. **Haiku** decomposes prompt via PICO framework (Population, Intervention, Comparison, Outcome) and classifies domain in a single call; queries past completed investigations in same domain
 4. **Domain detection** -- `DomainRegistry.detect()` selects `DomainConfig` (molecular/sports), emits `DomainDetected` SSE event with display config; researcher tool list filtered to domain-relevant tools
-5. **Researcher** (Sonnet) conducts literature survey
-6. **Director** (Opus) formulates 2-4 hypotheses with predictions, criteria, scope, Bayesian priors
+5. **Researcher** (Sonnet) conducts structured literature survey with domain-filtered tools, citation chasing, evidence-level grading; **Haiku** grades body-of-evidence (GRADE-adapted) and self-assesses quality (AMSTAR-2); emits `LiteratureSurveyCompleted` event
+6. **Director** (Opus) formulates 2-4 hypotheses with predictions, criteria, scope, Bayesian priors; receives structured XML literature context (PICO + graded findings)
 7. **User Approval Gate** -- user approves/rejects hypotheses (5-min timeout auto-approves)
 8. For each batch of 2 hypotheses:
    a. **Director** designs experiment (description + tool plan)
@@ -152,10 +152,11 @@ api/ -> investigation/application/ only
    e. If revised: new hypothesis spawned with parent link
 9. **Negative controls** recorded from formulation suggestions
 10. **Director** synthesizes final report with candidates, citations, cost
-11. All events stream via SSE (16 event types) to Console in real-time
+11. All events stream via SSE (17 event types) to Console in real-time
     - `DomainDetected` sends display config (score columns, visualization type) to frontend
-    - `FindingRecorded` includes evidence + source provenance (source_type, source_id)
-    - `PhaseChanged` tracks 5-step progress
+    - `FindingRecorded` includes evidence + source provenance (source_type, source_id) + evidence_level (1-6)
+    - `LiteratureSurveyCompleted` carries PICO, search stats, evidence grade, self-assessment
+    - `PhaseChanged` tracks 6-step progress
     - `CostUpdate` streams progressive cost snapshots
     - `HypothesisApprovalRequested` pauses for user steering
     - `InvestigationCompleted` includes candidates, hypotheses, findings, negative controls

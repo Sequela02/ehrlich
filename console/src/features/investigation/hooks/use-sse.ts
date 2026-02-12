@@ -10,6 +10,7 @@ import type {
   Finding,
   Hypothesis,
   HypothesisStatus,
+  LiteratureSurveyCompletedData,
   NegativeControl,
   PhaseInfo,
   SSEEvent,
@@ -33,6 +34,7 @@ const EVENT_TYPES: SSEEventType[] = [
   "cost_update",
   "hypothesis_approval_requested",
   "domain_detected",
+  "literature_survey_completed",
 ];
 
 const MAX_RETRIES = 3;
@@ -57,6 +59,7 @@ interface SSEState {
   approvalPending: boolean;
   pendingApprovalHypotheses: { id: string; statement: string; rationale: string }[];
   domainConfig: DomainDisplayConfig | null;
+  literatureSurvey: LiteratureSurveyCompletedData | null;
   error: string | null;
   toolCallCount: number;
   activeToolName: string;
@@ -86,6 +89,9 @@ export function useSSE(url: string | null): SSEState {
     { id: string; statement: string; rationale: string }[]
   >([]);
   const [domainConfig, setDomainConfig] = useState<DomainDisplayConfig | null>(null);
+  const [literatureSurvey, setLiteratureSurvey] = useState<LiteratureSurveyCompletedData | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [toolCallCount, setToolCallCount] = useState(0);
   const [activeToolName, setActiveToolName] = useState("");
@@ -234,6 +240,7 @@ export function useSSE(url: string | null): SSEState {
             evidence: (parsed.data.evidence as string) || undefined,
             source_type: (parsed.data.source_type as string) || undefined,
             source_id: (parsed.data.source_id as string) || undefined,
+            evidence_level: (parsed.data.evidence_level as number) || undefined,
           },
         ]);
         break;
@@ -261,6 +268,9 @@ export function useSSE(url: string | null): SSEState {
         break;
       case "domain_detected":
         setDomainConfig(parsed.data.display_config as unknown as DomainDisplayConfig);
+        break;
+      case "literature_survey_completed":
+        setLiteratureSurvey(parsed.data as unknown as LiteratureSurveyCompletedData);
         break;
       case "completed": {
         const d = parsed.data as unknown as CompletedData;
@@ -381,6 +391,7 @@ export function useSSE(url: string | null): SSEState {
     approvalPending,
     pendingApprovalHypotheses,
     domainConfig,
+    literatureSurvey,
     error,
     toolCallCount,
     activeToolName,

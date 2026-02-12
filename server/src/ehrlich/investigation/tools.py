@@ -9,6 +9,7 @@ async def record_finding(
     evidence: str = "",
     source_type: str = "",
     source_id: str = "",
+    evidence_level: int = 0,
 ) -> str:
     """Record a scientific finding linked to a hypothesis.
 
@@ -23,6 +24,7 @@ async def record_finding(
         evidence: Raw evidence data or citation
         source_type: Data source type (chembl, pdb, doi, pubchem, uniprot, opentargets, gtopdb)
         source_id: Specific identifier from the source (e.g. CHEMBL25, 2ABC, 10.1038/...)
+        evidence_level: Evidence hierarchy 0-6 (0=unrated, 1-6 per evidence pyramid)
     """
     return json.dumps({"status": "recorded", "title": title, "hypothesis_id": hypothesis_id})
 

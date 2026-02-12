@@ -13,10 +13,12 @@ from ehrlich.investigation.application.prompts import (
     DIRECTOR_SYNTHESIS_PROMPT,
     RESEARCHER_EXPERIMENT_PROMPT,
     SUMMARIZER_PROMPT,
-    build_domain_classification_prompt,
     build_experiment_prompt,
     build_formulation_prompt,
+    build_literature_assessment_prompt,
+    build_literature_survey_prompt,
     build_multi_investigation_context,
+    build_pico_and_classification_prompt,
     build_researcher_prompt,
     build_synthesis_prompt,
 )
@@ -34,6 +36,7 @@ from ehrlich.investigation.domain.events import (
     HypothesisFormulated,
     InvestigationCompleted,
     InvestigationError,
+    LiteratureSurveyCompleted,
     NegativeControlRecorded,
     OutputSummarized,
     PhaseChanged,
@@ -137,48 +140,47 @@ class MultiModelOrchestrator:
     async def run(self, investigation: Investigation) -> AsyncGenerator[DomainEvent, None]:
         investigation.status = InvestigationStatus.RUNNING
         cost = CostTracker()
+        pico: dict[str, Any] = {}
 
         try:
-            # 1. Literature survey by researcher (quick phase)
+            # 1. Classify domain + PICO decomposition (single Haiku call)
             yield PhaseChanged(
                 phase=1,
-                name="Literature Survey",
-                description="Searching scientific literature and available datasets",
+                name="Classification & PICO",
+                description="Detecting domain and decomposing research question",
                 investigation_id=investigation.id,
             )
-            literature_summary = ""
-            async for event in self._run_literature_survey(investigation, cost):
-                yield event
-                if isinstance(event, Thinking):
-                    literature_summary += event.text + "\n"
 
-            yield self._cost_event(cost, investigation.id)
-
-            # Classify domain via Haiku and build prior investigation context
             prior_context = ""
             if self._repository:
                 valid_categories: frozenset[str] = frozenset()
                 if self._domain_registry:
                     valid_categories = self._domain_registry.all_categories()
-                classification_prompt = build_domain_classification_prompt(
-                    valid_categories
-                )
-                domain_response = await self._summarizer.create_message(
-                    system=classification_prompt,
+                pico_prompt = build_pico_and_classification_prompt(valid_categories)
+                pico_response = await self._summarizer.create_message(
+                    system=pico_prompt,
                     messages=[{"role": "user", "content": investigation.prompt}],
                     tools=[],
                 )
-                domain_text = (
-                    domain_response.content[0].get("text", "other").strip().lower()
-                    if domain_response.content
-                    else "other"
-                )
-                investigation.domain = domain_text
                 cost.add_usage(
-                    domain_response.input_tokens,
-                    domain_response.output_tokens,
+                    pico_response.input_tokens,
+                    pico_response.output_tokens,
                     self._summarizer.model,
                 )
+                pico_text = ""
+                for block in pico_response.content:
+                    if block.get("type") == "text":
+                        pico_text += block["text"]
+                pico_data = _parse_json(pico_text)
+                domain_text = pico_data.get("domain", "other").strip().lower()
+                investigation.domain = domain_text
+                pico = {
+                    "population": pico_data.get("population", ""),
+                    "intervention": pico_data.get("intervention", ""),
+                    "comparison": pico_data.get("comparison", ""),
+                    "outcome": pico_data.get("outcome", ""),
+                    "search_terms": pico_data.get("search_terms", []),
+                }
 
                 # Detect domain config and yield event
                 if self._domain_registry:
@@ -202,9 +204,23 @@ class MultiModelOrchestrator:
                 if related:
                     prior_context = build_multi_investigation_context(related)
 
-            # 2. Director formulates hypotheses
+            yield self._cost_event(cost, investigation.id)
+
+            # 2. Literature survey by researcher (structured, domain-aware)
             yield PhaseChanged(
                 phase=2,
+                name="Literature Survey",
+                description="Structured literature search with PICO framework and citation chasing",
+                investigation_id=investigation.id,
+            )
+            async for event in self._run_literature_survey(investigation, cost, pico):
+                yield event
+
+            yield self._cost_event(cost, investigation.id)
+
+            # 3. Director formulates hypotheses
+            yield PhaseChanged(
+                phase=3,
                 name="Formulation",
                 description="Director formulating testable hypotheses from literature evidence",
                 investigation_id=investigation.id,
@@ -215,14 +231,15 @@ class MultiModelOrchestrator:
                 if self._active_config
                 else DIRECTOR_FORMULATION_PROMPT
             )
+
+            # Build structured XML context from PICO + findings
+            literature_context = self._build_literature_context(investigation, pico)
             formulation = await self._director_call(
                 cost,
                 formulation_prompt,
                 f"Research prompt: {investigation.prompt}\n\n"
-                f"Literature survey results:\n{literature_summary[:3000]}\n\n"
-                f"Findings so far:\n"
-                + "\n".join(f"- {f.title}: {f.detail}" for f in investigation.findings)
-                + "\n\nFormulate 2-4 testable hypotheses and identify negative controls."
+                f"{literature_context}\n\n"
+                f"Formulate 2-4 testable hypotheses and identify negative controls."
                 + prior_section,
             )
 
@@ -284,9 +301,9 @@ class MultiModelOrchestrator:
                     logger.info("Approval timeout, auto-approving all hypotheses")
                 self._approval_event.clear()
 
-            # 3. Hypothesis loop -- batched parallel execution
+            # 4. Hypothesis loop -- batched parallel execution
             yield PhaseChanged(
-                phase=3,
+                phase=4,
                 name="Hypothesis Testing",
                 description="Running parallel experiments to test hypotheses",
                 investigation_id=investigation.id,
@@ -481,9 +498,9 @@ class MultiModelOrchestrator:
 
                 yield self._cost_event(cost, investigation.id)
 
-            # 4. Negative controls (from director suggestions)
+            # 5. Negative controls (from director suggestions)
             yield PhaseChanged(
-                phase=4,
+                phase=5,
                 name="Negative Controls",
                 description="Validating model predictions with known-inactive compounds",
                 investigation_id=investigation.id,
@@ -510,9 +527,9 @@ class MultiModelOrchestrator:
                         investigation_id=investigation.id,
                     )
 
-            # 5. Director synthesizes
+            # 6. Director synthesizes
             yield PhaseChanged(
-                phase=5,
+                phase=6,
                 name="Synthesis",
                 description="Director synthesizing final report and ranking candidates",
                 investigation_id=investigation.id,
@@ -637,6 +654,32 @@ class MultiModelOrchestrator:
             investigation.cost_data = cost.to_dict()
             yield InvestigationError(error=str(e), investigation_id=investigation.id)
 
+    @staticmethod
+    def _build_literature_context(
+        investigation: Investigation,
+        pico: dict[str, Any],
+    ) -> str:
+        """Build structured XML context from PICO + findings for Director formulation."""
+        parts: list[str] = ["<literature_survey>"]
+        pop = pico.get("population", "")
+        interv = pico.get("intervention", "")
+        comp = pico.get("comparison", "")
+        outcome = pico.get("outcome", "")
+        parts.append(
+            f'  <pico population="{pop}" intervention="{interv}" '
+            f'comparison="{comp}" outcome="{outcome}"/>'
+        )
+        if investigation.findings:
+            parts.append("  <findings>")
+            for f in investigation.findings:
+                parts.append(
+                    f'    <finding level="{f.evidence_level}" '
+                    f'type="{f.evidence_type}">{f.title}: {f.detail}</finding>'
+                )
+            parts.append("  </findings>")
+        parts.append("</literature_survey>")
+        return "\n".join(parts)
+
     async def _director_call(
         self,
         cost: CostTracker,
@@ -690,36 +733,53 @@ class MultiModelOrchestrator:
         self,
         investigation: Investigation,
         cost: CostTracker,
+        pico: dict[str, Any],
     ) -> AsyncGenerator[DomainEvent, None]:
-        """Quick literature survey before hypothesis formulation."""
-        tool_schemas = self._registry.list_schemas()
-        lit_tools = {
-            "search_literature",
-            "get_reference",
-            "explore_dataset",
-            "analyze_substructures",
-            "compute_properties",
-            "record_finding",
-            "validate_smiles",
-        }
-        tool_schemas = [t for t in tool_schemas if t["name"] in lit_tools]
+        """Structured literature survey with PICO, citation chasing, and evidence grading."""
+        # A. Domain-filtered tools (no hardcoded set)
+        if self._active_config:
+            excluded = {
+                "conclude_investigation",
+                "propose_hypothesis",
+                "design_experiment",
+                "evaluate_hypothesis",
+            }
+            tool_schemas = [
+                t for t in self._registry.list_schemas_for_domain(
+                    self._active_config.tool_tags
+                )
+                if t["name"] not in excluded
+            ]
+        else:
+            lit_tools = {
+                "search_literature",
+                "search_citations",
+                "get_reference",
+                "explore_dataset",
+                "record_finding",
+            }
+            tool_schemas = [t for t in self._registry.list_schemas() if t["name"] in lit_tools]
+
+        # Build structured survey prompt
+        survey_prompt = build_literature_survey_prompt(self._active_config, pico)
 
         messages: list[dict[str, Any]] = [
             {
                 "role": "user",
                 "content": (
                     f"Research prompt: {investigation.prompt}\n\n"
-                    f"Conduct a brief literature survey. Search for relevant papers, "
-                    f"explore available datasets, and record key findings. "
-                    f"Use 3-6 tool calls, then stop."
+                    f"Conduct a structured literature survey following the protocol above."
                 ),
             },
         ]
 
+        search_queries = 0
+        total_results = 0
+
         for _iteration in range(self._max_iterations_per_experiment):
             investigation.iteration += 1
             response = await self._researcher.create_message(
-                system=self._researcher_prompt,
+                system=survey_prompt,
                 messages=messages,
                 tools=tool_schemas,
             )
@@ -747,6 +807,12 @@ class MultiModelOrchestrator:
                 tool_use_id = tool_block["id"]
                 cost.add_tool_call()
 
+                # Track search stats
+                if tool_name in ("search_literature", "search_citations", "explore_dataset",
+                                 "search_bioactivity", "search_compounds", "search_pharmacology",
+                                 "search_sports_literature", "search_supplement_evidence"):
+                    search_queries += 1
+
                 yield ToolCalled(
                     tool_name=tool_name,
                     tool_input=tool_input,
@@ -755,6 +821,14 @@ class MultiModelOrchestrator:
 
                 result_str = await self._dispatch_tool(tool_name, tool_input, investigation)
                 result_str = _compact_result(tool_name, result_str)
+
+                # Track result counts
+                try:
+                    result_data = json.loads(result_str)
+                    if isinstance(result_data, dict):
+                        total_results += int(result_data.get("count", 0))
+                except (json.JSONDecodeError, TypeError, ValueError):
+                    pass
 
                 summarized_str, summarize_event = await self._summarize_output(
                     cost, tool_name, result_str, investigation.id
@@ -779,6 +853,7 @@ class MultiModelOrchestrator:
                         evidence_type=tool_input.get("evidence_type", "neutral"),
                         source_type=tool_input.get("source_type", ""),
                         source_id=tool_input.get("source_id", ""),
+                        evidence_level=int(tool_input.get("evidence_level", 0)),
                     )
                     investigation.record_finding(finding)
                     yield FindingRecorded(
@@ -789,6 +864,7 @@ class MultiModelOrchestrator:
                         evidence=finding.evidence,
                         source_type=finding.source_type,
                         source_id=finding.source_id,
+                        evidence_level=finding.evidence_level,
                         investigation_id=investigation.id,
                     )
 
@@ -801,6 +877,43 @@ class MultiModelOrchestrator:
                 )
 
             messages.append({"role": "user", "content": tool_results})
+
+        # B. Body-of-evidence grading (Haiku, 1 call)
+        evidence_grade = ""
+        assessment = ""
+        if investigation.findings:
+            findings_for_grading = "\n".join(
+                f"- [level={f.evidence_level}] {f.title}: {f.detail}"
+                for f in investigation.findings
+            )
+            grade_response = await self._summarizer.create_message(
+                system=build_literature_assessment_prompt(),
+                messages=[{"role": "user", "content": findings_for_grading}],
+                tools=[],
+            )
+            cost.add_usage(
+                grade_response.input_tokens,
+                grade_response.output_tokens,
+                self._summarizer.model,
+            )
+            grade_text = ""
+            for block in grade_response.content:
+                if block.get("type") == "text":
+                    grade_text += block["text"]
+            grade_data = _parse_json(grade_text)
+            evidence_grade = grade_data.get("evidence_grade", "")
+            assessment = grade_data.get("assessment", "")
+
+        # C. Yield LiteratureSurveyCompleted event
+        yield LiteratureSurveyCompleted(
+            pico=pico,
+            search_queries=search_queries,
+            total_results=total_results,
+            included_results=len(investigation.findings),
+            evidence_grade=evidence_grade,
+            assessment=assessment,
+            investigation_id=investigation.id,
+        )
 
     async def _run_researcher_experiment(
         self,
@@ -945,6 +1058,7 @@ class MultiModelOrchestrator:
                         evidence_type=e_type,
                         source_type=tool_input.get("source_type", ""),
                         source_id=tool_input.get("source_id", ""),
+                        evidence_level=int(tool_input.get("evidence_level", 0)),
                     )
                     async with self._state_lock:
                         investigation.record_finding(finding)
@@ -966,6 +1080,7 @@ class MultiModelOrchestrator:
                         evidence=finding.evidence,
                         source_type=finding.source_type,
                         source_id=finding.source_id,
+                        evidence_level=finding.evidence_level,
                         investigation_id=investigation.id,
                     )
 

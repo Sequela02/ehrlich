@@ -9,3 +9,9 @@ class PaperSearchRepository(ABC):
 
     @abstractmethod
     async def get_by_doi(self, doi: str) -> Paper | None: ...
+
+    @abstractmethod
+    async def get_references(self, paper_id: str, limit: int = 10) -> list[Paper]: ...
+
+    @abstractmethod
+    async def get_citing(self, paper_id: str, limit: int = 10) -> list[Paper]: ...
