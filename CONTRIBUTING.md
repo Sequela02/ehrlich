@@ -181,7 +181,7 @@ YOUR_DOMAIN = DomainConfig(
     ),
     attribute_keys=("category", "source"), # Non-numeric candidate attributes
     negative_control_threshold=0.5,        # Score below = correctly classified
-    visualization_type="table",            # "molecular" for 3Dmol.js, "table" for generic
+    # visualization is reactive: LiveLabViewer auto-appears for molecular tools,
     hypothesis_types=(
         "mechanistic",                     # Valid hypothesis_type values for this domain
         "correlational",
@@ -205,7 +205,7 @@ YOUR_DOMAIN = DomainConfig(
 ```
 
 Key decisions:
-- **`visualization_type`**: Use `"molecular"` only if your candidates are SMILES strings and you want 3Dmol.js. Use `"table"` for everything else.
+- **Visualization**: Visualization is reactive -- LiveLabViewer auto-appears when molecular tool events (docking, descriptors, etc.) are detected in the SSE stream. Chart visualizations render inline from `VisualizationRendered` events. No configuration needed.
 - **`tool_tags`**: This frozenset determines which tools the Researcher can see. Include `"literature"` if you want paper search.
 - **`director_examples`**: These are the most impactful part. Good multishot examples make the Director formulate domain-appropriate hypotheses. Use `{{` and `}}` for literal braces in f-string-like contexts.
 - **`score_definitions`**: These become the columns in the CandidateTable. The frontend auto-generates color-coded cells based on thresholds.

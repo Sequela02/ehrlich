@@ -554,7 +554,7 @@ Generalized the entire engine from molecular-science-specific to domain-agnostic
 ### Frontend Generalization
 - [x] Dynamic score columns from `DomainDisplayConfig` (replaces hardcoded Pred/Dock/ADMET/Resist)
 - [x] Conditional MolViewer2D: only when `identifier_type === "smiles"`
-- [x] Conditional Lab View tab: only when `visualization_type === "molecular"`
+- [x] Unified reactive VisualizationPanel: LiveLabViewer auto-appears for molecular tool events, charts render inline
 - [x] 6 template cards (4 molecular + 2 sports) with domain badges
 - [x] Generic candidate comparison, negative control panel, markdown export
 

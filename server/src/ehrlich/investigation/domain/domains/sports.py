@@ -47,7 +47,6 @@ SPORTS_SCIENCE = DomainConfig(
     ),
     attribute_keys=("sport", "training_type", "evidence_level"),
     negative_control_threshold=0.5,
-    visualization_type="table",
     hypothesis_types=(
         "physiological",
         "performance",

@@ -22,6 +22,17 @@ const SMILES_INPUT_TOOLS = new Set([
   "predict_admet",
 ]);
 
+/** All tool names that produce molecular 3D data -- used to auto-detect
+ *  whether LiveLabViewer should render inside VisualizationPanel. */
+export const MOLECULAR_TOOL_NAMES = new Set([
+  ...SMILES_INPUT_TOOLS,
+  "dock_against_target",
+  "tanimoto_similarity",
+  "search_compounds",
+  "predict_candidates",
+  "search_protein_targets",
+]);
+
 export function buildSceneUpdates(event: SSEEventData): SceneAction[] {
   const { type, data } = event;
 

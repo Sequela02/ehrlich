@@ -29,7 +29,6 @@ class DomainConfig:
     score_definitions: tuple[ScoreDefinition, ...]
     attribute_keys: tuple[str, ...]
     negative_control_threshold: float = 0.5
-    visualization_type: str = "molecular"
     hypothesis_types: tuple[str, ...] = ()
     valid_domain_categories: tuple[str, ...] = ()
     template_prompts: tuple[dict[str, str], ...] = ()
@@ -46,7 +45,6 @@ class DomainConfig:
             "identifier_type": self.identifier_type,
             "identifier_label": self.identifier_label,
             "candidate_label": self.candidate_label,
-            "visualization_type": self.visualization_type,
             "score_columns": [
                 {
                     "key": sd.key,
@@ -105,7 +103,6 @@ def merge_domain_configs(configs: list[DomainConfig]) -> DomainConfig:
         score_definitions=tuple(sd for c in sorted_configs for sd in c.score_definitions),
         attribute_keys=tuple(attrs),
         negative_control_threshold=first.negative_control_threshold,
-        visualization_type=first.visualization_type,
         hypothesis_types=tuple(hyp_types),
         valid_domain_categories=tuple(
             cat for c in sorted_configs for cat in c.valid_domain_categories

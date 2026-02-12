@@ -287,7 +287,6 @@ export interface DomainDisplayConfig {
   identifier_type: string;
   identifier_label: string;
   candidate_label: string;
-  visualization_type: "molecular" | "chart" | "table";
   score_columns: ScoreColumnConfig[];
   attribute_keys: string[];
   domains?: DomainDisplayConfig[];

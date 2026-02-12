@@ -230,7 +230,6 @@ class ToolGroup(BaseModel):
 class DomainInfo(BaseModel):
     name: str
     display_name: str
-    visualization_type: str
     tool_count: int
     score_definitions: list[dict[str, Any]]
     hypothesis_types: list[str]
@@ -261,7 +260,6 @@ async def get_methodology() -> MethodologyResponse:
             DomainInfo(
                 name=config.name,
                 display_name=config.display_name,
-                visualization_type=config.visualization_type,
                 tool_count=len(domain_tools),
                 score_definitions=[
                     {

@@ -8,17 +8,16 @@ interface LiveLabViewerProps {
   events: SSEEvent[];
   completed: boolean;
   experiments?: Experiment[];
-  activeExperimentId?: string | null;
-  onExperimentChange?: (id: string | null) => void;
 }
 
-export function LiveLabViewer({ events, completed, experiments, activeExperimentId, onExperimentChange }: LiveLabViewerProps) {
+export function LiveLabViewer({ events, completed, experiments }: LiveLabViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<GLViewer | null>(null);
   const processedRef = useRef(0);
   const seenSmilesRef = useRef(new Set<string>());
   const [ready, setReady] = useState(false);
   const [hasContent, setHasContent] = useState(false);
+  const [activeExperimentId, setActiveExperimentId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -84,14 +83,14 @@ export function LiveLabViewer({ events, completed, experiments, activeExperiment
 
   return (
     <div className="relative overflow-hidden rounded-lg border border-border">
-      {experiments && experiments.length > 0 && onExperimentChange && (
+      {experiments && experiments.length > 0 && (
         <div className="flex items-center gap-2 border-b border-border p-2">
           <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
             Experiment:
           </span>
           <select
             value={activeExperimentId ?? "all"}
-            onChange={(e) => onExperimentChange(e.target.value === "all" ? null : e.target.value)}
+            onChange={(e) => setActiveExperimentId(e.target.value === "all" ? null : e.target.value)}
             className="rounded-md border border-border bg-surface px-2 py-1 text-xs text-foreground"
           >
             <option value="all">All</option>

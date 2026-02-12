@@ -62,14 +62,14 @@ class DomainConfig:
     candidate_label: str         # "Candidate Molecules" or "Training Protocols"
     tool_tags: frozenset[str]    # which tool categories this domain uses
     score_definitions: tuple[ScoreDefinition, ...]  # dynamic table columns
-    visualization_type: str      # "molecular" (3Dmol.js) or "table"
+    # visualization is reactive -- determined by tool events in the stream
     hypothesis_types: tuple[str, ...]     # valid hypothesis categories
     director_examples: str       # multishot examples for Opus
     experiment_examples: str     # tool usage examples for Sonnet
     synthesis_scoring_instructions: str   # how to score candidates
 ```
 
-One config drives: tool filtering, prompt adaptation, frontend rendering, score column definitions, and visualization type selection. No if/else chains. No feature flags. Configuration over code.
+One config drives: tool filtering, prompt adaptation, frontend rendering, and score column definitions. Visualization is reactive -- LiveLabViewer auto-appears when molecular tool events are detected in the stream, and chart visualizations render inline from `VisualizationRendered` events. No if/else chains. No feature flags. Configuration over code.
 
 ### Tool Tagging: Domain-Filtered Availability
 
@@ -89,7 +89,7 @@ The frontend went from hardcoded columns to data-driven rendering:
 
 - **CandidateTable**: Score columns come from `DomainDisplayConfig.score_columns`, not constants. Each column knows its label, format, threshold, and whether higher is better.
 - **CandidateDetail**: Routes to `MolecularDetail` (2D/3D/descriptors) when `identifier_type === "smiles"`, or `GenericDetail` (score/attribute cards) otherwise.
-- **Lab View tab**: Only appears when `visualization_type === "molecular"`. Sports investigations show Timeline + Diagram without the 3Dmol.js scene.
+- **Visualization**: Unified `VisualizationPanel` renders all visualizations inline. LiveLabViewer auto-appears when molecular tool events are detected in the SSE stream. Chart visualizations render from `VisualizationRendered` events. No static configuration needed.
 - **Template cards**: Each template carries a domain badge. Users see both molecular and sports templates on the home page.
 
 The `DomainDetected` SSE event sends the full display config to the frontend early in the investigation, before any results arrive.
@@ -161,7 +161,6 @@ The engine becomes a general-purpose scientific reasoning framework. The domains
 DomainConfig (frozen dataclass)
     ├── tool_tags → ToolRegistry.list_schemas_for_domain()
     ├── score_definitions → CandidateTable dynamic columns
-    ├── visualization_type → conditional Lab View tab
     ├── director_examples → build_formulation_prompt()
     ├── experiment_examples → build_experiment_prompt()
     ├── synthesis_scoring_instructions → build_synthesis_prompt()

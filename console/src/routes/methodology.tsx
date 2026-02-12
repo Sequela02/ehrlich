@@ -226,9 +226,6 @@ function DomainRegistry({ domains }: { domains: Methodology["domains"] }) {
                 <span className="rounded-full bg-muted px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground/70">
                   {domain.tool_count} tools
                 </span>
-                <span className="rounded-full bg-muted px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground/70">
-                  {domain.visualization_type}
-                </span>
               </div>
             </button>
             {expanded === domain.name && (

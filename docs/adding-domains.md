@@ -103,7 +103,7 @@ GENOMICS = DomainConfig(
     ),
     attribute_keys=("gene_symbol", "chromosome", "consequence"),
     negative_control_threshold=0.5,
-    visualization_type="table",
+    # visualization is reactive: LiveLabViewer auto-appears for molecular tools,
     hypothesis_types=("mechanistic", "epidemiological", "pharmacogenomic"),
     valid_domain_categories=("genomics", "genetics", "pharmacogenomics"),
     template_prompts=(...),
@@ -164,7 +164,6 @@ Create tests for:
 | `score_definitions` | `tuple[ScoreDefinition, ...]` | Score columns for candidate table |
 | `attribute_keys` | `tuple[str, ...]` | Extra attribute columns |
 | `negative_control_threshold` | `float` | Score threshold for negative controls |
-| `visualization_type` | `str` | "molecular", "chart", or "table" |
 | `hypothesis_types` | `tuple[str, ...]` | Valid hypothesis types for this domain |
 | `valid_domain_categories` | `tuple[str, ...]` | Categories the Haiku classifier can output |
 | `template_prompts` | `tuple[dict, ...]` | Template research questions for home page |

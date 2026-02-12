@@ -4,7 +4,7 @@
 
 Ehrlich is a domain-agnostic scientific discovery platform built for the Claude Code Hackathon (Feb 10-16, 2026). It uses Claude as a hypothesis-driven scientific reasoning engine that works across multiple scientific domains. Named after Paul Ehrlich, the father of the "magic bullet" concept.
 
-The hypothesis-driven engine is domain-agnostic: a pluggable `DomainConfig` + `DomainRegistry` system lets any scientific domain plug in with its own tools, score definitions, prompt examples, and visualization types. Currently supports two domains:
+The hypothesis-driven engine is domain-agnostic: a pluggable `DomainConfig` + `DomainRegistry` system lets any scientific domain plug in with its own tools, score definitions, and prompt examples. Visualization is reactive -- LiveLabViewer auto-appears when molecular tool events are detected in the stream, chart visualizations render inline from `VisualizationRendered` events. Currently supports two domains:
 
 - **Molecular Science** -- antimicrobial resistance, drug discovery, toxicology, agricultural biocontrol
 - **Sports Science** -- training protocol optimization, injury risk assessment, supplement evidence analysis
@@ -196,7 +196,7 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - **Protein targets**: YAML-configured (`data/targets/*.yaml`) + dynamic RCSB PDB discovery
 - **Resistance data**: YAML-configured (`data/resistance/*.yaml`), extensible per domain
 - 7 control tools: `propose_hypothesis`, `design_experiment`, `evaluate_hypothesis`, `record_finding`, `record_negative_control`, `search_prior_research`, `conclude_investigation`
-- **Domain configuration**: `DomainConfig` defines per-domain tool tags, score definitions, prompt examples, visualization type; `DomainRegistry` auto-detects domain from classification; `DomainDetected` SSE event sends display config to frontend
+- **Domain configuration**: `DomainConfig` defines per-domain tool tags, score definitions, prompt examples; `DomainRegistry` auto-detects domain from classification; `DomainDetected` SSE event sends display config to frontend
 - **Multi-domain investigations**: `DomainRegistry.detect()` returns `list[DomainConfig]` for cross-domain research; `merge_domain_configs()` creates synthetic merged config with union of tool_tags, concatenated score_definitions, joined prompt examples; `DomainDisplayConfig.domains` carries sub-domain list to frontend
 - **Self-referential research**: `search_prior_research` tool queries FTS5 full-text index of past investigation findings; indexed on completion via `_rebuild_fts()`; intercepted in orchestrator `_dispatch_tool()` and routed to `SqliteInvestigationRepository.search_findings()`; "ehrlich" source type on findings links to past investigations
 - **MCP bridge**: Optional `MCPBridge` connects to external MCP servers (e.g. Excalidraw for visual summaries); tools registered dynamically via `ToolRegistry.register_mcp_tools()`; lifecycle managed by orchestrator (connect on start, disconnect on completion); enabled via `EHRLICH_MCP_EXCALIDRAW=true` env var
@@ -234,8 +234,8 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - `CompletionSummaryCard` replaces `ActiveExperimentCard` post-completion (candidate + finding + hypothesis counts)
 - `HypothesisBoard`: kanban-style card grid showing hypothesis status (proposed/testing/supported/refuted/revised)
 - `NegativeControlPanel`: table of known-inactive compounds with pass/fail classification indicators
-- **Live Lab Viewer**: 3Dmol.js scene that updates in real-time from SSE events -- protein targets load, ligands dock, candidates color by score
-- `LiveLabViewer` subscribes to SSE stream, renders molecular scene: protein cartoon + ligand sticks + score labels
+- **Unified Visualization**: `VisualizationPanel` is the single rendering surface for all visualizations. LiveLabViewer (3Dmol.js) auto-appears when molecular tool events are detected in the SSE stream. Chart visualizations from `VisualizationRendered` events render alongside.
+- `LiveLabViewer` subscribes to SSE stream, renders molecular scene: protein cartoon + ligand sticks + score labels. Self-contained with internal experiment filter state.
 - SSE event → 3D action mapping: `dock_against_target` → ligand appears in binding pocket, `predict_candidates` → molecules color by probability, `completed` → top candidates glow
 - Interactive: rotate, zoom, click molecules for details; split-pane with Timeline
 - **React Flow investigation diagrams**: `@xyflow/react` node graph with custom `InvestigationNode` and `AnnotationNode` types

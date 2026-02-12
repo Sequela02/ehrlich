@@ -10,7 +10,6 @@ interface ScoreDefinition {
 interface DomainInfo {
   name: string;
   display_name: string;
-  visualization_type: string;
   tool_count: number;
   score_definitions: ScoreDefinition[];
   hypothesis_types: string[];

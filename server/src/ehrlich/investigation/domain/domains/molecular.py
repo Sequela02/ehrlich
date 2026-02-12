@@ -47,7 +47,6 @@ MOLECULAR_SCIENCE = DomainConfig(
     ),
     attribute_keys=("resistance_risk",),
     negative_control_threshold=0.5,
-    visualization_type="molecular",
     hypothesis_types=(
         "mechanistic",
         "structural",

@@ -12,7 +12,6 @@ import {
   ActiveExperimentCard,
   CompletionSummaryCard,
   NegativeControlPanel,
-  LiveLabViewer,
   InvestigationDiagram,
 } from "@/features/investigation/components";
 import { HypothesisApprovalCard } from "@/features/investigation/components/HypothesisApprovalCard";
@@ -26,7 +25,7 @@ export const Route = createFileRoute("/investigation/$id")({
   component: InvestigationPage,
 });
 
-type ViewTab = "timeline" | "lab" | "diagram";
+type ViewTab = "timeline" | "diagram";
 
 function InvestigationPage() {
   const { id } = Route.useParams();
@@ -59,16 +58,7 @@ function InvestigationPage() {
     diagramUrl,
   } = useSSE(streamUrl);
 
-  const showLabView = domainConfig?.visualization_type === "molecular";
   const [activeTab, setActiveTab] = useState<ViewTab>("diagram");
-
-  // Switch to lab view once domain is confirmed as molecular
-  useEffect(() => {
-    if (domainConfig?.visualization_type === "molecular") {
-      setActiveTab("lab");
-    }
-  }, [domainConfig]);
-  const [activeExperimentId, setActiveExperimentId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const sidebarTimelineRef = useRef<HTMLDivElement>(null);
   const mobileTimelineRef = useRef<HTMLDivElement>(null);
@@ -212,20 +202,17 @@ function InvestigationPage() {
                 >
                   Timeline
                 </button>
-                {([...(showLabView ? ["lab" as const] : []), "diagram" as const]).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={cn(
-                      "rounded-md px-4 py-1.5 font-mono text-[11px] font-medium uppercase tracking-wider transition-colors",
-                      activeTab === tab
-                        ? "bg-surface text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {tab === "lab" ? "Lab View" : "Diagram"}
-                  </button>
-                ))}
+                <button
+                  onClick={() => setActiveTab("diagram")}
+                  className={cn(
+                    "rounded-md px-4 py-1.5 font-mono text-[11px] font-medium uppercase tracking-wider transition-colors",
+                    activeTab === "diagram"
+                      ? "bg-surface text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  Diagram
+                </button>
               </div>
 
               {/* Tab content */}
@@ -237,28 +224,6 @@ function InvestigationPage() {
                   >
                     <Timeline events={events} />
                   </div>
-                </section>
-              )}
-
-              {showLabView && activeTab === "lab" && (
-                <section className="space-y-2">
-                  <div>
-                    <h3 className="border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                      Lab View
-                    </h3>
-                    <p className="mt-1 pl-3 text-[11px] leading-relaxed text-muted-foreground/50">
-                      Real-time 3D visualization of molecules as they are analyzed. Proteins, ligands, and scores appear as tools process them.
-                    </p>
-                  </div>
-                  <ErrorBoundary fallbackMessage="Failed to load 3D viewer">
-                    <LiveLabViewer
-                      events={events}
-                      completed={completed}
-                      experiments={experiments}
-                      activeExperimentId={activeExperimentId}
-                      onExperimentChange={setActiveExperimentId}
-                    />
-                  </ErrorBoundary>
                 </section>
               )}
 
@@ -282,7 +247,12 @@ function InvestigationPage() {
                 </section>
               )}
 
-              <VisualizationPanel visualizations={visualizations} />
+              <VisualizationPanel
+                visualizations={visualizations}
+                events={events}
+                experiments={experiments}
+                completed={completed}
+              />
 
               <section>
                 <FindingsPanel findings={findings} />
@@ -305,7 +275,7 @@ function InvestigationPage() {
           {/* --- COMPLETED VIEW: structured report following scientific workflow --- */}
           {completed && (
             <>
-              {/* Visual exploration tabs (Lab + Diagram) */}
+              {/* Visual exploration tabs (Diagram) */}
               <div className="flex gap-1 rounded-lg border border-border bg-muted/30 p-1">
                 <button
                   onClick={() => setActiveTab("timeline")}
@@ -318,20 +288,17 @@ function InvestigationPage() {
                 >
                   Timeline
                 </button>
-                {([...(showLabView ? ["lab" as const] : []), "diagram" as const]).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={cn(
-                      "rounded-md px-4 py-1.5 font-mono text-[11px] font-medium uppercase tracking-wider transition-colors",
-                      activeTab === tab
-                        ? "bg-surface text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {tab === "lab" ? "Lab View" : "Diagram"}
-                  </button>
-                ))}
+                <button
+                  onClick={() => setActiveTab("diagram")}
+                  className={cn(
+                    "rounded-md px-4 py-1.5 font-mono text-[11px] font-medium uppercase tracking-wider transition-colors",
+                    activeTab === "diagram"
+                      ? "bg-surface text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  Diagram
+                </button>
               </div>
 
               {activeTab === "timeline" && (
@@ -342,28 +309,6 @@ function InvestigationPage() {
                   >
                     <Timeline events={events} />
                   </div>
-                </section>
-              )}
-
-              {showLabView && activeTab === "lab" && (
-                <section className="space-y-2">
-                  <div>
-                    <h3 className="border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                      Lab View
-                    </h3>
-                    <p className="mt-1 pl-3 text-[11px] leading-relaxed text-muted-foreground/50">
-                      3D molecular scene from the investigation. Proteins, ligands, and docking scores visualized in real-time during the experiment.
-                    </p>
-                  </div>
-                  <ErrorBoundary fallbackMessage="Failed to load 3D viewer">
-                    <LiveLabViewer
-                      events={events}
-                      completed={completed}
-                      experiments={experiments}
-                      activeExperimentId={activeExperimentId}
-                      onExperimentChange={setActiveExperimentId}
-                    />
-                  </ErrorBoundary>
                 </section>
               )}
 
@@ -387,7 +332,12 @@ function InvestigationPage() {
                 </section>
               )}
 
-              <VisualizationPanel visualizations={visualizations} />
+              <VisualizationPanel
+                visualizations={visualizations}
+                events={events}
+                experiments={experiments}
+                completed={completed}
+              />
 
               {/* Structured report: follows scientific method workflow */}
               <InvestigationReport
