@@ -185,6 +185,7 @@ def _hypothesis_to_dict(h: Hypothesis) -> dict[str, Any]:
         "status": h.status.value,
         "parent_id": h.parent_id,
         "confidence": h.confidence,
+        "certainty_of_evidence": h.certainty_of_evidence,
         "supporting_evidence": h.supporting_evidence,
         "contradicting_evidence": h.contradicting_evidence,
     }
@@ -264,6 +265,7 @@ def _from_row(row: Any) -> Investigation:
             hypothesis_type=h.get("hypothesis_type", ""),
             prior_confidence=h.get("prior_confidence", 0.0),
             confidence=h.get("confidence", 0.0),
+            certainty_of_evidence=h.get("certainty_of_evidence", ""),
             supporting_evidence=h.get("supporting_evidence", []),
             contradicting_evidence=h.get("contradicting_evidence", []),
         )

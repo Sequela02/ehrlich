@@ -188,13 +188,69 @@ Orchestrator wiring:
 
 ---
 
-### Phase 4: Evidence Evaluation -- RESEARCHED
+### Phase 4: Evidence Evaluation -- UPGRADED
 
-**Status:** Research complete. See [evidence-evaluation-research.md](../research/evidence-evaluation-research.md). Implementation pending.
+**Status:** Complete. Grounded in 47 verified sources spanning evidence hierarchies (Burns & Chung), effect sizes (Cohen), Bayesian updating (Kass & Raftery, Jeffreys), contradiction resolution (Lakatos, Hunter & Schmidt), and convergence of evidence (Munafo et al.). See [evidence-evaluation-research.md](../research/evidence-evaluation-research.md).
 
-**Current state:** Criteria-based comparison (improved with hypothesis upgrade).
+**Sources:**
+- Burns & Chung (2011) -- Evidence hierarchy (8-tier ranking by directness, reproducibility, controls)
+- Cohen (1988) -- Effect size benchmarks (d=0.2 small, 0.5 medium, 0.8 large)
+- Kramer et al. (2012) -- Experimental uncertainty: IC50 reproducibility +/-0.3 log (intra-lab), +/-0.5 log (cross-lab)
+- Chen (2015) -- Docking score uncertainty: <0.5 kcal/mol is noise
+- Kass & Raftery (1995) -- Bayes factors for sequential hypothesis confidence update
+- Jeffreys (1961) -- BF interpretation scale (1-3 barely, 3-20 positive, 20-150 strong)
+- Munafo et al. (2021) -- Triangulation: independent methods agreeing strengthens causal inference
+- Lakatos (1978) -- Contradiction resolution: compound identity → assay comparability → temporal → severity
+- Hunter & Schmidt (1990) -- Meta-analytic correction for contradictory evidence
 
-**Research covers:** 20 universal components spanning evidence hierarchies (Burns & Chung), effect sizes (Cohen), confidence intervals (Cumming), weight of evidence (OECD), Bayesian updating (Kass & Raftery, Jeffreys), prediction calibration (Brier, Platt, conformal), multi-source data integration, ensemble consensus, activity cliffs (Maggiora, Stumpfe & Bajorath), retrospective vs. prospective evidence quality, temporal discounting, contradiction resolution, SAR transferability, quantitative confidence aggregation.
+**8 Universal Components (implemented via Director evaluation prompt):**
+
+| # | Component | Description |
+|---|-----------|-------------|
+| 1 | Evidence Hierarchy | 8-tier ranking from replicated experimental data (highest) to qualitative literature (lowest) |
+| 2 | Effect Size Thresholds | Domain-specific noise floors (IC50 <2-fold, docking <0.5 kcal/mol, ML <0.1 prob) |
+| 3 | Bayesian Updating | Prior confidence × evidence multiplier → posterior (supporting tiers 1-3: ×1.3-1.5, contradicting: ×0.3-0.5) |
+| 4 | Contradiction Resolution | 4-step hierarchy: identity check → assay comparability → temporal relevance → severity classification |
+| 5 | Convergence Check | Independent method agreement (converging/mixed/contradictory) modulates confidence |
+| 6 | Methodology Checks | Control validation, criteria comparison, analysis plan adherence, confounder check |
+| 7 | Certainty of Evidence | GRADE-adapted grading (high/moderate/low/very_low) per hypothesis |
+| 8 | Evidence Convergence | Explicit convergence/divergence status across method types |
+
+**Implementation:**
+```
+Hypothesis entity field:
+  certainty_of_evidence  -- GRADE-adapted level (high/moderate/low/very_low/"")
+
+HypothesisEvaluated event field:
+  certainty_of_evidence  -- carries Director's assessment to frontend
+
+Director evaluation prompt: 6 methodology sections
+  <evidence_hierarchy>         -- 8-tier reliability ranking
+  <effect_size_thresholds>     -- domain-specific noise floors
+  <bayesian_updating>          -- prior → posterior update rules
+  <contradiction_resolution>   -- 4-step resolution hierarchy
+  <convergence_check>          -- independent method agreement
+  <methodology_checks>         -- controls, criteria, analysis plan, confounders
+
+Output format: +2 new fields
+  "certainty_of_evidence": "high|moderate|low|very_low"
+  "evidence_convergence": "converging|mixed|contradictory"
+
+Orchestrator wiring:
+  - Reads certainty_of_evidence from evaluation output
+  - Stores on Hypothesis entity
+  - Includes in HypothesisEvaluated event
+  - Includes in InvestigationCompleted hypothesis dicts
+  - Logs evidence_convergence for audit trail
+  - Serialized/deserialized in SQLite repository
+```
+
+**Key design decisions:**
+- Certainty of evidence is a string field on Hypothesis (not an enum) -- Director-assigned, keeps domain layer simple
+- Evidence hierarchy is prompt guidance (8 tiers), not infrastructure code -- Director reasons over tiers rather than computing them algorithmically
+- Bayesian updating is formalized as multiplier rules in the prompt rather than coded computation -- keeps the LLM as the reasoning engine while providing structured methodology
+- Contradiction resolution follows a resolution hierarchy (identity → assay → temporal → severity) rather than averaging -- prevents masking genuine disagreements
+- Convergence check is a separate explicit field rather than folded into confidence -- allows the frontend to distinguish "high confidence from one method" vs "moderate confidence from converging methods"
 
 ---
 

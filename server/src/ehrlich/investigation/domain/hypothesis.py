@@ -40,6 +40,7 @@ class Hypothesis:
     hypothesis_type: str = ""
     prior_confidence: float = 0.0
     confidence: float = 0.0
+    certainty_of_evidence: str = ""
     supporting_evidence: list[str] = field(default_factory=list)
     contradicting_evidence: list[str] = field(default_factory=list)
 

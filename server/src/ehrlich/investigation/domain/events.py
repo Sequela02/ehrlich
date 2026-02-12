@@ -55,6 +55,7 @@ class HypothesisEvaluated(DomainEvent):
     status: str = ""
     confidence: float = 0.0
     reasoning: str = ""
+    certainty_of_evidence: str = ""
     investigation_id: str = ""
 
 

@@ -185,9 +185,7 @@ class MultiModelOrchestrator:
                 # Detect domain config and yield event
                 if self._domain_registry:
                     self._active_config = self._domain_registry.detect(domain_text)
-                    self._researcher_prompt = build_researcher_prompt(
-                        self._active_config
-                    )
+                    self._researcher_prompt = build_researcher_prompt(self._active_config)
                     yield DomainDetected(
                         domain=self._active_config.name,
                         display_config=self._active_config.to_display_dict(),
@@ -196,7 +194,8 @@ class MultiModelOrchestrator:
 
                 all_investigations = await self._repository.list_all()
                 related = [
-                    inv for inv in all_investigations
+                    inv
+                    for inv in all_investigations
                     if inv.status == InvestigationStatus.COMPLETED
                     and inv.domain == investigation.domain
                     and inv.id != investigation.id
@@ -311,37 +310,27 @@ class MultiModelOrchestrator:
             tested = 0
             while tested < self._max_hypotheses:
                 proposed = [
-                    h
-                    for h in investigation.hypotheses
-                    if h.status == HypothesisStatus.PROPOSED
+                    h for h in investigation.hypotheses if h.status == HypothesisStatus.PROPOSED
                 ]
                 if not proposed:
                     break
 
                 # Take up to 2 hypotheses per batch
                 batch_hypotheses = proposed[:2]
-                batch: list[
-                    tuple[Hypothesis, Experiment, dict[str, Any]]
-                ] = []
+                batch: list[tuple[Hypothesis, Experiment, dict[str, Any]]] = []
 
                 for hypothesis in batch_hypotheses:
                     hypothesis.status = HypothesisStatus.TESTING
-                    investigation.current_hypothesis_id = (
-                        hypothesis.id
-                    )
+                    investigation.current_hypothesis_id = hypothesis.id
                     tested += 1
 
                     # Director designs experiment
                     if self._active_config:
                         tools_csv = ", ".join(
-                            self._registry.list_tools_for_domain(
-                                self._active_config.tool_tags
-                            )
+                            self._registry.list_tools_for_domain(self._active_config.tool_tags)
                         )
                     else:
-                        tools_csv = ", ".join(
-                            self._registry.list_tools()
-                        )
+                        tools_csv = ", ".join(self._registry.list_tools())
                     experiment_prompt = (
                         build_experiment_prompt(self._active_config)
                         if self._active_config
@@ -377,9 +366,7 @@ class MultiModelOrchestrator:
                     )
                     experiment.status = ExperimentStatus.RUNNING
                     investigation.add_experiment(experiment)
-                    investigation.current_experiment_id = (
-                        experiment.id
-                    )
+                    investigation.current_experiment_id = experiment.id
 
                     yield ExperimentStarted(
                         experiment_id=experiment.id,
@@ -399,9 +386,7 @@ class MultiModelOrchestrator:
                 # Run batch (parallel if 2, sequential if 1)
                 exp_tool_count = cost.tool_calls
                 exp_finding_count = len(investigation.findings)
-                async for event in self._run_experiment_batch(
-                    investigation, batch, cost
-                ):
+                async for event in self._run_experiment_batch(investigation, batch, cost):
                     yield event
 
                 # Mark completed + Director evaluates each
@@ -410,26 +395,17 @@ class MultiModelOrchestrator:
                     yield ExperimentCompleted(
                         experiment_id=experiment.id,
                         hypothesis_id=hypothesis.id,
-                        tool_count=(
-                            cost.tool_calls - exp_tool_count
-                        ),
-                        finding_count=(
-                            len(investigation.findings)
-                            - exp_finding_count
-                        ),
+                        tool_count=(cost.tool_calls - exp_tool_count),
+                        finding_count=(len(investigation.findings) - exp_finding_count),
                         investigation_id=investigation.id,
                     )
 
                     # Director evaluates hypothesis
                     findings_for_hyp = [
-                        f
-                        for f in investigation.findings
-                        if f.hypothesis_id == hypothesis.id
+                        f for f in investigation.findings if f.hypothesis_id == hypothesis.id
                     ]
                     findings_text = "\n".join(
-                        f"- [{f.evidence_type}] "
-                        f"{f.title}: {f.detail}"
-                        for f in findings_for_hyp
+                        f"- [{f.evidence_type}] {f.title}: {f.detail}" for f in findings_for_hyp
                     )
                     controls_text = ", ".join(experiment.controls) or "None specified"
                     evaluation = await self._director_call(
@@ -453,22 +429,22 @@ class MultiModelOrchestrator:
                         f"success/failure criteria. Evaluate this hypothesis.",
                     )
 
-                    eval_status = evaluation.get(
-                        "status", "supported"
-                    )
-                    eval_confidence = float(
-                        evaluation.get("confidence", 0.5)
-                    )
+                    eval_status = evaluation.get("status", "supported")
+                    eval_confidence = float(evaluation.get("confidence", 0.5))
+                    eval_certainty = evaluation.get("certainty_of_evidence", "")
                     status_map = {
                         "supported": HypothesisStatus.SUPPORTED,
                         "refuted": HypothesisStatus.REFUTED,
                         "revised": HypothesisStatus.REVISED,
                     }
-                    hypothesis.status = status_map.get(
-                        eval_status, HypothesisStatus.SUPPORTED
-                    )
-                    hypothesis.confidence = max(
-                        0.0, min(1.0, eval_confidence)
+                    hypothesis.status = status_map.get(eval_status, HypothesisStatus.SUPPORTED)
+                    hypothesis.confidence = max(0.0, min(1.0, eval_confidence))
+                    hypothesis.certainty_of_evidence = eval_certainty
+
+                    logger.info(
+                        "Hypothesis %s convergence: %s",
+                        hypothesis.id,
+                        evaluation.get("evidence_convergence", ""),
                     )
 
                     yield HypothesisEvaluated(
@@ -476,22 +452,19 @@ class MultiModelOrchestrator:
                         status=eval_status,
                         confidence=eval_confidence,
                         reasoning=evaluation.get("reasoning", ""),
+                        certainty_of_evidence=eval_certainty,
                         investigation_id=investigation.id,
                     )
 
                     # If revised, add new hypothesis to queue
-                    if eval_status == "revised" and evaluation.get(
-                        "revision"
-                    ):
+                    if eval_status == "revised" and evaluation.get("revision"):
                         revised = Hypothesis(
                             statement=evaluation["revision"],
                             rationale=evaluation.get(
                                 "reasoning",
                                 "Revised from prior evidence",
                             ),
-                            prediction=evaluation.get(
-                                "prediction", hypothesis.prediction
-                            ),
+                            prediction=evaluation.get("prediction", hypothesis.prediction),
                             success_criteria=evaluation.get(
                                 "success_criteria", hypothesis.success_criteria
                             ),
@@ -597,9 +570,7 @@ class MultiModelOrchestrator:
                         for k, v in c.get("scores", {}).items()
                         if isinstance(v, (int, float))
                     },
-                    attributes={
-                        k: str(v) for k, v in c.get("attributes", {}).items()
-                    },
+                    attributes={k: str(v) for k, v in c.get("attributes", {}).items()},
                 )
                 for i, c in enumerate(raw_candidates)
             ]
@@ -639,6 +610,7 @@ class MultiModelOrchestrator:
                     "status": h.status.value,
                     "parent_id": h.parent_id,
                     "confidence": h.confidence,
+                    "certainty_of_evidence": h.certainty_of_evidence,
                     "supporting_evidence": h.supporting_evidence,
                     "contradicting_evidence": h.contradicting_evidence,
                 }
@@ -765,9 +737,8 @@ class MultiModelOrchestrator:
                 "evaluate_hypothesis",
             }
             tool_schemas = [
-                t for t in self._registry.list_schemas_for_domain(
-                    self._active_config.tool_tags
-                )
+                t
+                for t in self._registry.list_schemas_for_domain(self._active_config.tool_tags)
                 if t["name"] not in excluded
             ]
         else:
@@ -828,9 +799,16 @@ class MultiModelOrchestrator:
                 cost.add_tool_call()
 
                 # Track search stats
-                if tool_name in ("search_literature", "search_citations", "explore_dataset",
-                                 "search_bioactivity", "search_compounds", "search_pharmacology",
-                                 "search_sports_literature", "search_supplement_evidence"):
+                if tool_name in (
+                    "search_literature",
+                    "search_citations",
+                    "explore_dataset",
+                    "search_bioactivity",
+                    "search_compounds",
+                    "search_pharmacology",
+                    "search_sports_literature",
+                    "search_supplement_evidence",
+                ):
                     search_queries += 1
 
                 yield ToolCalled(
@@ -955,9 +933,7 @@ class MultiModelOrchestrator:
                 "design_experiment",
                 "evaluate_hypothesis",
             }
-            domain_schemas = self._registry.list_schemas_for_domain(
-                self._active_config.tool_tags
-            )
+            domain_schemas = self._registry.list_schemas_for_domain(self._active_config.tool_tags)
             tool_schemas = [t for t in domain_schemas if t["name"] not in excluded]
         else:
             excluded = {
@@ -1040,27 +1016,17 @@ class MultiModelOrchestrator:
                     investigation_id=investigation.id,
                 )
 
-                result_str = await self._dispatch_tool(
-                    tool_name, tool_input, investigation
-                )
+                result_str = await self._dispatch_tool(tool_name, tool_input, investigation)
                 result_str = _compact_result(tool_name, result_str)
 
-                summarized_str, summarize_event = (
-                    await self._summarize_output(
-                        cost, tool_name, result_str, investigation.id
-                    )
+                summarized_str, summarize_event = await self._summarize_output(
+                    cost, tool_name, result_str, investigation.id
                 )
                 if summarize_event is not None:
                     yield summarize_event
 
-                content_for_model = (
-                    summarized_str if summarize_event else result_str
-                )
-                preview = (
-                    result_str[:1500]
-                    if len(result_str) > 1500
-                    else result_str
-                )
+                content_for_model = summarized_str if summarize_event else result_str
+                preview = result_str[:1500] if len(result_str) > 1500 else result_str
                 yield ToolResultEvent(
                     tool_name=tool_name,
                     result_preview=preview,
@@ -1069,12 +1035,8 @@ class MultiModelOrchestrator:
                 )
 
                 if tool_name == "record_finding":
-                    h_id = tool_input.get(
-                        "hypothesis_id", hypothesis.id
-                    )
-                    e_type = tool_input.get(
-                        "evidence_type", "neutral"
-                    )
+                    h_id = tool_input.get("hypothesis_id", hypothesis.id)
+                    e_type = tool_input.get("evidence_type", "neutral")
                     finding = Finding(
                         title=tool_input.get("title", ""),
                         detail=tool_input.get("detail", ""),
@@ -1090,13 +1052,9 @@ class MultiModelOrchestrator:
                         h = investigation.get_hypothesis(h_id)
                         if h:
                             if e_type == "supporting":
-                                h.supporting_evidence.append(
-                                    finding.title
-                                )
+                                h.supporting_evidence.append(finding.title)
                             elif e_type == "contradicting":
-                                h.contradicting_evidence.append(
-                                    finding.title
-                                )
+                                h.contradicting_evidence.append(finding.title)
                     yield FindingRecorded(
                         title=finding.title,
                         detail=finding.detail,
@@ -1111,9 +1069,7 @@ class MultiModelOrchestrator:
 
                 if tool_name == "record_negative_control":
                     control = NegativeControl(
-                        identifier=tool_input.get(
-                            "identifier", tool_input.get("smiles", "")
-                        ),
+                        identifier=tool_input.get("identifier", tool_input.get("smiles", "")),
                         identifier_type=tool_input.get("identifier_type", ""),
                         name=tool_input.get("name", ""),
                         score=float(
@@ -1130,9 +1086,7 @@ class MultiModelOrchestrator:
                         name=control.name,
                         score=control.score,
                         threshold=control.threshold,
-                        correctly_classified=(
-                            control.correctly_classified
-                        ),
+                        correctly_classified=(control.correctly_classified),
                         investigation_id=investigation.id,
                     )
 
@@ -1149,23 +1103,17 @@ class MultiModelOrchestrator:
     async def _run_experiment_batch(
         self,
         investigation: Investigation,
-        batch: list[
-            tuple[Hypothesis, Experiment, dict[str, Any]]
-        ],
+        batch: list[tuple[Hypothesis, Experiment, dict[str, Any]]],
         cost: CostTracker,
     ) -> AsyncGenerator[DomainEvent, None]:
         """Run up to 2 experiments concurrently."""
         if len(batch) == 1:
             h, exp, design = batch[0]
-            async for event in self._run_researcher_experiment(
-                investigation, h, exp, cost, design
-            ):
+            async for event in self._run_researcher_experiment(investigation, h, exp, cost, design):
                 yield event
             return
 
-        queue: asyncio.Queue[DomainEvent | None] = (
-            asyncio.Queue()
-        )
+        queue: asyncio.Queue[DomainEvent | None] = asyncio.Queue()
 
         async def _run_one(
             hyp: Hypothesis,
@@ -1178,16 +1126,11 @@ class MultiModelOrchestrator:
                 ):
                     await queue.put(ev)
             except Exception as e:
-                logger.warning(
-                    "Experiment %s failed: %s", exp.id, e
-                )
+                logger.warning("Experiment %s failed: %s", exp.id, e)
             finally:
                 await queue.put(None)
 
-        tasks = [
-            asyncio.create_task(_run_one(h, e, d))
-            for h, e, d in batch
-        ]
+        tasks = [asyncio.create_task(_run_one(h, e, d)) for h, e, d in batch]
 
         done_count = 0
         while done_count < len(tasks):

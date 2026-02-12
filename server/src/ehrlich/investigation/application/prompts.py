@@ -427,6 +427,76 @@ reasoning. If revising, the new statement must be more specific \
 than the original.
 </instructions>
 
+<evidence_hierarchy>
+Rank each finding by its reliability tier before weighing it:
+1. Replicated experimental data (orthogonal assays, n>=3) -- highest
+2. Single experimental measurement (one lab, one assay)
+3. Curated database entry (ChEMBL, PubChem, GtoPdb)
+4. Prospectively validated ML prediction (external test set)
+5. Retrospective ML prediction (cross-validated)
+6. Consensus computational (3+ methods agree)
+7. Single computational score (one docking, one prediction)
+8. Qualitative literature report -- lowest
+
+When reasoning, cite which tier each key finding belongs to. \
+Higher-tier evidence should carry more weight in your assessment.
+</evidence_hierarchy>
+
+<effect_size_thresholds>
+Distinguish real effects from noise using these domain \
+reference thresholds:
+- IC50/Ki (single lab): <2-fold is noise, 3-5-fold meaningful, \
+>10-fold high confidence
+- Docking score: <0.5 kcal/mol is noise, 1.0-1.5 meaningful, \
+>2.0 high confidence
+- ML probability: difference <0.1 is noise, >0.2 meaningful, \
+>0.4 high confidence
+- Enrichment factor EF1%: <2x is noise, >5x meaningful, >10x \
+excellent
+- Effect size (Cohen's d): <0.2 trivial, 0.5 medium, >0.8 large
+
+Compare observed differences against these thresholds. A \
+difference below the noise floor is NOT evidence.
+</effect_size_thresholds>
+
+<bayesian_updating>
+Update confidence from prior to posterior using the evidence:
+- If most evidence is supporting AND from tiers 1-3: multiply \
+prior_confidence by 1.3-1.5 (cap at 0.95)
+- If evidence is mixed or from lower tiers only: keep near \
+prior, widen uncertainty
+- If most evidence is contradicting: multiply prior_confidence \
+by 0.3-0.5 (floor at 0.05)
+- Express the updated value as the "confidence" field in output
+</bayesian_updating>
+
+<contradiction_resolution>
+When findings conflict, follow this resolution hierarchy:
+1. Check compound/subject identity (SMILES match, correct \
+identifiers, stereochemistry)
+2. Check assay comparability (IC50 vs Ki vs EC50, same assay \
+conditions, same units?)
+3. Apply temporal relevance (newer data weighted higher)
+4. Classify severity:
+   - <3x noise floor = minor: average after corrections
+   - 3-6x noise floor = moderate: widen confidence interval, flag
+   - >6x noise floor = major: do NOT average, report as \
+contradictory, investigate mechanism
+</contradiction_resolution>
+
+<convergence_check>
+Check whether independent method types converge or diverge:
+- If 2+ independent methods (e.g. docking + ML + literature + \
+bioactivity data) agree: evidence is CONVERGING -- increase \
+confidence
+- If methods disagree: evidence is MIXED -- decrease confidence \
+and flag which methods disagree
+- If methods give opposing conclusions: evidence is \
+CONTRADICTORY -- do not average, report which methods conflict
+
+Report convergence status in the "evidence_convergence" field.
+</convergence_check>
+
 <methodology_checks>
 Before determining the outcome, verify:
 1. CONTROLS: Did positive controls produce expected results? \
@@ -447,9 +517,13 @@ Respond with ONLY valid JSON (no markdown fences):
 {
   "status": "supported|refuted|revised",
   "confidence": 0.85,
+  "certainty_of_evidence": "high|moderate|low|very_low",
+  "evidence_convergence": "converging|mixed|contradictory",
   "reasoning": "Detailed scientific reasoning citing specific \
-evidence from findings",
-  "key_evidence": ["list of key evidence points with numbers"],
+evidence from findings, referencing evidence hierarchy tiers \
+and effect size thresholds",
+  "key_evidence": ["list of key evidence points with numbers \
+and their reliability tier"],
   "revision": "If revised, the new refined hypothesis (omit \
 if not revised)"
 }
@@ -642,16 +716,18 @@ artifacts, redundant context.
 Respond with ONLY the compressed text, no preamble."""
 
 
-_DEFAULT_CATEGORIES = frozenset({
-    "antimicrobial",
-    "neurodegenerative",
-    "oncology",
-    "environmental",
-    "cardiovascular",
-    "metabolic",
-    "immunology",
-    "other",
-})
+_DEFAULT_CATEGORIES = frozenset(
+    {
+        "antimicrobial",
+        "neurodegenerative",
+        "oncology",
+        "environmental",
+        "cardiovascular",
+        "metabolic",
+        "immunology",
+        "other",
+    }
+)
 
 
 def build_pico_and_classification_prompt(
@@ -794,10 +870,7 @@ def build_multi_investigation_context(
         return ""
     parts: list[str] = ["<prior_investigations>"]
     for inv in investigations[:3]:
-        parts.append(
-            f'  <investigation domain="{inv.domain}" '
-            f'prompt="{inv.prompt[:100]}">'
-        )
+        parts.append(f'  <investigation domain="{inv.domain}" prompt="{inv.prompt[:100]}">')
         for h in inv.hypotheses[:4]:
             if h.status.value in ("supported", "refuted", "revised"):
                 parts.append(
@@ -1030,15 +1103,8 @@ def _build_prior_context(investigation: Investigation) -> str:
     parts: list[str] = ["<prior_hypotheses>"]
     for h in investigation.hypotheses:
         if h.status.value in ("supported", "refuted", "revised"):
-            findings = [
-                f
-                for f in investigation.findings
-                if f.hypothesis_id == h.id
-            ]
-            evidence = "; ".join(
-                f"[{f.evidence_type}] {f.title}"
-                for f in findings[:5]
-            )
+            findings = [f for f in investigation.findings if f.hypothesis_id == h.id]
+            evidence = "; ".join(f"[{f.evidence_type}] {f.title}" for f in findings[:5])
             parts.append(
                 f"  <hypothesis id='{h.id}' "
                 f"status='{h.status.value}' "

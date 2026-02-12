@@ -108,6 +108,7 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
                 "status": event.status,
                 "confidence": event.confidence,
                 "reasoning": event.reasoning,
+                "certainty_of_evidence": event.certainty_of_evidence,
                 "investigation_id": event.investigation_id,
             },
         )
