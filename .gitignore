@@ -19,6 +19,13 @@ node_modules/
 dist/
 .tsbuildinfo
 
+# TanStack Start / Vite
+.output/
+.tanstack/
+.vinxi/
+app.config.timestamp_*
+routeTree.gen.ts
+
 # Data (large files)
 *.pdbqt
 *.parquet
@@ -45,6 +52,9 @@ server/data/
 # OS
 .DS_Store
 Thumbs.db
+
+# Prototype archives (temporary)
+*.zip
 
 # Docker
 docker-compose.override.yml

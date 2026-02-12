@@ -1,0 +1,138 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-background: oklch(0.10 0.005 155);
+  --color-foreground: oklch(0.93 0.005 155);
+  --color-surface: oklch(0.14 0.008 155);
+  --color-primary: oklch(0.72 0.19 155);
+  --color-primary-foreground: oklch(0.10 0.005 155);
+  --color-secondary: oklch(0.55 0.10 200);
+  --color-accent: oklch(0.75 0.15 80);
+  --color-muted: oklch(0.18 0.005 155);
+  --color-muted-foreground: oklch(0.55 0.01 155);
+  --color-border: oklch(0.22 0.01 155);
+  --color-destructive: oklch(0.60 0.22 25);
+}
+
+/* Base */
+html {
+  scroll-behavior: smooth;
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Lab Protocol: monospace label utility */
+.label-mono {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Green glow pulse */
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 12px oklch(0.72 0.19 155 / 0.2);
+  }
+  50% {
+    box-shadow: 0 0 24px oklch(0.72 0.19 155 / 0.4);
+  }
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2.5s ease-in-out infinite;
+}
+
+/* Scroll reveal */
+.reveal-section {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.reveal-section.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Staggered children reveal */
+.stagger-children.is-visible > * {
+  opacity: 0;
+  animation: stagger-in 0.5s ease-out forwards;
+}
+
+.stagger-children.is-visible > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children.is-visible > *:nth-child(2) { animation-delay: 80ms; }
+.stagger-children.is-visible > *:nth-child(3) { animation-delay: 160ms; }
+.stagger-children.is-visible > *:nth-child(4) { animation-delay: 240ms; }
+.stagger-children.is-visible > *:nth-child(5) { animation-delay: 320ms; }
+.stagger-children.is-visible > *:nth-child(6) { animation-delay: 400ms; }
+.stagger-children.is-visible > *:nth-child(7) { animation-delay: 480ms; }
+
+@keyframes stagger-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ASCII background layer */
+.ascii-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+}
+
+.ascii-bg pre {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--color-primary);
+  opacity: 0.03;
+  white-space: pre;
+}
+
+/* Pipeline sequential animation */
+@keyframes node-activate {
+  from {
+    border-color: var(--color-border);
+    opacity: 0.6;
+  }
+  to {
+    border-color: oklch(0.72 0.19 155 / 0.4);
+    opacity: 1;
+  }
+}
+
+.pipeline-node {
+  opacity: 0.6;
+  transition: all 0.4s ease-out;
+}
+
+.pipeline-node.is-visible {
+  animation: node-activate 0.4s ease-out forwards;
+}
+
+/* Scroll progress bar */
+.scroll-progress {
+  transform-origin: left;
+  transition: transform 50ms linear;
+}

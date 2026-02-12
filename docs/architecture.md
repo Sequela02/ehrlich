@@ -160,6 +160,17 @@ Dark-only theme mixing Industrial Scientific + Editorial Academic + Cyberpunk La
 - No blur shadows — hard borders or glow effects only
 - No gradient blobs or decorative elements
 
+## Landing Site (`web/`)
+
+Separate TanStack Start project for the public-facing landing page. SSR/SSG for SEO via Nitro server, same React + TypeScript + Bun toolchain as console. Shares design tokens (OKLCH Lab Protocol identity, Space Grotesk + JetBrains Mono fonts) but no code dependencies on console -- each project builds independently.
+
+- **Console** (`console/`): authenticated SPA for running investigations (TanStack Router, client-side only)
+- **Web** (`web/`): public landing page with SSR/SSG for SEO (TanStack Start + Nitro, server-rendered)
+
+10 components: Nav (scroll progress), Hero (ASCII bg, bottom-third), Architecture (Director-Worker-Summarizer diagram), Methodology (6-phase pipeline), Domains (3 asymmetric cards), DataSources (13 sources), OpenSource, CTA, SectionHeader, Footer. All use OKLCH tokens, `useReveal` scroll animations, staggered children, and ASCII art backgrounds at 3% opacity.
+
+Both deploy independently: console to app server, web to CDN/static hosting.
+
 ## Dependency Rules
 
 ```

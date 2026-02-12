@@ -453,6 +453,11 @@ Phase 2A-C    Phase 2D-E
            |
      Domain-Specific Visualization System -- DONE
            |
+     Claude SDK Optimization -- URGENT
+           |
+     Landing Site (web/) -- DONE
+     (TanStack Start + SSR)
+           |
      ┌─────┼──────────────┐
      │     │              │
 Training  Nutrition   Competitive
@@ -460,6 +465,9 @@ Enhancement Enhancement  Sports
   (TODO)    (TODO)     Domain (TODO)
      │     │              │
      └─────┼──────────────┘
+           |
+     Phase 12: SaaS Infrastructure -- TODO
+     (PostgreSQL + WorkOS Auth + BYOK + Credits)
            |
      Demo + Video -- TODO
            |
@@ -665,6 +673,258 @@ DDD cleanup, shared bounded context, MCP bridge for external tools, 4 new data s
 
 ---
 
+## Claude SDK Optimization -- URGENT
+
+Upgrade the Anthropic SDK integration to use all available features for better reasoning quality, lower costs, and improved UX. Currently using a minimal subset of the SDK (non-streaming `messages.create`, ephemeral cache on system block only, no thinking, no effort, no tool_choice, no structured outputs).
+
+**Why URGENT:** Every investigation run burns tokens at suboptimal rates. Prompt caching on tools alone could save ~90% of tool schema input tokens across 20+ API calls per investigation. Extended thinking could dramatically improve Director hypothesis quality. Pricing is wrong (3x over-reported for Opus).
+
+### SDK-1: Fix Pricing + Cache-Aware Cost Tracking (Quick Win)
+
+Fix incorrect hardcoded pricing and track cache hit/miss tokens for accurate cost reporting.
+
+- [ ] Fix Opus pricing: `$15/$75` -> `$5/$25` per M tokens (Opus 4.5/4.6 pricing)
+- [ ] Fix Haiku pricing: `$0.80/$4.0` -> `$1/$5` per M tokens (Haiku 4.5 pricing)
+- [ ] Track `cache_creation_input_tokens` and `cache_read_input_tokens` from `response.usage`
+- [ ] Compute cache-aware cost: cache writes at 1.25x, cache reads at 0.1x base input rate
+- [ ] Add `cache_read_tokens` and `cache_write_tokens` to `CostTracker.to_dict()`
+- [ ] Update `CostUpdate` SSE event with cache breakdown
+- [ ] Update `MessageResponse` dataclass with cache token fields
+- [ ] Tests: cost calculation with cache hits, cache misses, mixed scenarios
+
+**Files:** `cost_tracker.py`, `anthropic_client.py`, `multi_orchestrator.py`, `events.py`, `sse.py`, `test_cost_tracker.py`
+
+### SDK-2: Prompt Caching on Tools Array (Quick Win)
+
+Cache the 48-tool schema array that repeats on every researcher API call.
+
+- [ ] Add `cache_control: {"type": "ephemeral"}` to the last tool in the tools array before passing to `messages.create`
+- [ ] Only apply when tools list is non-empty
+- [ ] No changes to tool registry -- caching applied at the adapter level
+
+**Files:** `anthropic_client.py`
+
+### SDK-3: Effort Parameter (Quick Win)
+
+Use `effort` to control token spend per model role.
+
+- [ ] Add `effort: str | None = None` parameter to `AnthropicClientAdapter.__init__`
+- [ ] Pass `effort` to `messages.create()` when set (omit when None for backward compat)
+- [ ] Configure per-model in `Settings`:
+  - Director (Opus 4.6): `effort="high"` (default, explicit)
+  - Researcher (Sonnet 4.5): `effort="high"` (default, explicit)
+  - Summarizer (Haiku 4.5): `effort="low"` (simple compression tasks)
+- [ ] Add `EHRLICH_DIRECTOR_EFFORT`, `EHRLICH_RESEARCHER_EFFORT`, `EHRLICH_SUMMARIZER_EFFORT` env vars
+- [ ] Wire in API route when creating adapters
+
+**Files:** `config.py`, `anthropic_client.py`, `routes/investigation.py`
+
+### SDK-4: Extended Thinking for Director (High Impact)
+
+Enable adaptive thinking on Opus 4.6 Director for deeper scientific reasoning.
+
+- [ ] Add `thinking: dict | None = None` parameter to `AnthropicClientAdapter.__init__`
+- [ ] Pass `thinking` to `messages.create()` when set
+- [ ] Default for Director: `{"type": "adaptive"}` (Opus 4.6 decides when to think)
+- [ ] Parse `thinking` content blocks in `_parse_content_blocks()` -- extract `block.thinking` text
+- [ ] Emit thinking text via existing `Thinking` SSE event (already supported in frontend)
+- [ ] `max_tokens` must accommodate thinking budget -- increase Director's max_tokens to 32768
+- [ ] Add `EHRLICH_DIRECTOR_THINKING` env var (enabled/disabled/adaptive)
+- [ ] Track thinking tokens separately in `MessageResponse` (thinking tokens billed as output)
+- [ ] Note: `temperature` is incompatible with `thinking` -- ensure Director calls omit temperature
+
+**Files:** `config.py`, `anthropic_client.py`, `multi_orchestrator.py`, `routes/investigation.py`
+
+### SDK-5: Structured Outputs for Director (Medium Impact)
+
+Guarantee valid JSON from Director calls (hypothesis formulation, experiment design, evaluation, synthesis).
+
+- [ ] Add `output_format: dict | None = None` parameter to `AnthropicClientAdapter.create_message()`
+- [ ] Pass `output_format` and `betas=["structured-outputs-2025-11-13"]` to `messages.create()` when set
+- [ ] Define JSON schemas for Director outputs:
+  - `hypothesis_formulation_schema` -- array of hypothesis objects
+  - `experiment_design_schema` -- experiment plan object
+  - `hypothesis_evaluation_schema` -- evaluation result object
+  - `synthesis_schema` -- synthesis result object
+- [ ] Update Director call sites in `MultiModelOrchestrator` to pass schemas
+- [ ] Remove JSON parsing fallbacks that handle malformed Director output
+- [ ] Note: structured outputs are incompatible with `thinking` on same call -- evaluate which phases benefit from thinking vs structured output, or use thinking + prompt-engineered JSON (current approach) where both are needed
+
+**Files:** `anthropic_client.py`, `multi_orchestrator.py`, `investigation/domain/schemas.py` (new)
+
+### SDK-6: tool_choice Control (Medium Impact)
+
+Control how the researcher uses tools.
+
+- [ ] Add `tool_choice: dict | None = None` parameter to `AnthropicClientAdapter.create_message()`
+- [ ] Pass `tool_choice` to `messages.create()` when set
+- [ ] Researcher first turn: `tool_choice={"type": "any"}` to force tool use (researcher should always start by calling tools)
+- [ ] Researcher subsequent turns: `tool_choice={"type": "auto"}` (default, let model decide)
+- [ ] Literature survey: `tool_choice={"type": "auto"}` (model decides when to stop searching)
+
+**Files:** `anthropic_client.py`, `multi_orchestrator.py`
+
+### SDK-7: Streaming API (High Impact, UX)
+
+Replace non-streaming `messages.create()` with streaming for real-time token display.
+
+- [ ] Add `stream_message()` async generator method to `AnthropicClientAdapter`
+- [ ] Use `client.messages.stream()` (high-level SDK helper) for async context manager
+- [ ] Yield intermediate events: `text_delta`, `tool_use_start`, `input_json_delta`
+- [ ] Accumulate final message via `stream.get_final_message()` for usage tracking
+- [ ] Update `MultiModelOrchestrator` to use streaming for Director calls (where UX matters most)
+- [ ] Emit real-time `Thinking` events as thinking tokens stream in
+- [ ] Keep non-streaming `create_message()` for Researcher and Summarizer (tool dispatch loop is simpler without streaming)
+- [ ] Error handling: stream cancellation on investigation abort, retry on disconnect
+
+**Files:** `anthropic_client.py`, `multi_orchestrator.py`
+
+### Implementation Order (Dependency Graph)
+
+```
+SDK-1 (Fix Pricing + Cache Tracking)     -- no deps, parallel
+SDK-2 (Cache Tools Array)                 -- no deps, parallel
+SDK-3 (Effort Parameter)                  -- no deps, parallel
+        |
+SDK-4 (Extended Thinking)                 -- after SDK-3 (shares adapter params)
+        |
+SDK-5 (Structured Outputs)               -- after SDK-4 (incompatibility check)
+SDK-6 (tool_choice)                       -- after SDK-3 (shares adapter params)
+SDK-7 (Streaming)                         -- after SDK-4 (streams thinking tokens)
+```
+
+**Parallel batch 1 (no deps):** SDK-1 + SDK-2 + SDK-3
+**Sequential batch 2:** SDK-4 (depends on adapter pattern from SDK-3)
+**Parallel batch 3:** SDK-5 + SDK-6 + SDK-7 (depend on SDK-4 for thinking compatibility)
+
+### Team Assignment
+
+| Agent | Tasks | Type |
+|-------|-------|------|
+| `sdk-adapter` | SDK-1, SDK-2, SDK-3, SDK-4 | general-purpose (writes code) |
+| `sdk-features` | SDK-5, SDK-6 | general-purpose (writes code) |
+| `sdk-streaming` | SDK-7 | general-purpose (writes code) |
+| `sdk-tests` | All test updates | general-purpose (writes code) |
+
+### Verification
+
+After all SDK tasks:
+- `uv run pytest --cov=ehrlich --cov-report=term-missing` -- all pass, 80%+ coverage
+- `uv run ruff check src/ tests/` -- zero violations
+- `uv run mypy src/ehrlich/` -- zero errors
+- `bun run build && bun run typecheck` -- zero errors (if SSE event schema changed)
+- `bunx vitest run` -- all pass
+- Manual: run investigation, verify cost display is accurate, Director shows thinking, tools are cached
+
+---
+
+## Landing Site (`web/`) -- DONE
+
+Separate TanStack Start project for the public-facing landing page. SSR/SSG for SEO, same React + TypeScript + Bun stack as console, independent build and deployment.
+
+### Why Separate from Console
+
+- **Different concerns**: landing page is marketing/SEO content; console is the authenticated SPA
+- **Different optimization**: SSR/SSG with zero-JS static pages vs client-side SPA with heavy WebGL/charting
+- **Independent deployment**: CDN-friendly static output vs API-connected app server
+- **Clean separation**: no marketing code in the investigation UI, no app dependencies in the landing page
+
+### Tech Stack
+
+| Layer | Choice | Rationale |
+|-------|--------|-----------|
+| Framework | TanStack Start | Same TanStack ecosystem as console, SSR/SSG built-in, Nitro server |
+| Runtime | Bun | Same as console |
+| Styling | Tailwind CSS 4 | Same as console, shared design tokens (OKLCH) |
+| Fonts | Space Grotesk + JetBrains Mono | Same as console (Lab Protocol identity) |
+| Icons | Lucide React | Same as console |
+| Build | Vite 7 (via Nitro) | Same toolchain |
+
+### Project Structure
+
+```
+web/
+├── src/
+│   ├── routes/
+│   │   ├── __root.tsx            # Root layout (shell, SEO meta, font loading)
+│   │   └── index.tsx             # Landing page (all sections wired)
+│   ├── components/
+│   │   ├── Nav.tsx               # Fixed navbar with scroll progress bar + mobile menu
+│   │   ├── Footer.tsx            # Minimal footer (links, license, year)
+│   │   ├── SectionHeader.tsx     # Mono label with left border accent
+│   │   ├── Hero.tsx              # Bottom-third hero with ASCII bg, stats bar, CTAs
+│   │   ├── Architecture.tsx      # Director-Worker-Summarizer diagram with connectors
+│   │   ├── Methodology.tsx       # 6-phase pipeline with glow-pulse active node
+│   │   ├── Domains.tsx           # 3 asymmetric domain cards with tool counts
+│   │   ├── DataSources.tsx       # 13 sources with large number visual anchor
+│   │   ├── OpenSource.tsx        # Typography-driven sparse section
+│   │   └── CTA.tsx               # Minimal CTA with arrow links
+│   ├── styles/
+│   │   └── app.css               # Tailwind 4 entry + OKLCH tokens + animations
+│   ├── lib/
+│   │   ├── constants.ts          # Stats, links, domain data, methodology phases
+│   │   ├── ascii-patterns.ts     # ASCII art backgrounds (hero, arch, methodology, data)
+│   │   ├── use-reveal.ts         # IntersectionObserver scroll reveal hook
+│   │   └── use-scroll-progress.ts # Scroll progress fraction hook
+│   ├── router.tsx                # TanStack Router factory (getRouter)
+│   └── routeTree.gen.ts          # Auto-generated route tree
+├── public/
+│   └── favicon.svg               # Green "E" favicon
+├── package.json                  # ehrlich-web, Bun scripts
+├── vite.config.ts                # TanStack Start + Nitro + Tailwind
+└── tsconfig.json                 # src/ paths, strict mode
+```
+
+### WEB-1: Project Scaffolding -- DONE
+
+- [x] TanStack Start project in `web/` with Bun
+- [x] `vite.config.ts` with tanstackStart + nitro + tailwindcss + viteReact + tsConfigPaths
+- [x] Tailwind CSS 4 with OKLCH design tokens matching console's Lab Protocol identity
+- [x] Space Grotesk + JetBrains Mono font loading via Google Fonts
+- [x] Root layout with `shellComponent`, `HeadContent`, CSS `?url` import
+- [x] Favicon + meta tags (title, description, OG, Twitter card, theme-color)
+- [x] `bun run build` produces `.output/` (client + SSR + Nitro server)
+- [x] `bun run typecheck` -- zero errors
+
+### WEB-2: Landing Page Sections -- DONE
+
+- [x] **Hero**: bottom-third placement, ASCII background, stats bar (48 tools, 13 sources, 3 domains, 3 models), CTA buttons
+- [x] **Architecture**: Director-Worker-Summarizer diagram with fork/merge connectors, color-coded accent bars, stagger-children animation
+- [x] **Methodology**: 6-phase pipeline with connecting line, glow-pulse on active node (Hypothesis Formulation), theoretical basis block
+- [x] **Domains**: 3 asymmetric grid cards (5/4/3 col spans), tool count badges, capabilities, sources, example prompts
+- [x] **DataSources**: large "13" visual anchor left, 2-column source list right, conditional access badges
+- [x] **OpenSource**: typography-driven sparse section (py-32), 3-column feature grid, GitHub link
+- [x] **CTA**: 3 arrow links (Launch Console, Self-Host with Docker, Read the Docs)
+
+### WEB-3: Navigation + Footer + Meta -- DONE
+
+- [x] **Nav**: fixed top bar, scroll progress indicator, desktop links, mobile hamburger menu
+- [x] **Footer**: AGPL-3.0 branding, mapped footer links, responsive layout
+- [x] **SectionHeader**: mono label with left border accent (reused across sections)
+- [x] **SEO meta**: full OG tags, Twitter card, theme-color, description
+- [x] **Smooth scroll**: anchor links (`#architecture`, `#methodology`, `#domains`, `#data-sources`)
+- [x] Responsive: mobile hamburger nav, stacked sections
+
+### WEB-5: Visual Polish + Animations -- DONE
+
+- [x] Scroll-triggered section reveals via `useReveal` (IntersectionObserver, one-shot)
+- [x] Staggered children animation (80ms delay cascade, CSS-only)
+- [x] Phase pipeline glow-pulse on active node
+- [x] Domain cards hover effects (-translate-y-[1px], border-primary)
+- [x] Architecture cards stagger-children animation
+- [x] ASCII art backgrounds at 3% opacity (hero, architecture, methodology, data sources)
+- [x] Scroll progress bar in navbar
+- [x] All OKLCH tokens (zero hardcoded gray-* classes)
+
+### Verification
+
+- [x] `cd web && bun run build` -- zero errors
+- [x] `cd web && bun run typecheck` -- zero TypeScript errors
+- [x] Visual: Lab Protocol identity consistent with console (OKLCH tokens, fonts, dark theme)
+- [x] All docs updated: `CLAUDE.md`, `README.md`, `docs/architecture.md`, `docs/roadmap.md`
+
+---
+
 ## Training Science Enhancement -- TODO
 
 Deepen the training bounded context with more data sources and richer analytical capabilities.
@@ -813,9 +1073,100 @@ Expose Ehrlich as an MCP tool server for Claude Code / Claude Desktop.
 
 ---
 
+## Phase 12: SaaS Infrastructure -- TODO
+
+Production deployment with authentication, API key management, and usage tracking.
+
+### 12A. PostgreSQL Migration
+
+Replace SQLite with PostgreSQL for production persistence.
+
+- [ ] `PostgresInvestigationRepository` implementing existing `InvestigationRepository` ABC
+- [ ] `asyncpg` connection pooling (replace `aiosqlite`)
+- [ ] FTS5 to PostgreSQL `tsvector` + GIN index (self-referential research)
+- [ ] `JSONB` columns for hypotheses, experiments, findings, candidates
+- [ ] `users` table: id, email, credits, encrypted_api_key, created_at
+- [ ] `DATABASE_URL` env var (replaces `EHRLICH_DB_PATH`)
+- [ ] Migration script (SQLite data export -> PostgreSQL import)
+- [ ] Tests with testcontainers-postgresql
+
+### 12B. Authentication (WorkOS AuthKit)
+
+User identity via WorkOS (1M MAU free tier). JWT-based, provider-swappable.
+
+- [ ] WorkOS dashboard setup (Google social login, redirect URIs)
+- [ ] Frontend: `@workos-inc/authkit-react` provider + `<AuthKitProvider>`
+- [ ] Backend: JWT verification middleware on protected routes
+- [ ] `user_id` extraction from JWT, linked to `users` table
+- [ ] Public routes: `GET /health`, `GET /methodology`, `GET /stats`
+- [ ] Protected routes: `POST /investigate`, `GET /investigate/{id}/stream`, BYOK endpoints
+- [ ] Env vars: `WORKOS_API_KEY`, `WORKOS_CLIENT_ID`
+
+### 12C. BYOK (Bring Your Own Key)
+
+Users provide their own Anthropic API key. Key never persisted in plaintext.
+
+- [ ] Frontend: API key input in settings, stored in `localStorage`
+- [ ] `X-Anthropic-Key` header sent per SSE connection
+- [ ] Backend: use provided key for that investigation, fall back to platform key
+- [ ] Key validation endpoint (`POST /validate-key`)
+- [ ] BYOK users bypass credit system -- pay Anthropic directly
+
+### 12D. Credit System
+
+Usage-based credits tracked per user. Free tier on signup, BYOK unlimited.
+
+- [ ] `credits` column on `users` table (default: 5 free on signup)
+- [ ] Credit deduction on investigation completion (mapped from `CostTracker` actual cost)
+- [ ] `GET /user/credits` -- current balance
+- [ ] Frontend: credit badge in header, exhaustion prompt (BYOK or wait)
+- [ ] Credit tiers: Free (5), BYOK (unlimited), future paid packs
+- [ ] Credit-to-dollar conversion rate configurable (e.g., 1 credit = $0.25)
+
+### 12E. Cost Transparency (PostHog Model)
+
+Radical cost transparency -- since the codebase is open source (AGPL-3.0), hiding costs would be disingenuous. Users can see the `_MODEL_PRICING` dict in the source code anyway. Instead, use cost visibility as a differentiator.
+
+**Industry context:** 79/500 SaaS companies use credit models (up 126% YoY). 65% of IT leaders report surprise AI charges. PostHog openly shows their 20% markup on LLM costs.
+
+**Dual-mode cost display (adapts to user's billing mode):**
+
+| Mode | Primary Display | Expandable Detail |
+|------|----------------|-------------------|
+| BYOK | `$0.47 API cost` (user's money, billed by Anthropic) | Token breakdown by model, cache savings |
+| Credits | `2 credits used` (platform billing unit) | Token breakdown, equivalent API cost, cache savings |
+
+**Implementation:**
+
+- [ ] `CostBreakdown` component: primary metric + expandable detail panel
+- [ ] Primary metric adapts to billing mode (credits vs BYOK dollar cost)
+- [ ] Expandable detail always shows: tokens (input/output/cache read/cache write) by model (Director/Researcher/Summarizer), cache savings estimate, total API cost
+- [ ] Cache savings highlight: "Saved $X.XX via prompt caching" -- validates the SDK optimization work (SDK-1, SDK-2)
+- [ ] `CostTracker` feeds both modes: `total_cost` for BYOK display, `total_cost` -> credit conversion for credit display
+- [ ] Cost data available in investigation detail page (completed investigations) and real-time during SSE stream
+- [ ] No cost obfuscation -- raw API cost always accessible in expandable detail regardless of billing mode
+
+**Files:** `console/src/features/investigation/components/CostBreakdown.tsx`, update `InvestigationReport.tsx`, update SSE event handling for cache-aware cost data
+
+### 12F. Deployment
+
+- [ ] Docker multi-stage build (Python backend)
+- [ ] PostgreSQL instance (managed or containerized)
+- [ ] Frontend: Vercel (static Vite build)
+- [ ] DNS: backend API + frontend app
+- [ ] Secrets management via environment variables
+- [ ] SSL via Let's Encrypt / platform provider
+- [ ] Backup schedule for PostgreSQL
+
+**Verification:** Full E2E: sign in with Google -> start investigation -> credits deducted -> cost breakdown shows credits + token detail -> BYOK key input -> investigation uses user key -> cost breakdown shows dollar cost + token detail -> credits unchanged.
+
+---
+
 ## Backlog (Post-Hackathon)
 
-- PostgreSQL migration for production persistence
 - Batch screening mode (score entire ZINC subsets)
 - Automated synthesis lab integration (Emerald Cloud Lab, Strateos)
 - Community contributions: new domains, new tools, new data sources
+- Rewarded ads for free credits (AdMob/AdSense integration)
+- Stripe integration for paid credit packs
+- Admin dashboard for usage analytics

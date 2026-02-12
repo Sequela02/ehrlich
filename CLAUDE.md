@@ -14,7 +14,7 @@ The engine is domain-agnostic: a pluggable `DomainConfig` + `DomainRegistry` sys
 
 ## Architecture
 
-DDD monorepo: `server/` (Python 3.12) + `console/` (React 19 / TypeScript / Bun).
+DDD monorepo: `server/` (Python 3.12) + `console/` (React 19 / TypeScript / Bun) + `web/` (TanStack Start landing page).
 
 ### Multi-Model Architecture (Director-Worker-Summarizer)
 
@@ -96,6 +96,17 @@ bun dev              # Dev server :5173
 bun test             # Vitest
 bun run build        # vite build (generates route tree + bundles)
 bun run typecheck    # tsc --noEmit (run after build for route types)
+```
+
+### Web (Landing Page)
+
+```bash
+cd web
+bun install
+bun run dev          # Dev server :3000 (vite dev)
+bun run build        # vite build (generates .output/)
+bun run typecheck    # tsc --noEmit
+bun run start        # node .output/server/index.mjs
 ```
 
 ## Quality Gates
@@ -410,3 +421,27 @@ All paths relative to `console/src/`.
 | `shared/components/ErrorBoundary.tsx` | Error boundary for LiveLabViewer and InvestigationDiagram |
 | `shared/components/ui/Toaster.tsx` | Sonner toast wrapper with dark OKLCH theme |
 | `routes/methodology.tsx` | Methodology page |
+
+## Key Files (Web Landing Page)
+
+All paths relative to `web/src/`.
+
+| File | Purpose |
+|------|---------|
+| `routes/__root.tsx` | Root layout with shellComponent, HeadContent, SEO meta, font loading |
+| `routes/index.tsx` | Landing page wiring all 10 components |
+| `components/Nav.tsx` | Fixed navbar with scroll progress bar + mobile menu |
+| `components/Footer.tsx` | Minimal footer with links and license |
+| `components/SectionHeader.tsx` | Mono label with left border accent |
+| `components/Hero.tsx` | Bottom-third hero with ASCII bg, stats bar, CTAs |
+| `components/Architecture.tsx` | Director-Worker-Summarizer diagram with fork/merge connectors |
+| `components/Methodology.tsx` | 6-phase pipeline with glow-pulse active node |
+| `components/Domains.tsx` | 3 asymmetric domain cards with tool counts |
+| `components/DataSources.tsx` | 13 sources with large number visual anchor |
+| `components/OpenSource.tsx` | Typography-driven sparse section |
+| `components/CTA.tsx` | Minimal CTA with arrow links |
+| `styles/app.css` | Tailwind 4 + OKLCH tokens + scroll/stagger animations |
+| `lib/constants.ts` | Stats, nav/footer links, domains, data sources, methodology phases |
+| `lib/ascii-patterns.ts` | ASCII art backgrounds (hero, architecture, methodology, data sources) |
+| `lib/use-reveal.ts` | IntersectionObserver scroll reveal hook |
+| `lib/use-scroll-progress.ts` | Scroll progress fraction (0-1) hook |
