@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Clock, FlaskConical, AlertCircle, CheckCircle2, GitCompareArrows } from "lucide-react";
+import { Clock, FlaskConical, AlertCircle, CheckCircle2, GitCompareArrows, Square, CheckSquare } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import type { InvestigationSummary } from "../types";
 
@@ -81,20 +81,22 @@ export function InvestigationList({ investigations }: InvestigationListProps) {
         const StatusIcon = config.icon;
         const isCompleted = inv.status === "completed";
         return (
-          <div key={inv.id} className="flex items-center gap-2">
+          <div key={inv.id} className="flex min-w-0 items-center gap-2">
             {completed.length >= 2 && isCompleted && (
-              <input
-                type="checkbox"
-                checked={selected.has(inv.id)}
-                onChange={() => toggleSelect(inv.id)}
-                className="h-3.5 w-3.5 shrink-0 rounded border-border accent-primary"
-              />
+              <button
+                onClick={(e) => { e.preventDefault(); toggleSelect(inv.id); }}
+                className="shrink-0 text-muted-foreground transition-colors hover:text-primary"
+              >
+                {selected.has(inv.id)
+                  ? <CheckSquare className="h-4 w-4 text-primary" />
+                  : <Square className="h-4 w-4" />}
+              </button>
             )}
             <Link
               to="/investigation/$id"
               params={{ id: inv.id }}
               className={cn(
-                "flex flex-1 items-center justify-between rounded-lg border border-border bg-surface p-3",
+                "flex min-w-0 flex-1 items-center justify-between rounded-lg border border-border bg-surface p-3",
                 "transition-colors hover:border-primary/30",
               )}
             >
@@ -109,7 +111,7 @@ export function InvestigationList({ investigations }: InvestigationListProps) {
                   })}
                 </p>
               </div>
-              <div className="ml-3 flex items-center gap-2">
+              <div className="ml-3 flex shrink-0 items-center gap-2">
                 {inv.candidate_count > 0 && (
                   <span className="font-mono text-[11px] text-muted-foreground">
                     {inv.candidate_count} candidates

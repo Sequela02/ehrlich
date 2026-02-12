@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, GitCompareArrows } from "lucide-react";
+import { ChevronDown, ChevronRight, GitCompareArrows, Square, CheckSquare } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { MolViewer2D } from "@/features/molecule/components/MolViewer2D";
 import type { CandidateRow } from "../types";
@@ -219,16 +219,14 @@ function CandidateRowComponent({
       >
         {showSelect && (
           <td className="px-2 py-2">
-            <input
-              type="checkbox"
-              checked={isSelected}
-              onChange={(e) => {
-                e.stopPropagation();
-                onSelect();
-              }}
-              onClick={(e) => e.stopPropagation()}
-              className="h-3.5 w-3.5 rounded border-border accent-primary"
-            />
+            <button
+              onClick={(e) => { e.stopPropagation(); onSelect(); }}
+              className="text-muted-foreground transition-colors hover:text-primary"
+            >
+              {isSelected
+                ? <CheckSquare className="h-4 w-4 text-primary" />
+                : <Square className="h-4 w-4" />}
+            </button>
           </td>
         )}
         <td className="px-2 py-2">
