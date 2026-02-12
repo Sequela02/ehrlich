@@ -15,6 +15,13 @@ class HypothesisFormulated(DomainEvent):
     hypothesis_id: str = ""
     statement: str = ""
     rationale: str = ""
+    prediction: str = ""
+    null_prediction: str = ""
+    success_criteria: str = ""
+    failure_criteria: str = ""
+    scope: str = ""
+    hypothesis_type: str = ""
+    prior_confidence: float = 0.0
     parent_id: str = ""
     investigation_id: str = ""
 
@@ -98,7 +105,7 @@ class OutputSummarized(DomainEvent):
 
 @dataclass(frozen=True)
 class HypothesisApprovalRequested(DomainEvent):
-    hypotheses: list[dict[str, str]] = field(default_factory=list)
+    hypotheses: list[dict[str, Any]] = field(default_factory=list)
     investigation_id: str = ""
 
 

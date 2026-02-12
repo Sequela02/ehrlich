@@ -27,6 +27,13 @@ export interface Hypothesis {
   id: string;
   statement: string;
   rationale: string;
+  prediction: string;
+  null_prediction: string;
+  success_criteria: string;
+  failure_criteria: string;
+  scope: string;
+  hypothesis_type: string;
+  prior_confidence: number;
   status: HypothesisStatus;
   parent_id: string;
   confidence: number;
@@ -55,6 +62,13 @@ export interface HypothesisFormulatedData {
   hypothesis_id: string;
   statement: string;
   rationale: string;
+  prediction: string;
+  null_prediction: string;
+  success_criteria: string;
+  failure_criteria: string;
+  scope: string;
+  hypothesis_type: string;
+  prior_confidence: number;
   parent_id: string;
   investigation_id: string;
 }

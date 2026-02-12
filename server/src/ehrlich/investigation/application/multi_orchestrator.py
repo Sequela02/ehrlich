@@ -197,12 +197,26 @@ class MultiModelOrchestrator:
                 hypothesis = Hypothesis(
                     statement=h_data.get("statement", ""),
                     rationale=h_data.get("rationale", ""),
+                    prediction=h_data.get("prediction", ""),
+                    null_prediction=h_data.get("null_prediction", ""),
+                    success_criteria=h_data.get("success_criteria", ""),
+                    failure_criteria=h_data.get("failure_criteria", ""),
+                    scope=h_data.get("scope", ""),
+                    hypothesis_type=h_data.get("hypothesis_type", ""),
+                    prior_confidence=min(1.0, max(0.0, h_data.get("prior_confidence", 0.0))),
                 )
                 investigation.add_hypothesis(hypothesis)
                 yield HypothesisFormulated(
                     hypothesis_id=hypothesis.id,
                     statement=hypothesis.statement,
                     rationale=hypothesis.rationale,
+                    prediction=hypothesis.prediction,
+                    null_prediction=hypothesis.null_prediction,
+                    success_criteria=hypothesis.success_criteria,
+                    failure_criteria=hypothesis.failure_criteria,
+                    scope=hypothesis.scope,
+                    hypothesis_type=hypothesis.hypothesis_type,
+                    prior_confidence=hypothesis.prior_confidence,
                     parent_id="",
                     investigation_id=investigation.id,
                 )
@@ -216,7 +230,15 @@ class MultiModelOrchestrator:
                 self._investigation = investigation
                 yield HypothesisApprovalRequested(
                     hypotheses=[
-                        {"id": h.id, "statement": h.statement, "rationale": h.rationale}
+                        {
+                            "id": h.id,
+                            "statement": h.statement,
+                            "rationale": h.rationale,
+                            "prediction": h.prediction,
+                            "scope": h.scope,
+                            "hypothesis_type": h.hypothesis_type,
+                            "prior_confidence": h.prior_confidence,
+                        }
                         for h in investigation.hypotheses
                         if h.status == HypothesisStatus.PROPOSED
                     ],
@@ -337,10 +359,15 @@ class MultiModelOrchestrator:
                         cost,
                         DIRECTOR_EVALUATION_PROMPT,
                         f"Hypothesis: {hypothesis.statement}\n"
-                        f"Rationale: {hypothesis.rationale}\n\n"
+                        f"Mechanism: {hypothesis.rationale}\n"
+                        f"Prediction: {hypothesis.prediction or 'N/A'}\n"
+                        f"Success criteria: {hypothesis.success_criteria or 'N/A'}\n"
+                        f"Failure criteria: {hypothesis.failure_criteria or 'N/A'}\n"
+                        f"Prior confidence: {hypothesis.prior_confidence}\n\n"
                         f"Experiment: {experiment.description}"
                         f"\n\nFindings:\n{findings_text}\n\n"
-                        f"Evaluate this hypothesis.",
+                        f"Compare the findings against the pre-defined "
+                        f"success/failure criteria. Evaluate this hypothesis.",
                     )
 
                     eval_status = evaluation.get(
@@ -379,6 +406,17 @@ class MultiModelOrchestrator:
                                 "reasoning",
                                 "Revised from prior evidence",
                             ),
+                            prediction=evaluation.get(
+                                "prediction", hypothesis.prediction
+                            ),
+                            success_criteria=evaluation.get(
+                                "success_criteria", hypothesis.success_criteria
+                            ),
+                            failure_criteria=evaluation.get(
+                                "failure_criteria", hypothesis.failure_criteria
+                            ),
+                            scope=hypothesis.scope,
+                            hypothesis_type=hypothesis.hypothesis_type,
                             parent_id=hypothesis.id,
                         )
                         investigation.add_hypothesis(revised)
@@ -386,6 +424,11 @@ class MultiModelOrchestrator:
                             hypothesis_id=revised.id,
                             statement=revised.statement,
                             rationale=revised.rationale,
+                            prediction=revised.prediction,
+                            success_criteria=revised.success_criteria,
+                            failure_criteria=revised.failure_criteria,
+                            scope=revised.scope,
+                            hypothesis_type=revised.hypothesis_type,
                             parent_id=hypothesis.id,
                             investigation_id=investigation.id,
                         )
@@ -727,13 +770,16 @@ class MultiModelOrchestrator:
                 "role": "user",
                 "content": (
                     f"Research prompt: {investigation.prompt}\n\n"
-                    f"Hypothesis being tested: {hypothesis.statement}\n"
-                    f"Rationale: {hypothesis.rationale}\n\n"
+                    f"Hypothesis: {hypothesis.statement}\n"
+                    f"Mechanism: {hypothesis.rationale}\n"
+                    f"Prediction: {hypothesis.prediction or 'N/A'}\n"
+                    f"Success criteria: {hypothesis.success_criteria or 'N/A'}\n"
+                    f"Failure criteria: {hypothesis.failure_criteria or 'N/A'}\n"
+                    f"Scope: {hypothesis.scope or 'N/A'}\n\n"
                     f"Experiment: {experiment.description}\n"
-                    f"Planned tools: {', '.join(experiment.tool_plan)}\n"
-                    f"Success criteria: {design.get('success_criteria', 'N/A')}\n"
-                    f"Failure criteria: {design.get('failure_criteria', 'N/A')}\n\n"
-                    f"Execute this experiment. Link all findings to "
+                    f"Planned tools: {', '.join(experiment.tool_plan)}\n\n"
+                    f"Execute this experiment. Compare results against the "
+                    f"pre-defined success/failure criteria. Link all findings to "
                     f"hypothesis_id='{hypothesis.id}'."
                 ),
             },

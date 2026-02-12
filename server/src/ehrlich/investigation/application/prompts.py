@@ -156,45 +156,55 @@ sulfonamide substituents will show dual Class A/C beta-lactamase \
 inhibition with Ki below 50 nM",
       "rationale": "Avibactam's DBO core achieves covalent \
 reversible inhibition of both classes; C2 modifications with \
-electron-withdrawing sulfonamide groups should enhance binding \
-to the conserved Ser70 active site while maintaining Class C \
-coverage",
-      "priority": 1
+electron-withdrawing sulfonamide groups enhance binding \
+to the conserved Ser70 active site",
+      "prediction": "Docking against Class A and Class C \
+beta-lactamases will show affinity < -7 kcal/mol for 3+ DBO \
+derivatives; ML model predicts Ki < 50 nM",
+      "null_prediction": "DBO derivatives show no preferential \
+binding vs non-sulfonamide controls; Ki > 500 nM",
+      "success_criteria": ">=3 candidates with docking < -7 \
+kcal/mol AND predicted Ki < 100 nM",
+      "failure_criteria": "<2 compounds meet docking threshold \
+OR all fail ADMET drug-likeness",
+      "scope": "MRSA beta-lactamases Class A/C; small molecules \
+MW < 500",
+      "hypothesis_type": "mechanistic",
+      "prior_confidence": 0.7
     },
     {
-      "statement": "Boronic acid compounds with molecular weight \
-below 350 Da and LogP below 1.0 will penetrate MRSA cell wall \
-and inhibit PBP2a-associated beta-lactamases",
+      "statement": "Boronic acid compounds with MW below 350 Da \
+and LogP below 1.0 will penetrate MRSA cell wall and inhibit \
+PBP2a-associated beta-lactamases",
       "rationale": "Vaborbactam demonstrates boronic acid \
 viability but has limited Gram-positive penetration; smaller, \
 more hydrophilic analogs may overcome MRSA's thick \
-peptidoglycan barrier based on permeability-size relationships",
-      "priority": 2
+peptidoglycan barrier",
+      "prediction": "Boronic acids with MW < 350 show MIC < 4 \
+ug/mL against MRSA; ADMET predicts oral bioavailability",
+      "null_prediction": "No boronic acid compounds show MIC \
+improvement over vaborbactam baseline (32 ug/mL)",
+      "success_criteria": ">=2 compounds with predicted MIC < 8 \
+ug/mL AND passes Lipinski criteria",
+      "failure_criteria": "All candidates fail Lipinski OR MIC \
+> 16 ug/mL",
+      "scope": "Gram-positive MRSA; orally bioavailable",
+      "hypothesis_type": "pharmacological",
+      "prior_confidence": 0.5
     }
   ],
   "negative_controls": [
     {
       "smiles": "CC(=O)Oc1ccccc1C(=O)O",
       "name": "Aspirin",
-      "source": "Non-antimicrobial NSAID with no known \
-beta-lactamase activity; validated inactive in ChEMBL"
+      "source": "Non-antimicrobial NSAID; validated inactive \
+in ChEMBL"
     },
     {
       "smiles": "CC(C)Cc1ccc(cc1)C(C)C(=O)O",
       "name": "Ibuprofen",
-      "source": "NSAID with no beta-lactam or enzyme inhibition \
-activity; structurally unrelated to any known BLI scaffold"
+      "source": "NSAID structurally unrelated to any BLI scaffold"
     }
-  ],
-  "focus_areas": [
-    "Class A/C dual inhibition profile",
-    "Cell wall permeability for Gram-positive organisms",
-    "Covalent reversible binding mechanism"
-  ],
-  "success_criteria": [
-    "At least 3 candidates with predicted Ki below 100 nM",
-    "Docking scores below -7.0 kcal/mol against beta-lactamase",
-    "Negative controls classified below 0.5 probability"
   ]
 }
 </output>
@@ -219,43 +229,51 @@ selectivity over BACE2 (>100x) with maintained potency
   "hypotheses": [
     {
       "statement": "Macrocyclic aminohydantoin derivatives with \
-12-14 membered rings will achieve BACE1 IC50 below 10 nM while \
-maintaining TPSA below 90 A^2 for BBB penetration",
+12-14 membered rings will achieve BACE1 IC50 below 10 nM \
+while maintaining TPSA below 90 A^2 for BBB penetration",
       "rationale": "Macrocyclization constrains the \
 aminohydantoin pharmacophore into the bioactive conformation, \
 reducing entropic penalty; ring sizes of 12-14 atoms balance \
-potency with physicochemical properties compatible with CNS \
-penetration per Lipinski/CNS MPO criteria",
-      "priority": 1
+potency with CNS MPO criteria",
+      "prediction": "Docking against BACE1 shows < -8 kcal/mol \
+for macrocyclic analogs; TPSA < 90 and MW < 500",
+      "null_prediction": "Macrocycles show no binding \
+improvement over linear aminohydantoins; TPSA > 100",
+      "success_criteria": ">=2 candidates with docking < -8 \
+kcal/mol AND TPSA < 90 AND MW < 500",
+      "failure_criteria": "No macrocycles achieve docking < -6 \
+kcal/mol OR all exceed MW 600",
+      "scope": "BACE1 aspartyl protease; CNS-penetrant small \
+molecules",
+      "hypothesis_type": "structural",
+      "prior_confidence": 0.6
     },
     {
       "statement": "Fragment-based compounds targeting the \
-BACE1 S3 subpocket with halogenated aromatic groups will show \
+BACE1 S3 subpocket with halogenated aromatics will show \
 selectivity over BACE2 greater than 50-fold",
       "rationale": "The S3 subpocket differs between BACE1 \
 (Ile110) and BACE2 (Val110); halogen bonding to this residue \
-difference can drive selectivity while fragments maintain \
-drug-like properties for oral bioavailability",
-      "priority": 2
+difference drives selectivity",
+      "prediction": "Halogenated fragments show BACE1 docking \
+< -7 kcal/mol with BACE2 docking > -4 kcal/mol (selectivity)",
+      "null_prediction": "No selectivity difference; both \
+BACE1 and BACE2 docking within 1 kcal/mol",
+      "success_criteria": ">=1 compound with BACE1/BACE2 \
+selectivity ratio > 50x",
+      "failure_criteria": "All compounds show < 10x selectivity",
+      "scope": "BACE1 S3 subpocket; fragment-like MW < 300",
+      "hypothesis_type": "structural",
+      "prior_confidence": 0.45
     }
   ],
   "negative_controls": [
     {
       "smiles": "CN1C=NC2=C1C(=O)N(C(=O)N2C)C",
       "name": "Caffeine",
-      "source": "CNS-active xanthine with no aspartyl protease \
-inhibition; zero BACE1 activity in published screens"
+      "source": "CNS-active xanthine; zero BACE1 activity \
+in published screens"
     }
-  ],
-  "focus_areas": [
-    "BACE1/BACE2 selectivity ratio",
-    "BBB penetration (TPSA, LogP, MW)",
-    "Comparison with failed clinical candidates"
-  ],
-  "success_criteria": [
-    "Candidates with predicted IC50 below 50 nM",
-    "TPSA below 90 and MW below 500 for CNS drug-likeness",
-    "BACE2 selectivity ratio above 50x"
   ]
 }
 </output>
@@ -268,8 +286,14 @@ Respond with ONLY valid JSON (no markdown fences):
   "hypotheses": [
     {
       "statement": "Specific testable hypothesis",
-      "rationale": "Scientific reasoning based on literature",
-      "priority": 1
+      "rationale": "Causal mechanism explaining HOW and WHY",
+      "prediction": "If true, we expect to observe X (specific, measurable)",
+      "null_prediction": "If false, we would observe Y instead",
+      "success_criteria": "Quantitative threshold for support",
+      "failure_criteria": "Quantitative threshold: e.g. no compounds show activity above baseline",
+      "scope": "Boundary conditions: organism, compound class, target",
+      "hypothesis_type": "mechanistic|structural|pharmacological|toxicological|other",
+      "prior_confidence": 0.65
     }
   ],
   "negative_controls": [
@@ -278,9 +302,7 @@ Respond with ONLY valid JSON (no markdown fences):
       "name": "Compound name",
       "source": "Why this is a good negative control"
     }
-  ],
-  "focus_areas": ["list of specific scientific priorities"],
-  "success_criteria": ["measurable outcomes expected"]
+  ]
 }
 </output_format>"""
 

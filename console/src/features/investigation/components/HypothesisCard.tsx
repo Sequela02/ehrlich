@@ -41,9 +41,16 @@ export function HypothesisCard({ hypothesis }: HypothesisCardProps) {
       <span className={cn("text-xs font-medium", textColor)}>
         {hypothesis.status.toUpperCase()}
       </span>
+      {hypothesis.prior_confidence > 0 && hypothesis.confidence === 0 && (
+        <span className="font-mono text-[10px] text-muted-foreground">
+          prior: {(hypothesis.prior_confidence * 100).toFixed(0)}%
+        </span>
+      )}
       {hypothesis.confidence > 0 && (
         <span className="font-mono text-[10px] text-muted-foreground">
-          {(hypothesis.confidence * 100).toFixed(0)}%
+          {hypothesis.prior_confidence > 0
+            ? `${(hypothesis.prior_confidence * 100).toFixed(0)}% → ${(hypothesis.confidence * 100).toFixed(0)}%`
+            : `${(hypothesis.confidence * 100).toFixed(0)}%`}
         </span>
       )}
       {hypothesis.parent_id && (
@@ -72,6 +79,31 @@ export function HypothesisCard({ hypothesis }: HypothesisCardProps) {
       <p className="text-[11px] italic text-muted-foreground">
         {hypothesis.rationale}
       </p>
+      {hypothesis.prediction && (
+        <div className="rounded bg-primary/5 px-2 py-1.5">
+          <span className="font-mono text-[10px] font-medium uppercase tracking-wider text-primary/70">
+            Prediction
+          </span>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            {hypothesis.prediction}
+          </p>
+        </div>
+      )}
+      {hypothesis.success_criteria && (
+        <div className="flex gap-3 text-[10px]">
+          <span className="text-secondary">Pass: {hypothesis.success_criteria}</span>
+        </div>
+      )}
+      {hypothesis.failure_criteria && (
+        <div className="flex gap-3 text-[10px]">
+          <span className="text-destructive">Fail: {hypothesis.failure_criteria}</span>
+        </div>
+      )}
+      {hypothesis.scope && (
+        <p className="font-mono text-[10px] text-muted-foreground/60">
+          Scope: {hypothesis.scope}
+        </p>
+      )}
       {parsed.smiles && (
         <div className="rounded bg-muted/30 px-2 py-1">
           <span className="select-all font-mono text-[10px] text-muted-foreground/70">
