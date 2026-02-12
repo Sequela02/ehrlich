@@ -16,50 +16,50 @@ Searches and manages scientific references. Integrates with Semantic Scholar and
 Cheminformatics operations: molecular descriptors, fingerprints, 3D conformer generation, substructure matching, and 2D SVG depiction. All RDKit usage is isolated in the infrastructure adapter (`rdkit_adapter.py`).
 
 ### Analysis
-Dataset exploration and statistical analysis. Loads bioactivity data from ChEMBL, performs substructure enrichment analysis, computes property distributions.
+Dataset exploration and statistical analysis. Loads bioactivity data from ChEMBL, compound search via PubChem, curated pharmacology via GtoPdb, substructure enrichment analysis, property distributions.
 
 ### Prediction
 Machine learning for antimicrobial activity prediction. Supports Chemprop (D-MPNN) and XGBoost models with Morgan fingerprints. Ensemble predictions combine multiple models.
 
 ### Simulation
-Molecular simulation: docking (AutoDock Vina), ADMET prediction (pkCSM), and resistance mutation assessment.
+Molecular simulation and target discovery: docking (AutoDock Vina/RDKit fallback), ADMET prediction, resistance assessment, protein targets (RCSB PDB), protein annotations (UniProt), disease-target associations (Open Targets), environmental toxicity (EPA CompTox).
 
 ### Investigation
-Agent orchestration. Manages the Claude-driven research loop: receives a research question, systematically calls tools across all contexts, records findings, and produces a ranked list of candidates. Supports two modes: single-model (Orchestrator) and multi-model (MultiModelOrchestrator).
+Hypothesis-driven agent orchestration. Manages the Claude-driven research loop: literature survey, hypothesis formulation (with predictions, criteria, scope), parallel experiment execution, criteria-based evaluation, negative controls, and synthesis. Uses multi-model architecture (Director/Researcher/Summarizer) with user-guided steering, domain classification, and multi-investigation memory.
 
 ## Multi-Model Architecture
 
 Ehrlich uses a three-tier Claude model architecture for cost-efficient investigations:
 
 ```
-Opus 4.6 (Director)     -- Plans phases, reviews results, synthesizes report (3-5 calls)
+Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesizes (3-5 calls)
     │                       NO tool access, structured JSON responses only
     │
-    ├── Sonnet 4.5 (Researcher) -- Executes each phase with 19 tools (10-20 calls)
-    │                               Tool-calling loop with max_iterations_per_phase guard
+    ├── Sonnet 4.5 (Researcher) -- Executes experiments with 30 tools (10-20 calls, parallel x2)
+    │                               Tool-calling loop with max_iterations_per_experiment guard
     │
-    └── Haiku 4.5 (Summarizer)  -- Compresses large tool outputs >2000 chars (5-10 calls)
+    └── Haiku 4.5 (Summarizer)  -- Compresses large tool outputs >2000 chars, classifies domains
                                     Reduces context bloat, preserves key scientific data
 ```
 
 **Cost**: ~$3-4 per investigation (vs ~$11 with all-Opus).
 
-### Flow
+### Flow (Hypothesis-Driven)
 
-1. **Director plans** -- Opus receives the research prompt and outputs a JSON plan with phases, goals, and key questions
-2. **Researcher executes** -- For each phase, Sonnet runs a tool-calling loop (max 10 iterations per phase). Large outputs are compressed by Haiku before appending to conversation
-3. **Director reviews** -- After each phase, Opus reviews findings and decides whether to proceed or stop early
-4. **Director synthesizes** -- After all phases, Opus produces the final report with summary, ranked candidates, and citations
-
-### Fallback
-
-When `EHRLICH_ANTHROPIC_MODEL` is set (or researcher == director model), the system falls back to the single-model `Orchestrator` which uses one model for everything.
+1. **Literature Survey** -- Haiku researcher searches papers and datasets
+2. **Domain Classification** -- Haiku classifies prompt into domain taxonomy, queries past investigations
+3. **Hypothesis Formulation** -- Opus Director formulates 2-4 hypotheses with predictions, criteria, scope, Bayesian priors (grounded in Popper, Platt, Feynman, Bayesian frameworks -- see `docs/scientific-methodology.md`)
+4. **User Approval Gate** -- User approves/rejects hypotheses before testing begins (5-min auto-approve timeout)
+5. **Experiment Design + Execution** -- Director designs experiments, 2 Sonnet researchers execute in parallel per batch (max 10 tool calls each)
+6. **Hypothesis Evaluation** -- Director compares findings against pre-defined success/failure criteria (objective, not subjective)
+7. **Negative Controls** -- Validate model with known-inactive compounds
+8. **Synthesis** -- Director synthesizes final report with ranked candidates, citations, cost breakdown
 
 ## Persistence
 
-Investigations are persisted to SQLite (WAL mode) via `aiosqlite`. The `SqliteInvestigationRepository` implements the `InvestigationRepository` ABC defined in the domain layer. Findings, candidates, citations, and cost data are JSON-serialized into a single `investigations` table.
+Investigations are persisted to SQLite (WAL mode) via `aiosqlite`. The `SqliteInvestigationRepository` implements the `InvestigationRepository` ABC defined in the domain layer. Hypotheses, experiments, findings, candidates, negative controls, citations, domain, and cost data are JSON-serialized into a single `investigations` table. All SSE events are persisted to a separate `events` table for full timeline replay on page reload.
 
-The API keeps an in-memory `_active_investigations` dict for in-flight SSE streaming, and persists to SQLite on completion (or error).
+The API keeps `_active_investigations` and `_active_orchestrators` dicts for in-flight SSE streaming and user-guided steering (hypothesis approval). Persists to SQLite on completion (or error).
 
 ## Molecule Visualization
 
@@ -134,24 +134,25 @@ api/ -> investigation/application/ only
 
 ### Multi-Model (Default)
 
-1. User submits research prompt via Console
+1. User submits research prompt via Console (or selects a template)
 2. API creates Investigation, persists to SQLite, starts MultiModelOrchestrator
-3. **Director** (Opus) plans phases and goals as structured JSON
-4. For each phase:
-   a. **Researcher** (Sonnet) executes tool-calling loop with 19 tools
-   b. **Summarizer** (Haiku) compresses outputs exceeding threshold
-   c. **Director** (Opus) reviews phase results, decides whether to proceed
-5. **Director** (Opus) synthesizes final report with candidates and citations
-6. All events stream via SSE (10 event types) to Console in real-time
-   - `FindingRecorded` includes `evidence` field for supporting data
-   - `InvestigationCompleted` includes candidates with multi-criteria scores
-7. Investigation persisted to SQLite with findings, candidates, and cost breakdown
-8. Console displays: full-width timeline (expandable events), findings grid with evidence, scored candidate table, full report, per-model cost breakdown
-
-### Single-Model (Fallback)
-
-1. User submits research prompt via Console
-2. API creates Investigation, persists to SQLite, starts Orchestrator
-3. Single Claude model reasons and calls tools across all phases
-4. Results stream back via SSE to Console
-5. Final report with ranked candidates displayed
+3. **Haiku** classifies prompt into domain taxonomy, queries past completed investigations in same domain
+4. **Researcher** (Sonnet) conducts literature survey
+5. **Director** (Opus) formulates 2-4 hypotheses with predictions, criteria, scope, Bayesian priors
+6. **User Approval Gate** -- user approves/rejects hypotheses (5-min timeout auto-approves)
+7. For each batch of 2 hypotheses:
+   a. **Director** designs experiment (description + tool plan)
+   b. **2 Researchers** (Sonnet) execute in parallel via asyncio.Queue
+   c. **Summarizer** (Haiku) compresses outputs exceeding threshold
+   d. **Director** evaluates hypothesis against pre-defined success/failure criteria
+   e. If revised: new hypothesis spawned with parent link
+8. **Negative controls** recorded from formulation suggestions
+9. **Director** synthesizes final report with candidates, citations, cost
+10. All events stream via SSE (15 event types) to Console in real-time
+    - `FindingRecorded` includes evidence + source provenance (source_type, source_id)
+    - `PhaseChanged` tracks 5-step progress
+    - `CostUpdate` streams progressive cost snapshots
+    - `HypothesisApprovalRequested` pauses for user steering
+    - `InvestigationCompleted` includes candidates, hypotheses, findings, negative controls
+11. Investigation persisted to SQLite with full state + events for timeline replay
+12. Console displays: phase indicator, hypothesis board, lab view (3Dmol.js), investigation diagram (React Flow), findings with source badges, candidate table with comparison mode, structured 8-section report with markdown export
