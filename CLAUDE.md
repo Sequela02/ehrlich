@@ -165,6 +165,10 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 - **Phase progress indicator**: `PhaseChanged` event tracks 5 orchestrator phases (Literature Survey → Formulation → Hypothesis Testing → Negative Controls → Synthesis); frontend renders 5-segment progress bar
 - **Streaming cost indicator**: `CostUpdate` event yields cost snapshots after each phase/batch; `CostBadge` updates progressively (not just at completion)
 - **Investigation templates**: 4 pre-built domain-agnostic prompts (MRSA, Alzheimer's, toxicology, oncology) on home page via `TemplateCards`
+- **Citation provenance**: `source_type` + `source_id` on findings, rendered as clickable badges linking to ChEMBL, PDB, DOI, PubChem, UniProt, Open Targets
+- **Markdown report export**: client-side markdown generation from InvestigationReport data, 8 sections, browser download
+- **Candidate comparison**: side-by-side scoring view for 2-4 selected candidates with best-in-group highlighting
+- **User-guided hypothesis steering**: `HypothesisApprovalRequested` event pauses orchestrator after formulation; user approves/rejects via `POST /investigate/{id}/approve`; `REJECTED` hypothesis status; 5-min auto-approve timeout
 - **Event persistence**: all SSE events stored in SQLite `events` table; completed investigations replay full timeline on page reload
 - TanStack Router file-based routing in console
 - `MultiModelOrchestrator`: hypothesis-driven loop with parallel experiment batches (2 hypotheses tested concurrently)
@@ -214,13 +218,13 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 | `investigation/domain/hypothesis.py` | Hypothesis entity + HypothesisStatus enum |
 | `investigation/domain/experiment.py` | Experiment entity + ExperimentStatus enum |
 | `investigation/domain/negative_control.py` | NegativeControl frozen dataclass |
-| `investigation/domain/events.py` | 14 domain events (Hypothesis*, Experiment*, NegativeControl*, Finding, Tool*, Thinking, PhaseChanged, CostUpdate, Completed, Error) |
+| `investigation/domain/events.py` | 15 domain events (Hypothesis*, HypothesisApproval*, Experiment*, NegativeControl*, Finding, Tool*, Thinking, PhaseChanged, CostUpdate, Completed, Error) |
 | `investigation/domain/repository.py` | InvestigationRepository ABC (save_event, get_events for audit trail) |
 | `investigation/infrastructure/sqlite_repository.py` | SQLite implementation with hypothesis/experiment/negative_control/event serialization |
 | `investigation/infrastructure/anthropic_client.py` | Anthropic API adapter with retry |
 | `api/routes/investigation.py` | REST + SSE endpoints, 27-tool registry, auto-selects orchestrator |
 | `api/routes/molecule.py` | Molecule depiction, conformer, descriptors, targets endpoints |
-| `api/sse.py` | Domain event to SSE conversion (14 types) |
+| `api/sse.py` | Domain event to SSE conversion (15 types) |
 
 ## Key Files (Data Source Clients)
 
@@ -273,3 +277,6 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 |------|---------|
 | `console/.../investigation/components/TemplateCards.tsx` | 4 domain-agnostic research prompt templates (MRSA, Alzheimer's, toxicology, oncology) |
 | `console/.../investigation/components/PromptInput.tsx` | Controlled component (value/onChange props), parent owns state |
+| `console/.../investigation/components/CandidateComparison.tsx` | Side-by-side candidate scoring comparison (2-4 candidates) |
+| `console/.../investigation/components/HypothesisApprovalCard.tsx` | Approve/reject hypotheses before testing with POST to /approve |
+| `console/.../investigation/lib/export-markdown.ts` | Client-side markdown generation for 8-section report export |
