@@ -1,11 +1,13 @@
 import Markdown from "react-markdown";
 import {
   BookOpen,
+  Download,
   FlaskConical,
   Target,
   TestTube,
   Zap,
 } from "lucide-react";
+import { generateMarkdown, downloadMarkdown } from "../lib/export-markdown";
 import { cn } from "@/shared/lib/utils";
 import type {
   CandidateRow,
@@ -71,8 +73,37 @@ export function InvestigationReport({
   negativeControls,
   cost,
 }: InvestigationReportProps) {
+  function handleExport() {
+    const md = generateMarkdown({
+      prompt,
+      summary,
+      hypotheses,
+      experiments,
+      findings,
+      candidates,
+      negativeControls,
+      cost,
+    });
+    const slug = prompt.slice(0, 40).replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase();
+    const ts = new Date().toISOString().slice(0, 10);
+    downloadMarkdown(md, `${slug}_${ts}_report.md`);
+  }
+
   return (
     <div className="space-y-8">
+      <div className="flex items-center justify-between">
+        <h2 className="font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          Investigation Report
+        </h2>
+        <button
+          onClick={handleExport}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 font-mono text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
+        >
+          <Download className="h-3.5 w-3.5" />
+          Export Report
+        </button>
+      </div>
+
       {/* 1. Research Question */}
       {prompt && (
         <section className="space-y-3">
