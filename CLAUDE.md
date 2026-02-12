@@ -152,7 +152,7 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 - Repository interfaces are ABCs in `domain/repository.py`
 - Infrastructure adapters implement repository ABCs
 - Tool functions in `tools.py` are the boundary between Claude and application services
-- **Hypothesis-driven investigation loop**: formulate hypotheses, design experiments, execute tools, evaluate evidence, revise/reject, synthesize
+- **Hypothesis-driven investigation loop**: formulate hypotheses (with predictions, criteria, scope, prior confidence), design experiments, execute tools, evaluate against pre-defined criteria, revise/reject, synthesize
 - **Domain-agnostic prompts**: Director infers domain from user's research question, adapts scientific context
 - **Evidence-linked findings**: every finding references a `hypothesis_id` + `evidence_type` (supporting/contradicting/neutral)
 - **Negative controls**: validate model predictions with known-inactive compounds (`NegativeControl` entity)
@@ -169,6 +169,7 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 - **Markdown report export**: client-side markdown generation from InvestigationReport data, 8 sections, browser download
 - **Candidate comparison**: side-by-side scoring view for 2-4 selected candidates with best-in-group highlighting
 - **User-guided hypothesis steering**: `HypothesisApprovalRequested` event pauses orchestrator after formulation; user approves/rejects via `POST /investigate/{id}/approve`; `REJECTED` hypothesis status; 5-min auto-approve timeout
+- **Scientific hypothesis model**: Based on Popper (falsifiability), Platt (strong inference), Feynman (compute consequences), Bayesian updating. Each hypothesis carries: prediction, null_prediction, success_criteria, failure_criteria, scope, hypothesis_type, prior_confidence. Evaluation compares results against pre-defined criteria (objective) not subjective judgment.
 - **Event persistence**: all SSE events stored in SQLite `events` table; completed investigations replay full timeline on page reload
 - TanStack Router file-based routing in console
 - `MultiModelOrchestrator`: hypothesis-driven loop with parallel experiment batches (2 hypotheses tested concurrently)
@@ -215,7 +216,7 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 | `investigation/application/cost_tracker.py` | Per-model cost tracking with tiered pricing |
 | `investigation/application/tool_cache.py` | In-memory TTL cache for tool results (deterministic + API) |
 | `investigation/application/prompts.py` | Domain-adaptive prompts: scientist, director (4 phases), researcher, summarizer |
-| `investigation/domain/hypothesis.py` | Hypothesis entity + HypothesisStatus enum |
+| `investigation/domain/hypothesis.py` | Hypothesis entity (statement, rationale, prediction, null_prediction, success/failure_criteria, scope, hypothesis_type, prior_confidence, confidence) + HypothesisStatus + HypothesisType enums |
 | `investigation/domain/experiment.py` | Experiment entity + ExperimentStatus enum |
 | `investigation/domain/negative_control.py` | NegativeControl frozen dataclass |
 | `investigation/domain/events.py` | 15 domain events (Hypothesis*, HypothesisApproval*, Experiment*, NegativeControl*, Finding, Tool*, Thinking, PhaseChanged, CostUpdate, Completed, Error) |

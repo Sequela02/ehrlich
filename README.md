@@ -196,10 +196,10 @@ Server at :8000, Console at :3000.
 
 | Event | Description |
 |-------|-------------|
-| `hypothesis_formulated` | New hypothesis proposed |
+| `hypothesis_formulated` | Hypothesis with prediction, criteria, scope, prior confidence |
 | `experiment_started` | Experiment execution begins |
 | `experiment_completed` | Experiment finished with results |
-| `hypothesis_evaluated` | Hypothesis outcome assessed |
+| `hypothesis_evaluated` | Outcome assessed against pre-defined criteria |
 | `negative_control` | Model validation result |
 | `tool_called` | Tool invocation with inputs |
 | `tool_result` | Tool output preview |
