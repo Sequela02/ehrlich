@@ -1,6 +1,6 @@
 # Synthesis Phase Research
 
-Phase 6 of the [Scientific Methodology Upgrade](../docs/scientific-methodology.md).
+Phase 6 of the [Scientific Methodology Upgrade](../../docs/scientific-methodology.md).
 
 ## Sources
 

@@ -1,6 +1,6 @@
 # Experiment Design Research
 
-Phase 3 of the [Scientific Methodology Upgrade](../docs/scientific-methodology.md).
+Phase 3 of the [Scientific Methodology Upgrade](../../docs/scientific-methodology.md).
 
 ## Sources
 

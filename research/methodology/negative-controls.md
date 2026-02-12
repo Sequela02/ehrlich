@@ -1,6 +1,6 @@
 # Negative Controls & Model Validation Research
 
-Phase 5 of the [Scientific Methodology Upgrade](../docs/scientific-methodology.md).
+Phase 5 of the [Scientific Methodology Upgrade](../../docs/scientific-methodology.md).
 
 ## Sources
 

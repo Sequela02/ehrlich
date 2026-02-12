@@ -1,6 +1,6 @@
 # Evidence Evaluation Research
 
-Phase 4 of the [Scientific Methodology Upgrade](../docs/scientific-methodology.md).
+Phase 4 of the [Scientific Methodology Upgrade](../../docs/scientific-methodology.md).
 
 ## Sources
 

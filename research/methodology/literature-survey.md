@@ -1,6 +1,6 @@
 # Literature Survey Methodology Research
 
-Phase 2 of the [Scientific Methodology Upgrade](../docs/scientific-methodology.md).
+Phase 2 of the [Scientific Methodology Upgrade](../../docs/scientific-methodology.md).
 
 ## Sources
 
