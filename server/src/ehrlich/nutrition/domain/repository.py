@@ -4,19 +4,11 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ehrlich.sports.domain.entities import (
+    from ehrlich.nutrition.domain.entities import (
         AdverseEvent,
-        ClinicalTrial,
         NutrientProfile,
         SupplementLabel,
     )
-
-
-class ClinicalTrialRepository(ABC):
-    @abstractmethod
-    async def search(
-        self, condition: str, intervention: str, max_results: int
-    ) -> list[ClinicalTrial]: ...
 
 
 class SupplementRepository(ABC):

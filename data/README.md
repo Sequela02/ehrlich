@@ -34,8 +34,7 @@ uv run python ../data/scripts/prepare_data.py --proteins
 
 Datasets are downloaded on-demand and cached in `data/datasets/` (gitignored).
 
-**ChEMBL**: Bioactivity data for antimicrobial targets (E. coli, S. aureus, etc.)
-**Tox21**: Toxicity assay data for safety filtering
+**ChEMBL**: Bioactivity data for any target organism/assay type (MIC, IC50, Ki, EC50, Kd)
 
 ## Core References
 

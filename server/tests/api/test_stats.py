@@ -29,7 +29,7 @@ class TestStats:
     def test_domain_count(self, client: TestClient) -> None:
         resp = client.get("/api/v1/stats")
         data = resp.json()
-        assert data["domain_count"] == 2
+        assert data["domain_count"] == 3
 
     def test_phase_count(self, client: TestClient) -> None:
         resp = client.get("/api/v1/stats")

@@ -1012,7 +1012,7 @@ class MultiModelOrchestrator:
                     "search_bioactivity",
                     "search_compounds",
                     "search_pharmacology",
-                    "search_sports_literature",
+                    "search_training_literature",
                     "search_supplement_evidence",
                     "search_prior_research",
                 ):

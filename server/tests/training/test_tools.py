@@ -1,4 +1,4 @@
-"""Tests for Sports Science tools."""
+"""Tests for Training Science tools."""
 
 from __future__ import annotations
 
@@ -8,25 +8,14 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from ehrlich.literature.domain.paper import Paper
-from ehrlich.sports.domain.entities import (
-    AdverseEvent,
-    ClinicalTrial,
-    IngredientEntry,
-    NutrientEntry,
-    NutrientProfile,
-    SupplementLabel,
-)
-from ehrlich.sports.tools import (
+from ehrlich.training.domain.entities import ClinicalTrial
+from ehrlich.training.tools import (
     analyze_training_evidence,
     assess_injury_risk,
     compare_protocols,
     compute_training_metrics,
     search_clinical_trials,
-    search_nutrient_data,
-    search_sports_literature,
-    search_supplement_evidence,
-    search_supplement_labels,
-    search_supplement_safety,
+    search_training_literature,
 )
 
 
@@ -44,26 +33,26 @@ def mock_scholar():
         ),
     ]
     with patch(
-        "ehrlich.sports.tools._client.search",
+        "ehrlich.training.tools._client.search",
         new_callable=AsyncMock,
         return_value=papers,
     ) as mock:
         yield mock
 
 
-class TestSearchSportsLiterature:
+class TestSearchTrainingLiterature:
     @pytest.mark.asyncio()
     async def test_returns_papers(self, mock_scholar: AsyncMock) -> None:
-        result = json.loads(await search_sports_literature("HIIT VO2max"))
+        result = json.loads(await search_training_literature("HIIT VO2max"))
         assert result["count"] == 1
         assert result["papers"][0]["title"] == "HIIT vs MICT for VO2max"
         assert result["papers"][0]["doi"] == "10.1234/test"
-        mock_scholar.assert_called_once_with("sports science HIIT VO2max", limit=10)
+        mock_scholar.assert_called_once_with("training science HIIT VO2max", limit=10)
 
     @pytest.mark.asyncio()
     async def test_custom_limit(self, mock_scholar: AsyncMock) -> None:
-        await search_sports_literature("creatine", limit=5)
-        mock_scholar.assert_called_once_with("sports science creatine", limit=5)
+        await search_training_literature("creatine", limit=5)
+        mock_scholar.assert_called_once_with("training science creatine", limit=5)
 
 
 class TestAnalyzeTrainingEvidence:
@@ -193,17 +182,6 @@ class TestComputeTrainingMetrics:
         assert "session_rpe_load_7d" in result
 
 
-class TestSearchSupplementEvidence:
-    @pytest.mark.asyncio()
-    async def test_returns_papers(self, mock_scholar: AsyncMock) -> None:
-        result = json.loads(
-            await search_supplement_evidence("creatine", "strength")
-        )
-        assert result["supplement"] == "creatine"
-        assert result["outcome"] == "strength"
-        assert result["count"] == 1
-
-
 class TestSearchClinicalTrials:
     @pytest.mark.asyncio()
     async def test_returns_trials(self) -> None:
@@ -222,7 +200,7 @@ class TestSearchClinicalTrials:
             )
         ]
         with patch(
-            "ehrlich.sports.tools._service.search_clinical_trials",
+            "ehrlich.training.tools._service.search_clinical_trials",
             new_callable=AsyncMock,
             return_value=trials,
         ):
@@ -234,84 +212,9 @@ class TestSearchClinicalTrials:
     @pytest.mark.asyncio()
     async def test_empty_results(self) -> None:
         with patch(
-            "ehrlich.sports.tools._service.search_clinical_trials",
+            "ehrlich.training.tools._service.search_clinical_trials",
             new_callable=AsyncMock,
             return_value=[],
         ):
             result = json.loads(await search_clinical_trials("nothing"))
             assert result["count"] == 0
-
-
-class TestSearchSupplementLabels:
-    @pytest.mark.asyncio()
-    async def test_returns_labels(self) -> None:
-        labels = [
-            SupplementLabel(
-                report_id="123",
-                product_name="Creatine Plus",
-                brand="Brand",
-                ingredients=(
-                    IngredientEntry(name="Creatine", amount="5", unit="g"),
-                ),
-                serving_size="1 scoop",
-            )
-        ]
-        with patch(
-            "ehrlich.sports.tools._service.search_supplement_labels",
-            new_callable=AsyncMock,
-            return_value=labels,
-        ):
-            result = json.loads(await search_supplement_labels("creatine"))
-            assert result["count"] == 1
-            assert result["products"][0]["product_name"] == "Creatine Plus"
-            assert len(result["products"][0]["ingredients"]) == 1
-
-
-class TestSearchNutrientData:
-    @pytest.mark.asyncio()
-    async def test_returns_profiles(self) -> None:
-        profiles = [
-            NutrientProfile(
-                fdc_id=171077,
-                description="Chicken breast",
-                brand="",
-                category="Poultry",
-                nutrients=(
-                    NutrientEntry(name="Protein", amount=23.0, unit="G", nutrient_number="203"),
-                ),
-            )
-        ]
-        with patch(
-            "ehrlich.sports.tools._service.search_nutrient_data",
-            new_callable=AsyncMock,
-            return_value=profiles,
-        ):
-            result = json.loads(await search_nutrient_data("chicken breast"))
-            assert result["count"] == 1
-            assert result["foods"][0]["fdc_id"] == 171077
-            assert result["foods"][0]["nutrients"][0]["name"] == "Protein"
-
-
-class TestSearchSupplementSafety:
-    @pytest.mark.asyncio()
-    async def test_returns_events(self) -> None:
-        events = [
-            AdverseEvent(
-                report_id="FDA-001",
-                date="20230315",
-                products=("Pre-Workout X",),
-                reactions=("NAUSEA",),
-                outcomes=("Hospitalization",),
-                consumer_age="28",
-                consumer_gender="Male",
-            )
-        ]
-        with patch(
-            "ehrlich.sports.tools._service.search_supplement_safety",
-            new_callable=AsyncMock,
-            return_value=events,
-        ):
-            result = json.loads(await search_supplement_safety("pre-workout"))
-            assert result["count"] == 1
-            assert result["adverse_events"][0]["report_id"] == "FDA-001"
-            assert "NAUSEA" in result["adverse_events"][0]["reactions"]

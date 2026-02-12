@@ -83,15 +83,3 @@ async def substructure_match(smiles: str, pattern: str) -> str:
         )
     except InvalidSMILESError as e:
         return json.dumps({"error": str(e), "smiles": smiles, "pattern": pattern})
-
-
-async def modify_molecule(smiles: str, modification: str) -> str:
-    """Apply a chemical modification to the molecule (R-group enumeration)."""
-    return json.dumps(
-        {
-            "status": "not_implemented",
-            "smiles": smiles,
-            "modification": modification,
-            "message": "R-group enumeration is a stretch goal",
-        }
-    )

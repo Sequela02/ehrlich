@@ -5,8 +5,8 @@ import logging
 import httpx
 
 from ehrlich.kernel.exceptions import ExternalServiceError
-from ehrlich.sports.domain.entities import IngredientEntry, SupplementLabel
-from ehrlich.sports.domain.repository import SupplementRepository
+from ehrlich.nutrition.domain.entities import IngredientEntry, SupplementLabel
+from ehrlich.nutrition.domain.repository import SupplementRepository
 
 logger = logging.getLogger(__name__)
 

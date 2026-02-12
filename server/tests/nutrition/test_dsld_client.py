@@ -5,7 +5,7 @@ import respx
 from httpx import Response
 
 from ehrlich.kernel.exceptions import ExternalServiceError
-from ehrlich.sports.infrastructure.dsld_client import DSLDClient
+from ehrlich.nutrition.infrastructure.dsld_client import DSLDClient
 
 
 @pytest.fixture

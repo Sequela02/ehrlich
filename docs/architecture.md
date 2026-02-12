@@ -13,7 +13,7 @@ Shared domain primitives used across all contexts: SMILES/InChIKey/MolBlock type
 Cross-cutting ports (abstract interfaces) and value objects used by multiple bounded contexts. Contains `ChemistryPort` ABC, `Fingerprint`, `MolecularDescriptors`, and `Conformer3D` value objects. No infrastructure dependencies -- pure Python only.
 
 ### Literature
-Searches and manages scientific references. Integrates with Semantic Scholar and PubMed APIs.
+Searches and manages scientific references. Integrates with Semantic Scholar API.
 
 ### Chemistry
 Cheminformatics operations: molecular descriptors, fingerprints, 3D conformer generation, substructure matching, and 2D SVG depiction. All RDKit usage is isolated in the infrastructure adapter (`rdkit_adapter.py`).
@@ -27,8 +27,11 @@ Machine learning for antimicrobial activity prediction. Supports Chemprop (D-MPN
 ### Simulation
 Molecular simulation and target discovery: docking (AutoDock Vina/RDKit fallback), ADMET prediction, resistance assessment, protein targets (RCSB PDB), protein annotations (UniProt), disease-target associations (Open Targets), environmental toxicity (EPA CompTox).
 
-### Sports
-Sports science research: evidence-based training analysis, protocol comparison, injury risk assessment, training load monitoring, supplement evidence search, clinical trial search (ClinicalTrials.gov), supplement label lookup (NIH DSLD), nutrient data (USDA FoodData), and supplement safety monitoring (OpenFDA CAERS). Uses Semantic Scholar for literature search.
+### Training
+Exercise physiology and sports medicine research: evidence-based training analysis, protocol comparison, injury risk assessment, training load monitoring, and clinical trial search (ClinicalTrials.gov). Uses Semantic Scholar for literature search.
+
+### Nutrition
+Nutrition science research: supplement evidence analysis, supplement label lookup (NIH DSLD), nutrient data (USDA FoodData), and supplement safety monitoring (OpenFDA CAERS). Uses Semantic Scholar for literature search.
 
 ### Investigation
 Hypothesis-driven agent orchestration. Manages the Claude-driven research loop: literature survey, hypothesis formulation (with predictions, criteria, scope), parallel experiment execution, criteria-based evaluation, negative controls, and synthesis. Uses multi-model architecture (Director/Researcher/Summarizer) with user-guided steering, domain classification, and multi-investigation memory. Includes domain configuration system (`DomainConfig` + `DomainRegistry`) for pluggable scientific domains with tool tagging, score definitions, prompt adaptation, and visualization control. Optional MCP bridge (`MCPBridge`) connects to external MCP servers for extensibility (e.g. Excalidraw for visual summaries).
@@ -101,6 +104,21 @@ Ehrlich uses a hybrid approach for molecule rendering:
 | `GET /targets` | JSON list of `{pdb_id, name, organism}` | None |
 
 Invalid SMILES on `/depict` returns a dark error SVG (200 status). Invalid SMILES on `/conformer` or `/descriptors` returns 400.
+
+## Domain-Specific Visualization
+
+6 visualization tools produce structured `VisualizationPayload` JSON (viz_type, title, data, config, domain). The orchestrator intercepts viz tool results via `_maybe_viz_event()` and emits a `VisualizationRendered` SSE event. On the frontend, `VizRegistry` maps each `viz_type` to a lazy-loaded React component rendered in the `VisualizationPanel` grid.
+
+| Tool | Chart Library | Purpose |
+|------|--------------|---------|
+| `render_binding_scatter` | Recharts ScatterChart | Compound binding affinities |
+| `render_admet_radar` | Recharts RadarChart | ADMET/drug-likeness profiles |
+| `render_training_timeline` | Recharts ComposedChart | Training load with ACWR danger zones |
+| `render_muscle_heatmap` | Custom SVG | Anatomical body diagram with activation/risk |
+| `render_forest_plot` | Visx | Meta-analysis forest plot |
+| `render_evidence_matrix` | Visx HeatmapRect | Hypothesis-by-evidence heatmap |
+
+Chart theming uses OKLCH color tokens consistent with the application's visual identity.
 
 ## Visual Identity — "Lab Protocol"
 

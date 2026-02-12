@@ -1,4 +1,4 @@
-import { FlaskConical, Brain, Leaf, Target, Activity, Shield } from "lucide-react";
+import { FlaskConical, Brain, Leaf, Target, Activity, Shield, Apple } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 interface Template {
@@ -45,7 +45,7 @@ const TEMPLATES: Template[] = [
   {
     title: "VO2max Training Optimization",
     domain: "Exercise Physiology",
-    domainTag: "Sports Science",
+    domainTag: "Training Science",
     prompt:
       "What are the most effective training protocols for improving VO2max in recreational runners? Compare high-intensity interval training (HIIT) vs polarized training vs threshold training, considering evidence quality, effect sizes, and injury risk.",
     Icon: Activity,
@@ -53,10 +53,18 @@ const TEMPLATES: Template[] = [
   {
     title: "ACL Injury Prevention",
     domain: "Sports Medicine",
-    domainTag: "Sports Science",
+    domainTag: "Training Science",
     prompt:
       "Evaluate evidence-based neuromuscular training programs for ACL injury prevention in female soccer players. Analyze which exercise components (plyometrics, balance, strength) have the strongest protective effect and optimal training frequency.",
     Icon: Shield,
+  },
+  {
+    title: "Creatine for Strength",
+    domain: "Sports Nutrition",
+    domainTag: "Nutrition Science",
+    prompt:
+      "What is the evidence for creatine monohydrate supplementation on strength and power performance? Analyze dosing protocols, loading phases, and safety profile from meta-analyses.",
+    Icon: Apple,
   },
 ];
 

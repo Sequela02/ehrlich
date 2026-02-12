@@ -67,10 +67,3 @@ class TestTanimotoSimilarity:
     async def test_different(self) -> None:
         result = json.loads(await tools.tanimoto_similarity("CCO", "c1ccccc1"))
         assert 0.0 <= result["similarity"] < 1.0
-
-
-class TestModifyMolecule:
-    @pytest.mark.asyncio
-    async def test_not_implemented(self) -> None:
-        result = json.loads(await tools.modify_molecule("CCO", "add_methyl"))
-        assert result["status"] == "not_implemented"

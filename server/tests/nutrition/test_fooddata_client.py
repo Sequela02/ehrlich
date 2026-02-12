@@ -5,7 +5,7 @@ import respx
 from httpx import Response
 
 from ehrlich.kernel.exceptions import ExternalServiceError
-from ehrlich.sports.infrastructure.fooddata_client import FoodDataClient
+from ehrlich.nutrition.infrastructure.fooddata_client import FoodDataClient
 
 
 @pytest.fixture

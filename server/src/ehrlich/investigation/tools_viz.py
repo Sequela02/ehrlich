@@ -144,7 +144,7 @@ async def render_training_timeline(
                 {"min": 0.0, "max": 0.8, "label": "Undertraining"},
             ],
         },
-        "config": {"domain": "sports"},
+        "config": {"domain": "training"},
     })
 
 
@@ -179,7 +179,7 @@ async def render_muscle_heatmap(
             "muscles": validated,
             "view": view if view in ("front", "back") else "front",
         },
-        "config": {"domain": "sports", "color_scale": "intensity"},
+        "config": {"domain": "training", "color_scale": "intensity"},
     })
 
 

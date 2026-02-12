@@ -17,14 +17,17 @@ Ehrlich is **domain-agnostic**. The hypothesis-driven engine works for any scien
 - **Agricultural biocontrol** -- "Find biocontrol molecules from endophytic bacteria in Mammillaria"
 - **Any molecular target** -- dynamic protein target discovery from 200K+ PDB structures
 
-### Sports Science
+### Training Science
 - **Training optimization** -- "What are the most effective protocols for improving VO2max?"
 - **Injury prevention** -- "Evaluate ACL injury prevention programs for female soccer players"
+
+### Nutrition Science
 - **Supplement evidence** -- "What is the evidence for creatine on strength performance?"
+- **Nutrient profiling** -- "Compare protein content and amino acid profiles of whey vs plant-based supplements"
 
 ## Architecture
 
-Ehrlich follows Domain-Driven Design with nine bounded contexts:
+Ehrlich follows Domain-Driven Design with ten bounded contexts:
 
 | Context | Purpose |
 |---------|---------|
@@ -35,7 +38,8 @@ Ehrlich follows Domain-Driven Design with nine bounded contexts:
 | **analysis** | Dataset exploration (ChEMBL, PubChem), substructure enrichment |
 | **prediction** | ML modeling: train, predict, ensemble, cluster |
 | **simulation** | Molecular docking, ADMET, resistance, target discovery (RCSB PDB), toxicity (EPA CompTox) |
-| **sports** | Sports science: evidence analysis, protocol comparison, injury risk, training metrics, clinical trials, supplement safety |
+| **training** | Exercise physiology: evidence analysis, protocol comparison, injury risk, training metrics, clinical trials |
+| **nutrition** | Nutrition science: supplement evidence, supplement labels, nutrient data, supplement safety |
 | **investigation** | Multi-model agent orchestration with Director-Worker-Summarizer pattern + domain registry + MCP bridge |
 
 ### Multi-Model Architecture
@@ -98,16 +102,16 @@ All data sources are free and open-access.
 | Simulation | `assess_resistance` | Resistance mutation scoring |
 | Simulation | `get_protein_annotation` | UniProt protein function and disease links |
 | Simulation | `search_disease_targets` | Open Targets disease-target associations |
-| Sports | `search_sports_literature` | Sports science literature via Semantic Scholar |
-| Sports | `analyze_training_evidence` | Pooled effect sizes, heterogeneity, evidence grading |
-| Sports | `compare_protocols` | Evidence-weighted protocol comparison |
-| Sports | `assess_injury_risk` | Knowledge-based injury risk scoring |
-| Sports | `compute_training_metrics` | ACWR, monotony, strain, session RPE load |
-| Sports | `search_supplement_evidence` | Supplement efficacy literature search |
-| Sports | `search_clinical_trials` | ClinicalTrials.gov exercise/training RCT search |
-| Sports | `search_supplement_labels` | NIH DSLD supplement product ingredient lookup |
-| Sports | `search_nutrient_data` | USDA FoodData Central nutrient profiles |
-| Sports | `search_supplement_safety` | OpenFDA CAERS adverse event reports |
+| Training | `search_training_literature` | Training science literature via Semantic Scholar |
+| Training | `analyze_training_evidence` | Pooled effect sizes, heterogeneity, evidence grading |
+| Training | `compare_protocols` | Evidence-weighted protocol comparison |
+| Training | `assess_injury_risk` | Knowledge-based injury risk scoring |
+| Training | `compute_training_metrics` | ACWR, monotony, strain, session RPE load |
+| Training | `search_clinical_trials` | ClinicalTrials.gov exercise/training RCT search |
+| Nutrition | `search_supplement_evidence` | Supplement efficacy literature search |
+| Nutrition | `search_supplement_labels` | NIH DSLD supplement product ingredient lookup |
+| Nutrition | `search_nutrient_data` | USDA FoodData Central nutrient profiles |
+| Nutrition | `search_supplement_safety` | OpenFDA CAERS adverse event reports |
 | Visualization | `render_binding_scatter` | Scatter plot of compound binding affinities |
 | Visualization | `render_admet_radar` | Radar chart of ADMET/drug-likeness properties |
 | Visualization | `render_training_timeline` | Training load timeline with ACWR danger zones |
@@ -218,6 +222,7 @@ Server at :8000, Console at :3000.
 | GET | `/api/v1/investigate/{id}` | Full investigation detail |
 | POST | `/api/v1/investigate` | Create new investigation |
 | GET | `/api/v1/investigate/{id}/stream` | SSE stream of investigation events |
+| POST | `/api/v1/investigate/{id}/approve` | Approve/reject formulated hypotheses |
 | GET | `/api/v1/molecule/depict?smiles=&w=&h=` | 2D SVG depiction (`image/svg+xml`, cached 24h) |
 | GET | `/api/v1/molecule/conformer?smiles=` | 3D conformer (JSON: mol_block, energy, num_atoms) |
 | GET | `/api/v1/molecule/descriptors?smiles=` | Molecular descriptors + Lipinski pass/fail |
@@ -244,6 +249,7 @@ Server at :8000, Console at :3000.
 | `cost_update` | Progressive cost/token snapshot |
 | `hypothesis_approval_requested` | Awaiting user approval of hypotheses |
 | `domain_detected` | Domain identified with display config |
+| `visualization` | Chart/diagram visualization rendered |
 | `completed` | Investigation finished with candidates and cost |
 | `error` | Error occurred |
 
@@ -303,7 +309,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, architecture overv
 
 ## License
 
-MIT - see [LICENSE](LICENSE).
+AGPL-3.0 - see [LICENSE](LICENSE).
 
 ## Author
 

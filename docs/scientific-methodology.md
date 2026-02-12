@@ -57,7 +57,7 @@ Hypothesis entity fields:
 
 **Key design decisions:**
 - Success/failure criteria live on the Hypothesis, not the Experiment. The hypothesis defines WHAT to measure; the experiment defines HOW to measure it. Evaluation compares observations against pre-defined criteria (objective) instead of subjective judgment.
-- `hypothesis_type` spans domains: molecular science uses mechanistic/structural/pharmacological/toxicological; sports science uses physiological/performance/epidemiological. `DomainConfig.hypothesis_types` defines valid types per domain.
+- `hypothesis_type` spans domains: molecular science uses mechanistic/structural/pharmacological/toxicological; training science uses physiological/performance/epidemiological; nutrition science uses mechanistic/efficacy/safety/dose_response. `DomainConfig.hypothesis_types` defines valid types per domain.
 - `DomainConfig` serves as the extension point for domain-specific validation and synthesis methodology (Phases 5-6).
 
 ---
@@ -184,7 +184,7 @@ Orchestrator wiring:
 - Analysis plan is pre-specified (before seeing results) to prevent post-hoc rationalization (Fisher's principle)
 - Confounders are explicitly identified at design time so the evaluator can check if they materialized
 - `expected_findings` removed from Director output format (was never read by orchestrator)
-- Domain config examples updated with protocol fields for both molecular and sports science
+- Domain config examples updated with protocol fields for molecular, training, and nutrition science
 
 ---
 
@@ -299,7 +299,7 @@ PositiveControl entity fields:
 Director formulation prompt:
   Now outputs positive_controls alongside negative_controls
   Guidance: 1-2 positive controls per investigation
-  Both molecular and sports domain examples updated
+  Molecular, training, and nutrition domain examples updated
 
 Director synthesis prompt:
   <validation_quality> section assesses control separation, classification quality
@@ -396,7 +396,8 @@ Candidate entity: +priority field (int, 0-4)
 
 Domain configs: priority assignment criteria per domain
   - Molecular: prediction_score + docking_score + ADMET
-  - Sports: evidence_score + effect_size + evidence_level
+  - Training: evidence_score + effect_size + confidence
+  - Nutrition: evidence_score + effect_size + safety_score
 ```
 
 **Key design decisions:**

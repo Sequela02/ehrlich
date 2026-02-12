@@ -48,14 +48,24 @@ _MOLECULAR = _make_config(
     experiment_examples="<experiment>dock</experiment>",
 )
 
-_SPORTS = _make_config(
-    "sports_science",
-    categories=("training", "recovery", "supplements"),
-    tool_tags=frozenset({"sports"}),
+_TRAINING = _make_config(
+    "training_science",
+    categories=("training", "recovery"),
+    tool_tags=frozenset({"training"}),
     score_defs=(ScoreDefinition(key="effect_size", label="ES", format_spec=".2f"),),
     attrs=("population",),
     hypothesis_types=("correlational",),
     director_examples="<example>HIIT</example>",
+)
+
+_NUTRITION = _make_config(
+    "nutrition_science",
+    categories=("supplements", "clinical_nutrition"),
+    tool_tags=frozenset({"nutrition"}),
+    score_defs=(ScoreDefinition(key="safety_score", label="Safety", format_spec=".2f"),),
+    attrs=("dosage",),
+    hypothesis_types=("efficacy",),
+    director_examples="<example>Creatine</example>",
 )
 
 
@@ -63,7 +73,7 @@ class TestDomainRegistryDetect:
     def test_single_category_returns_one_config(self) -> None:
         reg = DomainRegistry()
         reg.register(_MOLECULAR)
-        reg.register(_SPORTS)
+        reg.register(_TRAINING)
 
         result = reg.detect(["drug_discovery"])
         assert len(result) == 1
@@ -80,17 +90,17 @@ class TestDomainRegistryDetect:
     def test_cross_domain_returns_both(self) -> None:
         reg = DomainRegistry()
         reg.register(_MOLECULAR)
-        reg.register(_SPORTS)
+        reg.register(_TRAINING)
 
         result = reg.detect(["drug_discovery", "training"])
         assert len(result) == 2
         names = {c.name for c in result}
-        assert names == {"molecular_science", "sports_science"}
+        assert names == {"molecular_science", "training_science"}
 
     def test_unknown_category_falls_back_to_first(self) -> None:
         reg = DomainRegistry()
         reg.register(_MOLECULAR)
-        reg.register(_SPORTS)
+        reg.register(_TRAINING)
 
         result = reg.detect(["astrophysics"])
         assert len(result) == 1
@@ -103,10 +113,10 @@ class TestDomainRegistryDetect:
     def test_preserves_order_from_input(self) -> None:
         reg = DomainRegistry()
         reg.register(_MOLECULAR)
-        reg.register(_SPORTS)
+        reg.register(_TRAINING)
 
         result = reg.detect(["training", "drug_discovery"])
-        assert result[0].name == "sports_science"
+        assert result[0].name == "training_science"
         assert result[1].name == "molecular_science"
 
 
@@ -116,41 +126,41 @@ class TestMergeDomainConfigs:
         assert result is _MOLECULAR
 
     def test_merged_name_alphabetical(self) -> None:
-        result = merge_domain_configs([_SPORTS, _MOLECULAR])
-        assert result.name == "molecular_science + sports_science"
+        result = merge_domain_configs([_TRAINING, _MOLECULAR])
+        assert result.name == "molecular_science + training_science"
 
     def test_merged_tool_tags_union(self) -> None:
-        result = merge_domain_configs([_MOLECULAR, _SPORTS])
-        assert result.tool_tags == frozenset({"chemistry", "analysis", "prediction", "sports"})
+        result = merge_domain_configs([_MOLECULAR, _TRAINING])
+        assert result.tool_tags == frozenset({"chemistry", "analysis", "prediction", "training"})
 
     def test_merged_score_definitions_concatenated(self) -> None:
-        result = merge_domain_configs([_MOLECULAR, _SPORTS])
+        result = merge_domain_configs([_MOLECULAR, _TRAINING])
         keys = [sd.key for sd in result.score_definitions]
         assert "probability" in keys
         assert "effect_size" in keys
 
     def test_merged_attribute_keys_deduplicated(self) -> None:
-        result = merge_domain_configs([_MOLECULAR, _SPORTS])
+        result = merge_domain_configs([_MOLECULAR, _TRAINING])
         assert "mechanism" in result.attribute_keys
         assert "population" in result.attribute_keys
 
     def test_merged_hypothesis_types_deduplicated(self) -> None:
-        result = merge_domain_configs([_MOLECULAR, _SPORTS])
+        result = merge_domain_configs([_MOLECULAR, _TRAINING])
         assert result.hypothesis_types.count("correlational") == 1
 
     def test_merged_director_examples_joined(self) -> None:
-        result = merge_domain_configs([_MOLECULAR, _SPORTS])
+        result = merge_domain_configs([_MOLECULAR, _TRAINING])
         assert "<example>MRSA</example>" in result.director_examples
         assert "<example>HIIT</example>" in result.director_examples
 
     def test_source_configs_preserved(self) -> None:
-        result = merge_domain_configs([_MOLECULAR, _SPORTS])
+        result = merge_domain_configs([_MOLECULAR, _TRAINING])
         assert len(result.source_configs) == 2
         names = {c.name for c in result.source_configs}
-        assert names == {"molecular_science", "sports_science"}
+        assert names == {"molecular_science", "training_science"}
 
     def test_to_display_dict_includes_domains(self) -> None:
-        result = merge_domain_configs([_MOLECULAR, _SPORTS])
+        result = merge_domain_configs([_MOLECULAR, _TRAINING])
         d = result.to_display_dict()
         assert "domains" in d
         domains = d["domains"]

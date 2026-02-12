@@ -77,11 +77,11 @@ Every tool gets a frozenset tag at registration:
 
 ```python
 registry.register("dock_against_target", dock_against_target, frozenset({"simulation"}))
-registry.register("compute_training_metrics", compute_training_metrics, frozenset({"sports"}))
+registry.register("compute_training_metrics", compute_training_metrics, frozenset({"training"}))
 registry.register("record_finding", record_finding, None)  # universal -- always available
 ```
 
-When the Researcher executes an experiment, it only sees tools that match the detected domain's `tool_tags`. A sports science investigation never sees docking tools. A molecular investigation never sees training metrics. Investigation control tools (propose_hypothesis, record_finding, etc.) have no tags and are always available.
+When the Researcher executes an experiment, it only sees tools that match the detected domain's `tool_tags`. A training science investigation never sees docking tools. A molecular investigation never sees training metrics. Investigation control tools (propose_hypothesis, record_finding, etc.) have no tags and are always available.
 
 ### Frontend: Dynamic Everything
 
@@ -90,7 +90,7 @@ The frontend went from hardcoded columns to data-driven rendering:
 - **CandidateTable**: Score columns come from `DomainDisplayConfig.score_columns`, not constants. Each column knows its label, format, threshold, and whether higher is better.
 - **CandidateDetail**: Routes to `MolecularDetail` (2D/3D/descriptors) when `identifier_type === "smiles"`, or `GenericDetail` (score/attribute cards) otherwise.
 - **Visualization**: Unified `VisualizationPanel` renders all visualizations inline. LiveLabViewer auto-appears when molecular tool events are detected in the SSE stream. Chart visualizations render from `VisualizationRendered` events. No static configuration needed.
-- **Template cards**: Each template carries a domain badge. Users see both molecular and sports templates on the home page.
+- **Template cards**: Each template carries a domain badge. Users see molecular, training, and nutrition templates on the home page.
 
 The `DomainDetected` SSE event sends the full display config to the frontend early in the investigation, before any results arrive.
 
@@ -125,11 +125,11 @@ We considered: separate registries per domain, tool namespacing, dynamic tool lo
 
 ### 4. The scientific method is the product
 
-Chemistry tools are impressive. Sports science tools prove a point. But the real value is the hypothesis-driven loop: formulate with predictions and criteria, test against pre-defined thresholds, evaluate objectively, revise or reject. That loop works for any domain where evidence can be gathered and weighed.
+Chemistry tools are impressive. Training and nutrition science tools prove a point. But the real value is the hypothesis-driven loop: formulate with predictions and criteria, test against pre-defined thresholds, evaluate objectively, revise or reject. That loop works for any domain where evidence can be gathered and weighed.
 
 ### 5. Frontend abstractions pay for themselves immediately
 
-Converting the CandidateTable from 4 hardcoded columns to dynamic `score_columns` took effort. But the sports science domain rendered correctly on the first try -- zero frontend work needed for domain #2.
+Converting the CandidateTable from 4 hardcoded columns to dynamic `score_columns` took effort. But the training science domain rendered correctly on the first try -- zero frontend work needed for new domains.
 
 ### 6. Tests as refactoring insurance
 
@@ -147,13 +147,13 @@ Domains that could be added with just tools + config, no engine changes:
 
 ### Medium-Term Evolution (Months)
 
-- **Cross-domain investigations** -- "Find compounds that improve both athletic recovery AND reduce inflammation" would use tools from both molecular and sports domains simultaneously.
+- **Cross-domain investigations** -- "Find compounds that improve both athletic recovery AND reduce inflammation" would use tools from molecular + training + nutrition domains simultaneously.
 - **Domain-specific validation** -- Each domain could define its own validation methodology in the DomainConfig (the scientific methodology research is already done for molecular; same treatment for other domains).
 - **Custom domain builder** -- A UI where researchers define their own DomainConfig: name their scores, pick their tools, write their prompt examples. No code required.
 
 ### Long-Term Vision
 
-The engine becomes a general-purpose scientific reasoning framework. The domains are plugins. Ehrlich is not a molecular discovery tool that also does sports science -- it is a scientific discovery engine that currently ships with two domains. The architecture supports any number.
+The engine becomes a general-purpose scientific reasoning framework. The domains are plugins. Ehrlich is a scientific discovery engine that currently ships with three domains (Molecular Science, Training Science, Nutrition Science). The architecture supports any number.
 
 ## Architecture Summary
 

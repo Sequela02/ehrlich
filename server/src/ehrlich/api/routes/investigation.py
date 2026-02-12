@@ -31,7 +31,8 @@ from ehrlich.investigation.application.multi_orchestrator import MultiModelOrche
 from ehrlich.investigation.application.tool_registry import ToolRegistry
 from ehrlich.investigation.domain.domain_registry import DomainRegistry
 from ehrlich.investigation.domain.domains.molecular import MOLECULAR_SCIENCE
-from ehrlich.investigation.domain.domains.sports import SPORTS_SCIENCE
+from ehrlich.investigation.domain.domains.nutrition import NUTRITION_SCIENCE
+from ehrlich.investigation.domain.domains.training import TRAINING_SCIENCE
 from ehrlich.investigation.domain.investigation import Investigation, InvestigationStatus
 from ehrlich.investigation.domain.mcp_config import MCPServerConfig
 from ehrlich.investigation.infrastructure.anthropic_client import AnthropicClientAdapter
@@ -55,6 +56,12 @@ from ehrlich.investigation.tools_viz import (
     render_training_timeline,
 )
 from ehrlich.literature.tools import get_reference, search_citations, search_literature
+from ehrlich.nutrition.tools import (
+    search_nutrient_data,
+    search_supplement_evidence,
+    search_supplement_labels,
+    search_supplement_safety,
+)
 from ehrlich.prediction.tools import cluster_compounds, predict_candidates, train_model
 from ehrlich.simulation.tools import (
     assess_resistance,
@@ -65,17 +72,13 @@ from ehrlich.simulation.tools import (
     search_disease_targets,
     search_protein_targets,
 )
-from ehrlich.sports.tools import (
+from ehrlich.training.tools import (
     analyze_training_evidence,
     assess_injury_risk,
     compare_protocols,
     compute_training_metrics,
     search_clinical_trials,
-    search_nutrient_data,
-    search_sports_literature,
-    search_supplement_evidence,
-    search_supplement_labels,
-    search_supplement_safety,
+    search_training_literature,
 )
 
 if TYPE_CHECKING:
@@ -145,14 +148,14 @@ def _build_registry() -> ToolRegistry:
     _analysis = frozenset({"analysis"})
     _pred = frozenset({"prediction"})
     _sim = frozenset({"simulation"})
-    _sports = frozenset({"sports"})
-    _sports_nutrition = frozenset({"sports", "nutrition"})
-    _sports_clinical = frozenset({"sports", "clinical"})
-    _sports_safety = frozenset({"sports", "safety"})
+    _training = frozenset({"training"})
+    _training_clinical = frozenset({"training", "clinical"})
+    _nutrition = frozenset({"nutrition"})
+    _nutrition_safety = frozenset({"nutrition", "safety"})
     _viz = frozenset({"visualization"})
     _chem_viz = frozenset({"chemistry", "visualization"})
     _sim_viz = frozenset({"simulation", "visualization"})
-    _sports_viz = frozenset({"sports", "visualization"})
+    _training_viz = frozenset({"training", "visualization"})
 
     tagged_tools: list[tuple[str, Any, frozenset[str] | None]] = [
         # Chemistry (6)
@@ -185,22 +188,23 @@ def _build_registry() -> ToolRegistry:
         ("assess_resistance", assess_resistance, _sim),
         ("get_protein_annotation", get_protein_annotation, _sim),
         ("search_disease_targets", search_disease_targets, _sim),
-        # Sports Science (10)
-        ("search_sports_literature", search_sports_literature, _sports),
-        ("analyze_training_evidence", analyze_training_evidence, _sports),
-        ("compare_protocols", compare_protocols, _sports),
-        ("assess_injury_risk", assess_injury_risk, _sports),
-        ("compute_training_metrics", compute_training_metrics, _sports),
-        ("search_supplement_evidence", search_supplement_evidence, _sports),
-        ("search_clinical_trials", search_clinical_trials, _sports_clinical),
-        ("search_supplement_labels", search_supplement_labels, _sports_nutrition),
-        ("search_nutrient_data", search_nutrient_data, _sports_nutrition),
-        ("search_supplement_safety", search_supplement_safety, _sports_safety),
+        # Training Science (6)
+        ("search_training_literature", search_training_literature, _training),
+        ("analyze_training_evidence", analyze_training_evidence, _training),
+        ("compare_protocols", compare_protocols, _training),
+        ("assess_injury_risk", assess_injury_risk, _training),
+        ("compute_training_metrics", compute_training_metrics, _training),
+        ("search_clinical_trials", search_clinical_trials, _training_clinical),
+        # Nutrition Science (4)
+        ("search_supplement_evidence", search_supplement_evidence, _nutrition),
+        ("search_supplement_labels", search_supplement_labels, _nutrition),
+        ("search_nutrient_data", search_nutrient_data, _nutrition),
+        ("search_supplement_safety", search_supplement_safety, _nutrition_safety),
         # Visualization (6)
         ("render_binding_scatter", render_binding_scatter, _chem_viz),
         ("render_admet_radar", render_admet_radar, _sim_viz),
-        ("render_training_timeline", render_training_timeline, _sports_viz),
-        ("render_muscle_heatmap", render_muscle_heatmap, _sports_viz),
+        ("render_training_timeline", render_training_timeline, _training_viz),
+        ("render_muscle_heatmap", render_muscle_heatmap, _training_viz),
         ("render_forest_plot", render_forest_plot, _viz),
         ("render_evidence_matrix", render_evidence_matrix, _viz),
         # Investigation control (7) -- universal, no tags
@@ -220,7 +224,8 @@ def _build_registry() -> ToolRegistry:
 def _build_domain_registry() -> DomainRegistry:
     domain_registry = DomainRegistry()
     domain_registry.register(MOLECULAR_SCIENCE)
-    domain_registry.register(SPORTS_SCIENCE)
+    domain_registry.register(TRAINING_SCIENCE)
+    domain_registry.register(NUTRITION_SCIENCE)
     return domain_registry
 
 

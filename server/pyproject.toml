@@ -110,11 +110,8 @@ omit = [
     "src/ehrlich/__main__.py",
     "src/ehrlich/config.py",
     "src/ehrlich/api/*",
-    "src/ehrlich/mcp/*",
     "src/ehrlich/investigation/*",
     "src/ehrlich/prediction/infrastructure/chemprop_adapter.py",
-    "src/ehrlich/literature/infrastructure/pubmed.py",
-    "src/ehrlich/analysis/infrastructure/tox21_loader.py",
 ]
 
 [tool.coverage.report]

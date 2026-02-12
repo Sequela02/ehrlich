@@ -55,7 +55,7 @@ type(scope): description
 
 **Types:** `feat`, `fix`, `refactor`, `chore`, `docs`, `test`
 
-**Scopes:** `kernel`, `shared`, `literature`, `chemistry`, `analysis`, `prediction`, `simulation`, `sports`, `investigation`, `api`, `console`, `mol`, `data`
+**Scopes:** `kernel`, `shared`, `literature`, `chemistry`, `analysis`, `prediction`, `simulation`, `training`, `nutrition`, `investigation`, `api`, `console`, `mol`, `data`
 
 ### Code Standards (Non-Negotiable)
 
@@ -72,7 +72,7 @@ Every contribution must respect:
 
 ## Architecture
 
-DDD monorepo with 9 bounded contexts. Each context follows `domain/` -> `application/` -> `infrastructure/` layering.
+DDD monorepo with 10 bounded contexts. Each context follows `domain/` -> `application/` -> `infrastructure/` layering.
 
 ### Layer Rules (Strict)
 
@@ -103,7 +103,8 @@ Haiku 4.5 (Summarizer)  -- Compresses large outputs, classifies domains
 | analysis | Dataset exploration (ChEMBL, PubChem, GtoPdb) |
 | prediction | ML models (XGBoost, Chemprop) |
 | simulation | Docking, ADMET, targets (RCSB PDB, UniProt, Open Targets, EPA CompTox) |
-| sports | Sports science (evidence analysis, protocol comparison, injury risk, training metrics) |
+| training | Exercise physiology (evidence analysis, protocol comparison, injury risk, training metrics, clinical trials) |
+| nutrition | Nutrition science (supplement evidence, supplement labels, nutrient data, supplement safety) |
 | investigation | Multi-model orchestration + domain registry + SQLite persistence |
 
 ## Testing
@@ -124,9 +125,9 @@ Before writing any code, research the domain deeply. This upfront work determine
 
 **What to research:**
 
-1. **Problem definition** -- What scientific questions should this domain answer? What does "discovery" mean here? (e.g., molecular: find candidate drugs; sports: find optimal training protocols)
+1. **Problem definition** -- What scientific questions should this domain answer? What does "discovery" mean here? (e.g., molecular: find candidate drugs; training: find optimal training protocols)
 2. **Data sources** -- Where does real experimental data come from? Identify free APIs, databases, or datasets. For each source: base URL, auth requirements, rate limits, response format, coverage
-3. **Candidate criteria** -- What makes a good candidate in this domain? What scores matter? What thresholds separate good from bad? (e.g., molecular: prediction_score > 0.7, docking < -7.0 kcal/mol; sports: effect_size > 0.5, evidence_grade A-B)
+3. **Candidate criteria** -- What makes a good candidate in this domain? What scores matter? What thresholds separate good from bad? (e.g., molecular: prediction_score > 0.7, docking < -7.0 kcal/mol; training: effect_size > 0.5, evidence_grade A-B)
 4. **Hypothesis types** -- What kinds of hypotheses does this domain test? (mechanistic, structural, correlational, physiological, etc.)
 5. **Visualization needs** -- How should results be displayed? Charts, 3D models, diagrams, maps, tables?
 6. **Domain vocabulary** -- Key terms, units, standard notations that Claude needs in its prompts
@@ -496,4 +497,4 @@ async def search_your_data(query: str, max_results: int = 10) -> str:
 # tests/yourdomain/test_your_client.py -- test HTTP parsing with httpx mock
 ```
 
-See `server/src/ehrlich/sports/` for a complete example with 4 data sources (ClinicalTrials.gov, NIH DSLD, USDA FoodData, OpenFDA CAERS), each following this exact pattern.
+See `server/src/ehrlich/training/` and `server/src/ehrlich/nutrition/` for complete examples with real data sources (ClinicalTrials.gov, NIH DSLD, USDA FoodData, OpenFDA CAERS), each following this exact pattern.

@@ -5,7 +5,7 @@ import respx
 from httpx import Response
 
 from ehrlich.kernel.exceptions import ExternalServiceError
-from ehrlich.sports.infrastructure.openfda_client import OpenFDAClient
+from ehrlich.nutrition.infrastructure.openfda_client import OpenFDAClient
 
 
 @pytest.fixture

@@ -28,7 +28,7 @@ The foundation. Every other context depends on molecular processing.
 ### 1A. RDKit Adapter -- Core Operations
 - [x] `validate_smiles(smiles)` -- `Chem.MolFromSmiles`, null-check, return bool
 - [x] `canonicalize(smiles)` -- canonical SMILES via RDKit
-- [x] `to_inchikey(smiles)` -- SMILES -> InChI -> InChIKey (needed for Tox21 cross-ref)
+- [x] `to_inchikey(smiles)` -- SMILES -> InChI -> InChIKey
 - [x] Tests: valid/invalid SMILES, canonicalization consistency (24 tests)
 
 ### 1B. RDKit Adapter -- Descriptors & Fingerprints
@@ -46,7 +46,6 @@ The foundation. Every other context depends on molecular processing.
 - [x] Wire `ChemistryService` to `RDKitAdapter` via dependency injection
 - [x] Implement `generate_3d` tool -- SMILES -> JSON with MolBlock + energy
 - [x] Implement `substructure_match` tool -- SMILES + pattern -> JSON with match + atoms
-- [x] Implement `modify_molecule` tool -- stub (R-group enumeration, stretch goal)
 - [x] Added `validate_smiles`, `compute_descriptors`, `compute_fingerprint`, `tanimoto_similarity` tools
 - [x] Tests: service integration tests (9), tool JSON output validation (11)
 
@@ -65,26 +64,21 @@ Two independent contexts. Can be built in parallel.
 - [x] Error handling: timeout, 429 rate limit, malformed response
 - [x] Tests: Paper entity construction from API response (3 tests)
 
-### 2B. PubMed Client (Backup)
-- [x] Two-step: esearch (get PMIDs) -> efetch (get details)
-- [x] Parse XML response into Paper entities
-- [ ] Tests: mock XML responses (deferred -- PubMed is fallback only)
-
-### 2C. Core Reference Set
+### 2B. Core Reference Set
 - [x] Load `data/references/core_references.json` into `CoreReferenceSet`
 - [x] Lookup by key: halicin, abaucin, who_bppl_2024, chemprop, pkcsm, amr_crisis
 - [x] Expanded JSON with full metadata (key findings, training size, hit rates)
 - [x] Tests: load fixture, find by key, all 6 keys verified
 
-### 2D. Literature Service + Tools
-- [x] `search_papers(query, limit)` -- Semantic Scholar primary, PubMed fallback
+### 2C. Literature Service + Tools
+- [x] `search_papers(query, limit)` -- Semantic Scholar
 - [x] `get_reference(key)` -- core reference lookup + DOI fallback
 - [x] `format_citation(paper)` -- APA-style string
 - [x] Implement `search_literature` tool -- query -> JSON with papers
 - [x] Implement `get_reference` tool -- key -> JSON with full citation
 - [x] Tests: service with mock repos (8), tool JSON output (3)
 
-### 2E. ChEMBL Loader
+### 2D. ChEMBL Loader
 - [x] HTTP client for ChEMBL REST API (direct httpx)
 - [x] Filter by: target_organism, standard_type=MIC/IC50, standard_relation="="
 - [x] Deduplicate: one entry per SMILES (median activity if duplicates)
@@ -93,13 +87,7 @@ Two independent contexts. Can be built in parallel.
 - [x] Build `Dataset` entity: smiles_list, activities, metadata
 - [ ] Tests: mock API (deferred -- uses mock service in tools tests)
 
-### 2F. Tox21 Loader
-- [x] Load Tox21 CSV with 12 toxicity endpoints
-- [x] Parse 12 toxicity endpoints (NR-AR through SR-p53)
-- [x] `cross_reference(dataset)` -- compute SMILES overlap
-- [ ] Tests: fixture CSV (deferred -- needs dataset download)
-
-### 2G. Analysis Service + Tools
+### 2E. Analysis Service + Tools
 - [x] `explore(target, threshold)` -- load dataset, return stats
 - [x] `analyze_substructures(dataset)` -- chi-squared enrichment on 10 known substructures
 - [x] `compute_properties(dataset)` -- descriptor distributions (active vs inactive)
@@ -209,7 +197,7 @@ The core: Claude as an autonomous scientist.
 - [x] Tests: mock API, verify request/response handling
 
 ### 5B. Tool Registry
-- [x] Register all tools from all contexts (6 chemistry, 3 literature, 6 analysis, 3 prediction, 7 simulation, 6 sports, 7 investigation control -- 38 total)
+- [x] Register all tools from all contexts (6 chemistry, 3 literature, 6 analysis, 3 prediction, 7 simulation, 6 training, 4 nutrition, 7 investigation control -- 38 at time of Phase 5; now 48 with API tools + visualization tools)
 - [x] Auto-generate JSON Schema from Python type hints + docstrings
 - [x] `get(name)` -> callable, `list_tools()` -> all registered tools, `list_schemas()` -> Anthropic-compatible schemas
 - [x] Schema format matches Anthropic tool_use specification
@@ -241,9 +229,9 @@ The core: Claude as an autonomous scientist.
 ### 5F. SSE Streaming
 - [x] Convert domain events to SSE events via `domain_event_to_sse()` mapper
 - [x] Wire orchestrator async generator to `sse-starlette` EventSourceResponse
-- [x] Event types: hypothesis_formulated, experiment_started, experiment_completed, hypothesis_evaluated, negative_control, tool_called, tool_result, finding_recorded, thinking, error, completed, output_summarized
+- [x] 20 event types (see README for full list): hypothesis lifecycle, experiment lifecycle, tool calls, findings, thinking, controls, validation, phases, cost, domain detection, literature survey, visualization, completion, error
 - [x] Include cost tracker data in completed event
-- [x] Tests: all 12 event type conversions + JSON format (14 tests)
+- [x] Tests: event type conversions + JSON format
 
 ### 5G. Investigation API Routes
 - [x] `POST /api/v1/investigate` -- accept prompt, create investigation, return ID
@@ -432,7 +420,7 @@ Phase 0 (Infrastructure) -- DONE
     |
 Phase 1 (Chemistry) -- DONE
     |         \
-Phase 2A-D    Phase 2E-G
+Phase 2A-C    Phase 2D-E
 (Literature)  (Analysis)  -- DONE
     |              |
     +----- + ------+
@@ -460,6 +448,18 @@ Phase 2A-D    Phase 2E-G
      Multi-Domain Investigations -- DONE
            |
      Self-Referential Research -- DONE
+           |
+     Shared Context + MCP Bridge + Training/Nutrition APIs -- DONE
+           |
+     Domain-Specific Visualization System -- DONE
+           |
+     ┌─────┼──────────────┐
+     │     │              │
+Training  Nutrition   Competitive
+Enhancement Enhancement  Sports
+  (TODO)    (TODO)     Domain (TODO)
+     │     │              │
+     └─────┼──────────────┘
            |
      Demo + Video -- TODO
            |
@@ -528,22 +528,23 @@ Replaced the linear 7-phase pipeline with a hypothesis-driven scientific method 
 
 ## Domain-Agnostic Generalization (Feb 11-12) -- DONE
 
-Generalized the entire engine from molecular-science-specific to domain-agnostic. Proved the architecture works by adding Sports Science as a second domain.
+Generalized the entire engine from molecular-science-specific to domain-agnostic. Proved the architecture works by adding Training Science and Nutrition Science as additional domains.
 
 ### Backend Entity Generalization
 - [x] `Candidate` entity: generic `identifier`/`identifier_type`/`scores`/`attributes` (replaces `smiles`/`prediction_score`/`docking_score`/`admet_score`/`resistance_risk`)
 - [x] `NegativeControl` entity: generic `identifier`/`identifier_type`/`score`/`threshold` (replaces `smiles`/`prediction_score`)
 - [x] `NegativeControlRecorded` event: generic fields
 - [x] SQLite serialization updated for new field names
-- [x] All 274 existing tests pass after entity changes
+- [x] All 274 existing tests pass after entity changes (274 at time of this phase)
 
 ### Domain Configuration + Tool Tagging
 - [x] `DomainConfig` + `ScoreDefinition` frozen dataclasses
 - [x] `DomainRegistry`: register, detect by classified category, list template prompts
 - [x] `MOLECULAR_SCIENCE` config (6 tool tags, 3 scores, 4 templates, multishot examples)
-- [x] `SPORTS_SCIENCE` config (2 tool tags, 3 scores, 2 templates, multishot examples)
+- [x] `TRAINING_SCIENCE` config (3 tool tags, 3 scores, 2 templates, multishot examples)
+- [x] `NUTRITION_SCIENCE` config (3 tool tags, 3 scores, 1 template, multishot examples)
 - [x] `ToolRegistry` with domain tag filtering (`list_schemas_for_domain`, `list_tools_for_domain`)
-- [x] Tools tagged: chemistry, analysis, prediction, simulation, sports, literature; investigation control universal
+- [x] Tools tagged: chemistry, analysis, prediction, simulation, training, clinical, nutrition, safety, literature; investigation control universal
 - [x] `DomainDetected` SSE event (16th event type) sends display config to frontend
 
 ### Prompt Template Generalization
@@ -555,17 +556,23 @@ Generalized the entire engine from molecular-science-specific to domain-agnostic
 - [x] Dynamic score columns from `DomainDisplayConfig` (replaces hardcoded Pred/Dock/ADMET/Resist)
 - [x] Conditional MolViewer2D: only when `identifier_type === "smiles"`
 - [x] Unified reactive VisualizationPanel: LiveLabViewer auto-appears for molecular tool events, charts render inline
-- [x] 6 template cards (4 molecular + 2 sports) with domain badges
+- [x] 7 template cards (4 molecular + 2 training + 1 nutrition) with domain badges
 - [x] Generic candidate comparison, negative control panel, markdown export
 
-### Sports Science Bounded Context (6 new tools)
-- [x] `search_sports_literature` -- Semantic Scholar with sports context
+### Training Science Bounded Context (6 tools)
+- [x] `search_training_literature` -- Semantic Scholar with training science context
 - [x] `analyze_training_evidence` -- effect sizes, heterogeneity, evidence grading (A-D)
 - [x] `compare_protocols` -- evidence-weighted composite scoring
 - [x] `assess_injury_risk` -- knowledge-based multi-factor risk scoring
 - [x] `compute_training_metrics` -- ACWR, monotony, strain, RPE load
+- [x] `search_clinical_trials` -- ClinicalTrials.gov exercise/training RCT search
+
+### Nutrition Science Bounded Context (4 tools)
 - [x] `search_supplement_evidence` -- supplement meta-analysis search
-- [x] 14 new sports tests, all passing
+- [x] `search_supplement_labels` -- NIH DSLD supplement product ingredient lookup
+- [x] `search_nutrient_data` -- USDA FoodData Central nutrient profiles
+- [x] `search_supplement_safety` -- OpenFDA CAERS adverse event reports for supplements
+- [x] Tests: training (8 tests) + nutrition (10 tests), all passing
 
 **Verification:** 288 server tests, 107 console tests. All quality gates green: ruff 0, mypy 0 (117 files), tsc 0, vitest 107/107.
 
@@ -573,7 +580,7 @@ Generalized the entire engine from molecular-science-specific to domain-agnostic
 
 ## Multi-Domain Investigations (Feb 12) -- DONE
 
-Cross-domain research questions that span multiple scientific domains (e.g., molecular + sports science).
+Cross-domain research questions that span multiple scientific domains (e.g., molecular + nutrition, training + nutrition).
 
 ### Changes
 
@@ -595,7 +602,7 @@ Ehrlich builds institutional knowledge by querying its own past investigations d
 ### Changes
 
 - [x] SQLite FTS5 virtual table (`findings_fts`) on finding title, detail, evidence_type, hypothesis statement/status, source provenance
-- [x] `search_prior_research` tool (38th tool) -- intercepted in orchestrator, routed to FTS5 via repository
+- [x] `search_prior_research` tool -- intercepted in orchestrator, routed to FTS5 via repository
 - [x] BM25-ranked full-text search with investigation prompt context
 - [x] FTS5 query sanitization (quoted tokens for literal hyphens/operators)
 - [x] FTS5 index rebuilt on investigation completion via `_rebuild_fts()`
@@ -606,33 +613,163 @@ Ehrlich builds institutional knowledge by querying its own past investigations d
 
 ---
 
-## Phase 10B: Additional Organisms -- BACKLOG
+## Shared Context + MCP Bridge + Training/Nutrition APIs (Feb 12) -- DONE
 
-Expand beyond MRSA to cover the WHO critical/high-priority pathogens.
+DDD cleanup, shared bounded context, MCP bridge for external tools, 4 new data source clients (training + nutrition), and methodology page.
 
-### 10A. Organism Registry
-- [ ] Centralized organism config: name, ChEMBL target IDs, protein targets, known resistance mutations
-- [ ] E. coli (Gram-negative, ESBL-producing)
-- [ ] P. aeruginosa (Gram-negative, carbapenem-resistant)
-- [ ] A. baumannii (Gram-negative, pan-drug resistant)
-- [ ] M. tuberculosis (mycobacterium, MDR/XDR-TB)
+### Shared Bounded Context
+- [x] `shared/` context: cross-cutting ports and value objects (`ChemistryPort` ABC, `Fingerprint`, `MolecularDescriptors`, `Conformer3D`)
+- [x] `ChemistryPort` ABC decouples chemistry operations from RDKit infrastructure
+- [x] Moved value objects from `chemistry/domain/` to `shared/` for cross-context use
 
-### 10B. Protein Targets per Organism
-- [ ] E. coli: PBP3, DNA Gyrase, Dihydrofolate reductase (DHFR)
-- [ ] P. aeruginosa: OprM efflux, PBP3, DNA Gyrase
-- [ ] A. baumannii: OXA-23 beta-lactamase, PBP1a, DNA Gyrase
-- [ ] M. tuberculosis: InhA (isoniazid target), KatG, DprE1
+### MCP Bridge
+- [x] `MCPBridge` connects to external MCP servers (stdio/SSE/streamable_http transports)
+- [x] Tools registered dynamically via `ToolRegistry.register_mcp_tools()` with domain tags
+- [x] Lifecycle managed by orchestrator (connect on start, disconnect on completion)
+- [x] Enabled via `EHRLICH_MCP_EXCALIDRAW=true` env var
 
-### 10C. Resistance Knowledge Base Expansion
-- [ ] Per-organism mutation profiles with literature references
-- [ ] Compound class patterns per organism (not just MRSA)
-- [ ] Cross-organism resistance comparison
+### Data Source API Tools (4 tools across training + nutrition)
+- [x] `search_clinical_trials` (training) -- ClinicalTrials.gov v2 API for exercise/training RCTs
+- [x] `search_supplement_labels` (nutrition) -- NIH DSLD supplement label database
+- [x] `search_nutrient_data` (nutrition) -- USDA FoodData Central nutrient profiles
+- [x] `search_supplement_safety` (nutrition) -- OpenFDA CAERS adverse event reports
+- [x] Full DDD: domain entities + repository ABCs + infrastructure clients in respective bounded contexts
 
-### 10D. Prompts + Agent Guidance
-- [ ] Update system prompts to handle multi-organism investigations
-- [ ] Organism-aware phase guidance (e.g., different screening strategies for Gram-neg vs mycobacteria)
+### Methodology Page
+- [x] `GET /methodology` endpoint: phases, domains, tools, data sources, models
+- [x] `GET /stats` endpoint: aggregate counts
+- [x] Console methodology page with phases, models, domains, tools, data sources
 
-**Verification:** All existing tests pass + new organism config tests. Agent can run investigations against any of the 5 organisms.
+**Verification:** 527 server tests, 107 console tests. All quality gates green.
+
+---
+
+## Domain-Specific Visualization System (Feb 12) -- DONE
+
+6 visualization tools with structured payloads, orchestrator interception, and lazy-loaded React components.
+
+### Backend
+- [x] `VisualizationPayload` frozen dataclass (viz_type, title, data, config, domain)
+- [x] 6 viz tools: `render_binding_scatter`, `render_admet_radar`, `render_training_timeline`, `render_muscle_heatmap`, `render_forest_plot`, `render_evidence_matrix`
+- [x] Orchestrator intercepts viz tool results via `_maybe_viz_event()`, emits `VisualizationRendered` SSE event (20th event type)
+
+### Frontend
+- [x] `VizRegistry` maps viz_type to lazy-loaded React component
+- [x] `VisualizationPanel` renders multiple charts in grid layout
+- [x] Recharts: scatter (compound affinities), radar (ADMET), timeline (training load + ACWR)
+- [x] Visx: forest plot (meta-analysis), evidence matrix (heatmap)
+- [x] Custom SVG: anatomical body diagram with muscle activation/risk heatmap
+- [x] OKLCH color tokens for consistent chart theming
+
+**Verification:** 527 server tests, 107 console tests. All quality gates green.
+
+---
+
+## Training Science Enhancement -- TODO
+
+Deepen the training bounded context with more data sources and richer analytical capabilities.
+
+### New Data Sources
+- [ ] PubMed API (`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/`) -- exercise physiology literature (better biomedical coverage than Semantic Scholar alone for RCTs and clinical studies)
+- [ ] Exercise database -- muscle groups, movement patterns, biomechanics reference data (Wger API or curated YAML)
+
+### New Tools
+- [ ] `search_pubmed_training` -- PubMed E-utilities search for exercise/training papers (MeSH terms, structured abstracts)
+- [ ] `search_exercise_database` -- exercise lookup by muscle group, movement pattern, equipment
+
+### Improvements
+- [ ] PubMed integration in literature survey (alongside Semantic Scholar for broader coverage)
+- [ ] Richer injury risk model (integrate epidemiological data from PubMed systematic reviews)
+- [ ] Periodization analysis tool (macro/meso/micro cycle planning based on evidence)
+
+---
+
+## Nutrition Science Enhancement -- TODO
+
+Deepen the nutrition bounded context with analytical tools, visualization, and interaction screening.
+
+### New Tools
+- [ ] `compare_nutrients` -- side-by-side nutrient comparison between 2+ foods or supplements (macros, micros, amino acid profiles)
+- [ ] `analyze_dose_response` -- dose-response modeling from literature data (optimal dose ranges, diminishing returns)
+- [ ] `check_interactions` -- supplement-drug and supplement-supplement interaction screening (contraindications, synergies)
+
+### New Visualization
+- [ ] `render_nutrient_comparison` -- bar/radar chart comparing nutrient profiles across foods/supplements (Recharts)
+
+### New Data Sources
+- [ ] PubMed API -- nutrition and supplement research (shared with training context via literature bounded context)
+- [ ] Drug interaction database (DrugBank open data or OpenFDA drug labels) for interaction checking
+
+### Improvements
+- [ ] RDA/DRI reference data (WHO/USDA recommended daily allowances) for context in nutrient comparisons
+- [ ] Bioavailability annotations on nutrient data (e.g., heme vs non-heme iron absorption rates)
+
+---
+
+## Competitive Sports Domain -- TODO
+
+New bounded context for actual competitive sports analytics: game statistics, player performance, team analysis, and sports-specific strategy research.
+
+### Bounded Context: `sports/`
+
+```
+server/src/ehrlich/sports/
+├── domain/
+│   ├── entities.py          # Player, Team, GameStats, SeasonStats, PerformanceMetric
+│   └── repository.py        # SportsDataRepository ABC
+├── application/
+│   └── sports_service.py    # SportsService (stats analysis, performance comparison)
+├── infrastructure/
+│   └── *_client.py          # API clients for sports data providers
+└── tools.py                 # Tools for Claude
+```
+
+### Data Sources (Research Needed)
+- [ ] Basketball: NBA API / Basketball Reference (player stats, advanced metrics, play-by-play)
+- [ ] Soccer/Football: football-data.org or API-Football (match results, player stats, league standings)
+- [ ] American Football: NFL data feeds (player stats, play-by-play, combine data)
+- [ ] General: ESPN API or Sports Reference family (multi-sport coverage)
+
+### Planned Tools
+- [ ] `search_player_stats` -- player statistics by name/team/season (points, assists, rebounds, goals, etc.)
+- [ ] `compare_players` -- side-by-side player comparison with advanced metrics
+- [ ] `analyze_team_performance` -- team-level analytics (win rate, offensive/defensive efficiency)
+- [ ] `search_sports_literature` -- Semantic Scholar + PubMed for sports-specific research (tactics, biomechanics, game theory)
+- [ ] `compute_advanced_metrics` -- sport-specific advanced stats (PER, WAR, xG, passer rating, etc.)
+- [ ] `analyze_matchup` -- head-to-head matchup analysis between players or teams
+
+### Domain Config: `COMPETITIVE_SPORTS`
+- tool_tags: `{"sports", "literature"}`
+- valid_domain_categories: `("competitive_sports", "basketball", "soccer", "football", "baseball", "tennis")`
+- hypothesis_types: `("performance", "tactical", "statistical", "predictive")`
+- score_definitions: performance_score, statistical_significance, sample_size
+- identifier_type: `"player"` or `"team"`
+
+### Visualization
+- [ ] `render_player_radar` -- radar chart comparing player attributes (Recharts)
+- [ ] `render_season_timeline` -- performance trends over a season (Recharts)
+- [ ] `render_shot_chart` -- spatial shot/play visualization (Custom SVG, basketball/soccer)
+
+### Cross-Domain Potential
+- Sports + Training: "What training protocols produce the best NBA pre-season conditioning results?"
+- Sports + Nutrition: "What supplements do elite soccer players use and what's the evidence?"
+- Sports + Molecular: "What are the pharmacological mechanisms behind caffeine's effect on sprint performance?"
+
+---
+
+## Additional Domains -- BACKLOG
+
+The engine is domain-agnostic via `DomainConfig` + `DomainRegistry`. Adding a new domain requires zero changes to existing code (see `CONTRIBUTING.md`). Potential future domains:
+
+- [ ] Genomics / bioinformatics (variant interpretation, gene expression analysis)
+- [ ] Environmental science (pollutant fate, ecosystem modeling)
+- [ ] Materials science (property prediction, synthesis planning)
+- [ ] Clinical pharmacology (drug interactions, pharmacokinetics)
+
+For molecular science specifically:
+- [ ] Expanded organism coverage (E. coli, P. aeruginosa, A. baumannii, M. tuberculosis)
+- [ ] Per-organism resistance knowledge base with literature references
+- [ ] Organism-aware prompt guidance (Gram-neg vs mycobacteria screening strategies)
 
 ---
 
@@ -642,8 +779,8 @@ Side-by-side comparison of investigation runs for reproducibility and consensus 
 
 ### 11A. Comparison Domain
 - [ ] `Comparison` entity: list of investigation IDs, consensus candidates, overlap metrics
-- [ ] Candidate overlap calculation (by SMILES / Tanimoto similarity threshold)
-- [ ] Finding overlap detection (by phase + title similarity)
+- [ ] Candidate overlap calculation (by identifier + domain-specific similarity)
+- [ ] Finding overlap detection (by hypothesis + title similarity)
 - [ ] Score aggregation across runs (mean, std, min, max)
 
 ### 11B. Comparison API
@@ -661,26 +798,18 @@ Side-by-side comparison of investigation runs for reproducibility and consensus 
 
 ---
 
-## Phase 12: MCP Server -- BACKLOG
+## MCP Server -- BACKLOG
 
-Expose Ehrlich as a tool server for Claude Code / Claude Desktop via Model Context Protocol.
+Expose Ehrlich as an MCP tool server for Claude Code / Claude Desktop.
 
-### 12A. MCP Transport
-- [ ] Stdio transport for Claude Code integration
-- [ ] SSE transport for Claude Desktop / remote clients
+> **Note:** Ehrlich already has an MCP **client** bridge (`investigation/infrastructure/mcp_bridge.py`) that connects TO external MCP servers (e.g., Excalidraw for visual summaries). This backlog item is the reverse: exposing Ehrlich's 48 tools as an MCP server.
+
+- [ ] Stdio + SSE transports for Claude Code / Claude Desktop
 - [ ] Tool registration: expose all 48 Ehrlich tools as MCP tools
-
-### 12B. Investigation Tool
-- [ ] `start_investigation(prompt, organism)` -- kick off full investigation, return ID
+- [ ] `start_investigation(prompt)` -- kick off investigation, return ID
 - [ ] `get_investigation(id)` -- return status, findings, candidates
-- [ ] `compare_investigations(ids)` -- return comparison summary
-
-### 12C. Documentation + Demo
 - [ ] MCP server config for Claude Code (`claude_desktop_config.json`)
-- [ ] Usage examples in README
-- [ ] Demo: Claude Code running a full investigation via MCP
-
-**Verification:** Claude Code can connect to Ehrlich MCP server and run an investigation end-to-end.
+- [ ] Demo: Claude Code running an investigation via MCP
 
 ---
 
@@ -688,6 +817,5 @@ Expose Ehrlich as a tool server for Claude Code / Claude Desktop via Model Conte
 
 - PostgreSQL migration for production persistence
 - Batch screening mode (score entire ZINC subsets)
-- Antifungal/antiviral expansion
 - Automated synthesis lab integration (Emerald Cloud Lab, Strateos)
-- Community contributions: new tools, new targets, new models
+- Community contributions: new domains, new tools, new data sources

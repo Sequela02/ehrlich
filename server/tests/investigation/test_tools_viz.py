@@ -20,8 +20,18 @@ class TestRenderBindingScatter:
     @pytest.mark.asyncio
     async def test_basic_scatter(self) -> None:
         compounds = [
-            {"name": "Aspirin", "smiles": "CC(=O)OC1=CC=CC=C1C(O)=O", "molecular_weight": 180.16, "binding_affinity": 5.2},
-            {"name": "Caffeine", "smiles": "CN1C=NC2=C1C(=O)N(C(=O)N2C)C", "molecular_weight": 194.19, "binding_affinity": 3.8},
+            {
+                "name": "Aspirin",
+                "smiles": "CC(=O)OC1=CC=CC=C1C(O)=O",
+                "molecular_weight": 180.16,
+                "binding_affinity": 5.2,
+            },
+            {
+                "name": "Caffeine",
+                "smiles": "CN1C=NC2=C1C(=O)N(C(=O)N2C)C",
+                "molecular_weight": 194.19,
+                "binding_affinity": 3.8,
+            },
         ]
         result = json.loads(await render_binding_scatter(compounds))
         assert result["viz_type"] == "binding_scatter"
@@ -49,8 +59,9 @@ class TestRenderBindingScatter:
 class TestRenderADMETRadar:
     @pytest.mark.asyncio
     async def test_basic_radar(self) -> None:
+        props = {"absorption": 0.8, "metabolism": 0.6, "toxicity": 0.2}
         result = json.loads(
-            await render_admet_radar("Ibuprofen", {"absorption": 0.8, "metabolism": 0.6, "toxicity": 0.2})
+            await render_admet_radar("Ibuprofen", props)
         )
         assert result["viz_type"] == "admet_radar"
         assert "Ibuprofen" in result["title"]
@@ -80,7 +91,7 @@ class TestRenderTrainingTimeline:
         assert len(result["data"]["timeline"]) == 3
         assert len(result["data"]["acwr"]) == 3
         assert len(result["data"]["danger_zones"]) == 2
-        assert result["config"]["domain"] == "sports"
+        assert result["config"]["domain"] == "training"
 
     @pytest.mark.asyncio
     async def test_acwr_computation(self) -> None:
@@ -101,7 +112,7 @@ class TestRenderMuscleHeatmap:
         assert result["viz_type"] == "muscle_heatmap"
         assert result["data"]["view"] == "front"
         assert len(result["data"]["muscles"]) == 2
-        assert result["config"]["domain"] == "sports"
+        assert result["config"]["domain"] == "training"
 
     @pytest.mark.asyncio
     async def test_known_muscle_flagged(self) -> None:
@@ -124,8 +135,20 @@ class TestRenderForestPlot:
     @pytest.mark.asyncio
     async def test_basic_forest(self) -> None:
         studies = [
-            {"name": "Study A", "effect_size": 0.5, "ci_lower": 0.2, "ci_upper": 0.8, "weight": 0.6},
-            {"name": "Study B", "effect_size": 0.3, "ci_lower": 0.1, "ci_upper": 0.5, "weight": 0.4},
+            {
+                "name": "Study A",
+                "effect_size": 0.5,
+                "ci_lower": 0.2,
+                "ci_upper": 0.8,
+                "weight": 0.6,
+            },
+            {
+                "name": "Study B",
+                "effect_size": 0.3,
+                "ci_lower": 0.1,
+                "ci_upper": 0.5,
+                "weight": 0.4,
+            },
         ]
         result = json.loads(await render_forest_plot(studies))
         assert result["viz_type"] == "forest_plot"

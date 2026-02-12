@@ -11,7 +11,8 @@ from ehrlich.investigation.application.prompts import (
     build_synthesis_prompt,
 )
 from ehrlich.investigation.domain.domains.molecular import MOLECULAR_SCIENCE
-from ehrlich.investigation.domain.domains.sports import SPORTS_SCIENCE
+from ehrlich.investigation.domain.domains.nutrition import NUTRITION_SCIENCE
+from ehrlich.investigation.domain.domains.training import TRAINING_SCIENCE
 
 
 class TestBuildPicoAndClassificationPrompt:
@@ -22,10 +23,10 @@ class TestBuildPicoAndClassificationPrompt:
         assert "other" in prompt
 
     def test_custom_categories(self) -> None:
-        cats = frozenset({"sports", "fitness"})
+        cats = frozenset({"training", "nutrition"})
         prompt = build_pico_and_classification_prompt(cats)
-        assert "sports" in prompt
-        assert "fitness" in prompt
+        assert "training" in prompt
+        assert "nutrition" in prompt
         assert "other" in prompt  # always added
 
     def test_output_format(self) -> None:
@@ -120,8 +121,8 @@ class TestDirectorExperimentPrompt:
         assert '"controls"' in prompt
         assert '"analysis_plan"' in prompt
 
-    def test_sports_domain_prompt(self) -> None:
-        prompt = build_experiment_prompt(SPORTS_SCIENCE)
+    def test_training_domain_prompt(self) -> None:
+        prompt = build_experiment_prompt(TRAINING_SCIENCE)
         assert "VARIABLES" in prompt
         assert '"success_criteria"' in prompt
 
@@ -142,8 +143,8 @@ class TestResearcherExperimentPrompt:
         assert "VERIFICATION" in prompt
         assert "NEGATIVE RESULTS" in prompt
 
-    def test_sports_domain_prompt_has_methodology(self) -> None:
-        prompt = build_researcher_prompt(SPORTS_SCIENCE)
+    def test_training_domain_prompt_has_methodology(self) -> None:
+        prompt = build_researcher_prompt(TRAINING_SCIENCE)
         assert "SENSITIVITY" in prompt
         assert "NEGATIVE RESULTS" in prompt
 
@@ -242,27 +243,31 @@ class TestBuildSynthesisPrompt:
         assert "prediction_score > 0.7" in prompt
         assert "docking_score < -7" in prompt
 
-    def test_sports_has_certainty_grading(self) -> None:
-        prompt = build_synthesis_prompt(SPORTS_SCIENCE)
+    def test_training_has_certainty_grading(self) -> None:
+        prompt = build_synthesis_prompt(TRAINING_SCIENCE)
         assert "certainty_grading" in prompt
 
-    def test_sports_has_priority_criteria(self) -> None:
-        prompt = build_synthesis_prompt(SPORTS_SCIENCE)
+    def test_training_has_priority_criteria(self) -> None:
+        prompt = build_synthesis_prompt(TRAINING_SCIENCE)
         assert "evidence_score > 0.7" in prompt
         assert "effect_size > 0.5" in prompt
 
-    def test_sports_output_has_priority(self) -> None:
-        prompt = build_synthesis_prompt(SPORTS_SCIENCE)
+    def test_training_output_has_priority(self) -> None:
+        prompt = build_synthesis_prompt(TRAINING_SCIENCE)
         assert '"priority"' in prompt
 
     def test_uses_domain_identifier_type(self) -> None:
         prompt = build_synthesis_prompt(MOLECULAR_SCIENCE)
         assert '"identifier_type": "smiles"' in prompt
-        prompt_sports = build_synthesis_prompt(SPORTS_SCIENCE)
-        assert '"identifier_type": "protocol"' in prompt_sports
+        prompt_training = build_synthesis_prompt(TRAINING_SCIENCE)
+        assert '"identifier_type": "protocol"' in prompt_training
+        prompt_nutrition = build_synthesis_prompt(NUTRITION_SCIENCE)
+        assert '"identifier_type": "intervention"' in prompt_nutrition
 
     def test_uses_domain_candidate_label(self) -> None:
         prompt = build_synthesis_prompt(MOLECULAR_SCIENCE)
         assert "candidate molecules" in prompt.lower()
-        prompt_sports = build_synthesis_prompt(SPORTS_SCIENCE)
-        assert "training protocols" in prompt_sports.lower()
+        prompt_training = build_synthesis_prompt(TRAINING_SCIENCE)
+        assert "training protocols" in prompt_training.lower()
+        prompt_nutrition = build_synthesis_prompt(NUTRITION_SCIENCE)
+        assert "nutritional interventions" in prompt_nutrition.lower()

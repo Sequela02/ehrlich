@@ -3,9 +3,9 @@ import { render, screen } from "@testing-library/react";
 import { TemplateCards } from "./TemplateCards";
 
 describe("TemplateCards", () => {
-  it("renders 6 template cards with domain labels", () => {
+  it("renders 7 template cards with domain labels", () => {
     render(<TemplateCards onSelect={() => {}} />);
-    expect(screen.getAllByRole("button")).toHaveLength(6);
+    expect(screen.getAllByRole("button")).toHaveLength(7);
   });
 
   it("renders all template domains", () => {
@@ -17,6 +17,7 @@ describe("TemplateCards", () => {
       "Oncology",
       "Exercise Physiology",
       "Sports Medicine",
+      "Sports Nutrition",
     ];
     for (const domain of domains) {
       expect(screen.getAllByText(domain).length).toBeGreaterThanOrEqual(1);

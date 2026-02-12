@@ -134,7 +134,7 @@ class TestToolRegistry:
         assert "search_pharmacology" in tools
         assert "search_prior_research" in tools
         # Sports science tools
-        assert "search_sports_literature" in tools
+        assert "search_training_literature" in tools
         assert "analyze_training_evidence" in tools
         assert "compare_protocols" in tools
         assert "assess_injury_risk" in tools

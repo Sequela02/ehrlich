@@ -42,10 +42,11 @@ class TestMethodology:
 
     def test_domains_from_registry(self, client: TestClient) -> None:
         data = client.get("/api/v1/methodology").json()
-        assert len(data["domains"]) == 2
+        assert len(data["domains"]) == 3
         names = {d["name"] for d in data["domains"]}
         assert "molecular_science" in names
-        assert "sports_science" in names
+        assert "training_science" in names
+        assert "nutrition_science" in names
 
     def test_domain_has_tool_count(self, client: TestClient) -> None:
         data = client.get("/api/v1/methodology").json()
@@ -64,7 +65,8 @@ class TestMethodology:
         contexts = {g["context"] for g in data["tools"]}
         assert "Chemistry" in contexts
         assert "Investigation" in contexts
-        assert "Sports Science" in contexts
+        assert "Training Science" in contexts
+        assert "Nutrition Science" in contexts
 
     def test_total_tool_count(self, client: TestClient) -> None:
         data = client.get("/api/v1/methodology").json()

@@ -1,24 +1,16 @@
-"""Sports Science domain configuration."""
+"""Training Science domain configuration."""
 
 from __future__ import annotations
 
 from ehrlich.investigation.domain.domain_config import DomainConfig, ScoreDefinition
 
-SPORTS_SCIENCE = DomainConfig(
-    name="sports_science",
-    display_name="Sports Science",
+TRAINING_SCIENCE = DomainConfig(
+    name="training_science",
+    display_name="Training Science",
     identifier_type="protocol",
     identifier_label="Protocol",
     candidate_label="Training Protocols",
-    tool_tags=frozenset(
-        {
-            "sports",
-            "literature",
-            "nutrition",
-            "safety",
-            "clinical",
-        }
-    ),
+    tool_tags=frozenset({"training", "literature", "clinical"}),
     score_definitions=(
         ScoreDefinition(
             key="evidence_score",
@@ -54,13 +46,10 @@ SPORTS_SCIENCE = DomainConfig(
         "mechanistic",
     ),
     valid_domain_categories=(
-        "sports_science",
+        "training_science",
         "exercise_physiology",
         "sports_medicine",
         "biomechanics",
-        "sports_nutrition",
-        "dietary_supplements",
-        "clinical_trials",
     ),
     template_prompts=(
         {
@@ -164,7 +153,7 @@ than MICT</hypothesis>
 {{
   "description": "Search for meta-analyses comparing \
 HIIT vs MICT for VO2max, then analyze effect sizes",
-  "tool_plan": ["search_sports_literature", \
+  "tool_plan": ["search_training_literature", \
 "analyze_training_evidence", "compare_protocols"],
   "independent_variable": "Training protocol type (HIIT vs MICT)",
   "dependent_variable": "VO2max improvement (mL/kg/min, effect size d)",

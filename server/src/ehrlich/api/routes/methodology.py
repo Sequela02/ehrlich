@@ -166,28 +166,28 @@ DATA_SOURCES: list[dict[str, str]] = [
         "url": "https://clinicaltrials.gov/api/v2",
         "purpose": "Registered clinical trials for exercise and training RCTs",
         "auth": "none",
-        "context": "sports",
+        "context": "training",
     },
     {
         "name": "NIH DSLD",
         "url": "https://api.ods.od.nih.gov/dsld/v9",
         "purpose": "Dietary supplement label database (ingredients, amounts)",
         "auth": "none",
-        "context": "sports",
+        "context": "nutrition",
     },
     {
         "name": "USDA FoodData",
         "url": "https://api.nal.usda.gov/fdc/v1",
         "purpose": "Nutrient profiles for foods and supplements",
         "auth": "api_key",
-        "context": "sports",
+        "context": "nutrition",
     },
     {
         "name": "OpenFDA CAERS",
         "url": "https://api.fda.gov/food/event.json",
         "purpose": "Supplement adverse event reports (safety monitoring)",
         "auth": "none",
-        "context": "sports",
+        "context": "nutrition",
     },
     {
         "name": "Ehrlich FTS5",
@@ -206,10 +206,10 @@ _TAG_TO_CONTEXT: dict[str, str] = {
     "analysis": "Analysis",
     "prediction": "Prediction",
     "simulation": "Simulation",
-    "sports": "Sports Science",
-    "nutrition": "Sports Science",
-    "clinical": "Sports Science",
-    "safety": "Sports Science",
+    "training": "Training Science",
+    "clinical": "Training Science",
+    "nutrition": "Nutrition Science",
+    "safety": "Nutrition Science",
 }
 
 
@@ -296,7 +296,8 @@ async def get_methodology() -> MethodologyResponse:
         "Analysis",
         "Prediction",
         "Simulation",
-        "Sports Science",
+        "Training Science",
+        "Nutrition Science",
         "Investigation",
     ]
     tool_groups: list[ToolGroup] = []

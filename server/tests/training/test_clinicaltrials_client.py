@@ -5,7 +5,7 @@ import respx
 from httpx import Response
 
 from ehrlich.kernel.exceptions import ExternalServiceError
-from ehrlich.sports.infrastructure.clinicaltrials_client import ClinicalTrialsClient
+from ehrlich.training.infrastructure.clinicaltrials_client import ClinicalTrialsClient
 
 
 @pytest.fixture
