@@ -169,7 +169,7 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 - **Markdown report export**: client-side markdown generation from InvestigationReport data, 8 sections, browser download
 - **Candidate comparison**: side-by-side scoring view for 2-4 selected candidates with best-in-group highlighting
 - **User-guided hypothesis steering**: `HypothesisApprovalRequested` event pauses orchestrator after formulation; user approves/rejects via `POST /investigate/{id}/approve`; `REJECTED` hypothesis status; 5-min auto-approve timeout
-- **Scientific hypothesis model**: Based on Popper (falsifiability), Platt (strong inference), Feynman (compute consequences), Bayesian updating. Each hypothesis carries: prediction, null_prediction, success_criteria, failure_criteria, scope, hypothesis_type, prior_confidence. Evaluation compares results against pre-defined criteria (objective) not subjective judgment.
+- **Scientific hypothesis model**: Based on Popper (falsifiability), Platt (strong inference), Feynman (compute consequences), Bayesian updating. Each hypothesis carries: prediction, null_prediction, success_criteria, failure_criteria, scope, hypothesis_type, prior_confidence. Evaluation compares results against pre-defined criteria (objective) not subjective judgment. See `docs/scientific-methodology.md` for full research and roadmap for all 6 phases.
 - **Event persistence**: all SSE events stored in SQLite `events` table; completed investigations replay full timeline on page reload
 - TanStack Router file-based routing in console
 - `MultiModelOrchestrator`: hypothesis-driven loop with parallel experiment batches (2 hypotheses tested concurrently)
