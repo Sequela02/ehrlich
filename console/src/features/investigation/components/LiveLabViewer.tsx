@@ -22,10 +22,13 @@ export function LiveLabViewer({ events, completed, experiments, activeExperiment
 
   useEffect(() => {
     if (!containerRef.current) return;
+    const el = containerRef.current;
+    if (el.offsetWidth === 0 || el.offsetHeight === 0) return;
     let cancelled = false;
 
     import("3dmol").then((mod) => {
       if (cancelled || !containerRef.current) return;
+      if (containerRef.current.offsetWidth === 0) return;
       const viewer = mod.createViewer(containerRef.current, {
         backgroundColor: "#0f1219",
       });
