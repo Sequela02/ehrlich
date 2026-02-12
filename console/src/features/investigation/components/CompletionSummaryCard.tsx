@@ -1,15 +1,18 @@
 import { CheckCircle2, FlaskConical, Lightbulb, TestTube } from "lucide-react";
+import type { CostInfo } from "../types";
 
 interface CompletionSummaryCardProps {
   candidateCount: number;
   findingCount: number;
   hypothesisCount: number;
+  cost?: CostInfo | null;
 }
 
 export function CompletionSummaryCard({
   candidateCount,
   findingCount,
   hypothesisCount,
+  cost,
 }: CompletionSummaryCardProps) {
   return (
     <div className="relative overflow-hidden rounded-lg border border-primary/30 bg-primary/5 p-4">
@@ -35,6 +38,14 @@ export function CompletionSummaryCard({
             <Lightbulb className="h-3 w-3" />
             {findingCount} {findingCount === 1 ? "finding" : "findings"}
           </span>
+          {cost && (
+            <>
+              <span className="text-border">|</span>
+              <span className="font-mono tabular-nums text-primary/70">
+                ${cost.totalCost.toFixed(4)}
+              </span>
+            </>
+          )}
         </div>
       </div>
     </div>

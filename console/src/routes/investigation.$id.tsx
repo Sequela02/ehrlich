@@ -152,6 +152,7 @@ function InvestigationPage() {
             candidateCount={candidates.length}
             findingCount={findings.length}
             hypothesisCount={hypotheses.length}
+            cost={cost}
           />
         ) : approvalPending ? (
           <HypothesisApprovalCard
