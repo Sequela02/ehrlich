@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING
 from ehrlich.simulation.domain.admet_profile import ADMETProfile
 
 if TYPE_CHECKING:
-    from ehrlich.kernel.chemistry_port import ChemistryPort
-    from ehrlich.kernel.descriptors import MolecularDescriptors
     from ehrlich.kernel.types import SMILES
+    from ehrlich.shared.chemistry_port import ChemistryPort
+    from ehrlich.shared.descriptors import MolecularDescriptors
 
 # Mutagenic substructure alerts (SMARTS)
 _MUTAGENIC_ALERTS = (

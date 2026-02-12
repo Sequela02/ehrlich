@@ -17,7 +17,7 @@ DDD monorepo: `server/` (Python 3.12) + `console/` (React 19 / TypeScript / Bun)
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, designs experiments, evaluates evidence, synthesizes (NO tools)
-Sonnet 4.5 (Researcher) -- Executes experiments with 38 tools (parallel: 2 experiments per batch)
+Sonnet 4.5 (Researcher) -- Executes experiments with 42 tools (parallel: 2 experiments per batch)
 Haiku 4.5 (Summarizer)  -- Compresses large tool outputs (>2000 chars), PICO decomposition, evidence grading
 ```
 
@@ -28,15 +28,16 @@ Always uses `MultiModelOrchestrator`. Hypotheses tested in parallel batches of 2
 | Context | Location | Purpose |
 |---------|----------|---------|
 | kernel | `server/src/ehrlich/kernel/` | Shared primitives (SMILES, Molecule, exceptions) |
+| shared | `server/src/ehrlich/shared/` | Cross-cutting ports and value objects (ChemistryPort, Fingerprint, Conformer3D, MolecularDescriptors) |
 | literature | `server/src/ehrlich/literature/` | Paper search (Semantic Scholar), references |
 | chemistry | `server/src/ehrlich/chemistry/` | RDKit cheminformatics |
 | analysis | `server/src/ehrlich/analysis/` | Dataset exploration (ChEMBL, PubChem), enrichment |
 | prediction | `server/src/ehrlich/prediction/` | ML models (Chemprop, XGBoost) |
 | simulation | `server/src/ehrlich/simulation/` | Docking, ADMET, resistance, target discovery (RCSB PDB), toxicity (EPA CompTox) |
-| sports | `server/src/ehrlich/sports/` | Sports science: evidence analysis, protocol comparison, injury risk, training metrics |
-| investigation | `server/src/ehrlich/investigation/` | Multi-model agent orchestration + SQLite persistence + domain registry |
+| sports | `server/src/ehrlich/sports/` | Sports science: evidence analysis, protocol comparison, injury risk, training metrics, clinical trials, supplement safety |
+| investigation | `server/src/ehrlich/investigation/` | Multi-model agent orchestration + SQLite persistence + domain registry + MCP bridge |
 
-### External Data Sources
+### External Data Sources (12 external + 1 internal)
 
 | Source | API | Purpose | Auth |
 |--------|-----|---------|------|
@@ -48,6 +49,11 @@ Always uses `MultiModelOrchestrator`. Hypotheses tested in parallel batches of 2
 | UniProt | `https://rest.uniprot.org` | Protein function, disease associations, GO terms, PDB cross-refs | None |
 | Open Targets | `https://api.platform.opentargets.org` | Disease-target associations (GraphQL, scored evidence) | None |
 | GtoPdb | `https://www.guidetopharmacology.org/services` | Expert-curated pharmacology (pKi, pIC50, receptor classification) | None |
+| ClinicalTrials.gov | `https://clinicaltrials.gov/api/v2` | Registered clinical trials for exercise/training RCTs | None |
+| NIH DSLD | `https://api.ods.od.nih.gov/dsld/v9` | Dietary supplement label database (ingredients, amounts) | None |
+| USDA FoodData | `https://api.nal.usda.gov/fdc/v1` | Nutrient profiles for foods and supplements | API key |
+| OpenFDA CAERS | `https://api.fda.gov/food/event.json` | Supplement adverse event reports (safety monitoring) | None |
+| Ehrlich FTS5 | internal | Full-text search of past investigation findings | None |
 
 ### Dependency Rules (STRICT)
 
@@ -55,9 +61,10 @@ Always uses `MultiModelOrchestrator`. Hypotheses tested in parallel batches of 2
 2. `application/` depends on `domain/` interfaces, never on `infrastructure/`
 3. `infrastructure/` implements `domain/` repository interfaces
 4. `tools.py` calls `application/` services, returns JSON for Claude
-5. No cross-context domain imports -- communicate via `kernel/` primitives
-6. RDKit imports ONLY in `chemistry/infrastructure/rdkit_adapter.py`
-7. External API clients live in `infrastructure/` of their bounded context
+5. No cross-context domain imports -- communicate via `kernel/` primitives or `shared/` ports
+6. `shared/` contains cross-cutting ports (ABCs) and value objects -- no infrastructure deps
+7. RDKit imports ONLY in `chemistry/infrastructure/rdkit_adapter.py`
+8. External API clients live in `infrastructure/` of their bounded context
 
 ## Commands
 
@@ -103,9 +110,9 @@ type(scope): description
 
 Types: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`
 
-Scopes: kernel, literature, chemistry, analysis, prediction, simulation, sports, investigation, api, console, mol, data, ci, docs, infra
+Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation, sports, investigation, api, console, mol, data, ci, docs, infra
 
-## Tools (38 Total)
+## Tools (42 Total)
 
 ### Chemistry (6) -- RDKit cheminformatics, domain-agnostic
 - `validate_smiles` -- Validate SMILES string
@@ -142,13 +149,17 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, sports,
 - `fetch_toxicity_profile` -- EPA CompTox environmental toxicity data
 - `assess_resistance` -- Knowledge-based resistance mutation scoring
 
-### Sports Science (6) -- Evidence-based sports research
+### Sports Science (10) -- Evidence-based sports research
 - `search_sports_literature` -- Semantic Scholar with sports science context
 - `analyze_training_evidence` -- Pooled effect sizes, heterogeneity, evidence grading (A-D)
 - `compare_protocols` -- Evidence-weighted protocol comparison with composite scoring
 - `assess_injury_risk` -- Knowledge-based injury risk scoring (sport, load, history, age)
 - `compute_training_metrics` -- ACWR, monotony, strain, session RPE load
 - `search_supplement_evidence` -- Supplement efficacy literature search
+- `search_clinical_trials` -- ClinicalTrials.gov exercise/training RCT search
+- `search_supplement_labels` -- NIH DSLD supplement product ingredient lookup
+- `search_nutrient_data` -- USDA FoodData Central nutrient profiles
+- `search_supplement_safety` -- OpenFDA CAERS adverse event reports for supplements
 
 ### Investigation (7) -- Hypothesis lifecycle + self-referential
 - `propose_hypothesis` -- Register testable hypothesis
@@ -180,7 +191,8 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, sports,
 - **Domain configuration**: `DomainConfig` defines per-domain tool tags, score definitions, prompt examples, visualization type; `DomainRegistry` auto-detects domain from classification; `DomainDetected` SSE event sends display config to frontend
 - **Multi-domain investigations**: `DomainRegistry.detect()` returns `list[DomainConfig]` for cross-domain research; `merge_domain_configs()` creates synthetic merged config with union of tool_tags, concatenated score_definitions, joined prompt examples; `DomainDisplayConfig.domains` carries sub-domain list to frontend
 - **Self-referential research**: `search_prior_research` tool queries FTS5 full-text index of past investigation findings; indexed on completion via `_rebuild_fts()`; intercepted in orchestrator `_dispatch_tool()` and routed to `SqliteInvestigationRepository.search_findings()`; "ehrlich" source type on findings links to past investigations
-- **Tool tagging**: Tools tagged with frozenset domain tags (chemistry, analysis, prediction, simulation, sports, literature); investigation control tools are universal (no tags); researcher sees only domain-relevant tools
+- **MCP bridge**: Optional `MCPBridge` connects to external MCP servers (e.g. Excalidraw for visual summaries); tools registered dynamically via `ToolRegistry.register_mcp_tools()`; lifecycle managed by orchestrator (connect on start, disconnect on completion); enabled via `EHRLICH_MCP_EXCALIDRAW=true` env var
+- **Tool tagging**: Tools tagged with frozenset domain tags (chemistry, analysis, prediction, simulation, sports, nutrition, clinical, safety, literature); investigation control tools are universal (no tags); researcher sees only domain-relevant tools
 - SSE streaming for real-time investigation updates (19 event types)
 - **Phase progress indicator**: `PhaseChanged` event tracks 6 orchestrator phases (Classification & PICO → Literature Survey → Formulation → Hypothesis Testing → Negative Controls → Synthesis); frontend renders 6-segment progress bar
 - **Literature survey methodology**: PICO decomposition + domain classification merged into single Haiku call; structured search protocol with citation chasing (snowballing); 6-level evidence hierarchy on findings; GRADE-adapted body-of-evidence grading (high/moderate/low/very_low) via Haiku; AMSTAR-2-adapted self-assessment; `LiteratureSurveyCompleted` event carries PICO, search stats, grade for PRISMA-lite transparency
@@ -248,7 +260,10 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, sports,
 | `investigation/domain/repository.py` | InvestigationRepository ABC (save_event, get_events for audit trail) |
 | `investigation/infrastructure/sqlite_repository.py` | SQLite implementation with hypothesis/experiment/negative_control/event serialization + FTS5 findings search |
 | `investigation/infrastructure/anthropic_client.py` | Anthropic API adapter with retry |
-| `api/routes/investigation.py` | REST + SSE endpoints, 38-tool registry with domain tagging, domain registry |
+| `investigation/infrastructure/mcp_bridge.py` | MCP client bridge: connects to external MCP servers (stdio/SSE/streamable_http), routes tool calls |
+| `investigation/domain/mcp_config.py` | `MCPServerConfig` frozen dataclass for MCP server connection config |
+| `api/routes/investigation.py` | REST + SSE endpoints, 42-tool registry with domain tagging, domain registry, MCP bridge |
+| `api/routes/methodology.py` | GET /methodology endpoint: phases, domains, tools, data sources, models |
 | `api/routes/molecule.py` | Molecule depiction, conformer, descriptors, targets endpoints |
 | `api/sse.py` | Domain event to SSE conversion (19 types) |
 
@@ -265,6 +280,10 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, sports,
 | `simulation/infrastructure/opentargets_client.py` | Open Targets GraphQL client for disease-target associations |
 | `analysis/infrastructure/gtopdb_client.py` | GtoPdb REST client for curated pharmacology |
 | `literature/infrastructure/semantic_scholar_client.py` | Semantic Scholar paper search with retry |
+| `sports/infrastructure/clinicaltrials_client.py` | ClinicalTrials.gov v2 API for exercise/training RCTs |
+| `sports/infrastructure/dsld_client.py` | NIH DSLD supplement label database |
+| `sports/infrastructure/fooddata_client.py` | USDA FoodData Central nutrient profiles |
+| `sports/infrastructure/openfda_client.py` | OpenFDA CAERS adverse event reporting |
 
 ## Key Files (Molecule Visualization)
 
@@ -307,6 +326,24 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, sports,
 | `console/.../investigation/components/HypothesisApprovalCard.tsx` | Approve/reject hypotheses before testing with POST to /approve |
 | `console/.../investigation/lib/export-markdown.ts` | Client-side markdown generation for 8-section report export |
 
+## Key Files (Shared Context)
+
+| File | Purpose |
+|------|---------|
+| `shared/chemistry_port.py` | `ChemistryPort` ABC -- cross-cutting interface for chemistry operations |
+| `shared/fingerprint.py` | `Fingerprint` value object used across contexts |
+| `shared/descriptors.py` | `MolecularDescriptors` value object |
+| `shared/conformer.py` | `Conformer3D` value object |
+
+## Key Files (Methodology Page)
+
+| File | Purpose |
+|------|---------|
+| `api/routes/methodology.py` | GET /methodology endpoint: phases, domains, tools, data sources, models |
+| `api/routes/stats.py` | GET /stats endpoint: aggregate counts (tools, domains, phases, data sources, events) |
+| `console/src/routes/methodology.tsx` | Methodology page: phases, models, domains, tools, data sources |
+| `console/src/features/investigation/hooks/use-methodology.ts` | React hook for fetching methodology data |
+
 ## Key Files (Domain Configuration)
 
 | File | Purpose |
@@ -316,4 +353,4 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, sports,
 | `investigation/domain/domains/molecular.py` | `MOLECULAR_SCIENCE` config (tool tags, scores, prompt examples) |
 | `investigation/domain/domains/sports.py` | `SPORTS_SCIENCE` config (protocol-based, table visualization) |
 | `investigation/application/tool_registry.py` | `ToolRegistry` with domain tag filtering |
-| `sports/tools.py` | 6 sports science tools (literature, evidence, protocols, injury, metrics, supplements) |
+| `sports/tools.py` | 10 sports science tools (literature, evidence, protocols, injury, metrics, supplements, clinical trials, supplement labels, nutrient data, supplement safety) |

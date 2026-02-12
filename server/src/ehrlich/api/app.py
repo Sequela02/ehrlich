@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from ehrlich.api.routes.health import router as health_router
 from ehrlich.api.routes.investigation import init_repository
 from ehrlich.api.routes.investigation import router as investigation_router
+from ehrlich.api.routes.methodology import router as methodology_router
 from ehrlich.api.routes.molecule import router as molecule_router
 from ehrlich.api.routes.stats import router as stats_router
 from ehrlich.config import get_settings
@@ -66,7 +67,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(
         title="Ehrlich",
-        description="AI-powered antimicrobial discovery agent",
+        description="AI-powered scientific discovery engine",
         version="0.1.0",
         lifespan=lifespan,
     )
@@ -81,6 +82,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router, prefix="/api/v1")
     app.include_router(investigation_router, prefix="/api/v1")
+    app.include_router(methodology_router, prefix="/api/v1")
     app.include_router(molecule_router, prefix="/api/v1")
     app.include_router(stats_router, prefix="/api/v1")
 

@@ -14,6 +14,9 @@ SPORTS_SCIENCE = DomainConfig(
         {
             "sports",
             "literature",
+            "nutrition",
+            "safety",
+            "clinical",
         }
     ),
     score_definitions=(
@@ -57,6 +60,8 @@ SPORTS_SCIENCE = DomainConfig(
         "sports_medicine",
         "biomechanics",
         "sports_nutrition",
+        "dietary_supplements",
+        "clinical_trials",
     ),
     template_prompts=(
         {

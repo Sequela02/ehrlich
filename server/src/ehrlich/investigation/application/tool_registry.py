@@ -3,7 +3,10 @@ from __future__ import annotations
 import inspect
 import re
 from collections.abc import Callable
-from typing import Any, get_type_hints
+from typing import TYPE_CHECKING, Any, get_type_hints
+
+if TYPE_CHECKING:
+    from ehrlich.investigation.infrastructure.mcp_bridge import MCPBridge
 
 ToolFunction = Callable[..., Any]
 
@@ -57,6 +60,34 @@ class ToolRegistry:
         """Return tool schemas matching any of the domain tags, plus untagged tools."""
         allowed = set(self.list_tools_for_domain(domain_tags))
         return [s for s in self._schemas.values() if s["name"] in allowed]
+
+    async def register_mcp_tools(
+        self,
+        bridge: MCPBridge,
+        server_name: str,
+        tags: frozenset[str] | None = None,
+    ) -> list[str]:
+        """Register all tools from an MCP server via the bridge.
+
+        Returns the list of registered tool names.
+        """
+        tool_schemas = await bridge.list_tools(server_name)
+        registered: list[str] = []
+        for schema in tool_schemas:
+            name = schema["name"]
+            self._schemas[name] = schema
+
+            async def _mcp_wrapper(
+                _bridge: MCPBridge = bridge,
+                _name: str = name,
+                **kwargs: Any,
+            ) -> str:
+                return await _bridge.call_tool(_name, kwargs)
+
+            self._tools[name] = _mcp_wrapper
+            self._tags[name] = tags or frozenset()
+            registered.append(name)
+        return registered
 
 
 def _generate_schema(name: str, func: ToolFunction) -> dict[str, Any]:

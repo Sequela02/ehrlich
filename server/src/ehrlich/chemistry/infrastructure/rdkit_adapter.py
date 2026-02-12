@@ -13,12 +13,12 @@ from rdkit.Chem.Scaffolds.MurckoScaffold import GetScaffoldForMol
 from rdkit.DataStructs import TanimotoSimilarity
 from rdkit.ML.Cluster import Butina
 
-from ehrlich.kernel.chemistry_port import ChemistryPort
-from ehrlich.kernel.conformer import Conformer3D
-from ehrlich.kernel.descriptors import MolecularDescriptors
 from ehrlich.kernel.exceptions import InvalidSMILESError
-from ehrlich.kernel.fingerprint import Fingerprint
 from ehrlich.kernel.types import SMILES, InChIKey, MolBlock
+from ehrlich.shared.chemistry_port import ChemistryPort
+from ehrlich.shared.conformer import Conformer3D
+from ehrlich.shared.descriptors import MolecularDescriptors
+from ehrlich.shared.fingerprint import Fingerprint
 
 
 class RDKitAdapter(ChemistryPort):

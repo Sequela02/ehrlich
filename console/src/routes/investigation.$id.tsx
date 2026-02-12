@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useRef, useEffect, useState, useMemo } from "react";
-import { ArrowLeft, PanelRightClose, PanelRightOpen, WifiOff } from "lucide-react";
+import { ArrowLeft, ExternalLink, PanelRightClose, PanelRightOpen, WifiOff } from "lucide-react";
 import type { PhaseInfo } from "@/features/investigation/types";
 import { cn } from "@/shared/lib/utils";
 import { ErrorBoundary } from "@/features/shared/components/ErrorBoundary";
@@ -54,6 +54,7 @@ function InvestigationPage() {
     activeToolName,
     experimentToolCount,
     experimentFindingCount,
+    diagramUrl,
   } = useSSE(streamUrl);
 
   const showLabView = !domainConfig || domainConfig.visualization_type === "molecular";
@@ -388,6 +389,18 @@ function InvestigationPage() {
                 domainConfig={domainConfig}
                 validationMetrics={validationMetrics}
               />
+
+              {diagramUrl && (
+                <a
+                  href={diagramUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5 font-mono text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  View Visual Summary
+                </a>
+              )}
             </>
           )}
         </main>

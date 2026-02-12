@@ -75,3 +75,74 @@ class WorkloadMetrics:
     strain: float
     avg_rpe_7d: float | None = None
     session_rpe_load_7d: float | None = None
+
+
+# --- Clinical Trials ---
+
+
+@dataclass(frozen=True)
+class ClinicalTrial:
+    nct_id: str
+    title: str
+    status: str
+    phase: str
+    enrollment: int
+    conditions: tuple[str, ...]
+    interventions: tuple[str, ...]
+    primary_outcomes: tuple[str, ...]
+    study_type: str
+    start_date: str
+
+
+# --- Supplement Labels (NIH DSLD) ---
+
+
+@dataclass(frozen=True)
+class IngredientEntry:
+    name: str
+    amount: str
+    unit: str
+    daily_value_pct: float | None = None
+
+
+@dataclass(frozen=True)
+class SupplementLabel:
+    report_id: str
+    product_name: str
+    brand: str
+    ingredients: tuple[IngredientEntry, ...]
+    serving_size: str
+
+
+# --- Nutrient Profiles (USDA FoodData Central) ---
+
+
+@dataclass(frozen=True)
+class NutrientEntry:
+    name: str
+    amount: float
+    unit: str
+    nutrient_number: str
+
+
+@dataclass(frozen=True)
+class NutrientProfile:
+    fdc_id: int
+    description: str
+    brand: str
+    category: str
+    nutrients: tuple[NutrientEntry, ...]
+
+
+# --- Adverse Events (OpenFDA CAERS) ---
+
+
+@dataclass(frozen=True)
+class AdverseEvent:
+    report_id: str
+    date: str
+    products: tuple[str, ...]
+    reactions: tuple[str, ...]
+    outcomes: tuple[str, ...]
+    consumer_age: str
+    consumer_gender: str

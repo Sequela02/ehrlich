@@ -11,8 +11,8 @@ from ehrlich.simulation.domain.resistance_assessment import MutationRisk, Resist
 from ehrlich.simulation.infrastructure.vina_adapter import VinaAdapter, interpret_energy
 
 if TYPE_CHECKING:
-    from ehrlich.kernel.chemistry_port import ChemistryPort
     from ehrlich.kernel.types import SMILES
+    from ehrlich.shared.chemistry_port import ChemistryPort
     from ehrlich.simulation.domain.admet_profile import ADMETProfile
     from ehrlich.simulation.domain.protein_annotation import ProteinAnnotation
     from ehrlich.simulation.domain.protein_target import ProteinTarget

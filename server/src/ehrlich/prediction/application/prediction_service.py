@@ -12,11 +12,11 @@ from ehrlich.prediction.domain.trained_model import TrainedModel
 
 if TYPE_CHECKING:
     from ehrlich.analysis.domain.repository import DatasetRepository
-    from ehrlich.kernel.chemistry_port import ChemistryPort
-    from ehrlich.kernel.fingerprint import Fingerprint
     from ehrlich.kernel.types import SMILES
     from ehrlich.prediction.domain.repository import ModelRepository
     from ehrlich.prediction.infrastructure.xgboost_adapter import XGBoostAdapter
+    from ehrlich.shared.chemistry_port import ChemistryPort
+    from ehrlich.shared.fingerprint import Fingerprint
 
 logger = logging.getLogger(__name__)
 

@@ -61,8 +61,10 @@ if TYPE_CHECKING:
     from ehrlich.investigation.application.tool_registry import ToolRegistry
     from ehrlich.investigation.domain.domain_config import DomainConfig
     from ehrlich.investigation.domain.domain_registry import DomainRegistry
+    from ehrlich.investigation.domain.mcp_config import MCPServerConfig
     from ehrlich.investigation.domain.repository import InvestigationRepository
     from ehrlich.investigation.infrastructure.anthropic_client import AnthropicClientAdapter
+    from ehrlich.investigation.infrastructure.mcp_bridge import MCPBridge
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +104,8 @@ class MultiModelOrchestrator:
         require_approval: bool = False,
         repository: InvestigationRepository | None = None,
         domain_registry: DomainRegistry | None = None,
+        mcp_bridge: MCPBridge | None = None,
+        mcp_configs: list[MCPServerConfig] | None = None,
     ) -> None:
         self._director = director
         self._researcher = researcher
@@ -113,6 +117,8 @@ class MultiModelOrchestrator:
         self._require_approval = require_approval
         self._repository = repository
         self._domain_registry = domain_registry
+        self._mcp_bridge = mcp_bridge
+        self._mcp_configs = mcp_configs or []
         self._active_config: DomainConfig | None = None
         self._researcher_prompt = RESEARCHER_EXPERIMENT_PROMPT
         self._cache = ToolCache()
@@ -146,6 +152,18 @@ class MultiModelOrchestrator:
         investigation.status = InvestigationStatus.RUNNING
         cost = CostTracker()
         pico: dict[str, Any] = {}
+
+        # Connect MCP servers if configured
+        if self._mcp_bridge and self._mcp_configs:
+            try:
+                await self._mcp_bridge.connect(self._mcp_configs)
+                for cfg in self._mcp_configs:
+                    if cfg.enabled and cfg.name in self._mcp_bridge.connected_servers:
+                        await self._registry.register_mcp_tools(
+                            self._mcp_bridge, cfg.name, cfg.tags
+                        )
+            except Exception:
+                logger.exception("MCP bridge connection failed, continuing without MCP")
 
         try:
             # 1. Classify domain + PICO decomposition (single Haiku call)
@@ -710,6 +728,11 @@ class MultiModelOrchestrator:
             citations = synthesis.get("citations") or []
             investigation.set_candidates(candidates, citations)
 
+            # Post-synthesis: generate Excalidraw diagram if MCP available
+            diagram_url = ""
+            if self._mcp_bridge and self._mcp_bridge.has_tool("excalidraw:create_view"):
+                diagram_url = await self._generate_diagram(investigation)
+
             investigation.status = InvestigationStatus.COMPLETED
             investigation.cost_data = cost.to_dict()
 
@@ -785,6 +808,7 @@ class MultiModelOrchestrator:
                 negative_controls=nc_dicts,
                 positive_controls=pc_dicts,
                 validation_metrics=validation_metrics,
+                diagram_url=diagram_url,
             )
 
         except Exception as e:
@@ -793,6 +817,39 @@ class MultiModelOrchestrator:
             investigation.error = str(e)
             investigation.cost_data = cost.to_dict()
             yield InvestigationError(error=str(e), investigation_id=investigation.id)
+        finally:
+            if self._mcp_bridge:
+                try:
+                    await self._mcp_bridge.disconnect()
+                except Exception:
+                    logger.warning("MCP bridge disconnect failed", exc_info=True)
+
+    async def _generate_diagram(self, investigation: Investigation) -> str:
+        """Generate an Excalidraw evidence synthesis diagram and return its URL."""
+        if not self._mcp_bridge:
+            return ""
+
+        elements = _build_excalidraw_elements(investigation)
+        elements_json = json.dumps(elements)
+        try:
+            await self._mcp_bridge.call_tool(
+                "excalidraw:read_me", {}
+            )
+            await self._mcp_bridge.call_tool(
+                "excalidraw:create_view", {"elements": elements_json}
+            )
+            export_result = await self._mcp_bridge.call_tool(
+                "excalidraw:export_to_excalidraw",
+                {"json": json.dumps({"elements": elements, "appState": {}})},
+            )
+            data = json.loads(export_result)
+            url: str = data.get("url", "")
+            if url:
+                logger.info("Diagram exported: %s", url)
+            return url
+        except Exception:
+            logger.warning("Diagram generation failed", exc_info=True)
+            return ""
 
     @staticmethod
     def _build_literature_context(
@@ -1332,6 +1389,83 @@ class MultiModelOrchestrator:
         except Exception as e:
             logger.warning("Tool %s failed: %s", tool_name, e)
             return json.dumps({"error": f"Tool {tool_name} failed: {e}"})
+
+
+def _build_excalidraw_elements(investigation: Investigation) -> list[dict[str, Any]]:
+    """Build Excalidraw elements representing the investigation evidence map."""
+    elements: list[dict[str, Any]] = []
+    y_offset = 0
+
+    # Title
+    elements.append({
+        "type": "text",
+        "x": 300, "y": y_offset, "width": 600, "height": 40,
+        "text": f"Evidence Synthesis: {investigation.prompt[:80]}",
+        "fontSize": 24, "fontFamily": 1, "textAlign": "center",
+        "strokeColor": "#e2e8f0",
+        "id": "title",
+    })
+    y_offset += 80
+
+    # Hypotheses
+    status_colors = {
+        "supported": "#166534",
+        "refuted": "#991b1b",
+        "revised": "#9a3412",
+        "proposed": "#374151",
+        "testing": "#1e40af",
+        "rejected": "#7f1d1d",
+    }
+    hyp_positions: dict[str, tuple[int, int]] = {}
+    for i, h in enumerate(investigation.hypotheses):
+        x = 50 + (i % 3) * 350
+        y = y_offset + (i // 3) * 160
+        color = status_colors.get(h.status.value, "#374151")
+        elements.append({
+            "type": "rectangle",
+            "x": x, "y": y, "width": 300, "height": 120,
+            "backgroundColor": color,
+            "strokeColor": "#94a3b8",
+            "roundness": {"type": 3},
+            "id": f"hyp-{h.id}",
+        })
+        label = f"{h.status.value.upper()}\n{h.statement[:60]}"
+        if h.confidence > 0:
+            label += f"\nConf: {h.confidence:.0%}"
+        elements.append({
+            "type": "text",
+            "x": x + 10, "y": y + 10, "width": 280, "height": 100,
+            "text": label,
+            "fontSize": 14, "fontFamily": 1,
+            "strokeColor": "#e2e8f0",
+            "id": f"hyp-label-{h.id}",
+        })
+        hyp_positions[h.id] = (x + 150, y + 120)
+
+    y_offset += ((len(investigation.hypotheses) + 2) // 3) * 160 + 40
+
+    # Findings summary
+    if investigation.findings:
+        elements.append({
+            "type": "text",
+            "x": 50, "y": y_offset, "width": 400, "height": 30,
+            "text": f"Findings: {len(investigation.findings)} recorded",
+            "fontSize": 18, "fontFamily": 1,
+            "strokeColor": "#94a3b8",
+            "id": "findings-header",
+        })
+        y_offset += 50
+        for j, f in enumerate(investigation.findings[:12]):
+            elements.append({
+                "type": "text",
+                "x": 60, "y": y_offset + j * 25, "width": 900, "height": 20,
+                "text": f"[{f.evidence_type}] {f.title[:90]}",
+                "fontSize": 12, "fontFamily": 3,
+                "strokeColor": "#94a3b8",
+                "id": f"finding-{j}",
+            })
+
+    return elements
 
 
 def _parse_json(text: str) -> dict[str, Any]:

@@ -1,11 +1,15 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { BookOpen } from "lucide-react";
 import { Toaster } from "@/shared/components/ui/Toaster";
+import { MethodologyDrawer } from "./MethodologyDrawer";
 
 interface AppLayoutProps {
   children: ReactNode;
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border">
@@ -19,13 +23,23 @@ export function AppLayout({ children }: AppLayoutProps) {
               alpha
             </span>
           </div>
-          <span className="hidden font-mono text-[11px] tracking-wide text-muted-foreground sm:block">
-            Antimicrobial Discovery
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="hidden font-mono text-[11px] tracking-wide text-muted-foreground sm:block">
+              Scientific Discovery Engine
+            </span>
+            <button
+              onClick={() => setDrawerOpen(true)}
+              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              title="Methodology"
+            >
+              <BookOpen className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </header>
       <main>{children}</main>
       <Toaster />
+      <MethodologyDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </div>
   );
 }

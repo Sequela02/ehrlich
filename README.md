@@ -24,18 +24,19 @@ Ehrlich is **domain-agnostic**. The hypothesis-driven engine works for any scien
 
 ## Architecture
 
-Ehrlich follows Domain-Driven Design with eight bounded contexts:
+Ehrlich follows Domain-Driven Design with nine bounded contexts:
 
 | Context | Purpose |
 |---------|---------|
 | **kernel** | Shared primitives: SMILES, Molecule, exceptions |
+| **shared** | Cross-cutting ports and value objects (ChemistryPort, Fingerprint, Conformer3D) |
 | **literature** | Scientific paper search (Semantic Scholar) and reference management |
 | **chemistry** | Cheminformatics: molecular descriptors, fingerprints, 3D conformers |
 | **analysis** | Dataset exploration (ChEMBL, PubChem), substructure enrichment |
 | **prediction** | ML modeling: train, predict, ensemble, cluster |
 | **simulation** | Molecular docking, ADMET, resistance, target discovery (RCSB PDB), toxicity (EPA CompTox) |
-| **sports** | Sports science: evidence analysis, protocol comparison, injury risk, training metrics |
-| **investigation** | Multi-model agent orchestration with Director-Worker-Summarizer pattern + domain registry |
+| **sports** | Sports science: evidence analysis, protocol comparison, injury risk, training metrics, clinical trials, supplement safety |
+| **investigation** | Multi-model agent orchestration with Director-Worker-Summarizer pattern + domain registry + MCP bridge |
 
 ### Multi-Model Architecture
 
@@ -43,7 +44,7 @@ Ehrlich uses a three-tier Claude model architecture for cost-efficient investiga
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesizes (3-5 calls)
-Sonnet 4.5 (Researcher) -- Executes experiments with 38 tools (10-20 calls)
+Sonnet 4.5 (Researcher) -- Executes experiments with 42 tools (10-20 calls)
 Haiku 4.5 (Summarizer)  -- Compresses large outputs, classifies domains (5-10 calls)
 ```
 
@@ -61,10 +62,14 @@ Cost: ~$3-4 per investigation (vs ~$11 with all-Opus).
 | [UniProt](https://www.uniprot.org/) | Protein function, disease associations, GO terms | 250M+ sequences |
 | [Open Targets](https://platform.opentargets.org/) | Disease-target associations (scored evidence) | 60K+ targets |
 | [GtoPdb](https://www.guidetopharmacology.org/) | Expert-curated pharmacology (pKi, pIC50) | 11K+ ligands |
+| [ClinicalTrials.gov](https://clinicaltrials.gov/) | Registered exercise/training RCTs | 500K+ studies |
+| [NIH DSLD](https://dsld.od.nih.gov/) | Dietary supplement label database | 120K+ products |
+| [USDA FoodData](https://fdc.nal.usda.gov/) | Nutrient profiles for foods and supplements | 1.1M+ foods |
+| [OpenFDA CAERS](https://open.fda.gov/) | Supplement adverse event reports | 200K+ reports |
 
 All data sources are free and open-access.
 
-## 38 Tools
+## 42 Tools
 
 | Context | Tool | Description |
 |---------|------|-------------|
@@ -99,6 +104,10 @@ All data sources are free and open-access.
 | Sports | `assess_injury_risk` | Knowledge-based injury risk scoring |
 | Sports | `compute_training_metrics` | ACWR, monotony, strain, session RPE load |
 | Sports | `search_supplement_evidence` | Supplement efficacy literature search |
+| Sports | `search_clinical_trials` | ClinicalTrials.gov exercise/training RCT search |
+| Sports | `search_supplement_labels` | NIH DSLD supplement product ingredient lookup |
+| Sports | `search_nutrient_data` | USDA FoodData Central nutrient profiles |
+| Sports | `search_supplement_safety` | OpenFDA CAERS adverse event reports |
 | Investigation | `propose_hypothesis` | Register testable hypothesis |
 | Investigation | `design_experiment` | Plan experiment with tool sequence |
 | Investigation | `evaluate_hypothesis` | Assess outcome with confidence score |
@@ -197,6 +206,8 @@ Server at :8000, Console at :3000.
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/v1/health` | Health check |
+| GET | `/api/v1/methodology` | Methodology: phases, domains, tools, data sources, models |
+| GET | `/api/v1/stats` | Aggregate counts (tools, domains, phases, data sources, events) |
 | GET | `/api/v1/investigate` | List all investigations (most recent first) |
 | GET | `/api/v1/investigate/{id}` | Full investigation detail |
 | POST | `/api/v1/investigate` | Create new investigation |
@@ -214,7 +225,9 @@ Server at :8000, Console at :3000.
 | `experiment_started` | Experiment execution begins |
 | `experiment_completed` | Experiment finished with results |
 | `hypothesis_evaluated` | Outcome assessed against pre-defined criteria |
-| `negative_control` | Model validation result |
+| `negative_control` | Model validation result (known-inactive compound) |
+| `positive_control` | Model validation result (known-active compound) |
+| `validation_metrics` | Z'-factor, control separation stats |
 | `tool_called` | Tool invocation with inputs |
 | `tool_result` | Tool output preview |
 | `finding_recorded` | Scientific finding with evidence level |

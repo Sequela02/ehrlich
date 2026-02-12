@@ -169,6 +169,7 @@ export interface CompletedData {
   candidate_count: number;
   summary: string;
   prompt?: string;
+  diagram_url?: string;
   cost: {
     input_tokens: number;
     output_tokens: number;

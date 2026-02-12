@@ -33,7 +33,9 @@ from ehrlich.investigation.domain.domain_registry import DomainRegistry
 from ehrlich.investigation.domain.domains.molecular import MOLECULAR_SCIENCE
 from ehrlich.investigation.domain.domains.sports import SPORTS_SCIENCE
 from ehrlich.investigation.domain.investigation import Investigation, InvestigationStatus
+from ehrlich.investigation.domain.mcp_config import MCPServerConfig
 from ehrlich.investigation.infrastructure.anthropic_client import AnthropicClientAdapter
+from ehrlich.investigation.infrastructure.mcp_bridge import MCPBridge
 from ehrlich.investigation.infrastructure.sqlite_repository import SqliteInvestigationRepository
 from ehrlich.investigation.tools import (
     conclude_investigation,
@@ -60,8 +62,12 @@ from ehrlich.sports.tools import (
     assess_injury_risk,
     compare_protocols,
     compute_training_metrics,
+    search_clinical_trials,
+    search_nutrient_data,
     search_sports_literature,
     search_supplement_evidence,
+    search_supplement_labels,
+    search_supplement_safety,
 )
 
 if TYPE_CHECKING:
@@ -132,6 +138,9 @@ def _build_registry() -> ToolRegistry:
     _pred = frozenset({"prediction"})
     _sim = frozenset({"simulation"})
     _sports = frozenset({"sports"})
+    _sports_nutrition = frozenset({"sports", "nutrition"})
+    _sports_clinical = frozenset({"sports", "clinical"})
+    _sports_safety = frozenset({"sports", "safety"})
 
     tagged_tools: list[tuple[str, Any, frozenset[str] | None]] = [
         # Chemistry (6)
@@ -164,13 +173,17 @@ def _build_registry() -> ToolRegistry:
         ("assess_resistance", assess_resistance, _sim),
         ("get_protein_annotation", get_protein_annotation, _sim),
         ("search_disease_targets", search_disease_targets, _sim),
-        # Sports Science (6)
+        # Sports Science (10)
         ("search_sports_literature", search_sports_literature, _sports),
         ("analyze_training_evidence", analyze_training_evidence, _sports),
         ("compare_protocols", compare_protocols, _sports),
         ("assess_injury_risk", assess_injury_risk, _sports),
         ("compute_training_metrics", compute_training_metrics, _sports),
         ("search_supplement_evidence", search_supplement_evidence, _sports),
+        ("search_clinical_trials", search_clinical_trials, _sports_clinical),
+        ("search_supplement_labels", search_supplement_labels, _sports_nutrition),
+        ("search_nutrient_data", search_nutrient_data, _sports_nutrition),
+        ("search_supplement_safety", search_supplement_safety, _sports_safety),
         # Investigation control (7) -- universal, no tags
         ("record_finding", record_finding, None),
         ("conclude_investigation", conclude_investigation, None),
@@ -190,6 +203,24 @@ def _build_domain_registry() -> DomainRegistry:
     domain_registry.register(MOLECULAR_SCIENCE)
     domain_registry.register(SPORTS_SCIENCE)
     return domain_registry
+
+
+def _build_mcp_configs() -> list[MCPServerConfig]:
+    """Build MCP server configs from environment. Currently supports Excalidraw."""
+    import os
+
+    configs: list[MCPServerConfig] = []
+    if os.environ.get("EHRLICH_MCP_EXCALIDRAW", "").lower() in ("1", "true"):
+        configs.append(
+            MCPServerConfig(
+                name="excalidraw",
+                transport="stdio",
+                command="npx",
+                args=("-y", "@anthropic/claude-code-mcp", "excalidraw"),
+                tags=frozenset({"visualization"}),
+            )
+        )
+    return configs
 
 
 def _broadcast_event(investigation_id: str, event: dict[str, str]) -> None:
@@ -284,11 +315,15 @@ async def stream_investigation(investigation_id: str) -> EventSourceResponse:
     settings = get_settings()
     registry = _build_registry()
     domain_registry = _build_domain_registry()
+    mcp_configs = _build_mcp_configs()
+    mcp_bridge = MCPBridge() if mcp_configs else None
 
     _active_investigations[investigation.id] = investigation
     _subscribers[investigation.id] = []
 
-    orchestrator = _create_orchestrator(settings, registry, repo, domain_registry)
+    orchestrator = _create_orchestrator(
+        settings, registry, repo, domain_registry, mcp_bridge, mcp_configs,
+    )
     _active_orchestrators[investigation.id] = orchestrator
 
     async def event_generator() -> AsyncGenerator[dict[str, str], None]:
@@ -328,6 +363,8 @@ def _create_orchestrator(
     registry: ToolRegistry,
     repository: SqliteInvestigationRepository,
     domain_registry: DomainRegistry | None = None,
+    mcp_bridge: MCPBridge | None = None,
+    mcp_configs: list[MCPServerConfig] | None = None,
 ) -> MultiModelOrchestrator:
     api_key = settings.anthropic_api_key or None
     director = AnthropicClientAdapter(model=settings.director_model, api_key=api_key)
@@ -343,6 +380,8 @@ def _create_orchestrator(
         require_approval=True,
         repository=repository,
         domain_registry=domain_registry,
+        mcp_bridge=mcp_bridge,
+        mcp_configs=mcp_configs,
     )
 
 

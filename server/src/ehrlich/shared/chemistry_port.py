@@ -4,10 +4,10 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ehrlich.kernel.conformer import Conformer3D
-    from ehrlich.kernel.descriptors import MolecularDescriptors
-    from ehrlich.kernel.fingerprint import Fingerprint
     from ehrlich.kernel.types import SMILES, InChIKey
+    from ehrlich.shared.conformer import Conformer3D
+    from ehrlich.shared.descriptors import MolecularDescriptors
+    from ehrlich.shared.fingerprint import Fingerprint
 
 
 class ChemistryPort(ABC):

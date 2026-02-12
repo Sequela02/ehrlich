@@ -68,6 +68,7 @@ interface SSEState {
   activeToolName: string;
   experimentToolCount: number;
   experimentFindingCount: number;
+  diagramUrl: string | null;
 }
 
 export function useSSE(url: string | null): SSEState {
@@ -101,6 +102,7 @@ export function useSSE(url: string | null): SSEState {
   const [activeToolName, setActiveToolName] = useState("");
   const [experimentToolCount, setExperimentToolCount] = useState(0);
   const [experimentFindingCount, setExperimentFindingCount] = useState(0);
+  const [diagramUrl, setDiagramUrl] = useState<string | null>(null);
   const sourceRef = useRef<EventSource | null>(null);
   const attemptRef = useRef(0);
   const doneRef = useRef(false);
@@ -304,6 +306,9 @@ export function useSSE(url: string | null): SSEState {
         if (d.validation_metrics) {
           setValidationMetrics(d.validation_metrics);
         }
+        if (d.diagram_url) {
+          setDiagramUrl(d.diagram_url);
+        }
         if (d.cost) {
           const costData = d.cost as Record<string, unknown>;
           setCost({
@@ -414,5 +419,6 @@ export function useSSE(url: string | null): SSEState {
     activeToolName,
     experimentToolCount,
     experimentFindingCount,
+    diagramUrl,
   };
 }

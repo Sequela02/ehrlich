@@ -201,6 +201,7 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
                 "negative_controls": event.negative_controls,
                 "positive_controls": event.positive_controls,
                 "validation_metrics": event.validation_metrics,
+                "diagram_url": event.diagram_url,
             },
         )
     if isinstance(event, OutputSummarized):

@@ -189,6 +189,7 @@ class InvestigationCompleted(DomainEvent):
     negative_controls: list[dict[str, Any]] = field(default_factory=list)
     positive_controls: list[dict[str, Any]] = field(default_factory=list)
     validation_metrics: dict[str, Any] = field(default_factory=dict)
+    diagram_url: str = ""
 
 
 @dataclass(frozen=True)

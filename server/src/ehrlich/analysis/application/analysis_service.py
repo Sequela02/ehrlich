@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from ehrlich.analysis.domain.compound import CompoundSearchResult
     from ehrlich.analysis.domain.dataset import Dataset
     from ehrlich.analysis.domain.repository import CompoundSearchRepository, DatasetRepository
-    from ehrlich.kernel.chemistry_port import ChemistryPort
+    from ehrlich.shared.chemistry_port import ChemistryPort
 
 logger = logging.getLogger(__name__)
 

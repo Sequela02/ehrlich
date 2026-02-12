@@ -1,9 +1,10 @@
 """Sports Science tools for the investigation engine.
 
-6 tools that enable evidence-based sports science research:
+10 tools that enable evidence-based sports science research:
 literature search, training evidence analysis, protocol comparison,
-injury risk assessment, training metrics computation, and
-supplement evidence search.
+injury risk assessment, training metrics computation, supplement
+evidence search, clinical trial search, supplement label search,
+nutrient data search, and supplement safety search.
 """
 
 from __future__ import annotations
@@ -12,9 +13,23 @@ import json
 
 from ehrlich.literature.infrastructure.semantic_scholar import SemanticScholarClient
 from ehrlich.sports.application.sports_service import SportsService
+from ehrlich.sports.infrastructure.clinicaltrials_client import ClinicalTrialsClient
+from ehrlich.sports.infrastructure.dsld_client import DSLDClient
+from ehrlich.sports.infrastructure.fooddata_client import FoodDataClient
+from ehrlich.sports.infrastructure.openfda_client import OpenFDAClient
 
 _client = SemanticScholarClient()
-_service = SportsService(paper_repo=_client)
+_ct_client = ClinicalTrialsClient()
+_dsld_client = DSLDClient()
+_food_client = FoodDataClient()
+_fda_client = OpenFDAClient()
+_service = SportsService(
+    paper_repo=_client,
+    clinical_trials=_ct_client,
+    supplements=_dsld_client,
+    nutrients=_food_client,
+    adverse_events=_fda_client,
+)
 
 
 async def search_sports_literature(
@@ -234,5 +249,162 @@ async def search_supplement_evidence(
             "outcome": outcome,
             "count": len(results),
             "papers": results,
+        }
+    )
+
+
+async def search_clinical_trials(
+    condition: str,
+    intervention: str = "",
+    max_results: int = 10,
+) -> str:
+    """Search ClinicalTrials.gov for exercise and training RCTs.
+
+    Finds registered clinical trials related to exercise, training, and
+    sports interventions. Returns trial ID, status, phase, enrollment,
+    conditions, interventions, and primary outcomes.
+
+    Args:
+        condition: Medical condition or topic (e.g. 'exercise', 'obesity', 'knee injury')
+        intervention: Training intervention filter (e.g. 'HIIT', 'resistance training')
+        max_results: Maximum number of trials to return (default: 10)
+    """
+    trials = await _service.search_clinical_trials(condition, intervention, max_results)
+    return json.dumps(
+        {
+            "condition": condition,
+            "intervention": intervention,
+            "count": len(trials),
+            "trials": [
+                {
+                    "nct_id": t.nct_id,
+                    "title": t.title,
+                    "status": t.status,
+                    "phase": t.phase,
+                    "enrollment": t.enrollment,
+                    "conditions": list(t.conditions),
+                    "interventions": list(t.interventions),
+                    "primary_outcomes": list(t.primary_outcomes),
+                    "study_type": t.study_type,
+                    "start_date": t.start_date,
+                }
+                for t in trials
+            ],
+        }
+    )
+
+
+async def search_supplement_labels(
+    ingredient: str,
+    max_results: int = 10,
+) -> str:
+    """Search NIH DSLD for supplement products containing an ingredient.
+
+    Queries the NIH Dietary Supplement Label Database for commercial
+    supplement products. Returns product name, brand, ingredient list
+    with amounts and daily value percentages, and serving size.
+
+    Args:
+        ingredient: Ingredient name (e.g. 'creatine', 'caffeine', 'vitamin D')
+        max_results: Maximum number of products to return (default: 10)
+    """
+    labels = await _service.search_supplement_labels(ingredient, max_results)
+    return json.dumps(
+        {
+            "ingredient": ingredient,
+            "count": len(labels),
+            "products": [
+                {
+                    "report_id": lb.report_id,
+                    "product_name": lb.product_name,
+                    "brand": lb.brand,
+                    "serving_size": lb.serving_size,
+                    "ingredients": [
+                        {
+                            "name": ing.name,
+                            "amount": ing.amount,
+                            "unit": ing.unit,
+                            "daily_value_pct": ing.daily_value_pct,
+                        }
+                        for ing in lb.ingredients
+                    ],
+                }
+                for lb in labels
+            ],
+        }
+    )
+
+
+async def search_nutrient_data(
+    food_query: str,
+    max_results: int = 5,
+) -> str:
+    """Search USDA FoodData Central for nutrient profiles.
+
+    Queries the USDA FoodData Central database for food nutrient
+    information including macronutrients, vitamins, and minerals.
+
+    Args:
+        food_query: Food search query (e.g. 'chicken breast', 'whey protein', 'salmon')
+        max_results: Maximum number of food items to return (default: 5)
+    """
+    profiles = await _service.search_nutrient_data(food_query, max_results)
+    return json.dumps(
+        {
+            "query": food_query,
+            "count": len(profiles),
+            "foods": [
+                {
+                    "fdc_id": p.fdc_id,
+                    "description": p.description,
+                    "brand": p.brand,
+                    "category": p.category,
+                    "nutrients": [
+                        {
+                            "name": n.name,
+                            "amount": n.amount,
+                            "unit": n.unit,
+                            "nutrient_number": n.nutrient_number,
+                        }
+                        for n in p.nutrients
+                    ],
+                }
+                for p in profiles
+            ],
+        }
+    )
+
+
+async def search_supplement_safety(
+    product_name: str,
+    max_results: int = 10,
+) -> str:
+    """Search OpenFDA CAERS for supplement adverse event reports.
+
+    Queries the FDA Center for Food Safety adverse event reporting
+    system for supplement-related adverse events. Returns report date,
+    products involved, reactions, outcomes, and consumer demographics.
+
+    Args:
+        product_name: Supplement product name (e.g. 'creatine', 'pre-workout', 'fat burner')
+        max_results: Maximum number of reports to return (default: 10)
+    """
+    events = await _service.search_supplement_safety(product_name, max_results)
+    return json.dumps(
+        {
+            "product_name": product_name,
+            "count": len(events),
+            "adverse_events": [
+                {
+                    "report_id": e.report_id,
+                    "date": e.date,
+                    "products": list(e.products),
+                    "reactions": list(e.reactions),
+                    "outcomes": list(e.outcomes),
+                    "consumer_age": e.consumer_age,
+                    "consumer_gender": e.consumer_gender,
+                }
+                for e in events
+            ],
         }
     )
