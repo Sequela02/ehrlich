@@ -55,11 +55,24 @@ type(scope): description
 
 **Types:** `feat`, `fix`, `refactor`, `chore`, `docs`, `test`
 
-**Scopes:** `kernel`, `literature`, `chemistry`, `analysis`, `prediction`, `simulation`, `sports`, `investigation`, `api`, `console`, `mol`, `data`
+**Scopes:** `kernel`, `shared`, `literature`, `chemistry`, `analysis`, `prediction`, `simulation`, `sports`, `investigation`, `api`, `console`, `mol`, `data`
+
+### Code Standards (Non-Negotiable)
+
+Every contribution must respect:
+
+- **DDD + Clean Architecture** -- Respect bounded contexts. `domain/` is pure Python with zero external deps. `application/` depends on domain interfaces, never infrastructure. `infrastructure/` implements domain ABCs. No cross-context domain imports.
+- **No redundancy** -- DRY across layers. If a pattern exists, reuse it. If a utility exists, find it before writing a new one. Three similar lines of code is better than a premature abstraction, but true duplication is never acceptable.
+- **No dead code** -- No commented-out blocks, no unused imports, no orphaned functions. Delete what you don't need.
+- **No boilerplate** -- If it can be derived (schemas from type hints, routes from file conventions), derive it. Don't write what the framework gives you.
+- **No backward-compatibility hacks** -- No renamed `_unused` vars, no re-exports for removed code, no `# removed` comments. If something is unused, delete it. Exception: production hotfixes with a follow-up cleanup ticket.
+- **Clean Code** -- Readability over cleverness. Explicit imports only (no wildcards). Fail fast at boundaries. Meaningful names. Small focused functions.
+- **Documentation as code** -- Every code change updates relevant docs in the same commit. Tool counts, event counts, file tables, component lists. This is the #1 recurring failure -- never skip it.
+- **Test before claiming complete** -- All quality gates must pass. Never say "done" without running the full suite.
 
 ## Architecture
 
-DDD monorepo with 8 bounded contexts. Each context follows `domain/` -> `application/` -> `infrastructure/` layering.
+DDD monorepo with 9 bounded contexts. Each context follows `domain/` -> `application/` -> `infrastructure/` layering.
 
 ### Layer Rules (Strict)
 
@@ -67,14 +80,15 @@ DDD monorepo with 8 bounded contexts. Each context follows `domain/` -> `applica
 2. `application/` depends on `domain/` interfaces, never on `infrastructure/`
 3. `infrastructure/` implements `domain/` repository interfaces
 4. `tools.py` calls `application/` services, returns JSON for Claude
-5. No cross-context domain imports -- communicate via `kernel/` primitives
-6. RDKit imports ONLY in `chemistry/infrastructure/rdkit_adapter.py`
+5. No cross-context domain imports -- communicate via `kernel/` primitives or `shared/` ports
+6. `shared/` contains cross-cutting ports (ABCs) and value objects -- no infrastructure deps
+7. RDKit imports ONLY in `chemistry/infrastructure/rdkit_adapter.py`
 
 ### Multi-Model Orchestrator
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence (NO tools)
-Sonnet 4.5 (Researcher) -- Executes experiments with 36 domain-filtered tools (parallel: 2 per batch)
+Sonnet 4.5 (Researcher) -- Executes experiments with 48 tools (parallel: 2 per batch)
 Haiku 4.5 (Summarizer)  -- Compresses large outputs, classifies domains
 ```
 
@@ -83,6 +97,7 @@ Haiku 4.5 (Summarizer)  -- Compresses large outputs, classifies domains
 | Context | Purpose |
 |---------|---------|
 | kernel | Shared primitives (SMILES, Molecule, exceptions) |
+| shared | Cross-cutting ports and value objects (ChemistryPort, Fingerprint, Conformer3D) |
 | literature | Paper search (Semantic Scholar) |
 | chemistry | RDKit cheminformatics |
 | analysis | Dataset exploration (ChEMBL, PubChem, GtoPdb) |
@@ -102,6 +117,30 @@ Haiku 4.5 (Summarizer)  -- Compresses large outputs, classifies domains
 ## Adding a New Scientific Domain
 
 The engine is designed so that adding a new domain requires **zero changes to existing code**. You create new files and register them.
+
+### Phase 0: Research Your Domain
+
+Before writing any code, research the domain deeply. This upfront work determines the quality of every downstream decision -- tools, scoring, prompts, and visualization.
+
+**What to research:**
+
+1. **Problem definition** -- What scientific questions should this domain answer? What does "discovery" mean here? (e.g., molecular: find candidate drugs; sports: find optimal training protocols)
+2. **Data sources** -- Where does real experimental data come from? Identify free APIs, databases, or datasets. For each source: base URL, auth requirements, rate limits, response format, coverage
+3. **Candidate criteria** -- What makes a good candidate in this domain? What scores matter? What thresholds separate good from bad? (e.g., molecular: prediction_score > 0.7, docking < -7.0 kcal/mol; sports: effect_size > 0.5, evidence_grade A-B)
+4. **Hypothesis types** -- What kinds of hypotheses does this domain test? (mechanistic, structural, correlational, physiological, etc.)
+5. **Visualization needs** -- How should results be displayed? Charts, 3D models, diagrams, maps, tables?
+6. **Domain vocabulary** -- Key terms, units, standard notations that Claude needs in its prompts
+
+**Document your research** in `research/{yourdomain}/`:
+
+```
+research/yourdomain/
+    data-sources.md       # APIs, databases, auth, rate limits
+    domain-model.md       # Entities, scoring criteria, thresholds
+    prior-work.md         # Existing tools and approaches in this field
+```
+
+See `research/molecular/` and `research/methodology/` for examples of thorough domain research.
 
 ### Step 1: Create the Bounded Context
 
@@ -243,7 +282,82 @@ If you added `template_prompts` in your DomainConfig, add matching templates in 
 },
 ```
 
-### Step 6: Write Tests
+### Step 6: Add Visualization Components (Optional)
+
+The visualization system supports **any rendering technology**: Recharts charts, Visx plots, custom SVG, 3Dmol.js 3D viewers, maps, network graphs, tables -- anything that renders in React. Each visualization is a lazy-loaded component registered by a `viz_type` string.
+
+**Backend: create a visualization tool**
+
+Add a tool that returns a `VisualizationPayload` JSON. The orchestrator auto-intercepts any tool result containing `viz_type` and emits a `VisualizationRendered` SSE event -- no orchestrator changes needed.
+
+```python
+# server/src/ehrlich/yourdomain/tools_viz.py (or in tools.py)
+
+import json
+from typing import Any
+
+async def render_your_chart(
+    items: list[dict[str, Any]],
+    title: str = "Your Chart",
+) -> str:
+    """Render an interactive chart of your domain data.
+
+    Args:
+        items: List of data points with numeric properties
+        title: Chart title
+    """
+    points = [{"label": i.get("name", ""), "value": i.get("score", 0)} for i in items]
+    return json.dumps({
+        "viz_type": "your_chart",        # Must match VizRegistry key
+        "title": title,
+        "data": {"points": points},
+        "config": {"domain": "your_domain"},
+    })
+```
+
+Register the tool in `_build_registry()` with a visualization tag:
+
+```python
+_yourdomain_viz = frozenset({"yourdomain", "visualization"})
+("render_your_chart", render_your_chart, _yourdomain_viz),
+```
+
+**Frontend: create and register the component**
+
+1. Create your chart component (any rendering library):
+
+```typescript
+// console/src/features/visualization/charts/YourChart.tsx
+
+interface YourChartProps {
+  data: { points: Array<{ label: string; value: number }> };
+  title: string;
+}
+
+export default function YourChart({ data, title }: YourChartProps) {
+  return (
+    <div>
+      <h4 className="mb-2 font-mono text-sm">{title}</h4>
+      {/* Your rendering logic: Recharts, Visx, SVG, canvas, etc. */}
+    </div>
+  );
+}
+```
+
+2. Register it in `console/src/features/visualization/VizRegistry.tsx`:
+
+```typescript
+const LazyYourChart = lazy(() => import('./charts/YourChart'));
+registry.set('your_chart', LazyYourChart as unknown as ChartComponent);
+```
+
+That's it. The `VisualizationPanel` handles Suspense boundaries, grid layout, and error fallbacks automatically.
+
+**Theming:** Use OKLCH tokens from `console/src/features/visualization/theme.ts` for consistent colors across all charts.
+
+**3D molecular viewers:** If your domain uses 3Dmol.js-style 3D visualization, add your tool names to `MOLECULAR_TOOL_NAMES` in `console/src/features/visualization/VisualizationPanel.tsx` so the `LiveLabViewer` auto-appears.
+
+### Step 7: Write Tests
 
 Create `server/tests/yourdomain/test_tools.py`:
 
@@ -262,7 +376,7 @@ class TestAnalyzeSomething:
 
 Mock external API calls. Test edge cases (empty input, invalid data).
 
-### Step 7: Update Documentation
+### Step 8: Update Documentation
 
 Update these files (in the same commit as the code):
 
@@ -273,7 +387,7 @@ Update these files (in the same commit as the code):
 | `docs/architecture.md` | Bounded contexts, tool count, data flow |
 | `docs/roadmap.md` | Add completion entry |
 
-### Step 8: Verify
+### Step 9: Verify
 
 ```bash
 # Server
@@ -315,7 +429,71 @@ Add entries to `template_prompts` in the config and matching cards in `TemplateC
 
 ### Adding External Data Sources
 
-1. Create an infrastructure client in your domain's `infrastructure/` directory
-2. Follow the pattern: `httpx.AsyncClient`, retry with exponential backoff, structured error handling
-3. Use the client in your tool functions
-4. Mock the client in tests
+Follow the DDD layering pattern used throughout the codebase:
+
+**1. Domain layer** -- Define entities and repository ABC:
+
+```python
+# server/src/ehrlich/yourdomain/domain/entities.py
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class YourEntity:
+    id: str
+    name: str
+    score: float
+```
+
+```python
+# server/src/ehrlich/yourdomain/domain/repository.py
+from abc import ABC, abstractmethod
+from ehrlich.yourdomain.domain.entities import YourEntity
+
+class YourRepository(ABC):
+    @abstractmethod
+    async def search(self, query: str, max_results: int) -> list[YourEntity]: ...
+```
+
+**2. Infrastructure layer** -- Implement the repository with an HTTP client:
+
+```python
+# server/src/ehrlich/yourdomain/infrastructure/your_client.py
+import httpx
+from ehrlich.kernel.exceptions import ExternalServiceError
+from ehrlich.yourdomain.domain.entities import YourEntity
+from ehrlich.yourdomain.domain.repository import YourRepository
+
+_BASE_URL = "https://api.example.com/v1"
+_TIMEOUT = 20.0
+_MAX_RETRIES = 3
+
+class YourClient(YourRepository):
+    def __init__(self) -> None:
+        self._client = httpx.AsyncClient(timeout=_TIMEOUT)
+
+    async def search(self, query: str, max_results: int = 10) -> list[YourEntity]:
+        # Retry with exponential backoff, raise ExternalServiceError on failure
+        ...
+```
+
+**3. Tool layer** -- Wire the client into your tool function:
+
+```python
+# In tools.py
+from ehrlich.yourdomain.infrastructure.your_client import YourClient
+
+_client = YourClient()
+
+async def search_your_data(query: str, max_results: int = 10) -> str:
+    results = await _client.search(query, max_results)
+    return json.dumps([{"id": r.id, "name": r.name, "score": r.score} for r in results])
+```
+
+**4. Testing** -- Mock the HTTP client, test adapter and tool separately:
+
+```python
+# tests/yourdomain/test_tools.py -- test tool with mocked client
+# tests/yourdomain/test_your_client.py -- test HTTP parsing with httpx mock
+```
+
+See `server/src/ehrlich/sports/` for a complete example with 4 data sources (ClinicalTrials.gov, NIH DSLD, USDA FoodData, OpenFDA CAERS), each following this exact pattern.
