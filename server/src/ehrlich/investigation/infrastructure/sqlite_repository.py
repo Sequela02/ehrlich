@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS investigations (
     negative_controls TEXT NOT NULL DEFAULT '[]',
     citations TEXT NOT NULL DEFAULT '[]',
     summary TEXT NOT NULL DEFAULT '',
+    domain TEXT NOT NULL DEFAULT '',
     iteration INTEGER NOT NULL DEFAULT 0,
     error TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL,
@@ -70,8 +71,8 @@ class SqliteInvestigationRepository(InvestigationRepository):
                    (id, prompt, status, hypotheses, experiments,
                     current_hypothesis_id, current_experiment_id,
                     findings, candidates, negative_controls,
-                    citations, summary, iteration, error, created_at, cost_data)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    citations, summary, domain, iteration, error, created_at, cost_data)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 _to_row(investigation),
             )
             await db.commit()
@@ -101,7 +102,7 @@ class SqliteInvestigationRepository(InvestigationRepository):
                    status=?, hypotheses=?, experiments=?,
                    current_hypothesis_id=?, current_experiment_id=?,
                    findings=?, candidates=?, negative_controls=?,
-                   citations=?, summary=?, iteration=?, error=?, cost_data=?
+                   citations=?, summary=?, domain=?, iteration=?, error=?, cost_data=?
                    WHERE id=?""",
                 (
                     investigation.status.value,
@@ -116,6 +117,7 @@ class SqliteInvestigationRepository(InvestigationRepository):
                     ),
                     json.dumps(investigation.citations),
                     investigation.summary,
+                    investigation.domain,
                     investigation.iteration,
                     investigation.error,
                     json.dumps(investigation.cost_data),
@@ -160,6 +162,7 @@ def _to_row(inv: Investigation) -> tuple[Any, ...]:
         json.dumps([_negative_control_to_dict(nc) for nc in inv.negative_controls]),
         json.dumps(inv.citations),
         inv.summary,
+        inv.domain,
         inv.iteration,
         inv.error,
         inv.created_at.isoformat(),
@@ -318,6 +321,7 @@ def _from_row(row: Any) -> Investigation:
         negative_controls=negative_controls,
         citations=json.loads(row["citations"]),
         summary=row["summary"],
+        domain=row["domain"],
         iteration=row["iteration"],
         error=row["error"],
         created_at=created_at,

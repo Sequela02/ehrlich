@@ -246,7 +246,7 @@ async def stream_investigation(investigation_id: str) -> EventSourceResponse:
     _active_investigations[investigation.id] = investigation
     _subscribers[investigation.id] = []
 
-    orchestrator = _create_orchestrator(settings, registry)
+    orchestrator = _create_orchestrator(settings, registry, repo)
     _active_orchestrators[investigation.id] = orchestrator
 
     async def event_generator() -> AsyncGenerator[dict[str, str], None]:
@@ -281,7 +281,11 @@ async def stream_investigation(investigation_id: str) -> EventSourceResponse:
     return EventSourceResponse(event_generator())
 
 
-def _create_orchestrator(settings: Any, registry: ToolRegistry) -> MultiModelOrchestrator:
+def _create_orchestrator(
+    settings: Any,
+    registry: ToolRegistry,
+    repository: SqliteInvestigationRepository,
+) -> MultiModelOrchestrator:
     api_key = settings.anthropic_api_key or None
     director = AnthropicClientAdapter(model=settings.director_model, api_key=api_key)
     researcher = AnthropicClientAdapter(model=settings.researcher_model, api_key=api_key)
@@ -294,6 +298,7 @@ def _create_orchestrator(settings: Any, registry: ToolRegistry) -> MultiModelOrc
         max_iterations_per_experiment=settings.max_iterations_per_experiment,
         summarizer_threshold=settings.summarizer_threshold,
         require_approval=True,
+        repository=repository,
     )
 
 

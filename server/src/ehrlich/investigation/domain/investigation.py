@@ -35,6 +35,7 @@ class Investigation:
     negative_controls: list[NegativeControl] = field(default_factory=list)
     citations: list[str] = field(default_factory=list)
     summary: str = ""
+    domain: str = ""
     iteration: int = 0
     error: str = ""
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))

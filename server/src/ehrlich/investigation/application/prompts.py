@@ -121,6 +121,12 @@ formulate 2-4 testable hypotheses. Each hypothesis must be:
 - Grounded in the literature findings provided
 - Testable with the available cheminformatics and ML tools
 
+If prior investigation results are provided in \
+<prior_investigations>, leverage their outcomes:
+- Build on supported hypotheses from related investigations
+- Avoid repeating refuted approaches
+- Consider candidates already identified as starting points
+
 Also identify 1-3 negative control compounds: molecules known to \
 be inactive against the target, which will validate model \
 reliability later.
@@ -534,6 +540,62 @@ artifacts, redundant context.
 </instructions>
 
 Respond with ONLY the compressed text, no preamble."""
+
+
+DOMAIN_CLASSIFICATION_PROMPT = """\
+Classify this research prompt into exactly one domain category.
+
+<categories>
+antimicrobial, neurodegenerative, oncology, environmental, \
+cardiovascular, metabolic, immunology, other
+</categories>
+
+Respond with ONLY the category name, nothing else."""
+
+
+VALID_DOMAINS = frozenset({
+    "antimicrobial",
+    "neurodegenerative",
+    "oncology",
+    "environmental",
+    "cardiovascular",
+    "metabolic",
+    "immunology",
+    "other",
+})
+
+
+def build_multi_investigation_context(
+    investigations: list[Investigation],
+) -> str:
+    """Compress past completed investigations into XML context for the Director."""
+    if not investigations:
+        return ""
+    parts: list[str] = ["<prior_investigations>"]
+    for inv in investigations[:3]:
+        parts.append(
+            f'  <investigation domain="{inv.domain}" '
+            f'prompt="{inv.prompt[:100]}">'
+        )
+        for h in inv.hypotheses[:4]:
+            if h.status.value in ("supported", "refuted", "revised"):
+                parts.append(
+                    f"    <hypothesis status='{h.status.value}' "
+                    f"confidence='{h.confidence:.0%}'>"
+                    f"{h.statement}</hypothesis>"
+                )
+        for c in inv.candidates[:2]:
+            score = c.prediction_score if c.prediction_score else 0
+            parts.append(
+                f"    <candidate rank='{c.rank}' "
+                f"smiles='{c.smiles}' score='{score:.2f}'>"
+                f"{c.name or 'unnamed'}</candidate>"
+            )
+        if inv.summary:
+            parts.append(f"    <summary>{inv.summary[:300]}</summary>")
+        parts.append("  </investigation>")
+    parts.append("</prior_investigations>")
+    return "\n".join(parts)
 
 
 def _build_prior_context(investigation: Investigation) -> str:

@@ -11,8 +11,11 @@ from ehrlich.investigation.application.prompts import (
     DIRECTOR_EXPERIMENT_PROMPT,
     DIRECTOR_FORMULATION_PROMPT,
     DIRECTOR_SYNTHESIS_PROMPT,
+    DOMAIN_CLASSIFICATION_PROMPT,
     RESEARCHER_EXPERIMENT_PROMPT,
     SUMMARIZER_PROMPT,
+    VALID_DOMAINS,
+    build_multi_investigation_context,
 )
 from ehrlich.investigation.application.tool_cache import ToolCache
 from ehrlich.investigation.domain.candidate import Candidate
@@ -44,6 +47,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
     from ehrlich.investigation.application.tool_registry import ToolRegistry
+    from ehrlich.investigation.domain.repository import InvestigationRepository
     from ehrlich.investigation.infrastructure.anthropic_client import AnthropicClientAdapter
 
 logger = logging.getLogger(__name__)
@@ -82,6 +86,7 @@ class MultiModelOrchestrator:
         max_hypotheses: int = 6,
         summarizer_threshold: int = 2000,
         require_approval: bool = False,
+        repository: InvestigationRepository | None = None,
     ) -> None:
         self._director = director
         self._researcher = researcher
@@ -91,6 +96,7 @@ class MultiModelOrchestrator:
         self._max_hypotheses = max_hypotheses
         self._summarizer_threshold = summarizer_threshold
         self._require_approval = require_approval
+        self._repository = repository
         self._cache = ToolCache()
         self._state_lock = asyncio.Lock()
         self._approval_event = asyncio.Event()
@@ -138,6 +144,35 @@ class MultiModelOrchestrator:
 
             yield self._cost_event(cost, investigation.id)
 
+            # Classify domain via Haiku and build prior investigation context
+            prior_context = ""
+            if self._repository:
+                domain_response = await self._summarizer.create_message(
+                    system=DOMAIN_CLASSIFICATION_PROMPT,
+                    messages=[{"role": "user", "content": investigation.prompt}],
+                    tools=[],
+                )
+                domain_text = (
+                    domain_response.content[0].get("text", "other").strip().lower()
+                    if domain_response.content
+                    else "other"
+                )
+                investigation.domain = domain_text if domain_text in VALID_DOMAINS else "other"
+                cost.add_usage(
+                    domain_response.input_tokens,
+                    domain_response.output_tokens,
+                    self._summarizer.model,
+                )
+                all_investigations = await self._repository.list_all()
+                related = [
+                    inv for inv in all_investigations
+                    if inv.status == InvestigationStatus.COMPLETED
+                    and inv.domain == investigation.domain
+                    and inv.id != investigation.id
+                ]
+                if related:
+                    prior_context = build_multi_investigation_context(related)
+
             # 2. Director formulates hypotheses
             yield PhaseChanged(
                 phase=2,
@@ -145,6 +180,7 @@ class MultiModelOrchestrator:
                 description="Director formulating testable hypotheses from literature evidence",
                 investigation_id=investigation.id,
             )
+            prior_section = f"\n\n{prior_context}" if prior_context else ""
             formulation = await self._director_call(
                 cost,
                 DIRECTOR_FORMULATION_PROMPT,
@@ -152,7 +188,8 @@ class MultiModelOrchestrator:
                 f"Literature survey results:\n{literature_summary[:3000]}\n\n"
                 f"Findings so far:\n"
                 + "\n".join(f"- {f.title}: {f.detail}" for f in investigation.findings)
-                + "\n\nFormulate 2-4 testable hypotheses and identify negative controls.",
+                + "\n\nFormulate 2-4 testable hypotheses and identify negative controls."
+                + prior_section,
             )
 
             # Create hypothesis entities
