@@ -305,13 +305,31 @@ Director synthesis prompt:
   <validation_quality> section assesses control separation, classification quality
   model_validation_quality field: "sufficient" | "marginal" | "insufficient"
   Insufficient validation downgrades all hypothesis certainty by one level
+  +Z'-factor thresholds (>=0.5 excellent, >0 marginal, <=0 unusable)
+  +Permutation significance (p < 0.05 = better than random)
+  +Scaffold-split gap (>0.15 = memorization risk)
 
 Orchestrator wiring:
   - Phase 3: stores pos_control_suggestions from formulation output
-  - Phase 5: records PositiveControl entities + PositiveControlRecorded events
-  - Phase 6: includes positive control text in synthesis context
-  - InvestigationCompleted event carries positive_controls list
+  - Phase 4: captures trained model_ids from train_model tool results
+  - Phase 5: scores controls through trained models via predict_candidates
+  - Phase 5: computes Z'-factor from positive/negative control scores
+  - Phase 5: emits ValidationMetricsComputed event with Z'-factor + quality
+  - Phase 5: falls back to score=0.0 if no trained model or non-molecular domain
+  - Phase 6: includes validation metrics text (Z'-factor, separation stats) in synthesis context
+  - InvestigationCompleted event carries positive_controls list + validation_metrics dict
 
+Validation domain module (investigation/domain/validation.py):
+  compute_z_prime(positive_scores, negative_scores) -> AssayQualityMetrics
+  Z' = 1 - (3*sigma_pos + 3*sigma_neg) / |mu_pos - mu_neg|
+  Thresholds: >= 0.5 excellent, > 0 marginal, <= 0 unusable, insufficient if < 3 per group
+
+PredictionService.train() dual-split metrics:
+  Scaffold-split: auroc, auprc, accuracy, f1 (primary, honest generalizability)
+  Random-split: random_auroc, random_auprc, random_accuracy, random_f1 (comparison)
+  Permutation: permutation_p_value (Y-scrambling, 100 permutations, Phipson & Smyth 2010)
+
+ValidationMetricsComputed domain event → validation_metrics SSE event type
 PositiveControlRecorded domain event → positive_control SSE event type
 ```
 

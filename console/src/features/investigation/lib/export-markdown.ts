@@ -5,6 +5,7 @@ import type {
   Finding,
   Hypothesis,
   NegativeControl,
+  ValidationMetricsData,
 } from "../types";
 
 export interface ExportData {
@@ -16,6 +17,7 @@ export interface ExportData {
   candidates: CandidateRow[];
   negativeControls: NegativeControl[];
   cost: CostInfo | null;
+  validationMetrics?: ValidationMetricsData | null;
 }
 
 export function generateMarkdown(data: ExportData): string {
@@ -131,6 +133,14 @@ export function generateMarkdown(data: ExportData): string {
       sections.push(`| ${nc.name || "-"} | \`${nc.identifier}\` | ${nc.score.toFixed(3)} | ${nc.correctly_classified ? "Pass" : "Fail"} |`);
     }
     sections.push("");
+    if (data.validationMetrics && data.validationMetrics.z_prime != null) {
+      const vm = data.validationMetrics;
+      const zp = vm.z_prime as number;
+      sections.push(`**Z'-factor:** ${zp.toFixed(3)} (${vm.z_prime_quality})\n`);
+      sections.push(`- Positive controls: mean=${vm.positive_mean.toFixed(3)}, n=${vm.positive_control_count}`);
+      sections.push(`- Negative controls: mean=${vm.negative_mean.toFixed(3)}, n=${vm.negative_control_count}`);
+      sections.push("");
+    }
   }
 
   // 8. Cost & Performance

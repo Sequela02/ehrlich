@@ -49,6 +49,7 @@ function InvestigationPage() {
     approvalPending,
     pendingApprovalHypotheses,
     domainConfig,
+    validationMetrics,
     error,
     activeToolName,
     experimentToolCount,
@@ -385,6 +386,7 @@ function InvestigationPage() {
                 negativeControls={negativeControls}
                 cost={cost}
                 domainConfig={domainConfig}
+                validationMetrics={validationMetrics}
               />
             </>
           )}

@@ -15,6 +15,7 @@ import type {
   PhaseInfo,
   SSEEvent,
   SSEEventType,
+  ValidationMetricsData,
 } from "../types";
 
 const EVENT_TYPES: SSEEventType[] = [
@@ -35,6 +36,7 @@ const EVENT_TYPES: SSEEventType[] = [
   "hypothesis_approval_requested",
   "domain_detected",
   "literature_survey_completed",
+  "validation_metrics",
 ];
 
 const MAX_RETRIES = 3;
@@ -60,6 +62,7 @@ interface SSEState {
   pendingApprovalHypotheses: { id: string; statement: string; rationale: string }[];
   domainConfig: DomainDisplayConfig | null;
   literatureSurvey: LiteratureSurveyCompletedData | null;
+  validationMetrics: ValidationMetricsData | null;
   error: string | null;
   toolCallCount: number;
   activeToolName: string;
@@ -92,6 +95,7 @@ export function useSSE(url: string | null): SSEState {
   const [literatureSurvey, setLiteratureSurvey] = useState<LiteratureSurveyCompletedData | null>(
     null,
   );
+  const [validationMetrics, setValidationMetrics] = useState<ValidationMetricsData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [toolCallCount, setToolCallCount] = useState(0);
   const [activeToolName, setActiveToolName] = useState("");
@@ -278,6 +282,9 @@ export function useSSE(url: string | null): SSEState {
       case "literature_survey_completed":
         setLiteratureSurvey(parsed.data as unknown as LiteratureSurveyCompletedData);
         break;
+      case "validation_metrics":
+        setValidationMetrics(parsed.data as unknown as ValidationMetricsData);
+        break;
       case "completed": {
         const d = parsed.data as unknown as CompletedData;
         setSummary(d.summary);
@@ -293,6 +300,9 @@ export function useSSE(url: string | null): SSEState {
         }
         if (d.negative_controls && d.negative_controls.length > 0) {
           setNegativeControls((prev) => (prev.length === 0 ? d.negative_controls! : prev));
+        }
+        if (d.validation_metrics) {
+          setValidationMetrics(d.validation_metrics);
         }
         if (d.cost) {
           const costData = d.cost as Record<string, unknown>;
@@ -398,6 +408,7 @@ export function useSSE(url: string | null): SSEState {
     pendingApprovalHypotheses,
     domainConfig,
     literatureSurvey,
+    validationMetrics,
     error,
     toolCallCount,
     activeToolName,

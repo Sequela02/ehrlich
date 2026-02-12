@@ -21,6 +21,7 @@ from ehrlich.investigation.domain.events import (
     OutputSummarized,
     ToolCalled,
     ToolResultEvent,
+    ValidationMetricsComputed,
 )
 from ehrlich.investigation.domain.investigation import Investigation, InvestigationStatus
 
@@ -421,6 +422,112 @@ class TestNegativeControls:
         assert nc_events[0].identifier == "CCO"
         assert nc_events[0].name == "Ethanol"
         assert len(investigation.negative_controls) == 1
+
+
+class TestValidationMetrics:
+    @pytest.mark.asyncio
+    async def test_phase5_emits_validation_metrics(self) -> None:
+        director, researcher, summarizer = _make_clients()
+
+        director.create_message = AsyncMock(
+            side_effect=[
+                _make_text_response(_formulation_json()),
+                _make_text_response(_experiment_design_json()),
+                _make_text_response(_evaluation_json()),
+                _make_text_response(_synthesis_json()),
+            ]
+        )
+        researcher.create_message = AsyncMock(return_value=_make_text_response("Done."))
+
+        orchestrator = MultiModelOrchestrator(
+            director=director,
+            researcher=researcher,
+            summarizer=summarizer,
+            registry=_build_registry(),
+            max_iterations_per_experiment=1,
+        )
+
+        investigation = Investigation(prompt="Test validation")
+        events = [e async for e in orchestrator.run(investigation)]
+
+        vm_events = [e for e in events if isinstance(e, ValidationMetricsComputed)]
+        assert len(vm_events) == 1
+        assert vm_events[0].investigation_id == investigation.id
+
+    @pytest.mark.asyncio
+    async def test_phase5_captures_model_id(self) -> None:
+        director, researcher, summarizer = _make_clients()
+
+        director.create_message = AsyncMock(
+            side_effect=[
+                _make_text_response(_formulation_json()),
+                _make_text_response(_experiment_design_json()),
+                _make_text_response(_evaluation_json()),
+                _make_text_response(_synthesis_json()),
+            ]
+        )
+
+        # Researcher calls train_model, returns a model_id
+        train_result = json.dumps({"model_id": "xgboost_test_abc12345", "metrics": {}})
+
+        async def mock_train_model(target: str = "", **kwargs: Any) -> str:
+            """Train model."""
+            return train_result
+
+        registry = _build_registry()
+        registry.register("train_model", mock_train_model)
+
+        researcher.create_message = AsyncMock(
+            side_effect=[
+                _make_text_response("Lit done."),
+                _make_tool_use_response("train_model", {"target": "test"}),
+                _make_text_response("Experiment done."),
+            ]
+        )
+
+        orchestrator = MultiModelOrchestrator(
+            director=director,
+            researcher=researcher,
+            summarizer=summarizer,
+            registry=registry,
+            max_iterations_per_experiment=5,
+        )
+
+        investigation = Investigation(prompt="Test model capture")
+        async for _ in orchestrator.run(investigation):
+            pass
+
+        assert "xgboost_test_abc12345" in investigation.trained_model_ids
+
+    @pytest.mark.asyncio
+    async def test_completed_event_has_validation_metrics(self) -> None:
+        director, researcher, summarizer = _make_clients()
+
+        director.create_message = AsyncMock(
+            side_effect=[
+                _make_text_response(_formulation_json()),
+                _make_text_response(_experiment_design_json()),
+                _make_text_response(_evaluation_json()),
+                _make_text_response(_synthesis_json()),
+            ]
+        )
+        researcher.create_message = AsyncMock(return_value=_make_text_response("Done."))
+
+        orchestrator = MultiModelOrchestrator(
+            director=director,
+            researcher=researcher,
+            summarizer=summarizer,
+            registry=_build_registry(),
+            max_iterations_per_experiment=1,
+        )
+
+        investigation = Investigation(prompt="Test")
+        events = [e async for e in orchestrator.run(investigation)]
+
+        completed = [e for e in events if isinstance(e, InvestigationCompleted)]
+        assert len(completed) == 1
+        assert "z_prime" in completed[0].validation_metrics
+        assert "z_prime_quality" in completed[0].validation_metrics
 
 
 class TestSummarizerCompression:

@@ -17,6 +17,7 @@ from ehrlich.investigation.domain.events import (
     Thinking,
     ToolCalled,
     ToolResultEvent,
+    ValidationMetricsComputed,
 )
 
 
@@ -243,6 +244,38 @@ class TestDomainEventToSSE:
         assert sse.event == SSEEventType.HYPOTHESIS_APPROVAL_REQUESTED
         assert len(sse.data["hypotheses"]) == 1
         assert sse.data["hypotheses"][0]["id"] == "h1"
+
+    def test_validation_metrics_event(self) -> None:
+        event = ValidationMetricsComputed(
+            z_prime=0.72,
+            z_prime_quality="excellent",
+            positive_control_count=3,
+            negative_control_count=4,
+            positive_mean=0.85,
+            negative_mean=0.12,
+            investigation_id="inv-1",
+        )
+        sse = domain_event_to_sse(event)
+        assert sse is not None
+        assert sse.event == SSEEventType.VALIDATION_METRICS
+        assert sse.data["z_prime"] == 0.72
+        assert sse.data["z_prime_quality"] == "excellent"
+        assert sse.data["positive_control_count"] == 3
+        assert sse.data["negative_control_count"] == 4
+        assert sse.data["positive_mean"] == 0.85
+        assert sse.data["negative_mean"] == 0.12
+
+    def test_completed_with_validation_metrics(self) -> None:
+        event = InvestigationCompleted(
+            investigation_id="inv-1",
+            candidate_count=1,
+            summary="Test",
+            cost={},
+            validation_metrics={"z_prime": 0.65, "z_prime_quality": "excellent"},
+        )
+        sse = domain_event_to_sse(event)
+        assert sse is not None
+        assert sse.data["validation_metrics"]["z_prime"] == 0.65
 
     def test_unknown_event_returns_none(self) -> None:
         event = DomainEvent()

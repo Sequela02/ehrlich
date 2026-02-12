@@ -82,6 +82,51 @@ class XGBoostAdapter:
         }
 
     @staticmethod
+    def permutation_test(
+        x_train: np.ndarray[Any, np.dtype[np.float64]],
+        y_train: np.ndarray[Any, np.dtype[np.float64]],
+        x_test: np.ndarray[Any, np.dtype[np.float64]],
+        y_test: np.ndarray[Any, np.dtype[np.float64]],
+        original_auroc: float,
+        n_permutations: int = 100,
+    ) -> float:
+        """Y-scrambling permutation test (Phipson & Smyth 2010).
+
+        Returns p-value: fraction of permuted models with AUROC >= original.
+        """
+        rng = np.random.RandomState(42)
+        count_ge = 0
+        n_pos = int(y_train.sum())
+        n_neg = len(y_train) - n_pos
+        scale_pos_weight = n_neg / n_pos if n_pos > 0 else 1.0
+
+        for _ in range(n_permutations):
+            y_perm = rng.permutation(y_train)
+            if len(set(y_perm)) < 2:
+                continue
+            model = XGBClassifier(
+                n_estimators=50,
+                max_depth=4,
+                learning_rate=0.1,
+                scale_pos_weight=scale_pos_weight,
+                objective="binary:logistic",
+                eval_metric="logloss",
+                random_state=42,
+                n_jobs=-1,
+            )
+            model.fit(x_train, y_perm)
+            try:
+                probas = model.predict_proba(x_test)
+                y_pred_proba = probas[:, 1] if probas.shape[1] > 1 else probas[:, 0]
+                perm_auroc = float(roc_auc_score(y_test, y_pred_proba))
+            except ValueError:
+                perm_auroc = 0.0
+            if perm_auroc >= original_auroc:
+                count_ge += 1
+
+        return (count_ge + 1) / (n_permutations + 1)
+
+    @staticmethod
     def _extract_feature_importance(model: XGBClassifier) -> dict[str, float]:
         importances: np.ndarray[Any, np.dtype[np.float64]] = model.feature_importances_
         top_indices = np.argsort(importances)[-20:][::-1]

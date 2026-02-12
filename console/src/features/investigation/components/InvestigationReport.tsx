@@ -17,6 +17,7 @@ import type {
   Finding,
   Hypothesis,
   NegativeControl,
+  ValidationMetricsData,
 } from "../types";
 import { CandidateTable } from "./CandidateTable";
 import { FindingsPanel } from "./FindingsPanel";
@@ -33,6 +34,7 @@ interface InvestigationReportProps {
   negativeControls: NegativeControl[];
   cost: CostInfo | null;
   domainConfig?: DomainDisplayConfig | null;
+  validationMetrics?: ValidationMetricsData | null;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -75,6 +77,7 @@ export function InvestigationReport({
   negativeControls,
   cost,
   domainConfig,
+  validationMetrics,
 }: InvestigationReportProps) {
   function handleExport() {
     const md = generateMarkdown({
@@ -86,6 +89,7 @@ export function InvestigationReport({
       candidates,
       negativeControls,
       cost,
+      validationMetrics,
     });
     const slug = prompt.slice(0, 40).replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase();
     const ts = new Date().toISOString().slice(0, 10);
@@ -209,8 +213,43 @@ export function InvestigationReport({
 
       {/* 7. Model Validation -- reuse NegativeControlPanel with pass/fail icons */}
       {negativeControls.length > 0 && (
-        <section>
+        <section className="space-y-3">
           <NegativeControlPanel controls={negativeControls} />
+          {validationMetrics && validationMetrics.z_prime != null && (
+            <div className="rounded-lg border border-border bg-surface p-4">
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground/60">
+                  Z&apos;-factor
+                </span>
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 font-mono text-[10px] font-medium",
+                    validationMetrics.z_prime_quality === "excellent"
+                      ? "bg-secondary/20 text-secondary"
+                      : validationMetrics.z_prime_quality === "marginal"
+                        ? "bg-amber-500/20 text-amber-400"
+                        : "bg-destructive/20 text-destructive",
+                  )}
+                >
+                  {validationMetrics.z_prime.toFixed(3)} ({validationMetrics.z_prime_quality})
+                </span>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-4 text-xs">
+                <div>
+                  <span className="text-muted-foreground/60">Positive controls:</span>{" "}
+                  <span className="font-mono tabular-nums">
+                    mean={validationMetrics.positive_mean.toFixed(3)}, n={validationMetrics.positive_control_count}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground/60">Negative controls:</span>{" "}
+                  <span className="font-mono tabular-nums">
+                    mean={validationMetrics.negative_mean.toFixed(3)}, n={validationMetrics.negative_control_count}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
       )}
 

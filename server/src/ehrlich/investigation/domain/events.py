@@ -82,6 +82,17 @@ class PositiveControlRecorded(DomainEvent):
 
 
 @dataclass(frozen=True)
+class ValidationMetricsComputed(DomainEvent):
+    z_prime: float | None = None
+    z_prime_quality: str = ""
+    positive_control_count: int = 0
+    negative_control_count: int = 0
+    positive_mean: float = 0.0
+    negative_mean: float = 0.0
+    investigation_id: str = ""
+
+
+@dataclass(frozen=True)
 class ToolCalled(DomainEvent):
     tool_name: str = ""
     tool_input: dict[str, Any] = field(default_factory=dict)
@@ -177,6 +188,7 @@ class InvestigationCompleted(DomainEvent):
     hypotheses: list[dict[str, Any]] = field(default_factory=list)
     negative_controls: list[dict[str, Any]] = field(default_factory=list)
     positive_controls: list[dict[str, Any]] = field(default_factory=list)
+    validation_metrics: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

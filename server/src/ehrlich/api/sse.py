@@ -23,6 +23,7 @@ from ehrlich.investigation.domain.events import (
     Thinking,
     ToolCalled,
     ToolResultEvent,
+    ValidationMetricsComputed,
 )
 
 
@@ -45,6 +46,7 @@ class SSEEventType(StrEnum):
     HYPOTHESIS_APPROVAL_REQUESTED = "hypothesis_approval_requested"
     DOMAIN_DETECTED = "domain_detected"
     LITERATURE_SURVEY_COMPLETED = "literature_survey_completed"
+    VALIDATION_METRICS = "validation_metrics"
 
 
 @dataclass(frozen=True)
@@ -198,6 +200,7 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
                 "hypotheses": event.hypotheses,
                 "negative_controls": event.negative_controls,
                 "positive_controls": event.positive_controls,
+                "validation_metrics": event.validation_metrics,
             },
         )
     if isinstance(event, OutputSummarized):
@@ -247,6 +250,19 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
                 "included_results": event.included_results,
                 "evidence_grade": event.evidence_grade,
                 "assessment": event.assessment,
+                "investigation_id": event.investigation_id,
+            },
+        )
+    if isinstance(event, ValidationMetricsComputed):
+        return SSEEvent(
+            event=SSEEventType.VALIDATION_METRICS,
+            data={
+                "z_prime": event.z_prime,
+                "z_prime_quality": event.z_prime_quality,
+                "positive_control_count": event.positive_control_count,
+                "negative_control_count": event.negative_control_count,
+                "positive_mean": event.positive_mean,
+                "negative_mean": event.negative_mean,
                 "investigation_id": event.investigation_id,
             },
         )

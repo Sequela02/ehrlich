@@ -587,6 +587,18 @@ the model can discriminate actives from inactives. Consider:
 - "marginal": most controls pass but separation is narrow
 - "insufficient": any positive control fails, or no positive controls tested
 
+4. Z'-FACTOR: Z' >= 0.5 = excellent assay separation, 0 < Z' < 0.5 = marginal \
+(scores overlap), Z' <= 0 = unusable (no separation between controls). \
+If Z'-factor is provided, cite it explicitly in your validation assessment.
+
+5. PERMUTATION SIGNIFICANCE: If permutation_p_value < 0.05, the model is \
+significantly better than random. If p >= 0.05, predictions may be noise -- \
+flag this prominently.
+
+6. SCAFFOLD-SPLIT GAP: If the gap between random_auroc and scaffold AUROC is \
+> 0.15, the model may be memorizing scaffolds rather than learning activity. \
+Report this as a methodology limitation.
+
 If validation is insufficient, downgrade certainty of ALL hypothesis \
 assessments by one level and note this in limitations.
 </validation_quality>
@@ -1184,6 +1196,16 @@ def build_synthesis_prompt(config: DomainConfig) -> str:
         '- "sufficient": positive controls pass, negatives pass, clear separation\n'
         '- "marginal": most controls pass but separation is narrow\n'
         '- "insufficient": any positive control fails, or no positive controls tested\n\n'
+        "4. Z'-FACTOR: Z' >= 0.5 = excellent assay separation, "
+        "0 < Z' < 0.5 = marginal (scores overlap), "
+        "Z' <= 0 = unusable (no separation between controls). "
+        "If Z'-factor is provided, cite it explicitly in your validation assessment.\n\n"
+        "5. PERMUTATION SIGNIFICANCE: If permutation_p_value < 0.05, the model is "
+        "significantly better than random. If p >= 0.05, predictions may be noise -- "
+        "flag this prominently.\n\n"
+        "6. SCAFFOLD-SPLIT GAP: If the gap between random_auroc and scaffold AUROC is "
+        "> 0.15, the model may be memorizing scaffolds rather than learning activity. "
+        "Report this as a methodology limitation.\n\n"
         "If validation is insufficient, downgrade certainty of ALL hypothesis "
         "assessments by one level and note this in limitations.\n"
         "</validation_quality>\n\n"

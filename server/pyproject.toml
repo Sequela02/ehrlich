@@ -85,6 +85,10 @@ module = "ehrlich.prediction.infrastructure.model_store"
 disable_error_code = ["import-untyped"]
 
 [[tool.mypy.overrides]]
+module = "ehrlich.prediction.infrastructure.xgboost_adapter"
+disable_error_code = ["import-untyped"]
+
+[[tool.mypy.overrides]]
 module = "ehrlich.prediction.infrastructure.chemprop_adapter"
 disable_error_code = ["import-not-found"]
 

@@ -15,7 +15,8 @@ export type SSEEventType =
   | "cost_update"
   | "hypothesis_approval_requested"
   | "domain_detected"
-  | "literature_survey_completed";
+  | "literature_survey_completed"
+  | "validation_metrics";
 
 export interface SSEEvent {
   event: SSEEventType;
@@ -179,6 +180,7 @@ export interface CompletedData {
   findings?: Finding[];
   hypotheses?: Hypothesis[];
   negative_controls?: NegativeControl[];
+  validation_metrics?: ValidationMetricsData;
 }
 
 export interface ErrorData {
@@ -217,6 +219,16 @@ export interface CostUpdateData {
   total_tokens: number;
   total_cost_usd: number;
   tool_calls: number;
+  investigation_id: string;
+}
+
+export interface ValidationMetricsData {
+  z_prime: number | null;
+  z_prime_quality: string;
+  positive_control_count: number;
+  negative_control_count: number;
+  positive_mean: number;
+  negative_mean: number;
   investigation_id: string;
 }
 

@@ -82,6 +82,51 @@ class TestTrain:
         assert all(v > 0 for v in importance.values())
 
 
+class TestPermutationTest:
+    def test_permutation_real_signal(
+        self,
+        adapter: XGBoostAdapter,
+        synthetic_data: tuple[
+            np.ndarray[..., np.dtype[np.float64]],
+            np.ndarray[..., np.dtype[np.float64]],
+            np.ndarray[..., np.dtype[np.float64]],
+            np.ndarray[..., np.dtype[np.float64]],
+        ],
+    ) -> None:
+        x_train, y_train, x_test, y_test = synthetic_data
+        p_value = adapter.permutation_test(
+            x_train, y_train, x_test, y_test, original_auroc=0.9, n_permutations=50
+        )
+        assert p_value < 0.1
+
+    def test_permutation_noise(self, adapter: XGBoostAdapter) -> None:
+        rng = np.random.RandomState(123)
+        x_train = rng.randint(0, 2, size=(80, 64)).astype(np.float64)
+        x_test = rng.randint(0, 2, size=(20, 64)).astype(np.float64)
+        y_train = rng.choice([0.0, 1.0], size=80)
+        y_test = rng.choice([0.0, 1.0], size=20)
+        p_value = adapter.permutation_test(
+            x_train, y_train, x_test, y_test, original_auroc=0.5, n_permutations=50
+        )
+        assert p_value > 0.1
+
+    def test_permutation_p_bounded(
+        self,
+        adapter: XGBoostAdapter,
+        synthetic_data: tuple[
+            np.ndarray[..., np.dtype[np.float64]],
+            np.ndarray[..., np.dtype[np.float64]],
+            np.ndarray[..., np.dtype[np.float64]],
+            np.ndarray[..., np.dtype[np.float64]],
+        ],
+    ) -> None:
+        x_train, y_train, x_test, y_test = synthetic_data
+        p_value = adapter.permutation_test(
+            x_train, y_train, x_test, y_test, original_auroc=0.5, n_permutations=50
+        )
+        assert 0.0 < p_value <= 1.0
+
+
 class TestPredict:
     @pytest.mark.asyncio
     async def test_returns_probabilities(

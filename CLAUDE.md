@@ -129,7 +129,7 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, sports,
 - `compute_properties` -- Property distributions (active vs inactive)
 
 ### Prediction (3) -- XGBoost, Chemprop
-- `train_model` -- Train ML model on any SMILES+activity dataset
+- `train_model` -- Train ML model on any SMILES+activity dataset (scaffold-split + random-split metrics, permutation p-value)
 - `predict_candidates` -- Score compounds with trained model
 - `cluster_compounds` -- Butina structural clustering
 
@@ -170,6 +170,7 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, sports,
 - **Evidence-linked findings**: every finding references a `hypothesis_id` + `evidence_type` (supporting/contradicting/neutral)
 - **Negative controls**: validate model predictions with known-inactive compounds (`NegativeControl` entity)
 - **Positive controls**: validate pipeline can detect true actives with known-active compounds (`PositiveControl` entity); validation quality assessment (sufficient/marginal/insufficient) in synthesis
+- **Validation metrics**: Z'-factor assay quality (Zhang et al., 1999), permutation significance (Y-scrambling, p-value), scaffold-split vs random-split comparison; controls scored through trained models in Phase 5; `ValidationMetricsComputed` event
 - **Dynamic target discovery**: RCSB PDB Search API finds protein targets for any organism/disease
 - **Flexible data loading**: ChEMBL queries accept any assay type (MIC, Ki, EC50, etc.), not hardcoded
 - **Protein targets**: YAML-configured (`data/targets/*.yaml`) + dynamic RCSB PDB discovery
@@ -177,7 +178,7 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, sports,
 - 6 control tools: `propose_hypothesis`, `design_experiment`, `evaluate_hypothesis`, `record_finding`, `record_negative_control`, `conclude_investigation`
 - **Domain configuration**: `DomainConfig` defines per-domain tool tags, score definitions, prompt examples, visualization type; `DomainRegistry` auto-detects domain from classification; `DomainDetected` SSE event sends display config to frontend
 - **Tool tagging**: Tools tagged with frozenset domain tags (chemistry, analysis, prediction, simulation, sports, literature); investigation control tools are universal (no tags); researcher sees only domain-relevant tools
-- SSE streaming for real-time investigation updates (18 event types)
+- SSE streaming for real-time investigation updates (19 event types)
 - **Phase progress indicator**: `PhaseChanged` event tracks 6 orchestrator phases (Classification & PICO → Literature Survey → Formulation → Hypothesis Testing → Negative Controls → Synthesis); frontend renders 6-segment progress bar
 - **Literature survey methodology**: PICO decomposition + domain classification merged into single Haiku call; structured search protocol with citation chasing (snowballing); 6-level evidence hierarchy on findings; GRADE-adapted body-of-evidence grading (high/moderate/low/very_low) via Haiku; AMSTAR-2-adapted self-assessment; `LiteratureSurveyCompleted` event carries PICO, search stats, grade for PRISMA-lite transparency
 - **Streaming cost indicator**: `CostUpdate` event yields cost snapshots after each phase/batch; `CostBadge` updates progressively (not just at completion)
@@ -238,14 +239,15 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, sports,
 | `investigation/domain/experiment.py` | Experiment entity (description, tool_plan, independent_variable, dependent_variable, controls, confounders, analysis_plan, success_criteria, failure_criteria) + ExperimentStatus enum |
 | `investigation/domain/negative_control.py` | NegativeControl frozen dataclass |
 | `investigation/domain/positive_control.py` | PositiveControl frozen dataclass (known active, correctly_classified >= 0.5) |
+| `investigation/domain/validation.py` | Z'-factor assay quality metric (compute_z_prime, AssayQualityMetrics) |
 | `investigation/domain/candidate.py` | Candidate dataclass (identifier, identifier_type, name, rank, priority, notes, scores dict, attributes dict) |
-| `investigation/domain/events.py` | 18 domain events (Hypothesis*, HypothesisApproval*, Experiment*, NegativeControl*, PositiveControl*, DomainDetected, Finding, LiteratureSurveyCompleted, Tool*, Thinking, PhaseChanged, CostUpdate, Completed, Error) |
+| `investigation/domain/events.py` | 19 domain events (Hypothesis*, HypothesisApproval*, Experiment*, NegativeControl*, PositiveControl*, ValidationMetricsComputed, DomainDetected, Finding, LiteratureSurveyCompleted, Tool*, Thinking, PhaseChanged, CostUpdate, Completed, Error) |
 | `investigation/domain/repository.py` | InvestigationRepository ABC (save_event, get_events for audit trail) |
 | `investigation/infrastructure/sqlite_repository.py` | SQLite implementation with hypothesis/experiment/negative_control/event serialization |
 | `investigation/infrastructure/anthropic_client.py` | Anthropic API adapter with retry |
 | `api/routes/investigation.py` | REST + SSE endpoints, 37-tool registry with domain tagging, domain registry |
 | `api/routes/molecule.py` | Molecule depiction, conformer, descriptors, targets endpoints |
-| `api/sse.py` | Domain event to SSE conversion (18 types) |
+| `api/sse.py` | Domain event to SSE conversion (19 types) |
 
 ## Key Files (Data Source Clients)
 

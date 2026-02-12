@@ -66,6 +66,21 @@ class PredictionService:
             x_train, y_train, x_test, y_test
         )
 
+        # Random-split comparison for generalizability assessment
+        x_rand_train, y_rand_train, x_rand_test, y_rand_test = self._random_split(x, y)
+        _, random_metrics, _ = await self._xgboost.train(
+            x_rand_train, y_rand_train, x_rand_test, y_rand_test
+        )
+        metrics["random_auroc"] = random_metrics["auroc"]
+        metrics["random_auprc"] = random_metrics["auprc"]
+        metrics["random_accuracy"] = random_metrics["accuracy"]
+        metrics["random_f1"] = random_metrics["f1"]
+
+        # Permutation significance (Y-scrambling)
+        metrics["permutation_p_value"] = self._xgboost.permutation_test(
+            x_train, y_train, x_test, y_test, metrics["auroc"]
+        )
+
         model_id = f"xgboost_{target.lower().replace(' ', '_')}_{uuid.uuid4().hex[:8]}"
         trained_model = TrainedModel(
             model_id=model_id,
@@ -196,6 +211,25 @@ class PredictionService:
         for bit in fp.bits:
             dense[bit] = 1
         return dense
+
+    @staticmethod
+    def _random_split(
+        x: np.ndarray[Any, np.dtype[np.float64]],
+        y: np.ndarray[Any, np.dtype[np.float64]],
+        test_size: float = 0.2,
+    ) -> tuple[
+        np.ndarray[Any, np.dtype[np.float64]],
+        np.ndarray[Any, np.dtype[np.float64]],
+        np.ndarray[Any, np.dtype[np.float64]],
+        np.ndarray[Any, np.dtype[np.float64]],
+    ]:
+        rng = np.random.RandomState(42)
+        indices = np.arange(len(y))
+        rng.shuffle(indices)
+        split = int(len(indices) * (1 - test_size))
+        train_idx = indices[:split]
+        test_idx = indices[split:]
+        return x[train_idx], y[train_idx], x[test_idx], y[test_idx]
 
     @staticmethod
     def _scaffold_split(

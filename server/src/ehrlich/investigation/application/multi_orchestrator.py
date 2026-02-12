@@ -44,6 +44,7 @@ from ehrlich.investigation.domain.events import (
     Thinking,
     ToolCalled,
     ToolResultEvent,
+    ValidationMetricsComputed,
 )
 from ehrlich.investigation.domain.experiment import Experiment, ExperimentStatus
 from ehrlich.investigation.domain.finding import Finding
@@ -51,6 +52,7 @@ from ehrlich.investigation.domain.hypothesis import Hypothesis, HypothesisStatus
 from ehrlich.investigation.domain.investigation import Investigation, InvestigationStatus
 from ehrlich.investigation.domain.negative_control import NegativeControl
 from ehrlich.investigation.domain.positive_control import PositiveControl
+from ehrlich.investigation.domain.validation import compute_z_prime
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -501,16 +503,53 @@ class MultiModelOrchestrator:
                 description="Validating model with positive and negative controls",
                 investigation_id=investigation.id,
             )
+            validation_metrics: dict[str, Any] = {}
+
+            # Score controls through trained model if available
+            score_map: dict[str, float] = {}
+            has_model = bool(investigation.trained_model_ids)
+            is_molecular = self._active_config is not None and any(
+                t in self._active_config.tool_tags for t in ("chemistry", "prediction")
+            )
+            if has_model and is_molecular:
+                model_id = investigation.trained_model_ids[-1]
+                all_identifiers = [
+                    nc.get("identifier", nc.get("smiles", ""))
+                    for nc in neg_control_suggestions
+                    if nc.get("identifier", nc.get("smiles", ""))
+                ] + [
+                    pc.get("identifier", "")
+                    for pc in pos_control_suggestions
+                    if pc.get("identifier", "")
+                ]
+                if all_identifiers:
+                    try:
+                        pred_result = await self._dispatch_tool(
+                            "predict_candidates",
+                            {"smiles_list": all_identifiers, "model_id": model_id},
+                            investigation,
+                        )
+                        pred_data = json.loads(pred_result)
+                        if isinstance(pred_data, dict):
+                            for entry in pred_data.get("predictions", []):
+                                smiles = entry.get("smiles", "")
+                                prob = float(entry.get("probability", 0.0))
+                                if smiles:
+                                    score_map[smiles] = prob
+                    except (json.JSONDecodeError, TypeError, ValueError):
+                        logger.warning("Failed to score controls via model %s", model_id)
+
             for nc_data in neg_control_suggestions:
                 identifier = nc_data.get("identifier", nc_data.get("smiles", ""))
                 name = nc_data.get("name", "")
                 source = nc_data.get("source", "")
                 if identifier:
+                    nc_score = score_map.get(identifier, 0.0)
                     control = NegativeControl(
                         identifier=identifier,
                         identifier_type=nc_data.get("identifier_type", ""),
                         name=name,
-                        score=0.0,
+                        score=nc_score,
                         source=source,
                     )
                     investigation.add_negative_control(control)
@@ -518,8 +557,8 @@ class MultiModelOrchestrator:
                         identifier=identifier,
                         identifier_type=control.identifier_type,
                         name=name,
-                        score=0.0,
-                        correctly_classified=True,
+                        score=nc_score,
+                        correctly_classified=control.correctly_classified,
                         investigation_id=investigation.id,
                     )
 
@@ -529,12 +568,14 @@ class MultiModelOrchestrator:
                 known_activity = pc_data.get("known_activity", "")
                 pc_source = pc_data.get("source", "")
                 if pc_identifier:
+                    pc_score = score_map.get(pc_identifier, 0.0)
                     pos_control = PositiveControl(
                         identifier=pc_identifier,
                         identifier_type=pc_data.get("identifier_type", ""),
                         name=pc_name,
                         known_activity=known_activity,
                         source=pc_source,
+                        score=pc_score,
                     )
                     investigation.add_positive_control(pos_control)
                     yield PositiveControlRecorded(
@@ -542,10 +583,34 @@ class MultiModelOrchestrator:
                         identifier_type=pos_control.identifier_type,
                         name=pc_name,
                         known_activity=known_activity,
-                        score=0.0,
-                        correctly_classified=True,
+                        score=pc_score,
+                        correctly_classified=pos_control.correctly_classified,
                         investigation_id=investigation.id,
                     )
+
+            # Compute Z'-factor from control scores
+            pos_scores = [pc.score for pc in investigation.positive_controls]
+            neg_scores = [nc.score for nc in investigation.negative_controls]
+            z_metrics = compute_z_prime(pos_scores, neg_scores)
+            validation_metrics = {
+                "z_prime": z_metrics.z_prime,
+                "z_prime_quality": z_metrics.quality,
+                "positive_mean": z_metrics.positive_mean,
+                "positive_std": z_metrics.positive_std,
+                "negative_mean": z_metrics.negative_mean,
+                "negative_std": z_metrics.negative_std,
+                "positive_count": z_metrics.positive_count,
+                "negative_count": z_metrics.negative_count,
+            }
+            yield ValidationMetricsComputed(
+                z_prime=z_metrics.z_prime,
+                z_prime_quality=z_metrics.quality,
+                positive_control_count=z_metrics.positive_count,
+                negative_control_count=z_metrics.negative_count,
+                positive_mean=z_metrics.positive_mean,
+                negative_mean=z_metrics.negative_mean,
+                investigation_id=investigation.id,
+            )
 
             # 6. Director synthesizes
             yield PhaseChanged(
@@ -571,6 +636,27 @@ class MultiModelOrchestrator:
                 for pc in investigation.positive_controls
             )
 
+            # Build validation metrics text for synthesis context
+            vm_text = ""
+            if validation_metrics.get("z_prime") is not None:
+                vm_text = (
+                    f"\nValidation metrics:\n"
+                    f"- Z'-factor: {validation_metrics['z_prime']:.3f} "
+                    f"({validation_metrics['z_prime_quality']})\n"
+                    f"- Positive controls: mean={validation_metrics['positive_mean']:.3f}, "
+                    f"std={validation_metrics['positive_std']:.3f}, "
+                    f"n={validation_metrics['positive_count']}\n"
+                    f"- Negative controls: mean={validation_metrics['negative_mean']:.3f}, "
+                    f"std={validation_metrics['negative_std']:.3f}, "
+                    f"n={validation_metrics['negative_count']}\n"
+                )
+            else:
+                vm_text = (
+                    f"\nValidation metrics: insufficient controls "
+                    f"(pos={validation_metrics.get('positive_count', 0)}, "
+                    f"neg={validation_metrics.get('negative_count', 0)})\n"
+                )
+
             synthesis_prompt = (
                 build_synthesis_prompt(self._active_config)
                 if self._active_config
@@ -584,6 +670,7 @@ class MultiModelOrchestrator:
                 f"All findings:\n{all_findings_text}\n\n"
                 f"Negative controls:\n{nc_text or 'None recorded'}\n\n"
                 f"Positive controls:\n{pc_text or 'None recorded'}\n\n"
+                f"{vm_text}\n"
                 f"Synthesize final report.",
             )
 
@@ -690,6 +777,7 @@ class MultiModelOrchestrator:
                 hypotheses=hypothesis_dicts,
                 negative_controls=nc_dicts,
                 positive_controls=pc_dicts,
+                validation_metrics=validation_metrics,
             )
 
         except Exception as e:
@@ -1119,6 +1207,17 @@ class MultiModelOrchestrator:
                         evidence_level=finding.evidence_level,
                         investigation_id=investigation.id,
                     )
+
+                if tool_name == "train_model":
+                    try:
+                        train_result = json.loads(result_str)
+                        if isinstance(train_result, dict) and "model_id" in train_result:
+                            async with self._state_lock:
+                                investigation.trained_model_ids.append(
+                                    train_result["model_id"]
+                                )
+                    except (json.JSONDecodeError, TypeError):
+                        pass
 
                 if tool_name == "record_negative_control":
                     control = NegativeControl(

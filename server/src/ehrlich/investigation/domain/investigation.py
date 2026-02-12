@@ -41,6 +41,7 @@ class Investigation:
     iteration: int = 0
     error: str = ""
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    trained_model_ids: list[str] = field(default_factory=list)
     cost_data: dict[str, object] = field(default_factory=dict)
 
     def record_finding(self, finding: Finding) -> None:

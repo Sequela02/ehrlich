@@ -79,6 +79,22 @@ class TestTrain:
             await service.train("Test")
 
 
+    @pytest.mark.asyncio
+    async def test_train_includes_random_metrics(self, service: PredictionService) -> None:
+        result = await service.train("Staphylococcus aureus")
+        assert "random_auroc" in result.metrics
+        assert "random_auprc" in result.metrics
+        assert "random_accuracy" in result.metrics
+        assert "random_f1" in result.metrics
+        assert all(0.0 <= result.metrics[k] <= 1.0 for k in ("random_auroc", "random_auprc"))
+
+    @pytest.mark.asyncio
+    async def test_train_includes_permutation_p_value(self, service: PredictionService) -> None:
+        result = await service.train("Staphylococcus aureus")
+        assert "permutation_p_value" in result.metrics
+        assert 0.0 < result.metrics["permutation_p_value"] <= 1.0
+
+
 class TestPredict:
     @pytest.mark.asyncio
     async def test_predict_returns_ranked_results(self, service: PredictionService) -> None:
