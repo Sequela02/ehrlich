@@ -457,6 +457,11 @@ Recording results:
 - Call `record_finding` after each significant discovery, \
 always specifying hypothesis_id and evidence_type \
 ('supporting' or 'contradicting').
+- Include source_type and source_id for provenance tracing: \
+e.g. source_type="chembl" source_id="CHEMBL25", \
+source_type="pdb" source_id="2ABC", \
+source_type="doi" source_id="10.1038/s41586-024-07613-w", \
+source_type="pubchem" source_id="2244".
 - Be quantitative: report exact numbers, scores, and \
 confidence intervals.
 

@@ -11,3 +11,5 @@ class Finding:
     hypothesis_id: str = ""
     evidence_type: str = "neutral"
     confidence: float = 0.0
+    source_type: str = ""
+    source_id: str = ""

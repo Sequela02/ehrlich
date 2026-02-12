@@ -31,4 +31,27 @@ describe("FindingsPanel", () => {
     );
     expect(screen.getByText(longDetail)).toBeInTheDocument();
   });
+
+  it("renders source badge with link when provenance is provided", () => {
+    render(
+      <FindingsPanel
+        findings={[
+          {
+            title: "ChEMBL finding",
+            detail: "From ChEMBL",
+            hypothesis_id: "h1",
+            evidence_type: "supporting",
+            source_type: "chembl",
+            source_id: "CHEMBL25",
+          },
+        ]}
+      />,
+    );
+    const badge = screen.getByText(/ChEMBL CHEMBL25/);
+    expect(badge).toBeInTheDocument();
+    expect(badge.closest("a")).toHaveAttribute(
+      "href",
+      "https://www.ebi.ac.uk/chembl/compound_report_card/CHEMBL25",
+    );
+  });
 });

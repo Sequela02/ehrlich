@@ -83,6 +83,8 @@ class FindingRecorded(DomainEvent):
     hypothesis_id: str = ""
     evidence_type: str = "neutral"
     evidence: str = ""
+    source_type: str = ""
+    source_id: str = ""
     investigation_id: str = ""
 
 

@@ -604,6 +604,8 @@ class MultiModelOrchestrator:
                         evidence=tool_input.get("evidence", ""),
                         hypothesis_id=tool_input.get("hypothesis_id", ""),
                         evidence_type=tool_input.get("evidence_type", "neutral"),
+                        source_type=tool_input.get("source_type", ""),
+                        source_id=tool_input.get("source_id", ""),
                     )
                     investigation.record_finding(finding)
                     yield FindingRecorded(
@@ -612,6 +614,8 @@ class MultiModelOrchestrator:
                         hypothesis_id=finding.hypothesis_id,
                         evidence_type=finding.evidence_type,
                         evidence=finding.evidence,
+                        source_type=finding.source_type,
+                        source_id=finding.source_id,
                         investigation_id=investigation.id,
                     )
 
@@ -752,6 +756,8 @@ class MultiModelOrchestrator:
                         evidence=tool_input.get("evidence", ""),
                         hypothesis_id=h_id,
                         evidence_type=e_type,
+                        source_type=tool_input.get("source_type", ""),
+                        source_id=tool_input.get("source_id", ""),
                     )
                     async with self._state_lock:
                         investigation.record_finding(finding)
@@ -771,6 +777,8 @@ class MultiModelOrchestrator:
                         hypothesis_id=h_id,
                         evidence_type=e_type,
                         evidence=finding.evidence,
+                        source_type=finding.source_type,
+                        source_id=finding.source_id,
                         investigation_id=investigation.id,
                     )
 

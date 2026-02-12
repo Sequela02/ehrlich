@@ -113,6 +113,8 @@ class TestDomainEventToSSE:
             detail="Important detail",
             hypothesis_id="h1",
             evidence_type="supporting",
+            source_type="chembl",
+            source_id="CHEMBL25",
             investigation_id="inv-1",
         )
         sse = domain_event_to_sse(event)
@@ -121,6 +123,8 @@ class TestDomainEventToSSE:
         assert sse.data["title"] == "Key insight"
         assert sse.data["hypothesis_id"] == "h1"
         assert sse.data["evidence_type"] == "supporting"
+        assert sse.data["source_type"] == "chembl"
+        assert sse.data["source_id"] == "CHEMBL25"
 
     def test_thinking(self) -> None:
         event = Thinking(text="Let me analyze this...", investigation_id="inv-1")

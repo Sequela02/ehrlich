@@ -109,6 +109,8 @@ export interface FindingRecordedData {
   hypothesis_id: string;
   evidence_type: EvidenceType;
   evidence?: string;
+  source_type?: string;
+  source_id?: string;
   investigation_id: string;
 }
 
@@ -192,6 +194,8 @@ export interface Finding {
   hypothesis_id: string;
   evidence_type: EvidenceType;
   evidence?: string;
+  source_type?: string;
+  source_id?: string;
 }
 
 export interface CandidateRow {

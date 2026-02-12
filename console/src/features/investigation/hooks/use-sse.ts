@@ -212,6 +212,8 @@ export function useSSE(url: string | null): SSEState {
             hypothesis_id: (parsed.data.hypothesis_id as string) || "",
             evidence_type: (parsed.data.evidence_type as EvidenceType) || "neutral",
             evidence: (parsed.data.evidence as string) || undefined,
+            source_type: (parsed.data.source_type as string) || undefined,
+            source_id: (parsed.data.source_id as string) || undefined,
           },
         ]);
         break;

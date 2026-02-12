@@ -132,6 +132,8 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
                 "hypothesis_id": event.hypothesis_id,
                 "evidence_type": event.evidence_type,
                 "evidence": event.evidence,
+                "source_type": event.source_type,
+                "source_id": event.source_id,
                 "investigation_id": event.investigation_id,
             },
         )

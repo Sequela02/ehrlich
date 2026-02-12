@@ -1,4 +1,4 @@
-import { FileText } from "lucide-react";
+import { ExternalLink, FileText } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import type { Finding } from "../types";
 
@@ -12,8 +12,27 @@ const EVIDENCE_COLORS: Record<string, string> = {
   neutral: "bg-muted text-muted-foreground",
 };
 
+const SOURCE_URLS: Record<string, (id: string) => string> = {
+  chembl: (id) => `https://www.ebi.ac.uk/chembl/compound_report_card/${id}`,
+  pdb: (id) => `https://www.rcsb.org/structure/${id}`,
+  doi: (id) => `https://doi.org/${id}`,
+  pubchem: (id) => `https://pubchem.ncbi.nlm.nih.gov/compound/${id}`,
+  uniprot: (id) => `https://www.uniprot.org/uniprotkb/${id}`,
+  opentargets: (id) => `https://platform.opentargets.org/target/${id}`,
+  gtopdb: (id) => `https://www.guidetopharmacology.org/GRAC/LigandDisplayForward?ligandId=${id}`,
+};
+
+const SOURCE_LABELS: Record<string, string> = {
+  chembl: "ChEMBL",
+  pdb: "PDB",
+  doi: "DOI",
+  pubchem: "PubChem",
+  uniprot: "UniProt",
+  opentargets: "Open Targets",
+  gtopdb: "GtoPdb",
+};
+
 export function FindingsPanel({ findings }: FindingsPanelProps) {
-  // Group findings by hypothesis_id
   const grouped = findings.reduce<Record<string, Finding[]>>((acc, f) => {
     const key = f.hypothesis_id || "general";
     if (!acc[key]) acc[key] = [];
@@ -59,14 +78,17 @@ export function FindingsPanel({ findings }: FindingsPanelProps) {
                         <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
                         <div className="min-w-0">
                           <p className="text-xs font-medium">{f.title}</p>
-                          <span
-                            className={cn(
-                              "mt-0.5 inline-block rounded px-1.5 py-0.5 font-mono text-[10px]",
-                              EVIDENCE_COLORS[f.evidence_type] ?? EVIDENCE_COLORS.neutral,
-                            )}
-                          >
-                            {f.evidence_type}
-                          </span>
+                          <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                            <span
+                              className={cn(
+                                "inline-block rounded px-1.5 py-0.5 font-mono text-[10px]",
+                                EVIDENCE_COLORS[f.evidence_type] ?? EVIDENCE_COLORS.neutral,
+                              )}
+                            >
+                              {f.evidence_type}
+                            </span>
+                            <SourceBadge sourceType={f.source_type} sourceId={f.source_id} />
+                          </div>
                           {f.detail && (
                             <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
                               {f.detail}
@@ -93,5 +115,33 @@ export function FindingsPanel({ findings }: FindingsPanelProps) {
         </div>
       )}
     </div>
+  );
+}
+
+function SourceBadge({ sourceType, sourceId }: { sourceType?: string; sourceId?: string }) {
+  if (!sourceType || !sourceId) return null;
+
+  const label = SOURCE_LABELS[sourceType] ?? sourceType;
+  const urlBuilder = SOURCE_URLS[sourceType];
+  const url = urlBuilder ? urlBuilder(sourceId) : undefined;
+
+  if (url) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] text-primary transition-colors hover:bg-primary/20"
+      >
+        {label} {sourceId}
+        <ExternalLink className="h-2.5 w-2.5" />
+      </a>
+    );
+  }
+
+  return (
+    <span className="inline-block rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+      {label} {sourceId}
+    </span>
   );
 }
