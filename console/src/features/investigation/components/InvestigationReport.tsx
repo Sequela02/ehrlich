@@ -12,6 +12,7 @@ import { cn } from "@/shared/lib/utils";
 import type {
   CandidateRow,
   CostInfo,
+  DomainDisplayConfig,
   Experiment,
   Finding,
   Hypothesis,
@@ -31,6 +32,7 @@ interface InvestigationReportProps {
   candidates: CandidateRow[];
   negativeControls: NegativeControl[];
   cost: CostInfo | null;
+  domainConfig?: DomainDisplayConfig | null;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -72,6 +74,7 @@ export function InvestigationReport({
   candidates,
   negativeControls,
   cost,
+  domainConfig,
 }: InvestigationReportProps) {
   function handleExport() {
     const md = generateMarkdown({
@@ -199,9 +202,9 @@ export function InvestigationReport({
         <FindingsPanel findings={findings} />
       </section>
 
-      {/* 6. Candidate Molecules -- reuse CandidateTable with 2D thumbnails, expandable 3D viewer */}
+      {/* 6. Candidates -- reuse CandidateTable with dynamic domain-based columns */}
       <section>
-        <CandidateTable candidates={candidates} />
+        <CandidateTable candidates={candidates} domainConfig={domainConfig} />
       </section>
 
       {/* 7. Model Validation -- reuse NegativeControlPanel with pass/fail icons */}

@@ -1,60 +1,19 @@
 import { X } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { MolViewer2D } from "@/features/molecule/components/MolViewer2D";
-import type { CandidateRow } from "../types";
+import type { CandidateRow, DomainDisplayConfig } from "../types";
 
 interface CandidateComparisonProps {
   candidates: CandidateRow[];
+  domainConfig?: DomainDisplayConfig | null;
   onClose: () => void;
 }
 
-const SCORE_ROWS: {
-  label: string;
-  key: keyof CandidateRow;
-  format: (v: unknown) => string;
-  isBest: (a: number, b: number) => boolean;
-}[] = [
-  {
-    label: "Prediction",
-    key: "prediction_score",
-    format: (v) => (v != null && v !== 0 ? (v as number).toFixed(2) : "-"),
-    isBest: (a, b) => a > b,
-  },
-  {
-    label: "Docking",
-    key: "docking_score",
-    format: (v) => (v != null && v !== 0 ? `${(v as number).toFixed(1)}` : "-"),
-    isBest: (a, b) => a < b,
-  },
-  {
-    label: "ADMET",
-    key: "admet_score",
-    format: (v) => (v != null && v !== 0 ? (v as number).toFixed(2) : "-"),
-    isBest: (a, b) => a > b,
-  },
-  {
-    label: "Resistance",
-    key: "resistance_risk",
-    format: (v) => (v as string) || "-",
-    isBest: () => false,
-  },
-];
+export function CandidateComparison({ candidates, domainConfig, onClose }: CandidateComparisonProps) {
+  const scoreColumns = domainConfig?.score_columns ?? [];
+  const attributeKeys = domainConfig?.attribute_keys ?? [];
+  const isMolecular = !domainConfig || domainConfig.identifier_type === "smiles";
 
-function bestIndex(candidates: CandidateRow[], key: keyof CandidateRow, isBest: (a: number, b: number) => boolean): number {
-  let best = -1;
-  let bestVal = 0;
-  for (let i = 0; i < candidates.length; i++) {
-    const v = candidates[i][key] as number;
-    if (v == null || v === 0) continue;
-    if (best === -1 || isBest(v, bestVal)) {
-      best = i;
-      bestVal = v;
-    }
-  }
-  return best;
-}
-
-export function CandidateComparison({ candidates, onClose }: CandidateComparisonProps) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -86,48 +45,72 @@ export function CandidateComparison({ candidates, onClose }: CandidateComparison
             </tr>
           </thead>
           <tbody>
-            {/* Structure row */}
+            {/* Structure row (molecular only) */}
+            {isMolecular && (
+              <tr className="border-b border-border/30">
+                <td className="px-4 py-3 font-mono text-xs text-muted-foreground">Structure</td>
+                {candidates.map((c) => (
+                  <td key={c.rank} className="px-4 py-3 text-center">
+                    <div className="inline-block">
+                      <MolViewer2D smiles={c.identifier} width={120} height={90} />
+                    </div>
+                  </td>
+                ))}
+              </tr>
+            )}
+            {/* Identifier row */}
             <tr className="border-b border-border/30">
-              <td className="px-4 py-3 font-mono text-xs text-muted-foreground">Structure</td>
-              {candidates.map((c) => (
-                <td key={c.rank} className="px-4 py-3 text-center">
-                  <div className="inline-block">
-                    <MolViewer2D smiles={c.smiles} width={120} height={90} />
-                  </div>
-                </td>
-              ))}
-            </tr>
-            {/* SMILES row */}
-            <tr className="border-b border-border/30">
-              <td className="px-4 py-2 font-mono text-xs text-muted-foreground">SMILES</td>
+              <td className="px-4 py-2 font-mono text-xs text-muted-foreground">
+                {domainConfig?.identifier_label ?? "Identifier"}
+              </td>
               {candidates.map((c) => (
                 <td key={c.rank} className="max-w-[200px] break-all px-4 py-2 font-mono text-[10px] text-muted-foreground">
-                  {c.smiles}
+                  {c.identifier}
                 </td>
               ))}
             </tr>
-            {/* Score rows */}
-            {SCORE_ROWS.map((row) => {
-              const best = row.key !== "resistance_risk" ? bestIndex(candidates, row.key, row.isBest) : -1;
+            {/* Dynamic score rows */}
+            {scoreColumns.map((col) => {
+              const best = findBestIndex(candidates, col.key, col.higher_is_better);
               return (
-                <tr key={row.label} className="border-b border-border/30 last:border-0">
+                <tr key={col.key} className="border-b border-border/30 last:border-0">
                   <td className="px-4 py-2 font-mono text-xs text-muted-foreground">
-                    {row.label}
+                    {col.label}
                   </td>
-                  {candidates.map((c, i) => (
-                    <td
-                      key={c.rank}
-                      className={cn(
-                        "px-4 py-2 text-center font-mono text-xs",
-                        i === best ? "font-medium text-primary" : "text-muted-foreground",
-                      )}
-                    >
-                      {row.format(c[row.key])}
-                    </td>
-                  ))}
+                  {candidates.map((c, i) => {
+                    const v = c.scores[col.key];
+                    const decimals = col.format_spec.includes("f") ? parseInt(col.format_spec.replace(/[^0-9]/g, "")) || 2 : 2;
+                    return (
+                      <td
+                        key={c.rank}
+                        className={cn(
+                          "px-4 py-2 text-center font-mono text-xs",
+                          i === best ? "font-medium text-primary" : "text-muted-foreground",
+                        )}
+                      >
+                        {v != null && v !== 0 ? v.toFixed(decimals) : "-"}
+                      </td>
+                    );
+                  })}
                 </tr>
               );
             })}
+            {/* Attribute rows */}
+            {attributeKeys.map((key) => (
+              <tr key={key} className="border-b border-border/30 last:border-0">
+                <td className="px-4 py-2 font-mono text-xs capitalize text-muted-foreground">
+                  {key.replace(/_/g, " ")}
+                </td>
+                {candidates.map((c) => (
+                  <td
+                    key={c.rank}
+                    className="px-4 py-2 text-center font-mono text-xs text-muted-foreground"
+                  >
+                    {c.attributes[key] || "-"}
+                  </td>
+                ))}
+              </tr>
+            ))}
             {/* Notes row */}
             <tr>
               <td className="px-4 py-2 font-mono text-xs text-muted-foreground">Notes</td>
@@ -142,4 +125,22 @@ export function CandidateComparison({ candidates, onClose }: CandidateComparison
       </div>
     </div>
   );
+}
+
+function findBestIndex(
+  candidates: CandidateRow[],
+  scoreKey: string,
+  higherIsBetter: boolean,
+): number {
+  let best = -1;
+  let bestVal = 0;
+  for (let i = 0; i < candidates.length; i++) {
+    const v = candidates[i].scores[scoreKey];
+    if (v == null || v === 0) continue;
+    if (best === -1 || (higherIsBetter ? v > bestVal : v < bestVal)) {
+      best = i;
+      bestVal = v;
+    }
+  }
+  return best;
 }

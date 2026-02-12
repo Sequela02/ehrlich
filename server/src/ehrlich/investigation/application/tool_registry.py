@@ -19,10 +19,17 @@ class ToolRegistry:
     def __init__(self) -> None:
         self._tools: dict[str, ToolFunction] = {}
         self._schemas: dict[str, dict[str, Any]] = {}
+        self._tags: dict[str, frozenset[str]] = {}
 
-    def register(self, name: str, func: ToolFunction) -> None:
+    def register(
+        self,
+        name: str,
+        func: ToolFunction,
+        tags: frozenset[str] | None = None,
+    ) -> None:
         self._tools[name] = func
         self._schemas[name] = _generate_schema(name, func)
+        self._tags[name] = tags or frozenset()
 
     def get(self, name: str) -> ToolFunction | None:
         return self._tools.get(name)
@@ -35,6 +42,21 @@ class ToolRegistry:
 
     def list_schemas(self) -> list[dict[str, Any]]:
         return list(self._schemas.values())
+
+    def list_tools_for_domain(self, domain_tags: frozenset[str]) -> list[str]:
+        """Return tool names matching any of the domain tags, plus untagged tools."""
+        return [
+            name
+            for name, tags in self._tags.items()
+            if not tags or tags & domain_tags
+        ]
+
+    def list_schemas_for_domain(
+        self, domain_tags: frozenset[str]
+    ) -> list[dict[str, Any]]:
+        """Return tool schemas matching any of the domain tags, plus untagged tools."""
+        allowed = set(self.list_tools_for_domain(domain_tags))
+        return [s for s in self._schemas.values() if s["name"] in allowed]
 
 
 def _generate_schema(name: str, func: ToolFunction) -> dict[str, Any]:

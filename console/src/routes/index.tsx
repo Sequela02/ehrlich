@@ -16,7 +16,7 @@ function HomePage() {
       <div className="space-y-3">
         <h1 className="text-5xl font-bold tracking-tight">Ehrlich</h1>
         <p className="text-lg text-muted-foreground">
-          AI-powered molecular discovery engine
+          AI-powered scientific discovery engine
         </p>
         <p className="font-mono text-xs text-muted-foreground/70">
           30 tools &middot; 5 phases &middot; multi-model architecture

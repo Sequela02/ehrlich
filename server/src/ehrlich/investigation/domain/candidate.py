@@ -1,19 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from ehrlich.kernel.types import SMILES
+from dataclasses import dataclass, field
 
 
 @dataclass
 class Candidate:
-    smiles: SMILES
+    identifier: str
+    identifier_type: str = ""
     name: str = ""
-    prediction_score: float = 0.0
-    docking_score: float = 0.0
-    admet_score: float = 0.0
-    resistance_risk: str = "unknown"
     rank: int = 0
     notes: str = ""
+    scores: dict[str, float] = field(default_factory=dict)
+    attributes: dict[str, str] = field(default_factory=dict)

@@ -29,6 +29,9 @@ from ehrlich.chemistry.tools import (
 from ehrlich.config import get_settings
 from ehrlich.investigation.application.multi_orchestrator import MultiModelOrchestrator
 from ehrlich.investigation.application.tool_registry import ToolRegistry
+from ehrlich.investigation.domain.domain_registry import DomainRegistry
+from ehrlich.investigation.domain.domains.molecular import MOLECULAR_SCIENCE
+from ehrlich.investigation.domain.domains.sports import SPORTS_SCIENCE
 from ehrlich.investigation.domain.investigation import Investigation, InvestigationStatus
 from ehrlich.investigation.infrastructure.anthropic_client import AnthropicClientAdapter
 from ehrlich.investigation.infrastructure.sqlite_repository import SqliteInvestigationRepository
@@ -50,6 +53,14 @@ from ehrlich.simulation.tools import (
     predict_admet,
     search_disease_targets,
     search_protein_targets,
+)
+from ehrlich.sports.tools import (
+    analyze_training_evidence,
+    assess_injury_risk,
+    compare_protocols,
+    compute_training_metrics,
+    search_sports_literature,
+    search_supplement_evidence,
 )
 
 if TYPE_CHECKING:
@@ -114,41 +125,68 @@ def _get_repository() -> SqliteInvestigationRepository:
 
 def _build_registry() -> ToolRegistry:
     registry = ToolRegistry()
-    tools: dict[str, Any] = {
-        "validate_smiles": validate_smiles,
-        "compute_descriptors": compute_descriptors,
-        "compute_fingerprint": compute_fingerprint,
-        "tanimoto_similarity": tanimoto_similarity,
-        "generate_3d": generate_3d,
-        "substructure_match": substructure_match,
-        "search_literature": search_literature,
-        "get_reference": get_reference,
-        "explore_dataset": explore_dataset,
-        "search_compounds": search_compounds,
-        "search_bioactivity": search_bioactivity,
-        "analyze_substructures": analyze_substructures,
-        "compute_properties": compute_properties,
-        "train_model": train_model,
-        "predict_candidates": predict_candidates,
-        "cluster_compounds": cluster_compounds,
-        "search_protein_targets": search_protein_targets,
-        "dock_against_target": dock_against_target,
-        "predict_admet": predict_admet,
-        "fetch_toxicity_profile": fetch_toxicity_profile,
-        "assess_resistance": assess_resistance,
-        "get_protein_annotation": get_protein_annotation,
-        "search_disease_targets": search_disease_targets,
-        "search_pharmacology": search_pharmacology,
-        "record_finding": record_finding,
-        "conclude_investigation": conclude_investigation,
-        "propose_hypothesis": propose_hypothesis,
-        "design_experiment": design_experiment,
-        "evaluate_hypothesis": evaluate_hypothesis,
-        "record_negative_control": record_negative_control,
-    }
-    for name, func in tools.items():
-        registry.register(name, func)
+    _chem = frozenset({"chemistry"})
+    _lit = frozenset({"literature"})
+    _analysis = frozenset({"analysis"})
+    _pred = frozenset({"prediction"})
+    _sim = frozenset({"simulation"})
+    _sports = frozenset({"sports"})
+
+    tagged_tools: list[tuple[str, Any, frozenset[str] | None]] = [
+        # Chemistry (6)
+        ("validate_smiles", validate_smiles, _chem),
+        ("compute_descriptors", compute_descriptors, _chem),
+        ("compute_fingerprint", compute_fingerprint, _chem),
+        ("tanimoto_similarity", tanimoto_similarity, _chem),
+        ("generate_3d", generate_3d, _chem),
+        ("substructure_match", substructure_match, _chem),
+        # Literature (2)
+        ("search_literature", search_literature, _lit),
+        ("get_reference", get_reference, _lit),
+        # Analysis (6)
+        ("explore_dataset", explore_dataset, _analysis),
+        ("search_compounds", search_compounds, _analysis),
+        ("search_bioactivity", search_bioactivity, _analysis),
+        ("analyze_substructures", analyze_substructures, _analysis),
+        ("compute_properties", compute_properties, _analysis),
+        ("search_pharmacology", search_pharmacology, _analysis),
+        # Prediction (3)
+        ("train_model", train_model, _pred),
+        ("predict_candidates", predict_candidates, _pred),
+        ("cluster_compounds", cluster_compounds, _pred),
+        # Simulation (7)
+        ("search_protein_targets", search_protein_targets, _sim),
+        ("dock_against_target", dock_against_target, _sim),
+        ("predict_admet", predict_admet, _sim),
+        ("fetch_toxicity_profile", fetch_toxicity_profile, _sim),
+        ("assess_resistance", assess_resistance, _sim),
+        ("get_protein_annotation", get_protein_annotation, _sim),
+        ("search_disease_targets", search_disease_targets, _sim),
+        # Sports Science (6)
+        ("search_sports_literature", search_sports_literature, _sports),
+        ("analyze_training_evidence", analyze_training_evidence, _sports),
+        ("compare_protocols", compare_protocols, _sports),
+        ("assess_injury_risk", assess_injury_risk, _sports),
+        ("compute_training_metrics", compute_training_metrics, _sports),
+        ("search_supplement_evidence", search_supplement_evidence, _sports),
+        # Investigation control (6) -- universal, no tags
+        ("record_finding", record_finding, None),
+        ("conclude_investigation", conclude_investigation, None),
+        ("propose_hypothesis", propose_hypothesis, None),
+        ("design_experiment", design_experiment, None),
+        ("evaluate_hypothesis", evaluate_hypothesis, None),
+        ("record_negative_control", record_negative_control, None),
+    ]
+    for name, func, tags in tagged_tools:
+        registry.register(name, func, tags)
     return registry
+
+
+def _build_domain_registry() -> DomainRegistry:
+    domain_registry = DomainRegistry()
+    domain_registry.register(MOLECULAR_SCIENCE)
+    domain_registry.register(SPORTS_SCIENCE)
+    return domain_registry
 
 
 def _broadcast_event(investigation_id: str, event: dict[str, str]) -> None:
@@ -242,11 +280,12 @@ async def stream_investigation(investigation_id: str) -> EventSourceResponse:
     # Pending -- start the investigation and stream
     settings = get_settings()
     registry = _build_registry()
+    domain_registry = _build_domain_registry()
 
     _active_investigations[investigation.id] = investigation
     _subscribers[investigation.id] = []
 
-    orchestrator = _create_orchestrator(settings, registry, repo)
+    orchestrator = _create_orchestrator(settings, registry, repo, domain_registry)
     _active_orchestrators[investigation.id] = orchestrator
 
     async def event_generator() -> AsyncGenerator[dict[str, str], None]:
@@ -285,6 +324,7 @@ def _create_orchestrator(
     settings: Any,
     registry: ToolRegistry,
     repository: SqliteInvestigationRepository,
+    domain_registry: DomainRegistry | None = None,
 ) -> MultiModelOrchestrator:
     api_key = settings.anthropic_api_key or None
     director = AnthropicClientAdapter(model=settings.director_model, api_key=api_key)
@@ -299,6 +339,7 @@ def _create_orchestrator(
         summarizer_threshold=settings.summarizer_threshold,
         require_approval=True,
         repository=repository,
+        domain_registry=domain_registry,
     )
 
 
@@ -333,14 +374,13 @@ async def _replay_final(
 
         candidates = [
             {
-                "smiles": c.smiles,
+                "identifier": c.identifier,
+                "identifier_type": c.identifier_type,
                 "name": c.name,
                 "rank": c.rank,
                 "notes": c.notes,
-                "prediction_score": c.prediction_score,
-                "docking_score": c.docking_score,
-                "admet_score": c.admet_score,
-                "resistance_risk": c.resistance_risk,
+                "scores": c.scores,
+                "attributes": c.attributes,
             }
             for c in investigation.candidates
         ]
@@ -369,9 +409,11 @@ async def _replay_final(
         ]
         negative_controls = [
             {
-                "smiles": nc.smiles,
+                "identifier": nc.identifier,
+                "identifier_type": nc.identifier_type,
                 "name": nc.name,
-                "prediction_score": nc.prediction_score,
+                "score": nc.score,
+                "threshold": nc.threshold,
                 "correctly_classified": nc.correctly_classified,
                 "source": nc.source,
             }
@@ -420,14 +462,13 @@ def _to_detail(inv: Investigation) -> InvestigationDetail:
     ]
     candidates = [
         {
-            "smiles": c.smiles,
+            "identifier": c.identifier,
+            "identifier_type": c.identifier_type,
             "name": c.name,
             "rank": c.rank,
             "notes": c.notes,
-            "prediction_score": c.prediction_score,
-            "docking_score": c.docking_score,
-            "admet_score": c.admet_score,
-            "resistance_risk": c.resistance_risk,
+            "scores": c.scores,
+            "attributes": c.attributes,
         }
         for c in inv.candidates
     ]
@@ -456,9 +497,11 @@ def _to_detail(inv: Investigation) -> InvestigationDetail:
     ]
     negative_controls = [
         {
-            "smiles": nc.smiles,
+            "identifier": nc.identifier,
+            "identifier_type": nc.identifier_type,
             "name": nc.name,
-            "prediction_score": nc.prediction_score,
+            "score": nc.score,
+            "threshold": nc.threshold,
             "correctly_classified": nc.correctly_classified,
             "source": nc.source,
         }

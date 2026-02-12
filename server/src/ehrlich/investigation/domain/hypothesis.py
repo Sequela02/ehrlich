@@ -19,6 +19,9 @@ class HypothesisType(StrEnum):
     STRUCTURAL = "structural"
     PHARMACOLOGICAL = "pharmacological"
     TOXICOLOGICAL = "toxicological"
+    PHYSIOLOGICAL = "physiological"
+    PERFORMANCE = "performance"
+    EPIDEMIOLOGICAL = "epidemiological"
     OTHER = "other"
 
 

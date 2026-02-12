@@ -95,7 +95,9 @@ class TestRecordNegativeControl:
     async def test_returns_recorded_status(self) -> None:
         from ehrlich.investigation.tools import record_negative_control
 
-        result = json.loads(await record_negative_control("CCO", "Ethanol", 0.1, "Known inactive"))
+        result = json.loads(
+            await record_negative_control("CCO", "Ethanol", 0.1, source="Known inactive")
+        )
         assert result["status"] == "recorded"
         assert result["correctly_classified"] is True
 

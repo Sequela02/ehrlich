@@ -13,7 +13,8 @@ export type SSEEventType =
   | "output_summarized"
   | "phase_changed"
   | "cost_update"
-  | "hypothesis_approval_requested";
+  | "hypothesis_approval_requested"
+  | "domain_detected";
 
 export interface SSEEvent {
   event: SSEEventType;
@@ -51,9 +52,11 @@ export interface Experiment {
 }
 
 export interface NegativeControl {
-  smiles: string;
+  identifier: string;
+  identifier_type: string;
   name: string;
-  prediction_score: number;
+  score: number;
+  threshold: number;
   correctly_classified: boolean;
   source: string;
 }
@@ -97,9 +100,11 @@ export interface HypothesisEvaluatedData {
 }
 
 export interface NegativeControlData {
-  smiles: string;
+  identifier: string;
+  identifier_type: string;
   name: string;
-  prediction_score: number;
+  score: number;
+  threshold: number;
   correctly_classified: boolean;
   investigation_id: string;
 }
@@ -219,14 +224,33 @@ export interface Finding {
 }
 
 export interface CandidateRow {
-  smiles: string;
+  identifier: string;
+  identifier_type: string;
   name: string;
   rank: number;
   notes: string;
-  prediction_score?: number;
-  docking_score?: number;
-  admet_score?: number;
-  resistance_risk?: string;
+  scores: Record<string, number>;
+  attributes: Record<string, string>;
+}
+
+export interface ScoreColumnConfig {
+  key: string;
+  label: string;
+  format_spec: string;
+  higher_is_better: boolean;
+  good_threshold: number;
+  ok_threshold: number;
+}
+
+export interface DomainDisplayConfig {
+  name: string;
+  display_name: string;
+  identifier_type: string;
+  identifier_label: string;
+  candidate_label: string;
+  visualization_type: "molecular" | "chart" | "table";
+  score_columns: ScoreColumnConfig[];
+  attribute_keys: string[];
 }
 
 export interface InvestigationDetail {

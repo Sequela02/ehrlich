@@ -5,6 +5,7 @@ from typing import Any
 
 from ehrlich.investigation.domain.events import (
     CostUpdate,
+    DomainDetected,
     DomainEvent,
     ExperimentCompleted,
     ExperimentStarted,
@@ -39,6 +40,7 @@ class SSEEventType(StrEnum):
     PHASE_CHANGED = "phase_changed"
     COST_UPDATE = "cost_update"
     HYPOTHESIS_APPROVAL_REQUESTED = "hypothesis_approval_requested"
+    DOMAIN_DETECTED = "domain_detected"
 
 
 @dataclass(frozen=True)
@@ -105,9 +107,11 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
         return SSEEvent(
             event=SSEEventType.NEGATIVE_CONTROL,
             data={
-                "smiles": event.smiles,
+                "identifier": event.identifier,
+                "identifier_type": event.identifier_type,
                 "name": event.name,
-                "prediction_score": event.prediction_score,
+                "score": event.score,
+                "threshold": event.threshold,
                 "correctly_classified": event.correctly_classified,
                 "investigation_id": event.investigation_id,
             },
@@ -195,6 +199,15 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
             event=SSEEventType.HYPOTHESIS_APPROVAL_REQUESTED,
             data={
                 "hypotheses": event.hypotheses,
+                "investigation_id": event.investigation_id,
+            },
+        )
+    if isinstance(event, DomainDetected):
+        return SSEEvent(
+            event=SSEEventType.DOMAIN_DETECTED,
+            data={
+                "domain": event.domain,
+                "display_config": event.display_config,
                 "investigation_id": event.investigation_id,
             },
         )

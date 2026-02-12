@@ -66,7 +66,7 @@ def _formulation_json() -> str:
                 },
             ],
             "negative_controls": [
-                {"smiles": "CCO", "name": "Ethanol", "source": "known inactive"},
+                {"identifier": "CCO", "name": "Ethanol", "source": "known inactive"},
             ],
         }
     )
@@ -110,10 +110,13 @@ def _synthesis_json() -> str:
             "summary": "Investigation found 1 promising candidate via PBP2a docking.",
             "candidates": [
                 {
-                    "smiles": "CC(=O)Oc1ccccc1C(=O)O",
+                    "identifier": "CC(=O)Oc1ccccc1C(=O)O",
+                    "identifier_type": "smiles",
                     "name": "Thiazolidine-A1",
                     "rationale": "Strong PBP2a binding",
                     "rank": 1,
+                    "scores": {},
+                    "attributes": {},
                 }
             ],
             "citations": ["10.1234/test"],
@@ -143,10 +146,10 @@ def _build_registry() -> ToolRegistry:
         return json.dumps({"status": "recorded", "title": title})
 
     async def record_negative_control(
-        smiles: str, name: str, prediction_score: float = 0.0, source: str = ""
+        identifier: str, name: str, score: float = 0.0, source: str = ""
     ) -> str:
         """Record negative control."""
-        return json.dumps({"status": "recorded", "smiles": smiles})
+        return json.dumps({"status": "recorded", "identifier": identifier})
 
     registry.register("search_literature", search_literature)
     registry.register("validate_smiles", validate_smiles)
@@ -415,7 +418,7 @@ class TestNegativeControls:
 
         nc_events = [e for e in events if isinstance(e, NegativeControlRecorded)]
         assert len(nc_events) == 1
-        assert nc_events[0].smiles == "CCO"
+        assert nc_events[0].identifier == "CCO"
         assert nc_events[0].name == "Ethanol"
         assert len(investigation.negative_controls) == 1
 
@@ -538,7 +541,7 @@ class TestDirectorSynthesis:
         assert investigation.status == InvestigationStatus.COMPLETED
         assert "promising candidate" in investigation.summary
         assert len(investigation.candidates) == 1
-        assert investigation.candidates[0].smiles == "CC(=O)Oc1ccccc1C(=O)O"
+        assert investigation.candidates[0].identifier == "CC(=O)Oc1ccccc1C(=O)O"
         assert len(investigation.citations) == 1
 
         completed = [e for e in events if isinstance(e, InvestigationCompleted)]

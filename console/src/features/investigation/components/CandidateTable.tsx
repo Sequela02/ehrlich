@@ -2,15 +2,16 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight, GitCompareArrows, Square, CheckSquare } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { MolViewer2D } from "@/features/molecule/components/MolViewer2D";
-import type { CandidateRow } from "../types";
+import type { CandidateRow, DomainDisplayConfig } from "../types";
 import { CandidateDetail } from "./CandidateDetail";
 import { CandidateComparison } from "./CandidateComparison";
 
 interface CandidateTableProps {
   candidates: CandidateRow[];
+  domainConfig?: DomainDisplayConfig | null;
 }
 
-export function CandidateTable({ candidates }: CandidateTableProps) {
+export function CandidateTable({ candidates, domainConfig }: CandidateTableProps) {
   const [expandedRank, setExpandedRank] = useState<number | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [comparing, setComparing] = useState(false);
@@ -19,12 +20,13 @@ export function CandidateTable({ candidates }: CandidateTableProps) {
     return null;
   }
 
+  const scoreColumns = domainConfig?.score_columns ?? [];
+  const attributeKeys = domainConfig?.attribute_keys ?? [];
+  const candidateLabel = domainConfig?.candidate_label ?? "Ranked Candidates";
+  const isMolecular = !domainConfig || domainConfig.identifier_type === "smiles";
+
   const hasScores = candidates.some(
-    (c) =>
-      (c.prediction_score && c.prediction_score > 0) ||
-      (c.docking_score && c.docking_score !== 0) ||
-      (c.admet_score && c.admet_score > 0) ||
-      (c.resistance_risk && c.resistance_risk !== "unknown"),
+    (c) => Object.keys(c.scores).length > 0 || Object.keys(c.attributes).length > 0,
   );
 
   function toggleSelect(rank: number) {
@@ -44,6 +46,7 @@ export function CandidateTable({ candidates }: CandidateTableProps) {
     return (
       <CandidateComparison
         candidates={compCandidates}
+        domainConfig={domainConfig}
         onClose={() => setComparing(false)}
       />
     );
@@ -54,10 +57,12 @@ export function CandidateTable({ candidates }: CandidateTableProps) {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-            Ranked Candidates
+            {candidateLabel}
           </h3>
           <p className="mt-1 pl-3 text-[11px] leading-relaxed text-muted-foreground/50">
-            Top molecules identified by the investigation. Click a row to view 3D structure, properties, and drug-likeness profile.
+            {isMolecular
+              ? "Top molecules identified by the investigation. Click a row to view 3D structure, properties, and drug-likeness profile."
+              : "Top candidates identified by the investigation. Click a row to view details."}
           </p>
         </div>
         {candidates.length >= 2 && (
@@ -71,13 +76,15 @@ export function CandidateTable({ candidates }: CandidateTableProps) {
           </button>
         )}
       </div>
-      {hasScores && (
+      {hasScores && scoreColumns.length > 0 && (
         <div className="rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
           <span className="font-medium text-foreground/70">Score legend:</span>{" "}
-          <span className="font-mono">Pred.</span> = ML activity prediction (0-1, higher is better) ·{" "}
-          <span className="font-mono">Dock.</span> = binding affinity kcal/mol (more negative is better) ·{" "}
-          <span className="font-mono">ADMET</span> = drug-likeness score (0-1, higher is better) ·{" "}
-          <span className="font-mono">Resist.</span> = resistance risk (low/medium/high)
+          {scoreColumns.map((col, i) => (
+            <span key={col.key}>
+              <span className="font-mono">{col.label}</span> = {col.higher_is_better ? "higher is better" : "lower is better"}
+              {i < scoreColumns.length - 1 ? " · " : ""}
+            </span>
+          ))}
         </div>
       )}
       <div className="overflow-x-auto rounded-lg border border-border bg-surface">
@@ -89,28 +96,24 @@ export function CandidateTable({ candidates }: CandidateTableProps) {
               <th className="px-3 py-2 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 Rank
               </th>
-              <th className="px-3 py-2 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                Structure
-              </th>
+              {isMolecular && (
+                <th className="px-3 py-2 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  Structure
+                </th>
+              )}
               <th className="px-3 py-2 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 Name
               </th>
-              {hasScores && (
-                <>
-                  <th className="px-3 py-2 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                    Pred.
-                  </th>
-                  <th className="px-3 py-2 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                    Dock.
-                  </th>
-                  <th className="px-3 py-2 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                    ADMET
-                  </th>
-                  <th className="px-3 py-2 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                    Resist.
-                  </th>
-                </>
-              )}
+              {hasScores && scoreColumns.map((col) => (
+                <th key={col.key} className="px-3 py-2 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  {col.label}
+                </th>
+              ))}
+              {hasScores && attributeKeys.map((key) => (
+                <th key={key} className="px-3 py-2 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground capitalize">
+                  {key.replace(/_/g, " ")}
+                </th>
+              ))}
               <th className="px-3 py-2 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 Notes
               </th>
@@ -125,6 +128,9 @@ export function CandidateTable({ candidates }: CandidateTableProps) {
                   candidate={c}
                   isExpanded={isExpanded}
                   hasScores={hasScores}
+                  scoreColumns={scoreColumns}
+                  attributeKeys={attributeKeys}
+                  isMolecular={isMolecular}
                   isSelected={selected.has(c.rank)}
                   showSelect={candidates.length >= 2}
                   onToggle={() =>
@@ -141,37 +147,38 @@ export function CandidateTable({ candidates }: CandidateTableProps) {
   );
 }
 
-function ScoreCell({
+function DynamicScoreCell({
   value,
-  thresholds,
-  format,
+  good,
+  ok,
+  higherIsBetter,
+  formatSpec,
 }: {
   value: number | undefined;
-  thresholds: { good: number; ok: number; invert?: boolean };
-  format: (v: number) => string;
+  good: number;
+  ok: number;
+  higherIsBetter: boolean;
+  formatSpec: string;
 }) {
-  if (!value || value === 0) {
+  if (value == null || value === 0) {
     return (
       <td className="px-3 py-2 font-mono text-xs text-muted-foreground/30">
         --
       </td>
     );
   }
-  const v = value;
-  const { good, ok, invert } = thresholds;
   let color: string;
-  if (invert) {
-    color =
-      v < good ? "text-primary" : v < ok ? "text-accent" : "text-muted-foreground";
+  if (higherIsBetter) {
+    color = value > good ? "text-primary" : value > ok ? "text-accent" : "text-muted-foreground";
   } else {
-    color =
-      v > good ? "text-primary" : v > ok ? "text-accent" : "text-muted-foreground";
+    color = value < good ? "text-primary" : value < ok ? "text-accent" : "text-muted-foreground";
   }
-  return <td className={cn("px-3 py-2 font-mono text-xs", color)}>{format(v)}</td>;
+  const decimals = formatSpec.includes("f") ? parseInt(formatSpec.replace(/[^0-9]/g, "")) || 2 : 2;
+  return <td className={cn("px-3 py-2 font-mono text-xs", color)}>{value.toFixed(decimals)}</td>;
 }
 
-function ResistanceCell({ risk }: { risk: string | undefined }) {
-  if (!risk || risk === "unknown") {
+function AttributeCell({ value }: { value: string | undefined }) {
+  if (!value || value === "unknown") {
     return (
       <td className="px-3 py-2 font-mono text-xs text-muted-foreground/30">
         --
@@ -179,14 +186,16 @@ function ResistanceCell({ risk }: { risk: string | undefined }) {
     );
   }
   const color =
-    risk === "low"
+    value === "low"
       ? "text-primary"
-      : risk === "medium"
+      : value === "medium"
         ? "text-accent"
-        : "text-destructive";
+        : value === "high"
+          ? "text-destructive"
+          : "text-muted-foreground";
   return (
     <td className={cn("px-3 py-2 font-mono text-xs capitalize", color)}>
-      {risk}
+      {value}
     </td>
   );
 }
@@ -195,6 +204,9 @@ function CandidateRowComponent({
   candidate,
   isExpanded,
   hasScores,
+  scoreColumns,
+  attributeKeys,
+  isMolecular,
   isSelected,
   showSelect,
   onToggle,
@@ -203,13 +215,18 @@ function CandidateRowComponent({
   candidate: CandidateRow;
   isExpanded: boolean;
   hasScores: boolean;
+  scoreColumns: { key: string; good_threshold: number; ok_threshold: number; higher_is_better: boolean; format_spec: string }[];
+  attributeKeys: string[];
+  isMolecular: boolean;
   isSelected: boolean;
   showSelect: boolean;
   onToggle: () => void;
   onSelect: () => void;
 }) {
   const Chevron = isExpanded ? ChevronDown : ChevronRight;
-  const colSpan = (hasScores ? 9 : 5) + (showSelect ? 1 : 0);
+  const baseCols = 3 + (isMolecular ? 1 : 0) + (showSelect ? 1 : 0);
+  const scoreCols = hasScores ? scoreColumns.length + attributeKeys.length : 0;
+  const colSpan = baseCols + scoreCols + 1; // +1 for notes
 
   return (
     <>
@@ -235,30 +252,25 @@ function CandidateRowComponent({
         <td className="px-3 py-2 font-mono font-medium text-primary">
           {candidate.rank}
         </td>
-        <td className="px-3 py-2">
-          <MolViewer2D smiles={candidate.smiles} width={100} height={75} />
-        </td>
-        <td className="px-3 py-2">{candidate.name || "-"}</td>
-        {hasScores && (
-          <>
-            <ScoreCell
-              value={candidate.prediction_score}
-              thresholds={{ good: 0.7, ok: 0.4 }}
-              format={(v) => v.toFixed(2)}
-            />
-            <ScoreCell
-              value={candidate.docking_score}
-              thresholds={{ good: -7.0, ok: -5.0, invert: true }}
-              format={(v) => v.toFixed(1)}
-            />
-            <ScoreCell
-              value={candidate.admet_score}
-              thresholds={{ good: 0.7, ok: 0.4 }}
-              format={(v) => v.toFixed(2)}
-            />
-            <ResistanceCell risk={candidate.resistance_risk} />
-          </>
+        {isMolecular && (
+          <td className="px-3 py-2">
+            <MolViewer2D smiles={candidate.identifier} width={100} height={75} />
+          </td>
         )}
+        <td className="px-3 py-2">{candidate.name || "-"}</td>
+        {hasScores && scoreColumns.map((col) => (
+          <DynamicScoreCell
+            key={col.key}
+            value={candidate.scores[col.key]}
+            good={col.good_threshold}
+            ok={col.ok_threshold}
+            higherIsBetter={col.higher_is_better}
+            formatSpec={col.format_spec}
+          />
+        ))}
+        {hasScores && attributeKeys.map((key) => (
+          <AttributeCell key={key} value={candidate.attributes[key]} />
+        ))}
         <td className="min-w-[200px] max-w-lg px-3 py-2 text-xs leading-relaxed text-muted-foreground">
           {candidate.notes || "-"}
         </td>
@@ -266,7 +278,13 @@ function CandidateRowComponent({
       {isExpanded && (
         <tr>
           <td colSpan={colSpan} className="border-b border-border/30 bg-muted/10">
-            <CandidateDetail smiles={candidate.smiles} name={candidate.name} />
+            <CandidateDetail
+              identifier={candidate.identifier}
+              identifierType={candidate.identifier_type}
+              name={candidate.name}
+              scores={candidate.scores}
+              attributes={candidate.attributes}
+            />
           </td>
         </tr>
       )}

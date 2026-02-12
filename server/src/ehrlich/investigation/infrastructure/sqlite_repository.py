@@ -217,9 +217,11 @@ def _finding_to_dict(f: Finding) -> dict[str, Any]:
 
 def _negative_control_to_dict(nc: NegativeControl) -> dict[str, Any]:
     return {
-        "smiles": nc.smiles,
+        "identifier": nc.identifier,
+        "identifier_type": nc.identifier_type,
         "name": nc.name,
-        "prediction_score": nc.prediction_score,
+        "score": nc.score,
+        "threshold": nc.threshold,
         "expected_inactive": nc.expected_inactive,
         "source": nc.source,
     }
@@ -227,14 +229,13 @@ def _negative_control_to_dict(nc: NegativeControl) -> dict[str, Any]:
 
 def _candidate_to_dict(c: Candidate) -> dict[str, Any]:
     return {
-        "smiles": c.smiles,
+        "identifier": c.identifier,
+        "identifier_type": c.identifier_type,
         "name": c.name,
-        "prediction_score": c.prediction_score,
-        "docking_score": c.docking_score,
-        "admet_score": c.admet_score,
-        "resistance_risk": c.resistance_risk,
         "rank": c.rank,
         "notes": c.notes,
+        "scores": c.scores,
+        "attributes": c.attributes,
     }
 
 
@@ -293,9 +294,11 @@ def _from_row(row: Any) -> Investigation:
     negative_controls_raw = json.loads(row["negative_controls"])
     negative_controls = [
         NegativeControl(
-            smiles=nc["smiles"],
+            identifier=nc["identifier"],
+            identifier_type=nc.get("identifier_type", ""),
             name=nc.get("name", ""),
-            prediction_score=nc.get("prediction_score", 0.0),
+            score=nc.get("score", 0.0),
+            threshold=nc.get("threshold", 0.5),
             expected_inactive=nc.get("expected_inactive", True),
             source=nc.get("source", ""),
         )
@@ -305,14 +308,13 @@ def _from_row(row: Any) -> Investigation:
     candidates_raw = json.loads(row["candidates"])
     candidates = [
         Candidate(
-            smiles=c["smiles"],
+            identifier=c["identifier"],
+            identifier_type=c.get("identifier_type", ""),
             name=c.get("name", ""),
-            prediction_score=c.get("prediction_score", 0.0),
-            docking_score=c.get("docking_score", 0.0),
-            admet_score=c.get("admet_score", 0.0),
-            resistance_risk=c.get("resistance_risk", "unknown"),
             rank=c.get("rank", 0),
             notes=c.get("notes", ""),
+            scores=c.get("scores", {}),
+            attributes=c.get("attributes", {}),
         )
         for c in candidates_raw
     ]

@@ -8,19 +8,19 @@ interface InvestigationComparisonProps {
 }
 
 function findShared(a: CandidateRow[], b: CandidateRow[]): string[] {
-  const smilesB = new Set(b.map((c) => c.smiles));
-  return a.filter((c) => smilesB.has(c.smiles)).map((c) => c.smiles);
+  const idsB = new Set(b.map((c) => c.identifier));
+  return a.filter((c) => idsB.has(c.identifier)).map((c) => c.identifier);
 }
 
 export function InvestigationComparison({ invA, invB }: InvestigationComparisonProps) {
-  const sharedSmiles = findShared(invA.candidates, invB.candidates);
+  const sharedIdentifiers = findShared(invA.candidates, invB.candidates);
 
   return (
     <div className="space-y-6">
       {/* Stats bar */}
       <div className="grid grid-cols-3 gap-4">
         <StatCard label="Investigation A" value={`${invA.candidates.length} candidates`} />
-        <StatCard label="Shared Molecules" value={`${sharedSmiles.length} overlap`} accent />
+        <StatCard label="Shared Candidates" value={`${sharedIdentifiers.length} overlap`} accent />
         <StatCard label="Investigation B" value={`${invB.candidates.length} candidates`} />
       </div>
 
@@ -32,25 +32,28 @@ export function InvestigationComparison({ invA, invB }: InvestigationComparisonP
 
       {/* Side-by-side candidates */}
       <div className="grid grid-cols-2 gap-4">
-        <CandidateList title="Investigation A" candidates={invA.candidates} sharedSmiles={sharedSmiles} />
-        <CandidateList title="Investigation B" candidates={invB.candidates} sharedSmiles={sharedSmiles} />
+        <CandidateList title="Investigation A" candidates={invA.candidates} sharedIdentifiers={sharedIdentifiers} />
+        <CandidateList title="Investigation B" candidates={invB.candidates} sharedIdentifiers={sharedIdentifiers} />
       </div>
 
-      {/* Shared molecules detail */}
-      {sharedSmiles.length > 0 && (
+      {/* Shared candidates detail */}
+      {sharedIdentifiers.length > 0 && (
         <div className="space-y-3">
           <h3 className="border-l-2 border-accent pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-            Shared Molecules ({sharedSmiles.length})
+            Shared Candidates ({sharedIdentifiers.length})
           </h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {sharedSmiles.map((smiles) => {
-              const fromA = invA.candidates.find((c) => c.smiles === smiles);
-              const fromB = invB.candidates.find((c) => c.smiles === smiles);
+            {sharedIdentifiers.map((id) => {
+              const fromA = invA.candidates.find((c) => c.identifier === id);
+              const fromB = invB.candidates.find((c) => c.identifier === id);
+              const isMolecular = fromA?.identifier_type === "smiles";
               return (
-                <div key={smiles} className="rounded-lg border border-accent/30 bg-accent/5 p-3">
-                  <div className="flex justify-center">
-                    <MolViewer2D smiles={smiles} width={120} height={90} />
-                  </div>
+                <div key={id} className="rounded-lg border border-accent/30 bg-accent/5 p-3">
+                  {isMolecular && (
+                    <div className="flex justify-center">
+                      <MolViewer2D smiles={id} width={120} height={90} />
+                    </div>
+                  )}
                   <p className="mt-2 text-center text-xs font-medium">
                     {fromA?.name || fromB?.name || "unnamed"}
                   </p>
@@ -106,32 +109,35 @@ function PromptCard({ prompt, status }: { prompt: string; status: string }) {
 function CandidateList({
   title,
   candidates,
-  sharedSmiles,
+  sharedIdentifiers,
 }: {
   title: string;
   candidates: CandidateRow[];
-  sharedSmiles: string[];
+  sharedIdentifiers: string[];
 }) {
-  const sharedSet = new Set(sharedSmiles);
+  const sharedSet = new Set(sharedIdentifiers);
   return (
     <div className="space-y-2">
       <h4 className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{title}</h4>
       <div className="space-y-1.5">
-        {candidates.slice(0, 10).map((c) => (
-          <div
-            key={c.rank}
-            className={cn(
-              "flex items-center gap-2 rounded-md border p-2 text-xs",
-              sharedSet.has(c.smiles) ? "border-accent/30 bg-accent/5" : "border-border bg-surface",
-            )}
-          >
-            <span className="font-mono font-medium text-primary">#{c.rank}</span>
-            <span className="truncate">{c.name || c.smiles.slice(0, 30)}</span>
-            {c.prediction_score != null && c.prediction_score > 0 && (
-              <span className="ml-auto font-mono text-muted-foreground">{c.prediction_score.toFixed(2)}</span>
-            )}
-          </div>
-        ))}
+        {candidates.slice(0, 10).map((c) => {
+          const topScore = Object.values(c.scores)[0];
+          return (
+            <div
+              key={c.rank}
+              className={cn(
+                "flex items-center gap-2 rounded-md border p-2 text-xs",
+                sharedSet.has(c.identifier) ? "border-accent/30 bg-accent/5" : "border-border bg-surface",
+              )}
+            >
+              <span className="font-mono font-medium text-primary">#{c.rank}</span>
+              <span className="truncate">{c.name || c.identifier.slice(0, 30)}</span>
+              {topScore != null && topScore > 0 && (
+                <span className="ml-auto font-mono text-muted-foreground">{topScore.toFixed(2)}</span>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

@@ -146,9 +146,9 @@ export function buildSceneUpdates(event: SSEEventData): SceneAction[] {
     const top = candidates.slice(0, 3);
     const actions: SceneAction[] = [];
     for (const c of top) {
-      const smiles = c.smiles as string | undefined;
-      if (smiles) {
-        actions.push({ type: "highlight", smiles, color: "#22c55e" });
+      const identifier = (c.identifier ?? c.smiles) as string | undefined;
+      if (identifier) {
+        actions.push({ type: "highlight", smiles: identifier, color: "#22c55e" });
       }
     }
     if (actions.length > 0) {

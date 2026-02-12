@@ -4,6 +4,7 @@ import type {
   CandidateRow,
   CompletedData,
   CostInfo,
+  DomainDisplayConfig,
   EvidenceType,
   Experiment,
   Finding,
@@ -31,6 +32,7 @@ const EVENT_TYPES: SSEEventType[] = [
   "phase_changed",
   "cost_update",
   "hypothesis_approval_requested",
+  "domain_detected",
 ];
 
 const MAX_RETRIES = 3;
@@ -54,6 +56,7 @@ interface SSEState {
   currentPhase: PhaseInfo | null;
   approvalPending: boolean;
   pendingApprovalHypotheses: { id: string; statement: string; rationale: string }[];
+  domainConfig: DomainDisplayConfig | null;
   error: string | null;
   toolCallCount: number;
   activeToolName: string;
@@ -82,6 +85,7 @@ export function useSSE(url: string | null): SSEState {
   const [pendingApprovalHypotheses, setPendingApprovalHypotheses] = useState<
     { id: string; statement: string; rationale: string }[]
   >([]);
+  const [domainConfig, setDomainConfig] = useState<DomainDisplayConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [toolCallCount, setToolCallCount] = useState(0);
   const [activeToolName, setActiveToolName] = useState("");
@@ -179,9 +183,11 @@ export function useSSE(url: string | null): SSEState {
       }
       case "negative_control": {
         const nc: NegativeControl = {
-          smiles: parsed.data.smiles as string,
+          identifier: parsed.data.identifier as string,
+          identifier_type: (parsed.data.identifier_type as string) || "",
           name: parsed.data.name as string,
-          prediction_score: parsed.data.prediction_score as number,
+          score: parsed.data.score as number,
+          threshold: (parsed.data.threshold as number) || 0.5,
           correctly_classified: parsed.data.correctly_classified as boolean,
           source: "",
         };
@@ -252,6 +258,9 @@ export function useSSE(url: string | null): SSEState {
           totalCost: parsed.data.total_cost_usd as number,
           toolCalls: parsed.data.tool_calls as number,
         });
+        break;
+      case "domain_detected":
+        setDomainConfig(parsed.data.display_config as unknown as DomainDisplayConfig);
         break;
       case "completed": {
         const d = parsed.data as unknown as CompletedData;
@@ -371,6 +380,7 @@ export function useSSE(url: string | null): SSEState {
     currentPhase,
     approvalPending,
     pendingApprovalHypotheses,
+    domainConfig,
     error,
     toolCallCount,
     activeToolName,

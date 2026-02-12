@@ -40,7 +40,7 @@ async def conclude_investigation(
 
     Args:
         summary: Comprehensive summary of the investigation
-        candidates: Ranked list of candidate molecules with SMILES and scores
+        candidates: Ranked list of candidates with identifiers and scores
         citations: Full literature citations with DOIs
         hypothesis_assessments: Summary of each hypothesis outcome
         negative_control_summary: Summary of negative control validation results
@@ -124,28 +124,32 @@ async def evaluate_hypothesis(
 
 
 async def record_negative_control(
-    smiles: str,
+    identifier: str,
     name: str,
-    prediction_score: float,
+    score: float,
+    threshold: float = 0.5,
+    identifier_type: str = "",
     source: str = "",
 ) -> str:
-    """Record a negative control compound prediction for model validation.
+    """Record a negative control prediction for model validation.
 
-    Call this to validate model reliability by testing known inactive compounds.
+    Call this to validate model reliability by testing known inactive subjects.
     A good model should predict low scores for negative controls.
 
     Args:
-        smiles: SMILES string of the control compound
-        name: Name of the control compound
-        prediction_score: Model's predicted activity score (0-1)
+        identifier: Identifier of the control subject (SMILES, protocol name, etc.)
+        name: Name of the control subject
+        score: Model's predicted activity score (0-1)
+        threshold: Score threshold for classification (default 0.5)
+        identifier_type: Type of identifier (smiles, protocol, compound_name)
         source: Where this negative control was sourced from
     """
-    correctly_classified = prediction_score < 0.5
+    correctly_classified = score < threshold
     return json.dumps(
         {
             "status": "recorded",
             "name": name,
-            "prediction_score": prediction_score,
+            "score": score,
             "correctly_classified": correctly_classified,
         }
     )

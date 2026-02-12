@@ -23,11 +23,24 @@ interface DescriptorData {
 }
 
 interface CandidateDetailProps {
-  smiles: string;
+  identifier: string;
+  identifierType: string;
   name: string;
+  scores: Record<string, number>;
+  attributes: Record<string, string>;
 }
 
-export function CandidateDetail({ smiles, name }: CandidateDetailProps) {
+export function CandidateDetail({ identifier, identifierType, name, scores, attributes }: CandidateDetailProps) {
+  const isMolecular = identifierType === "smiles" || !identifierType;
+
+  if (isMolecular) {
+    return <MolecularDetail smiles={identifier} name={name} />;
+  }
+
+  return <GenericDetail identifier={identifier} name={name} scores={scores} attributes={attributes} />;
+}
+
+function MolecularDetail({ smiles, name }: { smiles: string; name: string }) {
   const [conformer, setConformer] = useState<ConformerData | null>(null);
   const [descriptors, setDescriptors] = useState<DescriptorData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -105,10 +118,58 @@ export function CandidateDetail({ smiles, name }: CandidateDetailProps) {
   );
 }
 
+function GenericDetail({
+  identifier,
+  name,
+  scores,
+  attributes,
+}: {
+  identifier: string;
+  name: string;
+  scores: Record<string, number>;
+  attributes: Record<string, string>;
+}) {
+  const scoreEntries = Object.entries(scores);
+  const attrEntries = Object.entries(attributes);
+
+  return (
+    <div className="p-4">
+      <div className="space-y-2 rounded-lg border border-border bg-surface p-3">
+        <div className="flex items-center justify-between">
+          <span className="font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            Details
+          </span>
+          <span className="font-mono text-xs text-muted-foreground">
+            {name || identifier}
+          </span>
+        </div>
+        {scoreEntries.length > 0 && (
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-3">
+            {scoreEntries.map(([key, value]) => (
+              <Property
+                key={key}
+                label={key.replace(/_/g, " ")}
+                value={typeof value === "number" ? value.toFixed(2) : String(value)}
+              />
+            ))}
+          </div>
+        )}
+        {attrEntries.length > 0 && (
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs sm:grid-cols-3">
+            {attrEntries.map(([key, value]) => (
+              <Property key={key} label={key.replace(/_/g, " ")} value={value} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Property({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between">
-      <span className="text-muted-foreground">{label}</span>
+      <span className="text-muted-foreground capitalize">{label}</span>
       <span className="font-mono">{value}</span>
     </div>
   );

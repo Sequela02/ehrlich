@@ -54,9 +54,11 @@ class HypothesisEvaluated(DomainEvent):
 
 @dataclass(frozen=True)
 class NegativeControlRecorded(DomainEvent):
-    smiles: str = ""
+    identifier: str = ""
+    identifier_type: str = ""
     name: str = ""
-    prediction_score: float = 0.0
+    score: float = 0.0
+    threshold: float = 0.5
     correctly_classified: bool = True
     investigation_id: str = ""
 
@@ -124,6 +126,13 @@ class CostUpdate(DomainEvent):
     total_tokens: int = 0
     total_cost_usd: float = 0.0
     tool_calls: int = 0
+    investigation_id: str = ""
+
+
+@dataclass(frozen=True)
+class DomainDetected(DomainEvent):
+    domain: str = ""
+    display_config: dict[str, Any] = field(default_factory=dict)
     investigation_id: str = ""
 
 

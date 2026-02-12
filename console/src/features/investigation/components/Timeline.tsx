@@ -175,7 +175,7 @@ function TimelineEntry({
             {(event.data.name as string) || "Control"}
           </span>
           <span className="font-mono text-[10px] text-muted-foreground/50">
-            score: {(event.data.prediction_score as number)?.toFixed(3)}
+            score: {(event.data.score as number)?.toFixed(3)}
           </span>
         </div>
       );

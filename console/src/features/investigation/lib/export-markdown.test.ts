@@ -45,21 +45,22 @@ const BASE_DATA: ExportData = {
   ],
   candidates: [
     {
-      smiles: "CC(=O)Oc1ccccc1C(=O)O",
+      identifier: "CC(=O)Oc1ccccc1C(=O)O",
+      identifier_type: "smiles",
       name: "Aspirin",
       rank: 1,
       notes: "Top candidate",
-      prediction_score: 0.92,
-      docking_score: -9.2,
-      admet_score: 0.88,
-      resistance_risk: "low",
+      scores: { prediction_score: 0.92, docking_score: -9.2, admet_score: 0.88 },
+      attributes: { resistance_risk: "low" },
     },
   ],
   negativeControls: [
     {
-      smiles: "CCO",
+      identifier: "CCO",
+      identifier_type: "smiles",
       name: "Ethanol",
-      prediction_score: 0.05,
+      score: 0.05,
+      threshold: 0.5,
       correctly_classified: true,
       source: "manual",
     },
@@ -81,7 +82,7 @@ describe("generateMarkdown", () => {
     expect(md).toContain("## Hypotheses & Outcomes");
     expect(md).toContain("## Methodology");
     expect(md).toContain("## Key Findings");
-    expect(md).toContain("## Candidate Molecules");
+    expect(md).toContain("## Candidates");
     expect(md).toContain("## Model Validation");
     expect(md).toContain("## Cost & Performance");
   });
@@ -100,7 +101,7 @@ describe("generateMarkdown", () => {
     const md = generateMarkdown(BASE_DATA);
     expect(md).toContain("| 1 | Aspirin |");
     expect(md).toContain("0.92");
-    expect(md).toContain("-9.2");
+    expect(md).toContain("-9.20");
   });
 
   it("includes finding with source provenance", () => {
@@ -133,6 +134,6 @@ describe("generateMarkdown", () => {
     });
     expect(md).toContain("# Investigation Report");
     expect(md).not.toContain("## Research Question");
-    expect(md).not.toContain("## Candidate Molecules");
+    expect(md).not.toContain("## Candidates");
   });
 });

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from ehrlich.investigation.domain.domain_config import DomainConfig
     from ehrlich.investigation.domain.investigation import Investigation
 
 SCIENTIST_SYSTEM_PROMPT = """\
@@ -564,18 +565,7 @@ artifacts, redundant context.
 Respond with ONLY the compressed text, no preamble."""
 
 
-DOMAIN_CLASSIFICATION_PROMPT = """\
-Classify this research prompt into exactly one domain category.
-
-<categories>
-antimicrobial, neurodegenerative, oncology, environmental, \
-cardiovascular, metabolic, immunology, other
-</categories>
-
-Respond with ONLY the category name, nothing else."""
-
-
-VALID_DOMAINS = frozenset({
+_DEFAULT_CATEGORIES = frozenset({
     "antimicrobial",
     "neurodegenerative",
     "oncology",
@@ -585,6 +575,20 @@ VALID_DOMAINS = frozenset({
     "immunology",
     "other",
 })
+
+
+def build_domain_classification_prompt(
+    categories: frozenset[str] | None = None,
+) -> str:
+    """Build a domain classification prompt from registered categories."""
+    cats = categories or _DEFAULT_CATEGORIES
+    cats_with_other = cats | {"other"}
+    cat_str = ", ".join(sorted(cats_with_other))
+    return (
+        "Classify this research prompt into exactly one domain category.\n\n"
+        f"<categories>\n{cat_str}\n</categories>\n\n"
+        "Respond with ONLY the category name, nothing else."
+    )
 
 
 def build_multi_investigation_context(
@@ -607,10 +611,10 @@ def build_multi_investigation_context(
                     f"{h.statement}</hypothesis>"
                 )
         for c in inv.candidates[:2]:
-            score = c.prediction_score if c.prediction_score else 0
+            top_score = max(c.scores.values()) if c.scores else 0
             parts.append(
                 f"    <candidate rank='{c.rank}' "
-                f"smiles='{c.smiles}' score='{score:.2f}'>"
+                f"identifier='{c.identifier}' score='{top_score:.2f}'>"
                 f"{c.name or 'unnamed'}</candidate>"
             )
         if inv.summary:
@@ -618,6 +622,175 @@ def build_multi_investigation_context(
         parts.append("  </investigation>")
     parts.append("</prior_investigations>")
     return "\n".join(parts)
+
+
+def build_formulation_prompt(config: DomainConfig) -> str:
+    """Build Director formulation prompt adapted to the domain config."""
+    hyp_types = "|".join(config.hypothesis_types) if config.hypothesis_types else "other"
+    examples = config.director_examples or ""
+    return (
+        "You are the Director of a scientific discovery investigation. "
+        "You formulate hypotheses and design the research strategy but "
+        "do NOT execute tools yourself.\n\n"
+        "<instructions>\n"
+        "Given the user's research prompt and literature survey results, "
+        "formulate 2-4 testable hypotheses. Each hypothesis must be:\n"
+        "- Specific and falsifiable\n"
+        "- Grounded in the literature findings provided\n"
+        "- Testable with the available tools\n\n"
+        "If prior investigation results are provided in "
+        "<prior_investigations>, leverage their outcomes:\n"
+        "- Build on supported hypotheses from related investigations\n"
+        "- Avoid repeating refuted approaches\n"
+        "- Consider candidates already identified as starting points\n\n"
+        "Also identify 1-3 negative controls: subjects known to be "
+        "inactive, which will validate model reliability later.\n"
+        "</instructions>\n\n"
+        f"{examples}\n\n"
+        "<output_format>\n"
+        "Respond with ONLY valid JSON (no markdown fences):\n"
+        "{\n"
+        '  "hypotheses": [\n'
+        "    {\n"
+        '      "statement": "Specific testable hypothesis",\n'
+        '      "rationale": "Causal mechanism explaining HOW and WHY",\n'
+        '      "prediction": "If true, we expect to observe X",\n'
+        '      "null_prediction": "If false, we would observe Y instead",\n'
+        '      "success_criteria": "Quantitative threshold for support",\n'
+        '      "failure_criteria": "Quantitative threshold for refutation",\n'
+        '      "scope": "Boundary conditions",\n'
+        f'      "hypothesis_type": "{hyp_types}",\n'
+        '      "prior_confidence": 0.65\n'
+        "    }\n"
+        "  ],\n"
+        '  "negative_controls": [\n'
+        "    {\n"
+        '      "identifier": "identifier of known inactive subject",\n'
+        '      "name": "Name",\n'
+        '      "source": "Why this is a good negative control"\n'
+        "    }\n"
+        "  ]\n"
+        "}\n"
+        "</output_format>"
+    )
+
+
+def build_experiment_prompt(config: DomainConfig) -> str:
+    """Build Director experiment design prompt adapted to the domain config."""
+    examples = config.experiment_examples or ""
+    return (
+        "You are the Director designing an experiment to test a "
+        "hypothesis in a scientific discovery investigation.\n\n"
+        "<instructions>\n"
+        "Given the hypothesis and available tools, design a specific "
+        "experiment with:\n"
+        "- A clear description of what the experiment will test\n"
+        "- An ordered tool_plan listing the tools to execute\n"
+        "- Explicit success criteria (what supports the hypothesis)\n"
+        "- Explicit failure criteria (what refutes the hypothesis)\n"
+        "- Expected findings to look for\n"
+        "</instructions>\n\n"
+        f"{examples}\n\n"
+        "<output_format>\n"
+        "Respond with ONLY valid JSON (no markdown fences):\n"
+        "{\n"
+        '  "description": "What this experiment will do",\n'
+        '  "tool_plan": ["tool_name_1", "tool_name_2"],\n'
+        '  "success_criteria": "What result would support the hypothesis",\n'
+        '  "failure_criteria": "What result would refute the hypothesis",\n'
+        '  "expected_findings": ["what we expect to discover"]\n'
+        "}\n"
+        "</output_format>"
+    )
+
+
+def build_synthesis_prompt(config: DomainConfig) -> str:
+    """Build Director synthesis prompt adapted to the domain config."""
+    scoring = config.synthesis_scoring_instructions or ""
+    label = config.candidate_label or "Candidates"
+    return (
+        "You are the Director synthesizing the full investigation "
+        "results into a final report.\n\n"
+        "<instructions>\n"
+        "Review all hypothesis outcomes, findings, and negative controls "
+        "to produce a comprehensive synthesis. Your report must:\n"
+        "- Summarize hypothesis outcomes with confidence levels\n"
+        f"- Rank {label.lower()} by multi-criteria evidence strength\n"
+        "- Assess model reliability using negative control results\n"
+        "- Identify limitations and suggest follow-up experiments\n"
+        "- Include all relevant citations\n\n"
+        f"{scoring}\n"
+        "</instructions>\n\n"
+        "<output_format>\n"
+        "Respond with ONLY valid JSON (no markdown fences):\n"
+        "{\n"
+        '  "summary": "Comprehensive 2-3 paragraph summary",\n'
+        '  "candidates": [\n'
+        "    {\n"
+        '      "identifier": "identifier string",\n'
+        '      "identifier_type": "' + config.identifier_type + '",\n'
+        '      "name": "name",\n'
+        '      "rationale": "why this candidate is promising",\n'
+        '      "rank": 1,\n'
+        '      "scores": {},\n'
+        '      "attributes": {}\n'
+        "    }\n"
+        "  ],\n"
+        '  "citations": ["DOI or reference strings"],\n'
+        '  "hypothesis_assessments": [\n'
+        "    {\n"
+        '      "hypothesis_id": "h1",\n'
+        '      "statement": "the hypothesis",\n'
+        '      "status": "supported|refuted|revised",\n'
+        '      "confidence": 0.85,\n'
+        '      "key_evidence": "summary of evidence"\n'
+        "    }\n"
+        "  ],\n"
+        '  "negative_control_summary": "Summary of negative control results",\n'
+        '  "confidence": "high/medium/low",\n'
+        '  "limitations": ["known limitations"]\n'
+        "}\n"
+        "</output_format>"
+    )
+
+
+def build_researcher_prompt(config: DomainConfig) -> str:
+    """Build researcher experiment prompt adapted to the domain config."""
+    examples = config.experiment_examples or ""
+    return (
+        "You are a research scientist executing a specific experiment "
+        "to test a hypothesis in a scientific discovery investigation.\n\n"
+        "<instructions>\n"
+        "You have access to specialized tools for this domain. "
+        "The user's research question defines the domain. "
+        "Focus ONLY on the current experiment.\n\n"
+        "Search strategy:\n"
+        "- Start with short, broad queries to understand the landscape, "
+        "then narrow focus based on results.\n\n"
+        "Recording results:\n"
+        "- Call `record_finding` after each significant discovery, "
+        "always specifying hypothesis_id and evidence_type "
+        "('supporting' or 'contradicting').\n"
+        "- Include source_type and source_id for provenance tracing.\n"
+        "- Be quantitative: report exact numbers, scores, and "
+        "confidence intervals.\n\n"
+        "Boundaries:\n"
+        "- Do NOT call `conclude_investigation` -- the Director "
+        "synthesizes results.\n"
+        "- Do NOT call `propose_hypothesis`, `design_experiment`, or "
+        "`evaluate_hypothesis` -- those are Director responsibilities.\n"
+        "</instructions>\n\n"
+        f"{examples}\n\n"
+        "<rules>\n"
+        "1. Explain your scientific reasoning before each tool call.\n"
+        "2. Call `record_finding` after each significant discovery with "
+        "hypothesis_id and evidence_type.\n"
+        "3. Cite papers by DOI when referencing literature.\n"
+        "4. If a tool returns an error, try an alternative approach.\n"
+        "5. Be quantitative: report exact numbers and scores.\n"
+        "6. Use at least 3 tool calls in this experiment.\n"
+        "</rules>"
+    )
 
 
 def _build_prior_context(investigation: Investigation) -> str:

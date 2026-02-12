@@ -24,7 +24,7 @@ class DatasetNotFoundError(EhrlichError):
 class TargetNotFoundError(EhrlichError):
     def __init__(self, target_id: str) -> None:
         self.target_id = target_id
-        super().__init__(f"Protein target not found: {target_id}")
+        super().__init__(f"Target not found: {target_id}")
 
 
 class ExternalServiceError(EhrlichError):

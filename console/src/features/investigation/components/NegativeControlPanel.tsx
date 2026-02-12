@@ -42,13 +42,13 @@ export function NegativeControlPanel({ controls }: NegativeControlPanelProps) {
                 <td className="px-3 py-2">
                   <div className="font-medium">{nc.name || "Unknown"}</div>
                   <div className="font-mono text-[10px] text-muted-foreground">
-                    {nc.smiles.length > 30
-                      ? nc.smiles.slice(0, 30) + "..."
-                      : nc.smiles}
+                    {nc.identifier.length > 30
+                      ? nc.identifier.slice(0, 30) + "..."
+                      : nc.identifier}
                   </div>
                 </td>
                 <td className="px-3 py-2 text-right font-mono tabular-nums">
-                  {nc.prediction_score.toFixed(3)}
+                  {nc.score.toFixed(3)}
                 </td>
                 <td className="px-3 py-2 text-center">
                   {nc.correctly_classified ? (

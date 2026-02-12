@@ -1,10 +1,13 @@
-# Ehrlich - AI Molecular Discovery Engine
+# Ehrlich - AI Scientific Discovery Engine
 
 ## Project Overview
 
-Ehrlich is a domain-agnostic molecular discovery platform built for the Claude Code Hackathon (Feb 10-16, 2026). It uses Claude as a hypothesis-driven scientific reasoning engine with cheminformatics, ML, molecular simulation, and multi-source data tools. Named after Paul Ehrlich, the father of the "magic bullet" concept -- finding the right molecule for any target.
+Ehrlich is a domain-agnostic scientific discovery platform built for the Claude Code Hackathon (Feb 10-16, 2026). It uses Claude as a hypothesis-driven scientific reasoning engine that works across multiple scientific domains. Named after Paul Ehrlich, the father of the "magic bullet" concept.
 
-Ehrlich handles any molecular science question: antimicrobial resistance, Alzheimer's drug candidates, environmental toxicity, agricultural biocontrol, and beyond. The hypothesis-driven engine is domain-agnostic; the data sources make it universal.
+The hypothesis-driven engine is domain-agnostic: a pluggable `DomainConfig` + `DomainRegistry` system lets any scientific domain plug in with its own tools, score definitions, prompt examples, and visualization types. Currently supports two domains:
+
+- **Molecular Science** -- antimicrobial resistance, drug discovery, toxicology, agricultural biocontrol
+- **Sports Science** -- training protocol optimization, injury risk assessment, supplement evidence analysis
 
 ## Architecture
 
@@ -14,7 +17,7 @@ DDD monorepo: `server/` (Python 3.12) + `console/` (React 19 / TypeScript / Bun)
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, designs experiments, evaluates evidence, synthesizes (NO tools)
-Sonnet 4.5 (Researcher) -- Executes experiments with 30 tools (parallel: 2 experiments per batch)
+Sonnet 4.5 (Researcher) -- Executes experiments with 36 tools (parallel: 2 experiments per batch)
 Haiku 4.5 (Summarizer)  -- Compresses large tool outputs (>2000 chars)
 ```
 
@@ -30,7 +33,8 @@ Always uses `MultiModelOrchestrator`. Hypotheses tested in parallel batches of 2
 | analysis | `server/src/ehrlich/analysis/` | Dataset exploration (ChEMBL, PubChem), enrichment |
 | prediction | `server/src/ehrlich/prediction/` | ML models (Chemprop, XGBoost) |
 | simulation | `server/src/ehrlich/simulation/` | Docking, ADMET, resistance, target discovery (RCSB PDB), toxicity (EPA CompTox) |
-| investigation | `server/src/ehrlich/investigation/` | Multi-model agent orchestration + SQLite persistence |
+| sports | `server/src/ehrlich/sports/` | Sports science: evidence analysis, protocol comparison, injury risk, training metrics |
+| investigation | `server/src/ehrlich/investigation/` | Multi-model agent orchestration + SQLite persistence + domain registry |
 
 ### External Data Sources
 
@@ -99,9 +103,9 @@ type(scope): description
 
 Types: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`
 
-Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investigation, api, console, mol, data, ci, docs, infra
+Scopes: kernel, literature, chemistry, analysis, prediction, simulation, sports, investigation, api, console, mol, data, ci, docs, infra
 
-## Tools (30 Total)
+## Tools (36 Total)
 
 ### Chemistry (6) -- RDKit cheminformatics, domain-agnostic
 - `validate_smiles` -- Validate SMILES string
@@ -137,6 +141,14 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 - `fetch_toxicity_profile` -- EPA CompTox environmental toxicity data
 - `assess_resistance` -- Knowledge-based resistance mutation scoring
 
+### Sports Science (6) -- Evidence-based sports research
+- `search_sports_literature` -- Semantic Scholar with sports science context
+- `analyze_training_evidence` -- Pooled effect sizes, heterogeneity, evidence grading (A-D)
+- `compare_protocols` -- Evidence-weighted protocol comparison with composite scoring
+- `assess_injury_risk` -- Knowledge-based injury risk scoring (sport, load, history, age)
+- `compute_training_metrics` -- ACWR, monotony, strain, session RPE load
+- `search_supplement_evidence` -- Supplement efficacy literature search
+
 ### Investigation (6) -- Hypothesis lifecycle
 - `propose_hypothesis` -- Register testable hypothesis
 - `design_experiment` -- Plan experiment with tool sequence
@@ -161,10 +173,12 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 - **Protein targets**: YAML-configured (`data/targets/*.yaml`) + dynamic RCSB PDB discovery
 - **Resistance data**: YAML-configured (`data/resistance/*.yaml`), extensible per domain
 - 6 control tools: `propose_hypothesis`, `design_experiment`, `evaluate_hypothesis`, `record_finding`, `record_negative_control`, `conclude_investigation`
-- SSE streaming for real-time investigation updates (14 event types)
+- **Domain configuration**: `DomainConfig` defines per-domain tool tags, score definitions, prompt examples, visualization type; `DomainRegistry` auto-detects domain from classification; `DomainDetected` SSE event sends display config to frontend
+- **Tool tagging**: Tools tagged with frozenset domain tags (chemistry, analysis, prediction, simulation, sports, literature); investigation control tools are universal (no tags); researcher sees only domain-relevant tools
+- SSE streaming for real-time investigation updates (16 event types)
 - **Phase progress indicator**: `PhaseChanged` event tracks 5 orchestrator phases (Literature Survey → Formulation → Hypothesis Testing → Negative Controls → Synthesis); frontend renders 5-segment progress bar
 - **Streaming cost indicator**: `CostUpdate` event yields cost snapshots after each phase/batch; `CostBadge` updates progressively (not just at completion)
-- **Investigation templates**: 4 pre-built domain-agnostic prompts (MRSA, Alzheimer's, toxicology, oncology) on home page via `TemplateCards`
+- **Investigation templates**: 6 cross-domain prompts (4 molecular + 2 sports science) on home page via `TemplateCards` with domain badges
 - **Citation provenance**: `source_type` + `source_id` on findings, rendered as clickable badges linking to ChEMBL, PDB, DOI, PubChem, UniProt, Open Targets
 - **Markdown report export**: client-side markdown generation from InvestigationReport data, 8 sections, browser download
 - **Candidate comparison**: side-by-side scoring view for 2-4 selected candidates with best-in-group highlighting
@@ -219,13 +233,13 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 | `investigation/domain/hypothesis.py` | Hypothesis entity (statement, rationale, prediction, null_prediction, success/failure_criteria, scope, hypothesis_type, prior_confidence, confidence) + HypothesisStatus + HypothesisType enums |
 | `investigation/domain/experiment.py` | Experiment entity + ExperimentStatus enum |
 | `investigation/domain/negative_control.py` | NegativeControl frozen dataclass |
-| `investigation/domain/events.py` | 15 domain events (Hypothesis*, HypothesisApproval*, Experiment*, NegativeControl*, Finding, Tool*, Thinking, PhaseChanged, CostUpdate, Completed, Error) |
+| `investigation/domain/events.py` | 16 domain events (Hypothesis*, HypothesisApproval*, Experiment*, NegativeControl*, DomainDetected, Finding, Tool*, Thinking, PhaseChanged, CostUpdate, Completed, Error) |
 | `investigation/domain/repository.py` | InvestigationRepository ABC (save_event, get_events for audit trail) |
 | `investigation/infrastructure/sqlite_repository.py` | SQLite implementation with hypothesis/experiment/negative_control/event serialization |
 | `investigation/infrastructure/anthropic_client.py` | Anthropic API adapter with retry |
-| `api/routes/investigation.py` | REST + SSE endpoints, 27-tool registry, auto-selects orchestrator |
+| `api/routes/investigation.py` | REST + SSE endpoints, 36-tool registry with domain tagging, domain registry |
 | `api/routes/molecule.py` | Molecule depiction, conformer, descriptors, targets endpoints |
-| `api/sse.py` | Domain event to SSE conversion (15 types) |
+| `api/sse.py` | Domain event to SSE conversion (16 types) |
 
 ## Key Files (Data Source Clients)
 
@@ -276,8 +290,19 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, investi
 
 | File | Purpose |
 |------|---------|
-| `console/.../investigation/components/TemplateCards.tsx` | 4 domain-agnostic research prompt templates (MRSA, Alzheimer's, toxicology, oncology) |
+| `console/.../investigation/components/TemplateCards.tsx` | 6 cross-domain research prompt templates (4 molecular + 2 sports) with domain badges |
 | `console/.../investigation/components/PromptInput.tsx` | Controlled component (value/onChange props), parent owns state |
 | `console/.../investigation/components/CandidateComparison.tsx` | Side-by-side candidate scoring comparison (2-4 candidates) |
 | `console/.../investigation/components/HypothesisApprovalCard.tsx` | Approve/reject hypotheses before testing with POST to /approve |
 | `console/.../investigation/lib/export-markdown.ts` | Client-side markdown generation for 8-section report export |
+
+## Key Files (Domain Configuration)
+
+| File | Purpose |
+|------|---------|
+| `investigation/domain/domain_config.py` | `DomainConfig` + `ScoreDefinition` frozen dataclasses |
+| `investigation/domain/domain_registry.py` | `DomainRegistry`: register, detect, lookup domains |
+| `investigation/domain/domains/molecular.py` | `MOLECULAR_SCIENCE` config (tool tags, scores, prompt examples) |
+| `investigation/domain/domains/sports.py` | `SPORTS_SCIENCE` config (protocol-based, table visualization) |
+| `investigation/application/tool_registry.py` | `ToolRegistry` with domain tag filtering |
+| `sports/tools.py` | 6 sports science tools (literature, evidence, protocols, injury, metrics, supplements) |

@@ -48,12 +48,14 @@ function InvestigationPage() {
     currentPhase,
     approvalPending,
     pendingApprovalHypotheses,
+    domainConfig,
     error,
     activeToolName,
     experimentToolCount,
     experimentFindingCount,
   } = useSSE(streamUrl);
 
+  const showLabView = !domainConfig || domainConfig.visualization_type === "molecular";
   const [activeTab, setActiveTab] = useState<ViewTab>("lab");
   const [activeExperimentId, setActiveExperimentId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -198,7 +200,7 @@ function InvestigationPage() {
                 >
                   Timeline
                 </button>
-                {(["lab", "diagram"] as const).map((tab) => (
+                {([...(showLabView ? ["lab" as const] : []), "diagram" as const]).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -226,7 +228,7 @@ function InvestigationPage() {
                 </section>
               )}
 
-              {activeTab === "lab" && (
+              {showLabView && activeTab === "lab" && (
                 <section className="space-y-2">
                   <div>
                     <h3 className="border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -274,7 +276,7 @@ function InvestigationPage() {
 
               {candidates.length > 0 && (
                 <section>
-                  <CandidateTable candidates={candidates} />
+                  <CandidateTable candidates={candidates} domainConfig={domainConfig} />
                 </section>
               )}
 
@@ -302,7 +304,7 @@ function InvestigationPage() {
                 >
                   Timeline
                 </button>
-                {(["lab", "diagram"] as const).map((tab) => (
+                {([...(showLabView ? ["lab" as const] : []), "diagram" as const]).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
@@ -329,7 +331,7 @@ function InvestigationPage() {
                 </section>
               )}
 
-              {activeTab === "lab" && (
+              {showLabView && activeTab === "lab" && (
                 <section className="space-y-2">
                   <div>
                     <h3 className="border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -381,6 +383,7 @@ function InvestigationPage() {
                 candidates={candidates}
                 negativeControls={negativeControls}
                 cost={cost}
+                domainConfig={domainConfig}
               />
             </>
           )}

@@ -1,10 +1,10 @@
 # Ehrlich Roadmap
 
-Hackathon: Feb 10-16, 2026. Seven phases, each ending with something testable.
+Hackathon: Feb 10-16, 2026. Each phase ends with something testable.
 
 ---
 
-## Phase 0: Infrastructure (Day 1) -- DONE
+## Phase 0: Infrastructure (Feb 10) -- DONE
 
 - [x] Git init, LICENSE, README, CLAUDE.md, CHANGELOG
 - [x] Server scaffolding: pyproject.toml, uv, all bounded contexts (domain/application/infrastructure/tools)
@@ -21,7 +21,7 @@ Hackathon: Feb 10-16, 2026. Seven phases, each ending with something testable.
 
 ---
 
-## Phase 1: Chemistry Context (Day 2) -- DONE
+## Phase 1: Chemistry Context (Feb 10) -- DONE
 
 The foundation. Every other context depends on molecular processing.
 
@@ -54,7 +54,7 @@ The foundation. Every other context depends on molecular processing.
 
 ---
 
-## Phase 2: Literature + Analysis (Day 2-3) -- DONE
+## Phase 2: Literature + Analysis (Feb 10) -- DONE
 
 Two independent contexts. Can be built in parallel.
 
@@ -112,7 +112,7 @@ Two independent contexts. Can be built in parallel.
 
 ---
 
-## Phase 3: Prediction Context (Day 3-4) -- DONE
+## Phase 3: Prediction Context (Feb 10) -- DONE
 
 ML models for antimicrobial activity prediction.
 
@@ -153,7 +153,7 @@ ML models for antimicrobial activity prediction.
 
 ---
 
-## Phase 4: Simulation Context (Day 4) -- DONE
+## Phase 4: Simulation Context (Feb 10) -- DONE
 
 Molecular docking, ADMET prediction, resistance assessment.
 
@@ -197,7 +197,7 @@ Molecular docking, ADMET prediction, resistance assessment.
 
 ---
 
-## Phase 5: Investigation Agent (Day 4-5) -- DONE
+## Phase 5: Investigation Agent (Feb 10) -- DONE
 
 The core: Claude as an autonomous scientist.
 
@@ -209,7 +209,7 @@ The core: Claude as an autonomous scientist.
 - [x] Tests: mock API, verify request/response handling
 
 ### 5B. Tool Registry
-- [x] Register all 23 tools from all contexts (7 chemistry, 2 literature, 3 analysis, 3 prediction, 3 simulation, 5 investigation control)
+- [x] Register all tools from all contexts (6 chemistry, 2 literature, 6 analysis, 3 prediction, 7 simulation, 6 sports, 6 investigation control -- 36 total)
 - [x] Auto-generate JSON Schema from Python type hints + docstrings
 - [x] `get(name)` -> callable, `list_tools()` -> all registered tools, `list_schemas()` -> Anthropic-compatible schemas
 - [x] Schema format matches Anthropic tool_use specification
@@ -262,7 +262,7 @@ The core: Claude as an autonomous scientist.
 
 ---
 
-## Phase 6: Console Integration (Day 5-6) -- DONE
+## Phase 6: Console Integration (Feb 10) -- DONE
 
 Visualization and real-time streaming UI.
 
@@ -298,7 +298,7 @@ Visualization and real-time streaming UI.
 
 ---
 
-## Phase 7: Integration + Demo (Day 6-7) -- DONE
+## Phase 7: Integration + Demo (Feb 10) -- DONE
 
 ### 7A. End-to-End Validation
 - [x] E2E smoke test exercising full pipeline (tool registry, orchestrator dispatch, SSE events)
@@ -323,7 +323,7 @@ Visualization and real-time streaming UI.
 
 ---
 
-## Phase 8: Multi-Model Architecture + Polish (Day 7) -- DONE
+## Phase 8: Multi-Model Architecture + Polish (Feb 10) -- DONE
 
 Cost-efficient multi-model orchestration, persistence, and UI polish.
 
@@ -342,7 +342,7 @@ Cost-efficient multi-model orchestration, persistence, and UI polish.
 ### 8C. Multi-Model Orchestrator
 - [x] `MultiModelOrchestrator` with hypothesis-driven Director-Worker-Summarizer pattern
 - [x] Director (Opus) formulates hypotheses, designs experiments, evaluates evidence, synthesizes -- NO tool access
-- [x] Researcher (Sonnet) executes experiments with 23 tools (max 10 iterations per experiment)
+- [x] Researcher (Sonnet) executes experiments with 36 domain-filtered tools (max 10 iterations per experiment)
 - [x] Summarizer (Haiku) compresses large outputs exceeding threshold
 - [x] 7 prompts: director formulation/experiment/evaluation/synthesis, researcher experiment, scientist, summarizer
 - [x] Auto-fallback to single-model Orchestrator when researcher == director
@@ -383,7 +383,7 @@ Cost-efficient multi-model orchestration, persistence, and UI polish.
 
 ---
 
-## Phase 9: Molecule Visualization Suite (Day 7) -- DONE
+## Phase 9: Molecule Visualization Suite (Feb 10) -- DONE
 
 Full visualization: server-side 2D SVG depiction, 3Dmol.js for 3D/docking views, expandable candidate detail panel.
 
@@ -450,11 +450,34 @@ Phase 2A-D    Phase 2E-G
      Phase 8 (Multi-Model + Polish) -- DONE
            |
      Phase 9 (Molecule Visualization) -- DONE
-          |
+           |
      Phase 10A (Hypothesis-Driven Engine) -- DONE
+           |
+     Scientific Methodology Upgrade (cross-cutting) -- Phase 1 DONE, Phases 2-6 RESEARCHED
+           |
+     Domain-Agnostic Generalization -- DONE
+           |
+     Demo + Video -- TODO
+           |
+     Submission (Feb 16, 3PM ET) -- TODO
 ```
 
-## Phase 10A: Hypothesis-Driven Investigation Engine (Day 2) -- DONE
+## Scientific Methodology Upgrade (Cross-Cutting)
+
+Grounding every phase of the investigation workflow in established scientific methodology. Each phase gets the treatment that Phase 1 (Hypothesis) received: deep research, universal components, entity upgrades, prompt updates. See [`docs/scientific-methodology.md`](scientific-methodology.md) for full details.
+
+| # | Phase | Status |
+|---|-------|--------|
+| 1 | Hypothesis Formulation (Popper, Platt, Feynman, Bayesian) | DONE |
+| 2 | Literature Survey (PRISMA, evidence grading, bias assessment) | RESEARCHED |
+| 3 | Experiment Design (Fisher, controls, statistical power) | RESEARCHED |
+| 4 | Evidence Evaluation (evidence hierarchy, GRADE, effect sizes) | RESEARCHED |
+| 5 | Negative Controls (sensitivity/specificity, ROC, Z-factor) | RESEARCHED |
+| 6 | Synthesis (Cochrane, GRADE, strength of recommendation) | RESEARCHED |
+
+---
+
+## Phase 10A: Hypothesis-Driven Investigation Engine (Feb 10) -- DONE
 
 Replaced the linear 7-phase pipeline with a hypothesis-driven scientific method loop.
 
@@ -465,7 +488,7 @@ Replaced the linear 7-phase pipeline with a hypothesis-driven scientific method 
 ### Domain Layer
 - [x] `Hypothesis` entity: statement, rationale, status (proposed/testing/supported/refuted/revised), confidence, evidence lists
 - [x] `Experiment` entity: hypothesis_id, description, tool_plan, status, result_summary
-- [x] `NegativeControl` frozen dataclass: smiles, name, prediction_score, correctly_classified property
+- [x] `NegativeControl` frozen dataclass: identifier, identifier_type, score, threshold, correctly_classified property (generalized in Domain-Agnostic phase)
 - [x] `Finding` modified: `hypothesis_id` + `evidence_type` replace `phase`
 - [x] `Investigation` modified: hypotheses, experiments, negative_controls replace phases
 
@@ -499,7 +522,52 @@ Replaced the linear 7-phase pipeline with a hypothesis-driven scientific method 
 
 ---
 
-## Phase 10B: Additional Organisms (Day 2)
+## Domain-Agnostic Generalization (Feb 11-12) -- DONE
+
+Generalized the entire engine from molecular-science-specific to domain-agnostic. Proved the architecture works by adding Sports Science as a second domain.
+
+### Backend Entity Generalization
+- [x] `Candidate` entity: generic `identifier`/`identifier_type`/`scores`/`attributes` (replaces `smiles`/`prediction_score`/`docking_score`/`admet_score`/`resistance_risk`)
+- [x] `NegativeControl` entity: generic `identifier`/`identifier_type`/`score`/`threshold` (replaces `smiles`/`prediction_score`)
+- [x] `NegativeControlRecorded` event: generic fields
+- [x] SQLite serialization updated for new field names
+- [x] All 274 existing tests pass after entity changes
+
+### Domain Configuration + Tool Tagging
+- [x] `DomainConfig` + `ScoreDefinition` frozen dataclasses
+- [x] `DomainRegistry`: register, detect by classified category, list template prompts
+- [x] `MOLECULAR_SCIENCE` config (6 tool tags, 3 scores, 4 templates, multishot examples)
+- [x] `SPORTS_SCIENCE` config (2 tool tags, 3 scores, 2 templates, multishot examples)
+- [x] `ToolRegistry` with domain tag filtering (`list_schemas_for_domain`, `list_tools_for_domain`)
+- [x] Tools tagged: chemistry, analysis, prediction, simulation, sports, literature; investigation control universal
+- [x] `DomainDetected` SSE event (16th event type) sends display config to frontend
+
+### Prompt Template Generalization
+- [x] Builder functions: `build_scientist_prompt()`, `build_formulation_prompt()`, `build_experiment_prompt()`, `build_synthesis_prompt()`
+- [x] Dynamic domain classification from all registered domain categories
+- [x] HypothesisType enum expanded: PHYSIOLOGICAL, PERFORMANCE, EPIDEMIOLOGICAL
+
+### Frontend Generalization
+- [x] Dynamic score columns from `DomainDisplayConfig` (replaces hardcoded Pred/Dock/ADMET/Resist)
+- [x] Conditional MolViewer2D: only when `identifier_type === "smiles"`
+- [x] Conditional Lab View tab: only when `visualization_type === "molecular"`
+- [x] 6 template cards (4 molecular + 2 sports) with domain badges
+- [x] Generic candidate comparison, negative control panel, markdown export
+
+### Sports Science Bounded Context (6 new tools)
+- [x] `search_sports_literature` -- Semantic Scholar with sports context
+- [x] `analyze_training_evidence` -- effect sizes, heterogeneity, evidence grading (A-D)
+- [x] `compare_protocols` -- evidence-weighted composite scoring
+- [x] `assess_injury_risk` -- knowledge-based multi-factor risk scoring
+- [x] `compute_training_metrics` -- ACWR, monotony, strain, RPE load
+- [x] `search_supplement_evidence` -- supplement meta-analysis search
+- [x] 14 new sports tests, all passing
+
+**Verification:** 288 server tests, 107 console tests. All quality gates green: ruff 0, mypy 0 (117 files), tsc 0, vitest 107/107.
+
+---
+
+## Phase 10B: Additional Organisms -- BACKLOG
 
 Expand beyond MRSA to cover the WHO critical/high-priority pathogens.
 
@@ -529,7 +597,7 @@ Expand beyond MRSA to cover the WHO critical/high-priority pathogens.
 
 ---
 
-## Phase 11: Investigation Comparison (Day 3)
+## Phase 11: Investigation Comparison -- BACKLOG
 
 Side-by-side comparison of investigation runs for reproducibility and consensus analysis.
 
@@ -554,14 +622,14 @@ Side-by-side comparison of investigation runs for reproducibility and consensus 
 
 ---
 
-## Phase 12: MCP Server (Day 4-5)
+## Phase 12: MCP Server -- BACKLOG
 
 Expose Ehrlich as a tool server for Claude Code / Claude Desktop via Model Context Protocol.
 
 ### 12A. MCP Transport
 - [ ] Stdio transport for Claude Code integration
 - [ ] SSE transport for Claude Desktop / remote clients
-- [ ] Tool registration: expose all 23 Ehrlich tools as MCP tools
+- [ ] Tool registration: expose all 36 Ehrlich tools as MCP tools
 
 ### 12B. Investigation Tool
 - [ ] `start_investigation(prompt, organism)` -- kick off full investigation, return ID

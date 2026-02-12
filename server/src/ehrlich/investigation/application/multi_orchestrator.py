@@ -11,16 +11,20 @@ from ehrlich.investigation.application.prompts import (
     DIRECTOR_EXPERIMENT_PROMPT,
     DIRECTOR_FORMULATION_PROMPT,
     DIRECTOR_SYNTHESIS_PROMPT,
-    DOMAIN_CLASSIFICATION_PROMPT,
     RESEARCHER_EXPERIMENT_PROMPT,
     SUMMARIZER_PROMPT,
-    VALID_DOMAINS,
+    build_domain_classification_prompt,
+    build_experiment_prompt,
+    build_formulation_prompt,
     build_multi_investigation_context,
+    build_researcher_prompt,
+    build_synthesis_prompt,
 )
 from ehrlich.investigation.application.tool_cache import ToolCache
 from ehrlich.investigation.domain.candidate import Candidate
 from ehrlich.investigation.domain.events import (
     CostUpdate,
+    DomainDetected,
     DomainEvent,
     ExperimentCompleted,
     ExperimentStarted,
@@ -47,6 +51,8 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
     from ehrlich.investigation.application.tool_registry import ToolRegistry
+    from ehrlich.investigation.domain.domain_config import DomainConfig
+    from ehrlich.investigation.domain.domain_registry import DomainRegistry
     from ehrlich.investigation.domain.repository import InvestigationRepository
     from ehrlich.investigation.infrastructure.anthropic_client import AnthropicClientAdapter
 
@@ -87,6 +93,7 @@ class MultiModelOrchestrator:
         summarizer_threshold: int = 2000,
         require_approval: bool = False,
         repository: InvestigationRepository | None = None,
+        domain_registry: DomainRegistry | None = None,
     ) -> None:
         self._director = director
         self._researcher = researcher
@@ -97,6 +104,9 @@ class MultiModelOrchestrator:
         self._summarizer_threshold = summarizer_threshold
         self._require_approval = require_approval
         self._repository = repository
+        self._domain_registry = domain_registry
+        self._active_config: DomainConfig | None = None
+        self._researcher_prompt = RESEARCHER_EXPERIMENT_PROMPT
         self._cache = ToolCache()
         self._state_lock = asyncio.Lock()
         self._approval_event = asyncio.Event()
@@ -147,8 +157,14 @@ class MultiModelOrchestrator:
             # Classify domain via Haiku and build prior investigation context
             prior_context = ""
             if self._repository:
+                valid_categories: frozenset[str] = frozenset()
+                if self._domain_registry:
+                    valid_categories = self._domain_registry.all_categories()
+                classification_prompt = build_domain_classification_prompt(
+                    valid_categories
+                )
                 domain_response = await self._summarizer.create_message(
-                    system=DOMAIN_CLASSIFICATION_PROMPT,
+                    system=classification_prompt,
                     messages=[{"role": "user", "content": investigation.prompt}],
                     tools=[],
                 )
@@ -157,12 +173,25 @@ class MultiModelOrchestrator:
                     if domain_response.content
                     else "other"
                 )
-                investigation.domain = domain_text if domain_text in VALID_DOMAINS else "other"
+                investigation.domain = domain_text
                 cost.add_usage(
                     domain_response.input_tokens,
                     domain_response.output_tokens,
                     self._summarizer.model,
                 )
+
+                # Detect domain config and yield event
+                if self._domain_registry:
+                    self._active_config = self._domain_registry.detect(domain_text)
+                    self._researcher_prompt = build_researcher_prompt(
+                        self._active_config
+                    )
+                    yield DomainDetected(
+                        domain=self._active_config.name,
+                        display_config=self._active_config.to_display_dict(),
+                        investigation_id=investigation.id,
+                    )
+
                 all_investigations = await self._repository.list_all()
                 related = [
                     inv for inv in all_investigations
@@ -181,9 +210,14 @@ class MultiModelOrchestrator:
                 investigation_id=investigation.id,
             )
             prior_section = f"\n\n{prior_context}" if prior_context else ""
+            formulation_prompt = (
+                build_formulation_prompt(self._active_config)
+                if self._active_config
+                else DIRECTOR_FORMULATION_PROMPT
+            )
             formulation = await self._director_call(
                 cost,
-                DIRECTOR_FORMULATION_PROMPT,
+                formulation_prompt,
                 f"Research prompt: {investigation.prompt}\n\n"
                 f"Literature survey results:\n{literature_summary[:3000]}\n\n"
                 f"Findings so far:\n"
@@ -281,12 +315,24 @@ class MultiModelOrchestrator:
                     tested += 1
 
                     # Director designs experiment
-                    tools_csv = ", ".join(
-                        self._registry.list_tools()
+                    if self._active_config:
+                        tools_csv = ", ".join(
+                            self._registry.list_tools_for_domain(
+                                self._active_config.tool_tags
+                            )
+                        )
+                    else:
+                        tools_csv = ", ".join(
+                            self._registry.list_tools()
+                        )
+                    experiment_prompt = (
+                        build_experiment_prompt(self._active_config)
+                        if self._active_config
+                        else DIRECTOR_EXPERIMENT_PROMPT
                     )
                     design = await self._director_call(
                         cost,
-                        DIRECTOR_EXPERIMENT_PROMPT,
+                        experiment_prompt,
                         f"Research prompt: {investigation.prompt}"
                         f"\n\nHypothesis to test: "
                         f"{hypothesis.statement}\n"
@@ -443,21 +489,23 @@ class MultiModelOrchestrator:
                 investigation_id=investigation.id,
             )
             for nc_data in neg_control_suggestions:
-                smiles = nc_data.get("smiles", "")
+                identifier = nc_data.get("identifier", nc_data.get("smiles", ""))
                 name = nc_data.get("name", "")
                 source = nc_data.get("source", "")
-                if smiles:
+                if identifier:
                     control = NegativeControl(
-                        smiles=smiles,
+                        identifier=identifier,
+                        identifier_type=nc_data.get("identifier_type", ""),
                         name=name,
-                        prediction_score=0.0,
+                        score=0.0,
                         source=source,
                     )
                     investigation.add_negative_control(control)
                     yield NegativeControlRecorded(
-                        smiles=smiles,
+                        identifier=identifier,
+                        identifier_type=control.identifier_type,
                         name=name,
-                        prediction_score=0.0,
+                        score=0.0,
                         correctly_classified=True,
                         investigation_id=investigation.id,
                     )
@@ -478,13 +526,18 @@ class MultiModelOrchestrator:
                 for h in investigation.hypotheses
             )
             nc_text = "\n".join(
-                f"- {nc.name}: score={nc.prediction_score}, correct={nc.correctly_classified}"
+                f"- {nc.name}: score={nc.score}, correct={nc.correctly_classified}"
                 for nc in investigation.negative_controls
             )
 
+            synthesis_prompt = (
+                build_synthesis_prompt(self._active_config)
+                if self._active_config
+                else DIRECTOR_SYNTHESIS_PROMPT
+            )
             synthesis = await self._director_call(
                 cost,
-                DIRECTOR_SYNTHESIS_PROMPT,
+                synthesis_prompt,
                 f"Original prompt: {investigation.prompt}\n\n"
                 f"Hypothesis outcomes:\n{hypothesis_text}\n\n"
                 f"All findings:\n{all_findings_text}\n\n"
@@ -497,14 +550,19 @@ class MultiModelOrchestrator:
             raw_candidates = synthesis.get("candidates") or []
             candidates = [
                 Candidate(
-                    smiles=c.get("smiles", ""),
+                    identifier=c.get("identifier", c.get("smiles", "")),
+                    identifier_type=c.get("identifier_type", ""),
                     name=c.get("name", ""),
                     notes=c.get("rationale", c.get("notes", "")),
                     rank=c.get("rank", i + 1),
-                    prediction_score=float(c.get("prediction_score", 0.0)),
-                    docking_score=float(c.get("docking_score", 0.0)),
-                    admet_score=float(c.get("admet_score", 0.0)),
-                    resistance_risk=c.get("resistance_risk", "unknown"),
+                    scores={
+                        k: float(v)
+                        for k, v in c.get("scores", {}).items()
+                        if isinstance(v, (int, float))
+                    },
+                    attributes={
+                        k: str(v) for k, v in c.get("attributes", {}).items()
+                    },
                 )
                 for i, c in enumerate(raw_candidates)
             ]
@@ -516,14 +574,13 @@ class MultiModelOrchestrator:
 
             candidate_dicts = [
                 {
-                    "smiles": c.smiles,
+                    "identifier": c.identifier,
+                    "identifier_type": c.identifier_type,
                     "name": c.name,
                     "rank": c.rank,
                     "notes": c.notes,
-                    "prediction_score": c.prediction_score,
-                    "docking_score": c.docking_score,
-                    "admet_score": c.admet_score,
-                    "resistance_risk": c.resistance_risk,
+                    "scores": c.scores,
+                    "attributes": c.attributes,
                 }
                 for c in candidates
             ]
@@ -552,9 +609,11 @@ class MultiModelOrchestrator:
             ]
             nc_dicts = [
                 {
-                    "smiles": nc.smiles,
+                    "identifier": nc.identifier,
+                    "identifier_type": nc.identifier_type,
                     "name": nc.name,
-                    "prediction_score": nc.prediction_score,
+                    "score": nc.score,
+                    "threshold": nc.threshold,
                     "correctly_classified": nc.correctly_classified,
                     "source": nc.source,
                 }
@@ -660,7 +719,7 @@ class MultiModelOrchestrator:
         for _iteration in range(self._max_iterations_per_experiment):
             investigation.iteration += 1
             response = await self._researcher.create_message(
-                system=RESEARCHER_EXPERIMENT_PROMPT,
+                system=self._researcher_prompt,
                 messages=messages,
                 tools=tool_schemas,
             )
@@ -756,6 +815,17 @@ class MultiModelOrchestrator:
         if planned:
             allowed = planned | control_tools
             tool_schemas = [t for t in self._registry.list_schemas() if t["name"] in allowed]
+        elif self._active_config:
+            excluded = {
+                "conclude_investigation",
+                "propose_hypothesis",
+                "design_experiment",
+                "evaluate_hypothesis",
+            }
+            domain_schemas = self._registry.list_schemas_for_domain(
+                self._active_config.tool_tags
+            )
+            tool_schemas = [t for t in domain_schemas if t["name"] not in excluded]
         else:
             excluded = {
                 "conclude_investigation",
@@ -788,7 +858,7 @@ class MultiModelOrchestrator:
         for _iteration in range(self._max_iterations_per_experiment):
             investigation.iteration += 1
             response = await self._researcher.create_message(
-                system=RESEARCHER_EXPERIMENT_PROMPT,
+                system=self._researcher_prompt,
                 messages=messages,
                 tools=tool_schemas,
             )
@@ -901,19 +971,25 @@ class MultiModelOrchestrator:
 
                 if tool_name == "record_negative_control":
                     control = NegativeControl(
-                        smiles=tool_input.get("smiles", ""),
-                        name=tool_input.get("name", ""),
-                        prediction_score=float(
-                            tool_input.get("prediction_score", 0.0)
+                        identifier=tool_input.get(
+                            "identifier", tool_input.get("smiles", "")
                         ),
+                        identifier_type=tool_input.get("identifier_type", ""),
+                        name=tool_input.get("name", ""),
+                        score=float(
+                            tool_input.get("score", tool_input.get("prediction_score", 0.0))
+                        ),
+                        threshold=float(tool_input.get("threshold", 0.5)),
                         source=tool_input.get("source", ""),
                     )
                     async with self._state_lock:
                         investigation.add_negative_control(control)
                     yield NegativeControlRecorded(
-                        smiles=control.smiles,
+                        identifier=control.identifier,
+                        identifier_type=control.identifier_type,
                         name=control.name,
-                        prediction_score=control.prediction_score,
+                        score=control.score,
+                        threshold=control.threshold,
                         correctly_classified=(
                             control.correctly_classified
                         ),

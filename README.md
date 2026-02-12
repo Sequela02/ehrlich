@@ -1,25 +1,30 @@
 # Ehrlich
 
-AI-powered molecular discovery engine. Ehrlich uses Claude as a hypothesis-driven scientific reasoning engine combined with cheminformatics, machine learning, molecular simulation, and multi-source data tools to investigate any molecular science question.
+AI-powered scientific discovery engine. Ehrlich uses Claude as a hypothesis-driven scientific reasoning engine that works across multiple scientific domains. The core engine is domain-agnostic: a pluggable `DomainConfig` system lets any domain bring its own tools, scoring, and visualization.
 
-Named after Paul Ehrlich, the father of the "magic bullet" -- finding the right molecule for any target.
+Named after Paul Ehrlich, the father of the "magic bullet" -- finding the right answer for any question.
 
 Built for the [Claude Code Hackathon](https://docs.anthropic.com/en/docs/claude-code-hackathon) (Feb 10-16, 2026).
 
 ## What Can Ehrlich Investigate?
 
-Ehrlich is **domain-agnostic**. The hypothesis-driven engine works for any question expressible as "find, analyze, predict, rank molecules":
+Ehrlich is **domain-agnostic**. The hypothesis-driven engine works for any scientific domain:
 
+### Molecular Science
 - **Antimicrobial resistance** -- "Find novel compounds active against MRSA"
 - **Drug discovery** -- "What compounds in Lycopodium selago could treat Alzheimer's?"
 - **Environmental toxicology** -- "Which microplastic degradation products are most toxic?"
 - **Agricultural biocontrol** -- "Find biocontrol molecules from endophytic bacteria in Mammillaria"
-- **Antifungal/antiviral** -- "Screen compounds against fungal CYP51"
 - **Any molecular target** -- dynamic protein target discovery from 200K+ PDB structures
+
+### Sports Science
+- **Training optimization** -- "What are the most effective protocols for improving VO2max?"
+- **Injury prevention** -- "Evaluate ACL injury prevention programs for female soccer players"
+- **Supplement evidence** -- "What is the evidence for creatine on strength performance?"
 
 ## Architecture
 
-Ehrlich follows Domain-Driven Design with seven bounded contexts:
+Ehrlich follows Domain-Driven Design with eight bounded contexts:
 
 | Context | Purpose |
 |---------|---------|
@@ -29,7 +34,8 @@ Ehrlich follows Domain-Driven Design with seven bounded contexts:
 | **analysis** | Dataset exploration (ChEMBL, PubChem), substructure enrichment |
 | **prediction** | ML modeling: train, predict, ensemble, cluster |
 | **simulation** | Molecular docking, ADMET, resistance, target discovery (RCSB PDB), toxicity (EPA CompTox) |
-| **investigation** | Multi-model agent orchestration with Director-Worker-Summarizer pattern |
+| **sports** | Sports science: evidence analysis, protocol comparison, injury risk, training metrics |
+| **investigation** | Multi-model agent orchestration with Director-Worker-Summarizer pattern + domain registry |
 
 ### Multi-Model Architecture
 
@@ -37,7 +43,7 @@ Ehrlich uses a three-tier Claude model architecture for cost-efficient investiga
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesizes (3-5 calls)
-Sonnet 4.5 (Researcher) -- Executes experiments with 30 tools (10-20 calls)
+Sonnet 4.5 (Researcher) -- Executes experiments with 36 tools (10-20 calls)
 Haiku 4.5 (Summarizer)  -- Compresses large outputs, classifies domains (5-10 calls)
 ```
 
@@ -58,7 +64,7 @@ Cost: ~$3-4 per investigation (vs ~$11 with all-Opus).
 
 All data sources are free and open-access.
 
-## 30 Tools
+## 36 Tools
 
 | Context | Tool | Description |
 |---------|------|-------------|
@@ -75,6 +81,7 @@ All data sources are free and open-access.
 | Analysis | `search_compounds` | PubChem compound search |
 | Analysis | `analyze_substructures` | Chi-squared enrichment analysis |
 | Analysis | `compute_properties` | Property distributions (active vs inactive) |
+| Analysis | `search_pharmacology` | GtoPdb curated receptor/ligand interactions |
 | Prediction | `train_model` | Train XGBoost/Chemprop on any SMILES+activity data |
 | Prediction | `predict_candidates` | Score compounds with trained model |
 | Prediction | `cluster_compounds` | Butina structural clustering |
@@ -85,7 +92,12 @@ All data sources are free and open-access.
 | Simulation | `assess_resistance` | Resistance mutation scoring |
 | Simulation | `get_protein_annotation` | UniProt protein function and disease links |
 | Simulation | `search_disease_targets` | Open Targets disease-target associations |
-| Analysis | `search_pharmacology` | GtoPdb curated receptor/ligand interactions |
+| Sports | `search_sports_literature` | Sports science literature via Semantic Scholar |
+| Sports | `analyze_training_evidence` | Pooled effect sizes, heterogeneity, evidence grading |
+| Sports | `compare_protocols` | Evidence-weighted protocol comparison |
+| Sports | `assess_injury_risk` | Knowledge-based injury risk scoring |
+| Sports | `compute_training_metrics` | ACWR, monotony, strain, session RPE load |
+| Sports | `search_supplement_evidence` | Supplement efficacy literature search |
 | Investigation | `propose_hypothesis` | Register testable hypothesis |
 | Investigation | `design_experiment` | Plan experiment with tool sequence |
 | Investigation | `evaluate_hypothesis` | Assess outcome with confidence score |
@@ -209,6 +221,7 @@ Server at :8000, Console at :3000.
 | `phase_changed` | Investigation phase transition (1-5) |
 | `cost_update` | Progressive cost/token snapshot |
 | `hypothesis_approval_requested` | Awaiting user approval of hypotheses |
+| `domain_detected` | Domain identified with display config |
 | `completed` | Investigation finished with candidates and cost |
 | `error` | Error occurred |
 
@@ -217,11 +230,12 @@ Server at :8000, Console at :3000.
 1. Start the server: `cd server && uv run uvicorn ehrlich.api.app:create_app --factory --port 8000`
 2. Start the console: `cd console && bun dev`
 3. Open http://localhost:5173
-4. Type any molecular science research question, for example:
+4. Type any research question or pick a template, for example:
    - *"Find novel antimicrobial candidates against MRSA"*
    - *"What compounds in Lycopodium selago could treat Alzheimer's?"*
    - *"Which microplastic degradation products are most toxic?"*
-   - *"Find compounds active against Acinetobacter baumannii"*
+   - *"What are the most effective training protocols for improving VO2max?"*
+   - *"Evaluate ACL injury prevention programs for female soccer players"*
 5. Watch the investigation unfold in real-time via SSE streaming
 6. See the Live Lab: 3D molecular scene updates as experiments run -- proteins load, ligands dock, candidates glow by score
 7. View ranked candidates with 2D structure thumbnails in the results table

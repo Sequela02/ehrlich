@@ -72,9 +72,10 @@ class TestDomainEventToSSE:
 
     def test_negative_control(self) -> None:
         event = NegativeControlRecorded(
-            smiles="CCO",
+            identifier="CCO",
+            identifier_type="smiles",
             name="Ethanol",
-            prediction_score=0.1,
+            score=0.1,
             correctly_classified=True,
             investigation_id="inv-1",
         )

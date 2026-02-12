@@ -89,6 +89,11 @@ const LABEL_MAP: Record<string, string> = {
   qed: "QED",
   hbd: "HBD",
   hba: "HBA",
+  vo2max: "VO2max",
+  hr: "HR",
+  rpe: "RPE",
+  "1rm": "1RM",
+  bmi: "BMI",
 };
 
 function normalizeLabel(raw: string): string {

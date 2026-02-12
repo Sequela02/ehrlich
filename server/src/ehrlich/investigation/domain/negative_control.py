@@ -5,12 +5,14 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class NegativeControl:
-    smiles: str
-    name: str
-    prediction_score: float
+    identifier: str
+    identifier_type: str = ""
+    name: str = ""
+    score: float = 0.0
+    threshold: float = 0.5
     expected_inactive: bool = True
     source: str = ""
 
     @property
     def correctly_classified(self) -> bool:
-        return self.prediction_score < 0.5
+        return self.score < self.threshold

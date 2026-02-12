@@ -116,7 +116,8 @@ class TestUpdate:
         inv.set_candidates(
             [
                 Candidate(
-                    smiles="CC(=O)Oc1ccccc1C(=O)O",
+                    identifier="CC(=O)Oc1ccccc1C(=O)O",
+                    identifier_type="smiles",
                     name="Aspirin",
                     rank=1,
                     notes="Good candidate",
@@ -131,7 +132,7 @@ class TestUpdate:
         assert len(retrieved.findings) == 1
         assert retrieved.findings[0].title == "Key insight"
         assert len(retrieved.candidates) == 1
-        assert retrieved.candidates[0].smiles == "CC(=O)Oc1ccccc1C(=O)O"
+        assert retrieved.candidates[0].identifier == "CC(=O)Oc1ccccc1C(=O)O"
         assert retrieved.citations == ["10.1234/test"]
 
     @pytest.mark.asyncio

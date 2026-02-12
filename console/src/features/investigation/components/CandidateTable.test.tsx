@@ -12,8 +12,8 @@ describe("CandidateTable", () => {
     render(
       <CandidateTable
         candidates={[
-          { smiles: "CCO", name: "Ethanol", rank: 1, notes: "Top candidate" },
-          { smiles: "c1ccccc1", name: "Benzene", rank: 2, notes: "" },
+          { identifier: "CCO", identifier_type: "smiles", name: "Ethanol", rank: 1, notes: "Top candidate", scores: {}, attributes: {} },
+          { identifier: "c1ccccc1", identifier_type: "smiles", name: "Benzene", rank: 2, notes: "", scores: {}, attributes: {} },
         ]}
       />,
     );
@@ -33,7 +33,7 @@ describe("CandidateTable", () => {
   it("renders structure column header", () => {
     render(
       <CandidateTable
-        candidates={[{ smiles: "CCO", name: "Ethanol", rank: 1, notes: "" }]}
+        candidates={[{ identifier: "CCO", identifier_type: "smiles", name: "Ethanol", rank: 1, notes: "", scores: {}, attributes: {} }]}
       />,
     );
     expect(screen.getAllByText("Structure").length).toBeGreaterThanOrEqual(1);
