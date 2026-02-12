@@ -13,3 +13,4 @@ export { NegativeControlPanel } from "./NegativeControlPanel";
 export { LiveLabViewer } from "./LiveLabViewer";
 export { InvestigationDiagram } from "./InvestigationDiagram";
 export { TemplateCards } from "./TemplateCards";
+export { CandidateComparison } from "./CandidateComparison";

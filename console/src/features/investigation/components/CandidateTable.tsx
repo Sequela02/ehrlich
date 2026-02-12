@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, GitCompareArrows } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { MolViewer2D } from "@/features/molecule/components/MolViewer2D";
 import type { CandidateRow } from "../types";
 import { CandidateDetail } from "./CandidateDetail";
+import { CandidateComparison } from "./CandidateComparison";
 
 interface CandidateTableProps {
   candidates: CandidateRow[];
@@ -11,6 +12,8 @@ interface CandidateTableProps {
 
 export function CandidateTable({ candidates }: CandidateTableProps) {
   const [expandedRank, setExpandedRank] = useState<number | null>(null);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [comparing, setComparing] = useState(false);
 
   if (candidates.length === 0) {
     return null;
@@ -24,15 +27,49 @@ export function CandidateTable({ candidates }: CandidateTableProps) {
       (c.resistance_risk && c.resistance_risk !== "unknown"),
   );
 
+  function toggleSelect(rank: number) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(rank)) {
+        next.delete(rank);
+      } else if (next.size < 4) {
+        next.add(rank);
+      }
+      return next;
+    });
+  }
+
+  if (comparing && selected.size >= 2) {
+    const compCandidates = candidates.filter((c) => selected.has(c.rank));
+    return (
+      <CandidateComparison
+        candidates={compCandidates}
+        onClose={() => setComparing(false)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-3">
-      <div>
-        <h3 className="border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-          Ranked Candidates
-        </h3>
-        <p className="mt-1 pl-3 text-[11px] leading-relaxed text-muted-foreground/50">
-          Top molecules identified by the investigation. Click a row to view 3D structure, properties, and drug-likeness profile.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            Ranked Candidates
+          </h3>
+          <p className="mt-1 pl-3 text-[11px] leading-relaxed text-muted-foreground/50">
+            Top molecules identified by the investigation. Click a row to view 3D structure, properties, and drug-likeness profile.
+          </p>
+        </div>
+        {candidates.length >= 2 && (
+          <button
+            onClick={() => setComparing(true)}
+            disabled={selected.size < 2}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 font-mono text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground disabled:opacity-40 disabled:hover:border-border disabled:hover:text-muted-foreground"
+          >
+            <GitCompareArrows className="h-3.5 w-3.5" />
+            Compare{selected.size > 0 ? ` (${selected.size})` : ""}
+          </button>
+        )}
       </div>
       {hasScores && (
         <div className="rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-[11px] text-muted-foreground">
@@ -47,6 +84,7 @@ export function CandidateTable({ candidates }: CandidateTableProps) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50 text-left">
+              {candidates.length >= 2 && <th className="w-8 px-2 py-2" />}
               <th className="w-8 px-2 py-2" />
               <th className="px-3 py-2 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 Rank
@@ -87,9 +125,12 @@ export function CandidateTable({ candidates }: CandidateTableProps) {
                   candidate={c}
                   isExpanded={isExpanded}
                   hasScores={hasScores}
+                  isSelected={selected.has(c.rank)}
+                  showSelect={candidates.length >= 2}
                   onToggle={() =>
                     setExpandedRank(isExpanded ? null : c.rank)
                   }
+                  onSelect={() => toggleSelect(c.rank)}
                 />
               );
             })}
@@ -154,15 +195,21 @@ function CandidateRowComponent({
   candidate,
   isExpanded,
   hasScores,
+  isSelected,
+  showSelect,
   onToggle,
+  onSelect,
 }: {
   candidate: CandidateRow;
   isExpanded: boolean;
   hasScores: boolean;
+  isSelected: boolean;
+  showSelect: boolean;
   onToggle: () => void;
+  onSelect: () => void;
 }) {
   const Chevron = isExpanded ? ChevronDown : ChevronRight;
-  const colSpan = hasScores ? 9 : 5;
+  const colSpan = (hasScores ? 9 : 5) + (showSelect ? 1 : 0);
 
   return (
     <>
@@ -170,6 +217,20 @@ function CandidateRowComponent({
         className="cursor-pointer border-b border-border/30 last:border-0 hover:bg-muted/30"
         onClick={onToggle}
       >
+        {showSelect && (
+          <td className="px-2 py-2">
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={(e) => {
+                e.stopPropagation();
+                onSelect();
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="h-3.5 w-3.5 rounded border-border accent-primary"
+            />
+          </td>
+        )}
         <td className="px-2 py-2">
           <Chevron className="h-4 w-4 text-muted-foreground" />
         </td>
