@@ -50,6 +50,12 @@ export interface Experiment {
   status: string;
   tool_count?: number;
   finding_count?: number;
+  independent_variable?: string;
+  dependent_variable?: string;
+  controls?: string[];
+  analysis_plan?: string;
+  success_criteria?: string;
+  failure_criteria?: string;
 }
 
 export interface NegativeControl {
@@ -81,6 +87,12 @@ export interface ExperimentStartedData {
   experiment_id: string;
   hypothesis_id: string;
   description: string;
+  independent_variable?: string;
+  dependent_variable?: string;
+  controls?: string[];
+  analysis_plan?: string;
+  success_criteria?: string;
+  failure_criteria?: string;
   investigation_id: string;
 }
 

@@ -199,6 +199,13 @@ def _experiment_to_dict(e: Experiment) -> dict[str, Any]:
         "status": e.status.value,
         "result_summary": e.result_summary,
         "supports_hypothesis": e.supports_hypothesis,
+        "independent_variable": e.independent_variable,
+        "dependent_variable": e.dependent_variable,
+        "controls": e.controls,
+        "confounders": e.confounders,
+        "analysis_plan": e.analysis_plan,
+        "success_criteria": e.success_criteria,
+        "failure_criteria": e.failure_criteria,
     }
 
 
@@ -273,6 +280,13 @@ def _from_row(row: Any) -> Investigation:
             status=ExperimentStatus(e.get("status", "planned")),
             result_summary=e.get("result_summary", ""),
             supports_hypothesis=e.get("supports_hypothesis"),
+            independent_variable=e.get("independent_variable", ""),
+            dependent_variable=e.get("dependent_variable", ""),
+            controls=e.get("controls", []),
+            confounders=e.get("confounders", []),
+            analysis_plan=e.get("analysis_plan", ""),
+            success_criteria=e.get("success_criteria", ""),
+            failure_criteria=e.get("failure_criteria", ""),
         )
         for e in experiments_raw
     ]

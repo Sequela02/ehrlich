@@ -171,6 +171,7 @@ function InvestigationPage() {
             activeToolName={activeToolName}
             experimentToolCount={experimentToolCount}
             experimentFindingCount={experimentFindingCount}
+            currentExperiment={currentExperiment}
           />
         )}
       </div>

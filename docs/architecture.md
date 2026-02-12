@@ -53,8 +53,8 @@ Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesize
 2. **Literature Survey** -- Sonnet researcher conducts structured search with domain-filtered tools, citation chasing (snowballing), evidence-level grading; Haiku grades body-of-evidence (GRADE-adapted) and self-assesses quality (AMSTAR-2-adapted)
 3. **Hypothesis Formulation** -- Opus Director formulates 2-4 hypotheses with predictions, criteria, scope, Bayesian priors (grounded in Popper, Platt, Feynman, Bayesian frameworks -- see `docs/scientific-methodology.md`); receives structured XML literature context (PICO + graded findings)
 4. **User Approval Gate** -- User approves/rejects hypotheses before testing begins (5-min auto-approve timeout)
-5. **Experiment Design + Execution** -- Director designs experiments, 2 Sonnet researchers execute in parallel per batch (max 10 tool calls each)
-6. **Hypothesis Evaluation** -- Director compares findings against pre-defined success/failure criteria (objective, not subjective)
+5. **Experiment Design + Execution** -- Director designs structured experiment protocols (variables, controls, confounders, analysis plan, criteria), 2 Sonnet researchers execute in parallel per batch (max 10 tool calls each) with methodology guidance (sensitivity, applicability domain, uncertainty, verification, negative results)
+6. **Hypothesis Evaluation** -- Director compares findings against both hypothesis-level and experiment-level criteria with methodology checks (control validation, confounders, analysis plan adherence)
 7. **Negative Controls** -- Validate model with known-inactive compounds
 8. **Synthesis** -- Director synthesizes final report with ranked candidates, citations, cost breakdown
 
@@ -145,7 +145,7 @@ api/ -> investigation/application/ only
 6. **Director** (Opus) formulates 2-4 hypotheses with predictions, criteria, scope, Bayesian priors; receives structured XML literature context (PICO + graded findings)
 7. **User Approval Gate** -- user approves/rejects hypotheses (5-min timeout auto-approves)
 8. For each batch of 2 hypotheses:
-   a. **Director** designs experiment (description + tool plan)
+   a. **Director** designs experiment protocol (description, tool plan, variables, controls, confounders, analysis plan, criteria)
    b. **2 Researchers** (Sonnet) execute in parallel via asyncio.Queue
    c. **Summarizer** (Haiku) compresses outputs exceeding threshold
    d. **Director** evaluates hypothesis against pre-defined success/failure criteria

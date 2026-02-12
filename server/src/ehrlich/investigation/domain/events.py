@@ -31,6 +31,12 @@ class ExperimentStarted(DomainEvent):
     experiment_id: str = ""
     hypothesis_id: str = ""
     description: str = ""
+    independent_variable: str = ""
+    dependent_variable: str = ""
+    controls: list[str] = field(default_factory=list)
+    analysis_plan: str = ""
+    success_criteria: str = ""
+    failure_criteria: str = ""
     investigation_id: str = ""
 
 

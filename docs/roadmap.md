@@ -453,7 +453,7 @@ Phase 2A-D    Phase 2E-G
            |
      Phase 10A (Hypothesis-Driven Engine) -- DONE
            |
-     Scientific Methodology Upgrade (cross-cutting) -- Phases 1-2 DONE, Phases 3-6 RESEARCHED
+     Scientific Methodology Upgrade (cross-cutting) -- Phases 1-3 DONE, Phases 4-6 RESEARCHED
            |
      Domain-Agnostic Generalization -- DONE
            |
@@ -470,7 +470,7 @@ Grounding every phase of the investigation workflow in established scientific me
 |---|-------|--------|
 | 1 | Hypothesis Formulation (Popper, Platt, Feynman, Bayesian) | DONE |
 | 2 | Literature Survey (PICO, citation chasing, GRADE, AMSTAR-2) | DONE |
-| 3 | Experiment Design (Fisher, controls, statistical power) | RESEARCHED |
+| 3 | Experiment Design (Fisher, controls, sensitivity, AD) | DONE |
 | 4 | Evidence Evaluation (evidence hierarchy, GRADE, effect sizes) | RESEARCHED |
 | 5 | Negative Controls (sensitivity/specificity, ROC, Z-factor) | RESEARCHED |
 | 6 | Synthesis (Cochrane, GRADE, strength of recommendation) | RESEARCHED |

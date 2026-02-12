@@ -177,6 +177,31 @@ bioactive conformation, reducing entropic penalty",
 </example>
 </examples>""",
     experiment_examples="""\
+<examples>
+<example>
+<hypothesis>DBO derivatives inhibit Class A/C beta-lactamases \
+with Ki below 50 nM</hypothesis>
+<output>
+{
+  "description": "Search ChEMBL for DBO-scaffold compounds, \
+train model, dock top predictions against beta-lactamase",
+  "tool_plan": ["search_bioactivity", "compute_descriptors", \
+"train_model", "predict_candidates", "dock_against_target"],
+  "independent_variable": "C2 substituent pattern on DBO scaffold",
+  "dependent_variable": "Predicted Ki (nM) and docking score (kcal/mol)",
+  "controls": ["positive: Avibactam (Ki ~1 nM)", \
+"negative: Aspirin (non-antimicrobial)"],
+  "confounders": ["ChEMBL dataset bias toward published actives", \
+"Docking may not capture covalent binding"],
+  "analysis_plan": "Primary: model AUC >0.7; secondary: docking \
+<-7 kcal/mol for top 3; expect N>=50 training compounds",
+  "success_criteria": ">=3 DBO derivatives with P>0.7 AND docking <-7",
+  "failure_criteria": "<2 compounds meet thresholds OR AUC <0.7"
+}
+</output>
+</example>
+</examples>
+
 <tool_examples>
 Example: Docking a compound against a protein target
 1. search_protein_targets(query="BACE1 human", limit=3)

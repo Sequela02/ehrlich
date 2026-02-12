@@ -143,6 +143,12 @@ export function useSSE(url: string | null): SSEState {
           hypothesis_id: parsed.data.hypothesis_id as string,
           description: parsed.data.description as string,
           status: "running",
+          independent_variable: (parsed.data.independent_variable as string) || undefined,
+          dependent_variable: (parsed.data.dependent_variable as string) || undefined,
+          controls: (parsed.data.controls as string[]) || undefined,
+          analysis_plan: (parsed.data.analysis_plan as string) || undefined,
+          success_criteria: (parsed.data.success_criteria as string) || undefined,
+          failure_criteria: (parsed.data.failure_criteria as string) || undefined,
         };
         setExperiments((prev) => [...prev, exp]);
         setCurrentExperimentId(exp.id);

@@ -45,6 +45,29 @@ class TestDomainEventToSSE:
         assert sse.event == SSEEventType.EXPERIMENT_STARTED
         assert sse.data["experiment_id"] == "e1"
 
+    def test_experiment_started_with_protocol(self) -> None:
+        event = ExperimentStarted(
+            experiment_id="e2",
+            hypothesis_id="h1",
+            description="Test DBO inhibition",
+            independent_variable="C2 substituent pattern",
+            dependent_variable="Ki (nM)",
+            controls=["positive: Avibactam", "negative: Aspirin"],
+            analysis_plan="AUC >0.7, docking <-7",
+            success_criteria=">=3 candidates meet thresholds",
+            failure_criteria="<2 compounds or AUC <0.7",
+            investigation_id="inv-1",
+        )
+        sse = domain_event_to_sse(event)
+        assert sse is not None
+        assert sse.event == SSEEventType.EXPERIMENT_STARTED
+        assert sse.data["independent_variable"] == "C2 substituent pattern"
+        assert sse.data["dependent_variable"] == "Ki (nM)"
+        assert len(sse.data["controls"]) == 2
+        assert sse.data["analysis_plan"] == "AUC >0.7, docking <-7"
+        assert sse.data["success_criteria"] == ">=3 candidates meet thresholds"
+        assert sse.data["failure_criteria"] == "<2 compounds or AUC <0.7"
+
     def test_experiment_completed(self) -> None:
         event = ExperimentCompleted(
             experiment_id="e1",

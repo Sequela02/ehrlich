@@ -367,6 +367,13 @@ class MultiModelOrchestrator:
                         hypothesis_id=hypothesis.id,
                         description=desc,
                         tool_plan=design.get("tool_plan", []),
+                        independent_variable=design.get("independent_variable", ""),
+                        dependent_variable=design.get("dependent_variable", ""),
+                        controls=design.get("controls", []),
+                        confounders=design.get("confounders", []),
+                        analysis_plan=design.get("analysis_plan", ""),
+                        success_criteria=design.get("success_criteria", ""),
+                        failure_criteria=design.get("failure_criteria", ""),
                     )
                     experiment.status = ExperimentStatus.RUNNING
                     investigation.add_experiment(experiment)
@@ -378,6 +385,12 @@ class MultiModelOrchestrator:
                         experiment_id=experiment.id,
                         hypothesis_id=hypothesis.id,
                         description=experiment.description,
+                        independent_variable=experiment.independent_variable,
+                        dependent_variable=experiment.dependent_variable,
+                        controls=experiment.controls,
+                        analysis_plan=experiment.analysis_plan,
+                        success_criteria=experiment.success_criteria,
+                        failure_criteria=experiment.failure_criteria,
                         investigation_id=investigation.id,
                     )
 
@@ -418,17 +431,24 @@ class MultiModelOrchestrator:
                         f"{f.title}: {f.detail}"
                         for f in findings_for_hyp
                     )
+                    controls_text = ", ".join(experiment.controls) or "None specified"
                     evaluation = await self._director_call(
                         cost,
                         DIRECTOR_EVALUATION_PROMPT,
                         f"Hypothesis: {hypothesis.statement}\n"
                         f"Mechanism: {hypothesis.rationale}\n"
                         f"Prediction: {hypothesis.prediction or 'N/A'}\n"
-                        f"Success criteria: {hypothesis.success_criteria or 'N/A'}\n"
-                        f"Failure criteria: {hypothesis.failure_criteria or 'N/A'}\n"
+                        f"Hypothesis success criteria: {hypothesis.success_criteria or 'N/A'}\n"
+                        f"Hypothesis failure criteria: {hypothesis.failure_criteria or 'N/A'}\n"
                         f"Prior confidence: {hypothesis.prior_confidence}\n\n"
-                        f"Experiment: {experiment.description}"
-                        f"\n\nFindings:\n{findings_text}\n\n"
+                        f"Experiment: {experiment.description}\n"
+                        f"Independent variable: {experiment.independent_variable or 'N/A'}\n"
+                        f"Dependent variable: {experiment.dependent_variable or 'N/A'}\n"
+                        f"Controls: {controls_text}\n"
+                        f"Analysis plan: {experiment.analysis_plan or 'N/A'}\n"
+                        f"Experiment success criteria: {experiment.success_criteria or 'N/A'}\n"
+                        f"Experiment failure criteria: {experiment.failure_criteria or 'N/A'}\n"
+                        f"\nFindings:\n{findings_text}\n\n"
                         f"Compare the findings against the pre-defined "
                         f"success/failure criteria. Evaluate this hypothesis.",
                     )
@@ -948,6 +968,7 @@ class MultiModelOrchestrator:
             }
             tool_schemas = [t for t in self._registry.list_schemas() if t["name"] not in excluded]
 
+        exp_controls = ", ".join(experiment.controls) or "None specified"
         messages: list[dict[str, Any]] = [
             {
                 "role": "user",
@@ -956,11 +977,15 @@ class MultiModelOrchestrator:
                     f"Hypothesis: {hypothesis.statement}\n"
                     f"Mechanism: {hypothesis.rationale}\n"
                     f"Prediction: {hypothesis.prediction or 'N/A'}\n"
-                    f"Success criteria: {hypothesis.success_criteria or 'N/A'}\n"
-                    f"Failure criteria: {hypothesis.failure_criteria or 'N/A'}\n"
+                    f"Hypothesis success criteria: {hypothesis.success_criteria or 'N/A'}\n"
+                    f"Hypothesis failure criteria: {hypothesis.failure_criteria or 'N/A'}\n"
                     f"Scope: {hypothesis.scope or 'N/A'}\n\n"
                     f"Experiment: {experiment.description}\n"
-                    f"Planned tools: {', '.join(experiment.tool_plan)}\n\n"
+                    f"Planned tools: {', '.join(experiment.tool_plan)}\n"
+                    f"Controls: {exp_controls}\n"
+                    f"Analysis plan: {experiment.analysis_plan or 'N/A'}\n"
+                    f"Experiment success criteria: {experiment.success_criteria or 'N/A'}\n"
+                    f"Experiment failure criteria: {experiment.failure_criteria or 'N/A'}\n\n"
                     f"Execute this experiment. Compare results against the "
                     f"pre-defined success/failure criteria. Link all findings to "
                     f"hypothesis_id='{hypothesis.id}'."

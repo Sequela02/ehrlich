@@ -122,13 +122,69 @@ Formulation context: Structured XML replaces raw text summary
 
 ---
 
-### Phase 3: Experiment Design -- RESEARCHED
+### Phase 3: Experiment Design -- UPGRADED
 
-**Status:** Research complete. See [experiment-design-research.md](../research/experiment-design-research.md). Implementation pending.
+**Status:** Complete. Grounded in 20 universal components from Fisher (1935), Platt (1964), Cohen (1988), Saltelli (2008), OECD (2007), Tropsha (2010), and others.
 
-**Current state:** Director picks tools and writes a description.
+**Sources:**
+- Fisher (1935) -- Randomization, replication, blocking
+- Platt (1964) -- Strong inference: crucial experiments that exclude hypotheses
+- Cohen (1988) -- Statistical power and effect sizes
+- Saltelli (2008) -- Sensitivity analysis: global methods for model robustness
+- OECD (2007) -- Applicability domain for QSAR model predictions
+- Tropsha (2010) -- Best practices for QSAR development and validation
+- Fanelli (2012) -- Negative results reporting and publication bias
+- Oberkampf & Roy (2010) -- Verification vs. validation in computational science
 
-**Research covers:** 20 universal components spanning Fisher's principles (randomization, replication, blocking), variables and controls, statistical power (Cohen), strong inference (Platt), sensitivity analysis (Saltelli), benchmarking methodology (MoleculeNet, SAMPL, TDC), verification vs. validation (Oberkampf), applicability domain (OECD Principle 3), uncertainty quantification, ablation studies, information-theoretic experiment selection, reproducibility (FAIR), negative results reporting.
+**10 Universal Components (implemented):**
+
+| # | Component | Description |
+|---|-----------|-------------|
+| 1 | Independent Variable | Factor being manipulated (e.g. substituent pattern, protocol type) |
+| 2 | Dependent Variable | Outcome being measured (e.g. Ki, docking score, effect size) |
+| 3 | Controls | Positive (known active) and negative (known inactive) baselines |
+| 4 | Confounders | Identified threats to validity (dataset bias, assay mismatch, etc.) |
+| 5 | Analysis Plan | Pre-specified metrics and thresholds (prevents post-hoc rationalization) |
+| 6 | Success Criteria | Quantitative threshold for supporting the hypothesis |
+| 7 | Failure Criteria | Quantitative threshold for refuting the hypothesis |
+| 8 | Sensitivity | Robustness check: does conclusion change with parameter variation? |
+| 9 | Applicability Domain | ML predictions checked against training data similarity |
+| 10 | Negative Results | Failed approaches recorded with diagnosis, not omitted |
+
+**Implementation:**
+```
+Experiment entity fields (7 new protocol fields):
+  independent_variable  -- factor being manipulated
+  dependent_variable    -- outcome being measured
+  controls              -- positive/negative baselines
+  confounders           -- identified threats to validity
+  analysis_plan         -- pre-specified metrics/thresholds
+  success_criteria      -- from Director design (experiment-level)
+  failure_criteria      -- from Director design (experiment-level)
+
+Director experiment prompt: +<methodology> section with 5 principles
+  (VARIABLES, CONTROLS, CONFOUNDERS, ANALYSIS PLAN, SENSITIVITY)
+
+Researcher experiment prompt: +<methodology> section with 5 principles
+  (SENSITIVITY, APPLICABILITY DOMAIN, UNCERTAINTY, VERIFICATION, NEGATIVE RESULTS)
+
+Director evaluation prompt: +<methodology_checks> section
+  (control validation, criteria comparison, analysis plan adherence, confounder check)
+
+Orchestrator wiring:
+  - Experiment creation reads all 7 fields from Director design output
+  - ExperimentStarted event carries protocol fields to frontend
+  - Researcher context includes experiment controls, analysis plan, criteria
+  - Evaluator context includes experiment-level protocol for criteria comparison
+```
+
+**Key design decisions:**
+- Experiment-level criteria complement hypothesis-level criteria: hypothesis defines WHAT to measure, experiment defines HOW to measure it with specific protocol
+- Controls are strings (free-form "positive: Avibactam (Ki ~1 nM)") rather than structured entities -- keeps the schema simple while allowing domain-specific descriptions
+- Analysis plan is pre-specified (before seeing results) to prevent post-hoc rationalization (Fisher's principle)
+- Confounders are explicitly identified at design time so the evaluator can check if they materialized
+- `expected_findings` removed from Director output format (was never read by orchestrator)
+- Domain config examples updated with protocol fields for both molecular and sports science
 
 ---
 

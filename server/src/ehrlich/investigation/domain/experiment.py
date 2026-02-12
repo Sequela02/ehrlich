@@ -21,6 +21,13 @@ class Experiment:
     status: ExperimentStatus = ExperimentStatus.PLANNED
     result_summary: str = ""
     supports_hypothesis: bool | None = None
+    independent_variable: str = ""
+    dependent_variable: str = ""
+    controls: list[str] = field(default_factory=list)
+    confounders: list[str] = field(default_factory=list)
+    analysis_plan: str = ""
+    success_criteria: str = ""
+    failure_criteria: str = ""
 
     def __post_init__(self) -> None:
         if not self.hypothesis_id:

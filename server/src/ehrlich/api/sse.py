@@ -80,6 +80,12 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
                 "experiment_id": event.experiment_id,
                 "hypothesis_id": event.hypothesis_id,
                 "description": event.description,
+                "independent_variable": event.independent_variable,
+                "dependent_variable": event.dependent_variable,
+                "controls": event.controls,
+                "analysis_plan": event.analysis_plan,
+                "success_criteria": event.success_criteria,
+                "failure_criteria": event.failure_criteria,
                 "investigation_id": event.investigation_id,
             },
         )

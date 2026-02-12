@@ -136,14 +136,26 @@ inconsistent findings across studies",
 <example>
 <hypothesis>HIIT produces greater VO2max improvements \
 than MICT</hypothesis>
-<experiment>
+<output>
 {{
   "description": "Search for meta-analyses comparing \
 HIIT vs MICT for VO2max, then analyze effect sizes",
-  "tool_sequence": ["search_sports_literature", \
-"analyze_training_evidence", "compare_protocols"]
+  "tool_plan": ["search_sports_literature", \
+"analyze_training_evidence", "compare_protocols"],
+  "independent_variable": "Training protocol type (HIIT vs MICT)",
+  "dependent_variable": "VO2max improvement (mL/kg/min, effect size d)",
+  "controls": ["positive: known effective HIIT protocol (Tabata 4x4)", \
+"negative: sedentary control group data"],
+  "confounders": ["Baseline fitness differences", \
+"Study duration variability (6-16 weeks)", \
+"HIIT protocol heterogeneity"],
+  "analysis_plan": "Primary: pooled effect size (Cohen's d) with 95% CI; \
+secondary: heterogeneity (I^2); expect N>=5 studies per comparison",
+  "success_criteria": "Pooled effect size >0.5 with I^2 <75%",
+  "failure_criteria": "Effect size <0.2 or I^2 >75% indicating \
+inconsistent findings"
 }}
-</experiment>
+</output>
 </example>
 </examples>""",
     synthesis_scoring_instructions="""\

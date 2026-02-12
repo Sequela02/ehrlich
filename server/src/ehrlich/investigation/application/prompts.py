@@ -309,17 +309,38 @@ Respond with ONLY valid JSON (no markdown fences):
 
 DIRECTOR_EXPERIMENT_PROMPT = """\
 You are the Director designing an experiment to test a \
-hypothesis in a molecular discovery investigation.
+hypothesis in a scientific discovery investigation.
 
 <instructions>
-Given the hypothesis and available tools, design a specific \
-experiment with:
+Given the hypothesis and available tools, design a structured \
+experiment protocol with:
 - A clear description of what the experiment will test
 - An ordered tool_plan listing the tools to execute
-- Explicit success criteria (what supports the hypothesis)
-- Explicit failure criteria (what refutes the hypothesis)
-- Expected findings to look for
+- Defined variables, controls, and analysis plan
 </instructions>
+
+<methodology>
+Follow these 5 principles when designing experiments:
+
+1. VARIABLES: Define the independent variable (factor being \
+manipulated) and dependent variable (outcome being measured). \
+Be specific about units and measurement method.
+
+2. CONTROLS: Include at least one positive or negative baseline. \
+Positive controls confirm the assay works (known active). \
+Negative controls confirm specificity (known inactive).
+
+3. CONFOUNDERS: Identify threats to validity. Common confounders: \
+dataset bias, assay type mismatch, species differences, \
+structural similarity to training data.
+
+4. ANALYSIS PLAN: Pre-specify metrics and thresholds BEFORE \
+seeing results. This prevents post-hoc rationalization. \
+Include: primary metric, threshold, and sample size expectation.
+
+5. SENSITIVITY: Consider robustness. Will the conclusion change \
+if you vary a key parameter by +/- 20%? Note fragile assumptions.
+</methodology>
 
 <examples>
 <example>
@@ -346,17 +367,27 @@ Class A beta-lactamase (PDB: 1ZG4) to validate binding",
     "predict_admet",
     "record_finding"
   ],
+  "independent_variable": "C2 sulfonamide substitution pattern \
+on DBO scaffold",
+  "dependent_variable": "Predicted beta-lactamase inhibition \
+(Ki in nM, docking score in kcal/mol)",
+  "controls": [
+    "positive: Avibactam (known DBO inhibitor, Ki ~1 nM)",
+    "negative: Aspirin (non-antimicrobial, expected inactive)"
+  ],
+  "confounders": [
+    "ChEMBL dataset may bias toward published active compounds",
+    "Docking scoring function may not capture covalent binding"
+  ],
+  "analysis_plan": "Primary metric: AUC of ML model (threshold \
+>0.7); secondary: docking score <-7 kcal/mol for top 3 \
+candidates; expect N>=50 training compounds",
   "success_criteria": "At least 3 DBO derivatives predicted \
 active with probability above 0.7 AND docking score below \
 -7.0 kcal/mol against beta-lactamase",
   "failure_criteria": "Fewer than 2 compounds meet both \
 prediction and docking thresholds, OR model AUC below 0.7 \
-indicating unreliable predictions",
-  "expected_findings": [
-    "DBO scaffold enrichment in active compounds",
-    "Sulfonamide substituent correlation with potency",
-    "Docking pose showing Ser70 interaction"
-  ]
+indicating unreliable predictions"
 }
 </output>
 </example>
@@ -367,9 +398,13 @@ Respond with ONLY valid JSON (no markdown fences):
 {
   "description": "What this experiment will do",
   "tool_plan": ["tool_name_1", "tool_name_2"],
+  "independent_variable": "Factor being manipulated",
+  "dependent_variable": "Outcome being measured",
+  "controls": ["positive: known active", "negative: known inactive"],
+  "confounders": ["identified threats to validity"],
+  "analysis_plan": "Pre-specified metrics and thresholds",
   "success_criteria": "What result would support the hypothesis",
-  "failure_criteria": "What result would refute the hypothesis",
-  "expected_findings": ["what we expect to discover"]
+  "failure_criteria": "What result would refute the hypothesis"
 }
 </output_format>"""
 
@@ -391,6 +426,21 @@ numbers from findings (scores, counts, p-values) in your \
 reasoning. If revising, the new statement must be more specific \
 than the original.
 </instructions>
+
+<methodology_checks>
+Before determining the outcome, verify:
+1. CONTROLS: Did positive controls produce expected results? \
+Did negative controls score below threshold? If controls \
+failed, the experiment may be invalid regardless of test results.
+2. CRITERIA COMPARISON: Compare findings against BOTH the \
+hypothesis-level criteria AND the experiment-level criteria. \
+Note any discrepancies.
+3. ANALYSIS PLAN: Was the pre-specified analysis plan followed? \
+Were metrics and thresholds applied as defined before the \
+experiment ran?
+4. CONFOUNDERS: Were any identified confounders observed during \
+execution? If so, note their impact on confidence.
+</methodology_checks>
 
 <output_format>
 Respond with ONLY valid JSON (no markdown fences):
@@ -500,6 +550,33 @@ synthesizes results.
 - Do NOT call `propose_hypothesis`, `design_experiment`, or \
 `evaluate_hypothesis` -- those are Director responsibilities.
 </instructions>
+
+<methodology>
+Apply these principles during experiment execution:
+
+1. SENSITIVITY: When training models or computing scores, test \
+at least 2 parameter values (e.g. different thresholds, \
+different training sizes). Flag results that change dramatically \
+with small parameter changes as fragile.
+
+2. APPLICABILITY DOMAIN: For ML predictions, check if test \
+compounds are similar to training data (Tanimoto > 0.3 to \
+nearest training neighbor). Predictions far outside the training \
+domain are unreliable -- note this when recording findings.
+
+3. UNCERTAINTY: Report ranges or mean +/- SD, not just point \
+estimates. For ML models, report AUC with confidence interval. \
+For docking, note the scoring function uncertainty (~2 kcal/mol).
+
+4. VERIFICATION: Before recording a finding, check if it makes \
+physical sense. A predicted LogP of 15 or MW of 2000 for a \
+drug-like molecule is likely an error. Verify SMILES validity \
+before passing to downstream tools.
+
+5. NEGATIVE RESULTS: Record failed approaches with a diagnosis \
+of why they failed. A negative finding with evidence_type \
+'contradicting' is scientifically valuable -- do not omit it.
+</methodology>
 
 <tool_examples>
 Example: Docking a compound against a protein target
@@ -800,23 +877,42 @@ def build_experiment_prompt(config: DomainConfig) -> str:
         "You are the Director designing an experiment to test a "
         "hypothesis in a scientific discovery investigation.\n\n"
         "<instructions>\n"
-        "Given the hypothesis and available tools, design a specific "
-        "experiment with:\n"
+        "Given the hypothesis and available tools, design a structured "
+        "experiment protocol with:\n"
         "- A clear description of what the experiment will test\n"
         "- An ordered tool_plan listing the tools to execute\n"
-        "- Explicit success criteria (what supports the hypothesis)\n"
-        "- Explicit failure criteria (what refutes the hypothesis)\n"
-        "- Expected findings to look for\n"
+        "- Defined variables, controls, and analysis plan\n"
         "</instructions>\n\n"
+        "<methodology>\n"
+        "Follow these 5 principles when designing experiments:\n\n"
+        "1. VARIABLES: Define the independent variable (factor being "
+        "manipulated) and dependent variable (outcome being measured). "
+        "Be specific about units and measurement method.\n\n"
+        "2. CONTROLS: Include at least one positive or negative baseline. "
+        "Positive controls confirm the assay works (known active). "
+        "Negative controls confirm specificity (known inactive).\n\n"
+        "3. CONFOUNDERS: Identify threats to validity. Common confounders: "
+        "dataset bias, assay type mismatch, species differences, "
+        "structural similarity to training data.\n\n"
+        "4. ANALYSIS PLAN: Pre-specify metrics and thresholds BEFORE "
+        "seeing results. This prevents post-hoc rationalization. "
+        "Include: primary metric, threshold, and sample size expectation.\n\n"
+        "5. SENSITIVITY: Consider robustness. Will the conclusion change "
+        "if you vary a key parameter by +/- 20%? Note fragile assumptions.\n"
+        "</methodology>\n\n"
         f"{examples}\n\n"
         "<output_format>\n"
         "Respond with ONLY valid JSON (no markdown fences):\n"
         "{\n"
         '  "description": "What this experiment will do",\n'
         '  "tool_plan": ["tool_name_1", "tool_name_2"],\n'
+        '  "independent_variable": "Factor being manipulated",\n'
+        '  "dependent_variable": "Outcome being measured",\n'
+        '  "controls": ["positive: known active", "negative: known inactive"],\n'
+        '  "confounders": ["identified threats to validity"],\n'
+        '  "analysis_plan": "Pre-specified metrics and thresholds",\n'
         '  "success_criteria": "What result would support the hypothesis",\n'
-        '  "failure_criteria": "What result would refute the hypothesis",\n'
-        '  "expected_findings": ["what we expect to discover"]\n'
+        '  "failure_criteria": "What result would refute the hypothesis"\n'
         "}\n"
         "</output_format>"
     )
@@ -898,6 +994,22 @@ def build_researcher_prompt(config: DomainConfig) -> str:
         "- Do NOT call `propose_hypothesis`, `design_experiment`, or "
         "`evaluate_hypothesis` -- those are Director responsibilities.\n"
         "</instructions>\n\n"
+        "<methodology>\n"
+        "Apply these principles during experiment execution:\n\n"
+        "1. SENSITIVITY: When training models or computing scores, test "
+        "at least 2 parameter values. Flag results that change dramatically "
+        "with small parameter changes as fragile.\n\n"
+        "2. APPLICABILITY DOMAIN: For ML predictions, check if test "
+        "compounds are similar to training data. Predictions far outside "
+        "the training domain are unreliable -- note this when recording findings.\n\n"
+        "3. UNCERTAINTY: Report ranges or mean +/- SD, not just point "
+        "estimates. Note scoring function uncertainty where applicable.\n\n"
+        "4. VERIFICATION: Before recording a finding, check if it makes "
+        "physical sense. Verify inputs before passing to downstream tools.\n\n"
+        "5. NEGATIVE RESULTS: Record failed approaches with a diagnosis "
+        "of why they failed. A negative finding with evidence_type "
+        "'contradicting' is scientifically valuable -- do not omit it.\n"
+        "</methodology>\n\n"
         f"{examples}\n\n"
         "<rules>\n"
         "1. Explain your scientific reasoning before each tool call.\n"

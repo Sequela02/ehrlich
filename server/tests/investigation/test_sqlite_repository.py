@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 from ehrlich.investigation.domain.candidate import Candidate
+from ehrlich.investigation.domain.experiment import Experiment
 from ehrlich.investigation.domain.finding import Finding
 from ehrlich.investigation.domain.investigation import Investigation, InvestigationStatus
 from ehrlich.investigation.infrastructure.sqlite_repository import SqliteInvestigationRepository
@@ -201,6 +202,64 @@ class TestEvents:
         await repository.save(inv)
         events = await repository.get_events(inv.id)
         assert events == []
+
+
+class TestExperimentProtocolRoundtrip:
+    @pytest.mark.asyncio
+    async def test_experiment_protocol_fields_persist(
+        self, repository: SqliteInvestigationRepository
+    ) -> None:
+        inv = Investigation(prompt="Test")
+        await repository.save(inv)
+
+        exp = Experiment(
+            hypothesis_id="h1",
+            description="Test DBO inhibition",
+            tool_plan=["search_bioactivity", "train_model"],
+            independent_variable="C2 substituent pattern",
+            dependent_variable="Ki (nM)",
+            controls=["positive: Avibactam", "negative: Aspirin"],
+            confounders=["Dataset bias", "Scoring function limits"],
+            analysis_plan="AUC >0.7, docking <-7 kcal/mol",
+            success_criteria=">=3 candidates meet thresholds",
+            failure_criteria="<2 compounds or AUC <0.7",
+        )
+        inv.add_experiment(exp)
+        await repository.update(inv)
+
+        retrieved = await repository.get_by_id(inv.id)
+        assert retrieved is not None
+        assert len(retrieved.experiments) == 1
+        e = retrieved.experiments[0]
+        assert e.independent_variable == "C2 substituent pattern"
+        assert e.dependent_variable == "Ki (nM)"
+        assert e.controls == ["positive: Avibactam", "negative: Aspirin"]
+        assert e.confounders == ["Dataset bias", "Scoring function limits"]
+        assert e.analysis_plan == "AUC >0.7, docking <-7 kcal/mol"
+        assert e.success_criteria == ">=3 candidates meet thresholds"
+        assert e.failure_criteria == "<2 compounds or AUC <0.7"
+
+    @pytest.mark.asyncio
+    async def test_experiment_protocol_defaults_on_missing(
+        self, repository: SqliteInvestigationRepository
+    ) -> None:
+        inv = Investigation(prompt="Test")
+        await repository.save(inv)
+
+        exp = Experiment(hypothesis_id="h1", description="Minimal experiment")
+        inv.add_experiment(exp)
+        await repository.update(inv)
+
+        retrieved = await repository.get_by_id(inv.id)
+        assert retrieved is not None
+        e = retrieved.experiments[0]
+        assert e.independent_variable == ""
+        assert e.dependent_variable == ""
+        assert e.controls == []
+        assert e.confounders == []
+        assert e.analysis_plan == ""
+        assert e.success_criteria == ""
+        assert e.failure_criteria == ""
 
 
 class TestEvidenceLevelRoundtrip:
