@@ -903,11 +903,15 @@ def build_pico_and_classification_prompt(
     return (
         "You are a scientific research analyst. Given a research prompt, "
         "perform TWO tasks:\n\n"
-        "1. CLASSIFY the research domain into exactly one category.\n"
+        "1. CLASSIFY the research domain into ALL relevant categories "
+        "(at least 1, as many as apply).\n"
         "2. DECOMPOSE the research question using the PICO framework "
         "(Population, Intervention, Comparison, Outcome).\n\n"
         f"<categories>\n{cat_str}\n</categories>\n\n"
         "<instructions>\n"
+        "- Domain: select every category that applies to the research question. "
+        "Cross-domain questions (e.g. drug effects on athletic performance) "
+        "should list all relevant categories.\n"
         "- Population: the subjects, organisms, or systems under study\n"
         "- Intervention: the treatment, compound, protocol, or variable being tested\n"
         "- Comparison: the control, baseline, or alternative being compared against\n"
@@ -917,7 +921,7 @@ def build_pico_and_classification_prompt(
         "<output_format>\n"
         "Respond with ONLY valid JSON (no markdown fences):\n"
         "{\n"
-        '  "domain": "category_name",\n'
+        '  "domain": ["category_1", "category_2"],\n'
         '  "population": "description of subjects/systems",\n'
         '  "intervention": "treatment/variable under study",\n'
         '  "comparison": "control/baseline",\n'

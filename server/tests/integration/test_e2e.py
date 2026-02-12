@@ -116,7 +116,7 @@ class TestToolRegistry:
     def test_build_registry_has_expected_tools(self) -> None:
         registry = _build_registry()
         tools = registry.list_tools()
-        assert len(tools) == 37
+        assert len(tools) == 38
         assert "validate_smiles" in tools
         assert "search_literature" in tools
         assert "search_citations" in tools
@@ -132,6 +132,7 @@ class TestToolRegistry:
         assert "get_protein_annotation" in tools
         assert "search_disease_targets" in tools
         assert "search_pharmacology" in tools
+        assert "search_prior_research" in tools
         # Sports science tools
         assert "search_sports_literature" in tools
         assert "analyze_training_evidence" in tools
@@ -143,7 +144,7 @@ class TestToolRegistry:
     def test_all_tools_have_schemas(self) -> None:
         registry = _build_registry()
         schemas = registry.list_schemas()
-        assert len(schemas) == 37
+        assert len(schemas) == 38
         for schema in schemas:
             assert "name" in schema
             assert "description" in schema

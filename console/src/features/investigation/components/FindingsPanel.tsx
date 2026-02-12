@@ -20,6 +20,7 @@ const SOURCE_URLS: Record<string, (id: string) => string> = {
   uniprot: (id) => `https://www.uniprot.org/uniprotkb/${id}`,
   opentargets: (id) => `https://platform.opentargets.org/target/${id}`,
   gtopdb: (id) => `https://www.guidetopharmacology.org/GRAC/LigandDisplayForward?ligandId=${id}`,
+  ehrlich: (id) => `/investigation/${id}`,
 };
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -30,6 +31,7 @@ const SOURCE_LABELS: Record<string, string> = {
   uniprot: "UniProt",
   opentargets: "Open Targets",
   gtopdb: "GtoPdb",
+  ehrlich: "Ehrlich",
 };
 
 export function FindingsPanel({ findings }: FindingsPanelProps) {
@@ -124,17 +126,18 @@ function SourceBadge({ sourceType, sourceId }: { sourceType?: string; sourceId?:
   const label = SOURCE_LABELS[sourceType] ?? sourceType;
   const urlBuilder = SOURCE_URLS[sourceType];
   const url = urlBuilder ? urlBuilder(sourceId) : undefined;
+  const isInternal = sourceType === "ehrlich";
 
   if (url) {
     return (
       <a
         href={url}
-        target="_blank"
-        rel="noopener noreferrer"
+        target={isInternal ? undefined : "_blank"}
+        rel={isInternal ? undefined : "noopener noreferrer"}
         className="inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] text-primary transition-colors hover:bg-primary/20"
       >
-        {label} {sourceId}
-        <ExternalLink className="h-2.5 w-2.5" />
+        {label} {sourceId.slice(0, 8)}
+        {!isInternal && <ExternalLink className="h-2.5 w-2.5" />}
       </a>
     );
   }

@@ -43,7 +43,7 @@ Ehrlich uses a three-tier Claude model architecture for cost-efficient investiga
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesizes (3-5 calls)
-Sonnet 4.5 (Researcher) -- Executes experiments with 37 tools (10-20 calls)
+Sonnet 4.5 (Researcher) -- Executes experiments with 38 tools (10-20 calls)
 Haiku 4.5 (Summarizer)  -- Compresses large outputs, classifies domains (5-10 calls)
 ```
 
@@ -64,7 +64,7 @@ Cost: ~$3-4 per investigation (vs ~$11 with all-Opus).
 
 All data sources are free and open-access.
 
-## 37 Tools
+## 38 Tools
 
 | Context | Tool | Description |
 |---------|------|-------------|
@@ -104,6 +104,7 @@ All data sources are free and open-access.
 | Investigation | `evaluate_hypothesis` | Assess outcome with confidence score |
 | Investigation | `record_finding` | Record finding linked to hypothesis |
 | Investigation | `record_negative_control` | Validate model with known-inactive compounds |
+| Investigation | `search_prior_research` | Search past investigation findings via FTS5 |
 | Investigation | `conclude_investigation` | Final summary with ranked candidates |
 
 ## Tech Stack

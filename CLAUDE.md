@@ -17,7 +17,7 @@ DDD monorepo: `server/` (Python 3.12) + `console/` (React 19 / TypeScript / Bun)
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, designs experiments, evaluates evidence, synthesizes (NO tools)
-Sonnet 4.5 (Researcher) -- Executes experiments with 37 tools (parallel: 2 experiments per batch)
+Sonnet 4.5 (Researcher) -- Executes experiments with 38 tools (parallel: 2 experiments per batch)
 Haiku 4.5 (Summarizer)  -- Compresses large tool outputs (>2000 chars), PICO decomposition, evidence grading
 ```
 
@@ -105,7 +105,7 @@ Types: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`
 
 Scopes: kernel, literature, chemistry, analysis, prediction, simulation, sports, investigation, api, console, mol, data, ci, docs, infra
 
-## Tools (37 Total)
+## Tools (38 Total)
 
 ### Chemistry (6) -- RDKit cheminformatics, domain-agnostic
 - `validate_smiles` -- Validate SMILES string
@@ -150,12 +150,13 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, sports,
 - `compute_training_metrics` -- ACWR, monotony, strain, session RPE load
 - `search_supplement_evidence` -- Supplement efficacy literature search
 
-### Investigation (6) -- Hypothesis lifecycle
+### Investigation (7) -- Hypothesis lifecycle + self-referential
 - `propose_hypothesis` -- Register testable hypothesis
 - `design_experiment` -- Plan experiment with tool sequence
 - `evaluate_hypothesis` -- Assess outcome (supported/refuted/revised)
 - `record_finding` -- Record finding linked to hypothesis + evidence_type
 - `record_negative_control` -- Validate model with known-inactive compounds
+- `search_prior_research` -- Search Ehrlich's own past findings via FTS5
 - `conclude_investigation` -- Final summary with ranked candidates
 
 ## Key Patterns
@@ -175,8 +176,10 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, sports,
 - **Flexible data loading**: ChEMBL queries accept any assay type (MIC, Ki, EC50, etc.), not hardcoded
 - **Protein targets**: YAML-configured (`data/targets/*.yaml`) + dynamic RCSB PDB discovery
 - **Resistance data**: YAML-configured (`data/resistance/*.yaml`), extensible per domain
-- 6 control tools: `propose_hypothesis`, `design_experiment`, `evaluate_hypothesis`, `record_finding`, `record_negative_control`, `conclude_investigation`
+- 7 control tools: `propose_hypothesis`, `design_experiment`, `evaluate_hypothesis`, `record_finding`, `record_negative_control`, `search_prior_research`, `conclude_investigation`
 - **Domain configuration**: `DomainConfig` defines per-domain tool tags, score definitions, prompt examples, visualization type; `DomainRegistry` auto-detects domain from classification; `DomainDetected` SSE event sends display config to frontend
+- **Multi-domain investigations**: `DomainRegistry.detect()` returns `list[DomainConfig]` for cross-domain research; `merge_domain_configs()` creates synthetic merged config with union of tool_tags, concatenated score_definitions, joined prompt examples; `DomainDisplayConfig.domains` carries sub-domain list to frontend
+- **Self-referential research**: `search_prior_research` tool queries FTS5 full-text index of past investigation findings; indexed on completion via `_rebuild_fts()`; intercepted in orchestrator `_dispatch_tool()` and routed to `SqliteInvestigationRepository.search_findings()`; "ehrlich" source type on findings links to past investigations
 - **Tool tagging**: Tools tagged with frozenset domain tags (chemistry, analysis, prediction, simulation, sports, literature); investigation control tools are universal (no tags); researcher sees only domain-relevant tools
 - SSE streaming for real-time investigation updates (19 event types)
 - **Phase progress indicator**: `PhaseChanged` event tracks 6 orchestrator phases (Classification & PICO → Literature Survey → Formulation → Hypothesis Testing → Negative Controls → Synthesis); frontend renders 6-segment progress bar
@@ -243,9 +246,9 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, sports,
 | `investigation/domain/candidate.py` | Candidate dataclass (identifier, identifier_type, name, rank, priority, notes, scores dict, attributes dict) |
 | `investigation/domain/events.py` | 19 domain events (Hypothesis*, HypothesisApproval*, Experiment*, NegativeControl*, PositiveControl*, ValidationMetricsComputed, DomainDetected, Finding, LiteratureSurveyCompleted, Tool*, Thinking, PhaseChanged, CostUpdate, Completed, Error) |
 | `investigation/domain/repository.py` | InvestigationRepository ABC (save_event, get_events for audit trail) |
-| `investigation/infrastructure/sqlite_repository.py` | SQLite implementation with hypothesis/experiment/negative_control/event serialization |
+| `investigation/infrastructure/sqlite_repository.py` | SQLite implementation with hypothesis/experiment/negative_control/event serialization + FTS5 findings search |
 | `investigation/infrastructure/anthropic_client.py` | Anthropic API adapter with retry |
-| `api/routes/investigation.py` | REST + SSE endpoints, 37-tool registry with domain tagging, domain registry |
+| `api/routes/investigation.py` | REST + SSE endpoints, 38-tool registry with domain tagging, domain registry |
 | `api/routes/molecule.py` | Molecule depiction, conformer, descriptors, targets endpoints |
 | `api/sse.py` | Domain event to SSE conversion (19 types) |
 
@@ -308,8 +311,8 @@ Scopes: kernel, literature, chemistry, analysis, prediction, simulation, sports,
 
 | File | Purpose |
 |------|---------|
-| `investigation/domain/domain_config.py` | `DomainConfig` + `ScoreDefinition` frozen dataclasses |
-| `investigation/domain/domain_registry.py` | `DomainRegistry`: register, detect, lookup domains |
+| `investigation/domain/domain_config.py` | `DomainConfig` + `ScoreDefinition` frozen dataclasses + `merge_domain_configs()` for cross-domain |
+| `investigation/domain/domain_registry.py` | `DomainRegistry`: register, multi-detect (returns `list[DomainConfig]`), lookup domains |
 | `investigation/domain/domains/molecular.py` | `MOLECULAR_SCIENCE` config (tool tags, scores, prompt examples) |
 | `investigation/domain/domains/sports.py` | `SPORTS_SCIENCE` config (protocol-based, table visualization) |
 | `investigation/application/tool_registry.py` | `ToolRegistry` with domain tag filtering |

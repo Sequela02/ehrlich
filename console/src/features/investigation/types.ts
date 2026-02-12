@@ -288,6 +288,7 @@ export interface DomainDisplayConfig {
   visualization_type: "molecular" | "chart" | "table";
   score_columns: ScoreColumnConfig[];
   attribute_keys: string[];
+  domains?: DomainDisplayConfig[];
 }
 
 export interface InvestigationDetail {

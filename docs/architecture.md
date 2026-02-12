@@ -38,7 +38,7 @@ Ehrlich uses a three-tier Claude model architecture for cost-efficient investiga
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesizes (3-5 calls)
     │                       NO tool access, structured JSON responses only
     │
-    ├── Sonnet 4.5 (Researcher) -- Executes experiments with 37 domain-filtered tools (10-20 calls, parallel x2)
+    ├── Sonnet 4.5 (Researcher) -- Executes experiments with 38 domain-filtered tools (10-20 calls, parallel x2)
     │                               Tool-calling loop with max_iterations_per_experiment guard
     │
     └── Haiku 4.5 (Summarizer)  -- Compresses large tool outputs >2000 chars, PICO+classification, evidence grading
@@ -55,14 +55,30 @@ Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesize
 4. **User Approval Gate** -- User approves/rejects hypotheses before testing begins (5-min auto-approve timeout)
 5. **Experiment Design + Execution** -- Director designs structured experiment protocols (variables, controls, confounders, analysis plan, criteria), 2 Sonnet researchers execute in parallel per batch (max 10 tool calls each) with methodology guidance (sensitivity, applicability domain, uncertainty, verification, negative results)
 6. **Hypothesis Evaluation** -- Director compares findings against both hypothesis-level and experiment-level criteria with methodology checks (control validation, confounders, analysis plan adherence)
-7. **Negative Controls** -- Validate model with known-inactive compounds
-8. **Synthesis** -- Director synthesizes final report with ranked candidates, citations, cost breakdown
+7. **Controls Validation** -- Score positive/negative controls through trained models; compute Z'-factor assay quality, permutation significance, scaffold-split vs random-split comparison
+8. **Synthesis** -- Director synthesizes final report with ranked candidates, citations, validation metrics, cost breakdown
 
 ## Persistence
 
 Investigations are persisted to SQLite (WAL mode) via `aiosqlite`. The `SqliteInvestigationRepository` implements the `InvestigationRepository` ABC defined in the domain layer. Hypotheses, experiments, findings, candidates, negative controls, citations, domain, and cost data are JSON-serialized into a single `investigations` table. All SSE events are persisted to a separate `events` table for full timeline replay on page reload.
 
 The API keeps `_active_investigations` and `_active_orchestrators` dicts for in-flight SSE streaming and user-guided steering (hypothesis approval). Persists to SQLite on completion (or error).
+
+## Multi-Domain Investigations
+
+Cross-domain research questions (e.g., "How does creatine supplementation affect muscle protein synthesis at the molecular level?") trigger multi-domain detection. `DomainRegistry.detect()` returns `list[DomainConfig]` -- one per matched domain. `merge_domain_configs()` creates a synthetic merged config with the union of tool_tags, concatenated score_definitions, joined prompt examples, and deduplicated attribute_keys/hypothesis_types. The merged config carries `source_configs` for frontend sub-domain display.
+
+The Haiku classifier outputs a JSON array of domain categories. Tool filtering uses the merged config's union of tags. The Director receives merged prompt examples from all relevant domains.
+
+**What stays the same:** The 6-phase pipeline, hypothesis loop, evaluation framework, and event system are domain-agnostic. Only the detection layer and tool/prompt filtering changed.
+
+## Self-Referential Research
+
+Ehrlich queries its own past investigation findings during new research. The `search_prior_research` tool (available during Phase 2 Literature Survey) queries a SQLite FTS5 virtual table (`findings_fts`) indexing finding titles, details, evidence types, hypothesis statements/statuses, and source provenance. The FTS5 index is rebuilt on investigation completion via `_rebuild_fts()`.
+
+The tool is intercepted in the orchestrator's `_dispatch_tool()` and routed to `SqliteInvestigationRepository.search_findings()`, which performs BM25-ranked full-text search with a JOIN to the investigations table for prompt context. Query tokens are quoted to handle FTS5 special characters (hyphens, boolean operators).
+
+Findings from past investigations carry provenance `source_type: "ehrlich"`, `source_id: "{investigation_id}"`. Frontend renders Ehrlich-branded source badges linking to past investigations (internal navigation, no external tab).
 
 ## Molecule Visualization
 
@@ -140,7 +156,7 @@ api/ -> investigation/application/ only
 1. User submits research prompt via Console (or selects a template)
 2. API creates Investigation, persists to SQLite, starts MultiModelOrchestrator
 3. **Haiku** decomposes prompt via PICO framework (Population, Intervention, Comparison, Outcome) and classifies domain in a single call; queries past completed investigations in same domain
-4. **Domain detection** -- `DomainRegistry.detect()` selects `DomainConfig` (molecular/sports), emits `DomainDetected` SSE event with display config; researcher tool list filtered to domain-relevant tools
+4. **Domain detection** -- `DomainRegistry.detect()` returns `list[DomainConfig]` (one or more); `merge_domain_configs()` creates merged config for cross-domain; emits `DomainDetected` SSE event with display config (includes `domains` sub-list for multi-domain); researcher tool list filtered to merged domain-relevant tools
 5. **Researcher** (Sonnet) conducts structured literature survey with domain-filtered tools, citation chasing, evidence-level grading; **Haiku** grades body-of-evidence (GRADE-adapted) and self-assesses quality (AMSTAR-2); emits `LiteratureSurveyCompleted` event
 6. **Director** (Opus) formulates 2-4 hypotheses with predictions, criteria, scope, Bayesian priors; receives structured XML literature context (PICO + graded findings)
 7. **User Approval Gate** -- user approves/rejects hypotheses (5-min timeout auto-approves)
@@ -152,13 +168,14 @@ api/ -> investigation/application/ only
    e. If revised: new hypothesis spawned with parent link
 9. **Negative controls** recorded from formulation suggestions
 10. **Director** synthesizes final report with candidates, citations, cost
-11. All events stream via SSE (17 event types) to Console in real-time
+11. All events stream via SSE (19 event types) to Console in real-time
     - `DomainDetected` sends display config (score columns, visualization type) to frontend
     - `FindingRecorded` includes evidence + source provenance (source_type, source_id) + evidence_level (1-6)
     - `LiteratureSurveyCompleted` carries PICO, search stats, evidence grade, self-assessment
     - `PhaseChanged` tracks 6-step progress
     - `CostUpdate` streams progressive cost snapshots
     - `HypothesisApprovalRequested` pauses for user steering
-    - `InvestigationCompleted` includes candidates, hypotheses, findings, negative controls
+    - `ValidationMetricsComputed` carries Z'-factor, quality, control separation stats
+    - `InvestigationCompleted` includes candidates, hypotheses, findings, negative controls, validation metrics
 12. Investigation persisted to SQLite with full state + events for timeline replay
 13. Console displays: phase indicator, hypothesis board, lab view (3Dmol.js, molecular only), investigation diagram (React Flow), findings with source badges, dynamic candidate table with domain-specific score columns, structured 8-section report with markdown export

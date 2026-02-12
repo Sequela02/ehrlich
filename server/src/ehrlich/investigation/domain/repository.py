@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from ehrlich.investigation.domain.investigation import Investigation
@@ -25,3 +25,6 @@ class InvestigationRepository(ABC):
 
     @abstractmethod
     async def get_events(self, investigation_id: str) -> list[dict[str, str]]: ...
+
+    @abstractmethod
+    async def search_findings(self, query: str, limit: int = 20) -> list[dict[str, Any]]: ...

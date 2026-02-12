@@ -21,17 +21,24 @@ class DomainRegistry:
     def get(self, name: str) -> DomainConfig | None:
         return self._configs.get(name)
 
-    def detect(self, classified_category: str) -> DomainConfig:
-        """Map a classified domain category to its DomainConfig.
+    def detect(self, classified_categories: list[str]) -> list[DomainConfig]:
+        """Map classified domain categories to their DomainConfigs.
 
-        Falls back to the first registered config if no match.
+        Deduplicates configs when multiple categories map to the same domain.
+        Falls back to the first registered config if no categories match.
         """
-        domain_name = self._category_map.get(classified_category)
-        if domain_name and domain_name in self._configs:
-            return self._configs[domain_name]
+        seen: set[str] = set()
+        configs: list[DomainConfig] = []
+        for category in classified_categories:
+            domain_name = self._category_map.get(category)
+            if domain_name and domain_name in self._configs and domain_name not in seen:
+                seen.add(domain_name)
+                configs.append(self._configs[domain_name])
+        if configs:
+            return configs
         # Fallback to first registered
         if self._configs:
-            return next(iter(self._configs.values()))
+            return [next(iter(self._configs.values()))]
         msg = "No domain configs registered"
         raise ValueError(msg)
 

@@ -42,6 +42,7 @@ from ehrlich.investigation.tools import (
     propose_hypothesis,
     record_finding,
     record_negative_control,
+    search_prior_research,
 )
 from ehrlich.literature.tools import get_reference, search_citations, search_literature
 from ehrlich.prediction.tools import cluster_compounds, predict_candidates, train_model
@@ -170,13 +171,14 @@ def _build_registry() -> ToolRegistry:
         ("assess_injury_risk", assess_injury_risk, _sports),
         ("compute_training_metrics", compute_training_metrics, _sports),
         ("search_supplement_evidence", search_supplement_evidence, _sports),
-        # Investigation control (6) -- universal, no tags
+        # Investigation control (7) -- universal, no tags
         ("record_finding", record_finding, None),
         ("conclude_investigation", conclude_investigation, None),
         ("propose_hypothesis", propose_hypothesis, None),
         ("design_experiment", design_experiment, None),
         ("evaluate_hypothesis", evaluate_hypothesis, None),
         ("record_negative_control", record_negative_control, None),
+        ("search_prior_research", search_prior_research, None),
     ]
     for name, func, tags in tagged_tools:
         registry.register(name, func, tags)

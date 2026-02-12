@@ -209,7 +209,7 @@ The core: Claude as an autonomous scientist.
 - [x] Tests: mock API, verify request/response handling
 
 ### 5B. Tool Registry
-- [x] Register all tools from all contexts (6 chemistry, 3 literature, 6 analysis, 3 prediction, 7 simulation, 6 sports, 6 investigation control -- 37 total)
+- [x] Register all tools from all contexts (6 chemistry, 3 literature, 6 analysis, 3 prediction, 7 simulation, 6 sports, 7 investigation control -- 38 total)
 - [x] Auto-generate JSON Schema from Python type hints + docstrings
 - [x] `get(name)` -> callable, `list_tools()` -> all registered tools, `list_schemas()` -> Anthropic-compatible schemas
 - [x] Schema format matches Anthropic tool_use specification
@@ -342,7 +342,7 @@ Cost-efficient multi-model orchestration, persistence, and UI polish.
 ### 8C. Multi-Model Orchestrator
 - [x] `MultiModelOrchestrator` with hypothesis-driven Director-Worker-Summarizer pattern
 - [x] Director (Opus) formulates hypotheses, designs experiments, evaluates evidence, synthesizes -- NO tool access
-- [x] Researcher (Sonnet) executes experiments with 37 domain-filtered tools (max 10 iterations per experiment)
+- [x] Researcher (Sonnet) executes experiments with 38 domain-filtered tools (max 10 iterations per experiment)
 - [x] Summarizer (Haiku) compresses large outputs exceeding threshold
 - [x] 7 prompts: director formulation/experiment/evaluation/synthesis, researcher experiment, scientist, summarizer
 - [x] Auto-fallback to single-model Orchestrator when researcher == director
@@ -453,9 +453,13 @@ Phase 2A-D    Phase 2E-G
            |
      Phase 10A (Hypothesis-Driven Engine) -- DONE
            |
-     Scientific Methodology Upgrade (cross-cutting) -- Phases 1-3 DONE, Phases 4-6 RESEARCHED
+     Scientific Methodology Upgrade (cross-cutting) -- All 6 Phases DONE
            |
      Domain-Agnostic Generalization -- DONE
+           |
+     Multi-Domain Investigations -- DONE
+           |
+     Self-Referential Research -- DONE
            |
      Demo + Video -- TODO
            |
@@ -471,9 +475,9 @@ Grounding every phase of the investigation workflow in established scientific me
 | 1 | Hypothesis Formulation (Popper, Platt, Feynman, Bayesian) | DONE |
 | 2 | Literature Survey (PICO, citation chasing, GRADE, AMSTAR-2) | DONE |
 | 3 | Experiment Design (Fisher, controls, sensitivity, AD) | DONE |
-| 4 | Evidence Evaluation (evidence hierarchy, GRADE, effect sizes) | RESEARCHED |
-| 5 | Negative Controls (sensitivity/specificity, ROC, Z-factor) | RESEARCHED |
-| 6 | Synthesis (Cochrane, GRADE, strength of recommendation) | RESEARCHED |
+| 4 | Evidence Evaluation (evidence hierarchy, GRADE, effect sizes) | DONE |
+| 5 | Negative Controls (Z'-factor, permutation significance, scaffold-split) | DONE |
+| 6 | Synthesis (GRADE certainty, priority tiers, knowledge gaps) | DONE |
 
 ---
 
@@ -567,6 +571,41 @@ Generalized the entire engine from molecular-science-specific to domain-agnostic
 
 ---
 
+## Multi-Domain Investigations (Feb 12) -- DONE
+
+Cross-domain research questions that span multiple scientific domains (e.g., molecular + sports science).
+
+### Changes
+
+- [x] `DomainRegistry.detect()` returns `list[DomainConfig]` (multi-domain detection, deduplicates)
+- [x] Haiku classifier outputs JSON array of domain categories
+- [x] `merge_domain_configs()` creates synthetic merged config (union tool_tags, concatenated scores, joined examples)
+- [x] Tool filtering uses merged config's union of domain tags
+- [x] Prompt examples merged from all relevant domains
+- [x] `DomainDetected` SSE event carries merged display config with `domains` sub-list
+- [x] Frontend `DomainDisplayConfig.domains` for sub-domain rendering
+- [x] Tests: 16 tests (multi-detect, deduplication, fallback, merge, display dict)
+
+---
+
+## Self-Referential Research (Feb 12) -- DONE
+
+Ehrlich builds institutional knowledge by querying its own past investigations during new research.
+
+### Changes
+
+- [x] SQLite FTS5 virtual table (`findings_fts`) on finding title, detail, evidence_type, hypothesis statement/status, source provenance
+- [x] `search_prior_research` tool (38th tool) -- intercepted in orchestrator, routed to FTS5 via repository
+- [x] BM25-ranked full-text search with investigation prompt context
+- [x] FTS5 query sanitization (quoted tokens for literal hyphens/operators)
+- [x] FTS5 index rebuilt on investigation completion via `_rebuild_fts()`
+- [x] Provenance: `source_type: "ehrlich"`, `source_id: "{investigation_id}"`
+- [x] Available during Phase 2 (Literature Survey) alongside external search tools
+- [x] Frontend: Ehrlich-branded source badges with internal navigation
+- [x] Tests: 6 FTS5 tests (empty, match, prompt context, limit, completion-gating, cross-investigation)
+
+---
+
 ## Phase 10B: Additional Organisms -- BACKLOG
 
 Expand beyond MRSA to cover the WHO critical/high-priority pathogens.
@@ -629,7 +668,7 @@ Expose Ehrlich as a tool server for Claude Code / Claude Desktop via Model Conte
 ### 12A. MCP Transport
 - [ ] Stdio transport for Claude Code integration
 - [ ] SSE transport for Claude Desktop / remote clients
-- [ ] Tool registration: expose all 37 Ehrlich tools as MCP tools
+- [ ] Tool registration: expose all 38 Ehrlich tools as MCP tools
 
 ### 12B. Investigation Tool
 - [ ] `start_investigation(prompt, organism)` -- kick off full investigation, return ID

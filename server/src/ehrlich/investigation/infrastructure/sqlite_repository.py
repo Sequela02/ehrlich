@@ -50,6 +50,19 @@ CREATE TABLE IF NOT EXISTS events (
 )
 """
 
+_CREATE_FINDINGS_FTS = """
+CREATE VIRTUAL TABLE IF NOT EXISTS findings_fts USING fts5(
+    investigation_id,
+    finding_title,
+    finding_detail,
+    evidence_type,
+    hypothesis_statement,
+    hypothesis_status,
+    source_type,
+    source_id
+)
+"""
+
 
 class SqliteInvestigationRepository(InvestigationRepository):
     def __init__(self, db_path: str) -> None:
@@ -61,6 +74,7 @@ class SqliteInvestigationRepository(InvestigationRepository):
             await db.execute("PRAGMA journal_mode=WAL")
             await db.execute(_CREATE_TABLE)
             await db.execute(_CREATE_EVENTS_TABLE)
+            await db.execute(_CREATE_FINDINGS_FTS)
             await db.commit()
         logger.info("SQLite repository initialized at %s", self._db_path)
 
@@ -124,6 +138,8 @@ class SqliteInvestigationRepository(InvestigationRepository):
                     investigation.id,
                 ),
             )
+            if investigation.status == InvestigationStatus.COMPLETED:
+                await self._rebuild_fts(db, investigation)
             await db.commit()
 
     async def save_event(self, investigation_id: str, event_type: str, event_data: str) -> None:
@@ -146,6 +162,49 @@ class SqliteInvestigationRepository(InvestigationRepository):
             return [
                 {"event_type": row["event_type"], "event_data": row["event_data"]} for row in rows
             ]
+
+    async def search_findings(self, query: str, limit: int = 20) -> list[dict[str, Any]]:
+        # Quote each token so FTS5 special chars (-, OR, AND) are literal
+        safe_query = " ".join(f'"{token}"' for token in query.split())
+        async with aiosqlite.connect(self._db_path) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                """SELECT f.investigation_id, i.prompt AS investigation_prompt,
+                          f.finding_title, f.finding_detail, f.evidence_type,
+                          f.hypothesis_statement, f.hypothesis_status,
+                          f.source_type, f.source_id,
+                          rank
+                   FROM findings_fts f
+                   JOIN investigations i ON f.investigation_id = i.id
+                   WHERE findings_fts MATCH ?
+                   ORDER BY rank
+                   LIMIT ?""",
+                (safe_query, limit),
+            )
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]
+
+    async def _rebuild_fts(self, db: aiosqlite.Connection, investigation: Investigation) -> None:
+        await db.execute("DELETE FROM findings_fts WHERE investigation_id = ?", (investigation.id,))
+        hypothesis_map = {h.id: h for h in investigation.hypotheses}
+        for finding in investigation.findings:
+            hyp = hypothesis_map.get(finding.hypothesis_id)
+            await db.execute(
+                """INSERT INTO findings_fts
+                   (investigation_id, finding_title, finding_detail, evidence_type,
+                    hypothesis_statement, hypothesis_status, source_type, source_id)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    investigation.id,
+                    finding.title,
+                    finding.detail,
+                    finding.evidence_type,
+                    hyp.statement if hyp else "",
+                    hyp.status.value if hyp else "",
+                    finding.source_type,
+                    finding.source_id,
+                ),
+            )
 
 
 def _to_row(inv: Investigation) -> tuple[Any, ...]:

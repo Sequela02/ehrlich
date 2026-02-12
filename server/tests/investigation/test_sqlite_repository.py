@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 from ehrlich.investigation.domain.candidate import Candidate
 from ehrlich.investigation.domain.experiment import Experiment
 from ehrlich.investigation.domain.finding import Finding
+from ehrlich.investigation.domain.hypothesis import Hypothesis
 from ehrlich.investigation.domain.investigation import Investigation, InvestigationStatus
 from ehrlich.investigation.infrastructure.sqlite_repository import SqliteInvestigationRepository
 
@@ -303,3 +304,139 @@ class TestEvidenceLevelRoundtrip:
         assert retrieved.findings[0].evidence_level == 1
         assert retrieved.findings[1].evidence_level == 5
         assert retrieved.findings[2].evidence_level == 0
+
+
+class TestSearchFindings:
+    @pytest.mark.asyncio
+    async def test_search_empty_returns_empty(
+        self, repository: SqliteInvestigationRepository
+    ) -> None:
+        results = await repository.search_findings("anything")
+        assert results == []
+
+    @pytest.mark.asyncio
+    async def test_search_finds_matching_findings(
+        self, repository: SqliteInvestigationRepository
+    ) -> None:
+        inv = Investigation(prompt="Find MRSA antimicrobials")
+        await repository.save(inv)
+
+        inv.hypotheses = [
+            Hypothesis(
+                statement="Beta-lactamase inhibitors restore antibiotic efficacy",
+                rationale="Mechanism-based approach",
+            )
+        ]
+        inv.record_finding(
+            Finding(
+                title="Avibactam shows potent inhibition",
+                detail="IC50 of 8nM against class A beta-lactamases",
+                hypothesis_id=inv.hypotheses[0].id,
+                evidence_type="supporting",
+                source_type="chembl",
+                source_id="CHEMBL3",
+            )
+        )
+        inv.status = InvestigationStatus.COMPLETED
+        await repository.update(inv)
+
+        results = await repository.search_findings("beta-lactamase")
+        assert len(results) >= 1
+        assert results[0]["investigation_id"] == inv.id
+        assert "beta-lactamase" in results[0]["finding_detail"].lower()
+
+    @pytest.mark.asyncio
+    async def test_search_includes_investigation_prompt(
+        self, repository: SqliteInvestigationRepository
+    ) -> None:
+        inv = Investigation(prompt="Investigate MRSA resistance")
+        await repository.save(inv)
+
+        inv.record_finding(
+            Finding(
+                title="PBP2a mutations",
+                detail="mecA gene confers resistance",
+                evidence_type="supporting",
+            )
+        )
+        inv.status = InvestigationStatus.COMPLETED
+        await repository.update(inv)
+
+        results = await repository.search_findings("PBP2a")
+        assert len(results) >= 1
+        assert results[0]["investigation_prompt"] == "Investigate MRSA resistance"
+
+    @pytest.mark.asyncio
+    async def test_search_respects_limit(
+        self, repository: SqliteInvestigationRepository
+    ) -> None:
+        inv = Investigation(prompt="Test")
+        await repository.save(inv)
+
+        for i in range(5):
+            inv.record_finding(
+                Finding(
+                    title=f"Finding about kinase {i}",
+                    detail=f"Kinase inhibitor result {i}",
+                    evidence_type="neutral",
+                )
+            )
+        inv.status = InvestigationStatus.COMPLETED
+        await repository.update(inv)
+
+        results = await repository.search_findings("kinase", limit=2)
+        assert len(results) == 2
+
+    @pytest.mark.asyncio
+    async def test_fts_not_indexed_until_completed(
+        self, repository: SqliteInvestigationRepository
+    ) -> None:
+        inv = Investigation(prompt="Pending investigation")
+        await repository.save(inv)
+
+        inv.record_finding(
+            Finding(
+                title="Preliminary result",
+                detail="Aspirin shows COX-2 selectivity",
+                evidence_type="supporting",
+            )
+        )
+        inv.status = InvestigationStatus.RUNNING
+        await repository.update(inv)
+
+        results = await repository.search_findings("Aspirin")
+        assert len(results) == 0
+
+    @pytest.mark.asyncio
+    async def test_search_across_investigations(
+        self, repository: SqliteInvestigationRepository
+    ) -> None:
+        inv1 = Investigation(prompt="MRSA study")
+        inv2 = Investigation(prompt="TB study")
+        await repository.save(inv1)
+        await repository.save(inv2)
+
+        inv1.record_finding(
+            Finding(
+                title="Rifampicin cross-resistance",
+                detail="Rifampicin shows activity against both MRSA and TB",
+                evidence_type="supporting",
+            )
+        )
+        inv1.status = InvestigationStatus.COMPLETED
+        await repository.update(inv1)
+
+        inv2.record_finding(
+            Finding(
+                title="Rifampicin backbone modification",
+                detail="Modified rifampicin analogs with improved TB activity",
+                evidence_type="supporting",
+            )
+        )
+        inv2.status = InvestigationStatus.COMPLETED
+        await repository.update(inv2)
+
+        results = await repository.search_findings("rifampicin")
+        assert len(results) == 2
+        inv_ids = {r["investigation_id"] for r in results}
+        assert inv_ids == {inv1.id, inv2.id}

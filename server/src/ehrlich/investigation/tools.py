@@ -1,4 +1,20 @@
+from __future__ import annotations
+
 import json
+
+
+async def search_prior_research(query: str, limit: int = 10) -> str:
+    """Search Ehrlich's own past investigation findings for prior knowledge.
+
+    Use this during literature survey to find relevant results from past Ehrlich
+    investigations. This helps build on prior discoveries and avoid repeating
+    refuted hypotheses.
+
+    Args:
+        query: Search terms (scientific keywords, compound names, targets, etc.)
+        limit: Maximum results to return
+    """
+    return json.dumps({"status": "search_dispatched", "query": query, "limit": limit})
 
 
 async def record_finding(

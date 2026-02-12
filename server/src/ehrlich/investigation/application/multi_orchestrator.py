@@ -24,6 +24,7 @@ from ehrlich.investigation.application.prompts import (
 )
 from ehrlich.investigation.application.tool_cache import ToolCache
 from ehrlich.investigation.domain.candidate import Candidate
+from ehrlich.investigation.domain.domain_config import merge_domain_configs
 from ehrlich.investigation.domain.events import (
     CostUpdate,
     DomainDetected,
@@ -176,8 +177,13 @@ class MultiModelOrchestrator:
                     if block.get("type") == "text":
                         pico_text += block["text"]
                 pico_data = _parse_json(pico_text)
-                domain_text = pico_data.get("domain", "other").strip().lower()
-                investigation.domain = domain_text
+                raw_domain = pico_data.get("domain", "other")
+                domain_categories: list[str] = (
+                    [d.strip().lower() for d in raw_domain]
+                    if isinstance(raw_domain, list)
+                    else [raw_domain.strip().lower()]
+                )
+                investigation.domain = ", ".join(domain_categories)
                 pico = {
                     "population": pico_data.get("population", ""),
                     "intervention": pico_data.get("intervention", ""),
@@ -186,9 +192,10 @@ class MultiModelOrchestrator:
                     "search_terms": pico_data.get("search_terms", []),
                 }
 
-                # Detect domain config and yield event
+                # Detect domain configs (multi-domain) and yield event
                 if self._domain_registry:
-                    self._active_config = self._domain_registry.detect(domain_text)
+                    detected_configs = self._domain_registry.detect(domain_categories)
+                    self._active_config = merge_domain_configs(detected_configs)
                     self._researcher_prompt = build_researcher_prompt(self._active_config)
                     yield DomainDetected(
                         domain=self._active_config.name,
@@ -201,8 +208,8 @@ class MultiModelOrchestrator:
                     inv
                     for inv in all_investigations
                     if inv.status == InvestigationStatus.COMPLETED
-                    and inv.domain == investigation.domain
                     and inv.id != investigation.id
+                    and any(cat in inv.domain for cat in domain_categories)
                 ]
                 if related:
                     prior_context = build_multi_investigation_context(related)
@@ -949,6 +956,7 @@ class MultiModelOrchestrator:
                     "search_pharmacology",
                     "search_sports_literature",
                     "search_supplement_evidence",
+                    "search_prior_research",
                 ):
                     search_queries += 1
 
@@ -1300,6 +1308,13 @@ class MultiModelOrchestrator:
         tool_input: dict[str, Any],
         investigation: Investigation,
     ) -> str:
+        # Intercept search_prior_research -- query FTS5 via repository
+        if tool_name == "search_prior_research" and self._repository:
+            query = tool_input.get("query", "")
+            limit = int(tool_input.get("limit", 10))
+            results = await self._repository.search_findings(query, limit)
+            return json.dumps({"results": results, "count": len(results), "query": query})
+
         args_hash = ToolCache.hash_args(tool_input)
         cached = self._cache.get(tool_name, args_hash)
         if cached is not None:
