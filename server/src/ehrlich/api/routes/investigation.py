@@ -553,6 +553,9 @@ def _create_orchestrator(
 
     director_model = director_model_override or settings.director_model
 
+    # effort is only supported by Opus models (4.5+)
+    director_effort = settings.director_effort if "opus" in director_model else None
+
     thinking = None
     if settings.director_thinking == "enabled":
         thinking = {
@@ -564,18 +567,16 @@ def _create_orchestrator(
         model=director_model,
         api_key=api_key,
         max_tokens=32768,
-        effort=settings.director_effort,
+        effort=director_effort,
         thinking=thinking,
     )
     researcher = AnthropicClientAdapter(
         model=settings.researcher_model,
         api_key=api_key,
-        effort=settings.researcher_effort,
     )
     summarizer = AnthropicClientAdapter(
         model=settings.summarizer_model,
         api_key=api_key,
-        effort=settings.summarizer_effort,
     )
     return MultiModelOrchestrator(
         director=director,

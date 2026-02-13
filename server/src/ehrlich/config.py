@@ -20,8 +20,6 @@ class Settings(BaseSettings):
     summarizer_threshold: int = 2000
     max_iterations_per_experiment: int = 10
     director_effort: str = "high"
-    researcher_effort: str = "high"
-    summarizer_effort: str = "low"
     director_thinking: str = "enabled"
     director_thinking_budget: int = 10000
     log_level: str = "INFO"

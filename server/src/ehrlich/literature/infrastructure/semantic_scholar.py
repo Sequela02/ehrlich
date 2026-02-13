@@ -49,7 +49,7 @@ class SemanticScholarClient(PaperSearchRepository):
                     raise ExternalServiceError("SemanticScholar", "Rate limit exceeded")
                 resp.raise_for_status()
                 data = resp.json()
-                return [self._to_paper(item) for item in data.get("data", [])]
+                return [self._to_paper(item) for item in (data.get("data") or [])]
             except httpx.TimeoutException as e:
                 last_error = e
                 delay = _BASE_DELAY * (2**attempt)
@@ -137,7 +137,7 @@ class SemanticScholarClient(PaperSearchRepository):
                 resp.raise_for_status()
                 data = resp.json()
                 papers = []
-                for item in data.get("data", []):
+                for item in (data.get("data") or []):
                     cited = item.get("citedPaper")
                     if cited and cited.get("title"):
                         papers.append(self._to_paper(cited))
@@ -186,7 +186,7 @@ class SemanticScholarClient(PaperSearchRepository):
                 resp.raise_for_status()
                 data = resp.json()
                 papers = []
-                for item in data.get("data", []):
+                for item in (data.get("data") or []):
                     citing = item.get("citingPaper")
                     if citing and citing.get("title"):
                         papers.append(self._to_paper(citing))
