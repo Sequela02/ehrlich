@@ -173,17 +173,19 @@ class AnthropicClientAdapter:
             "tools": cached_tools,
         }
 
+        merged_output: dict[str, Any] = {}
         if self._effort is not None:
-            kwargs["effort"] = self._effort
+            merged_output["effort"] = self._effort
+        if output_config is not None:
+            merged_output.update(output_config)
+        if merged_output:
+            kwargs["output_config"] = merged_output
 
         if self._thinking is not None:
             kwargs["thinking"] = self._thinking
 
         if tool_choice is not None:
             kwargs["tool_choice"] = tool_choice
-
-        if output_config is not None:
-            kwargs["output_config"] = output_config
 
         return kwargs
 

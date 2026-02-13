@@ -713,7 +713,7 @@ Cache the 67-tool schema array that repeats on every researcher API call.
 Use `effort` to control token spend per model role.
 
 - [x] Add `effort: str | None = None` parameter to `AnthropicClientAdapter.__init__`
-- [x] Pass `effort` to `messages.create()` when set (omit when None for backward compat)
+- [x] Pass `effort` via `output_config` dict to `messages.create()` (SDK 0.79+ requires it nested, not top-level)
 - [x] Configure per-model in `Settings`:
   - Director (Opus 4.6): `effort="high"` (default, explicit)
   - Researcher (Sonnet 4.5): `effort="high"` (default, explicit)
