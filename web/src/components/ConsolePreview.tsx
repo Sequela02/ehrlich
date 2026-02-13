@@ -1,4 +1,4 @@
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import { SectionHeader } from "./SectionHeader";
 
 /* ── Static data for mockups ──────────────────────────────────── */
@@ -69,7 +69,7 @@ function BrowserFrame({
             <svg width="10" height="10" viewBox="0 0 10 10" className="text-muted-foreground/40 shrink-0">
               <circle cx="5" cy="5" r="4" fill="none" stroke="currentColor" strokeWidth="1.5" />
             </svg>
-            <span className="font-mono text-[10px] text-muted-foreground/50 truncate">
+            <span className="font-mono text-[10px] text-muted-foreground/60 truncate">
               {url}
             </span>
           </div>
@@ -91,7 +91,7 @@ function BrowserFrame({
 function HypothesisBoard() {
   return (
     <div className="space-y-3">
-      <span className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-wider">
+      <span className="font-mono text-[10px] text-muted-foreground/60 uppercase tracking-wider">
         Hypothesis Board
       </span>
       <div className="space-y-2">
@@ -119,7 +119,7 @@ function HypothesisBoard() {
                     style={{ width: `${h.confidence * 100}%` }}
                   />
                 </div>
-                <span className="font-mono text-[9px] text-muted-foreground/50">
+                <span className="font-mono text-[9px] text-muted-foreground/60">
                   {h.confidence.toFixed(2)}
                 </span>
               </div>
@@ -134,18 +134,18 @@ function HypothesisBoard() {
 function CandidateTable() {
   return (
     <div className="space-y-3">
-      <span className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-wider">
+      <span className="font-mono text-[10px] text-muted-foreground/60 uppercase tracking-wider">
         Candidate Ranking
       </span>
       <div className="border border-border rounded-sm overflow-hidden">
         <table className="w-full">
           <thead>
             <tr className="border-b border-border bg-surface/30">
-              <th className="font-mono text-[9px] text-muted-foreground/50 uppercase tracking-wider text-left px-3 py-2">ID</th>
-              <th className="font-mono text-[9px] text-muted-foreground/50 uppercase tracking-wider text-right px-3 py-2">Score</th>
-              <th className="font-mono text-[9px] text-muted-foreground/50 uppercase tracking-wider text-right px-3 py-2">Docking</th>
-              <th className="font-mono text-[9px] text-muted-foreground/50 uppercase tracking-wider text-center px-3 py-2">ADMET</th>
-              <th className="font-mono text-[9px] text-muted-foreground/50 uppercase tracking-wider text-center px-3 py-2">Lipinski</th>
+              <th className="font-mono text-[9px] text-muted-foreground/60 uppercase tracking-wider text-left px-3 py-2">ID</th>
+              <th className="font-mono text-[9px] text-muted-foreground/60 uppercase tracking-wider text-right px-3 py-2">Score</th>
+              <th className="font-mono text-[9px] text-muted-foreground/60 uppercase tracking-wider text-right px-3 py-2">Docking</th>
+              <th className="font-mono text-[9px] text-muted-foreground/60 uppercase tracking-wider text-center px-3 py-2">ADMET</th>
+              <th className="font-mono text-[9px] text-muted-foreground/60 uppercase tracking-wider text-center px-3 py-2">Lipinski</th>
             </tr>
           </thead>
           <tbody>
@@ -184,7 +184,7 @@ function InvestigationTimeline() {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-wider">
+        <span className="font-mono text-[10px] text-muted-foreground/60 uppercase tracking-wider">
           Investigation Timeline
         </span>
         <span className="font-mono text-[10px] text-muted-foreground/30">
@@ -245,7 +245,7 @@ function MiniRadarChart() {
 
   return (
     <div className="space-y-3">
-      <span className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-wider">
+      <span className="font-mono text-[10px] text-muted-foreground/60 uppercase tracking-wider">
         ADMET Radar
       </span>
       <div className="flex justify-center">
@@ -311,16 +311,15 @@ function MiniRadarChart() {
 /* ── Main section ─────────────────────────────────────────────── */
 
 export function ConsolePreview() {
-  const reduced = useReducedMotion();
 
   return (
     <section className="py-24 px-4 lg:px-0 max-w-[1200px] mx-auto border-t border-border">
       <SectionHeader title="Console" />
 
       <div className="mb-12 max-w-2xl">
-        <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-4">
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-4">
           What you see while it runs.
-        </h3>
+        </h2>
         <p className="text-base text-muted-foreground leading-relaxed">
           SSE events stream into the console in real time. Hypotheses update live.
           Candidates rank as experiments complete. Charts render when visualization
@@ -329,7 +328,7 @@ export function ConsolePreview() {
       </div>
 
       <motion.div
-        initial={reduced ? false : { opacity: 0, y: 16 }}
+        initial={{ opacity: 0, y: 16 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6, ease: "easeOut" }}
@@ -342,7 +341,7 @@ export function ConsolePreview() {
         >
           {/* Investigation prompt */}
           <div className="mb-5 pb-4 border-b border-border/50">
-            <span className="font-mono text-[9px] text-muted-foreground/40 uppercase tracking-wider block mb-1.5">
+            <span className="font-mono text-[9px] text-muted-foreground/60 uppercase tracking-wider block mb-1.5">
               Research Question
             </span>
             <p className="font-mono text-sm text-foreground/90 leading-relaxed">

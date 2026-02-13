@@ -34,7 +34,7 @@ function SourceCard({ source, index }: { source: (typeof DATA_SOURCES)[number]; 
         <div className="text-[11px] text-muted-foreground leading-relaxed">
           {source.purpose}
         </div>
-        <div className="flex items-center gap-3 mt-1.5 font-mono text-[10px] text-muted-foreground/50">
+        <div className="flex items-center gap-3 mt-1.5 font-mono text-[10px] text-muted-foreground/60">
           <span>{source.records}</span>
           <span className="text-border">&middot;</span>
           <span>{source.access}</span>
@@ -46,7 +46,9 @@ function SourceCard({ source, index }: { source: (typeof DATA_SOURCES)[number]; 
 
 export function DataSources() {
   return (
-    <section id="data-sources" className="relative py-32 px-4 lg:px-0 border-t border-border/30">
+    <section id="data-sources" className="relative py-32 px-4 lg:px-0 bg-surface/30">
+      {/* Teal accent glow -- matches secondary/data color */}
+      <div className="absolute top-1/3 left-0 w-[400px] h-[400px] bg-secondary/4 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="max-w-6xl mx-auto relative z-10">
         <div className="grid lg:grid-cols-3 gap-16">
@@ -84,9 +86,9 @@ export function DataSources() {
 
             {/* Institutional memory callout */}
             <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-              <h4 className="font-mono text-[10px] text-primary uppercase tracking-wider mb-2">
+              <h3 className="font-mono text-[10px] text-primary uppercase tracking-wider mb-2">
                 Self-Referential Research
-              </h4>
+              </h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Every investigation&apos;s findings are indexed in a full-text search database.
                 Future investigations query past findings via{" "}

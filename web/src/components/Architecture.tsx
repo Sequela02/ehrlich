@@ -1,4 +1,4 @@
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import { Cpu, Activity, FileText, Network } from "lucide-react";
 
 const CARD_STYLES = {
@@ -95,10 +95,17 @@ function DataPipe({ height = 40, delay = 0 }) {
 }
 
 export function Architecture() {
-  const reduced = useReducedMotion();
-
   return (
-    <section id="architecture" className="relative py-32 px-4 lg:px-0 overflow-hidden">
+    <section
+      id="architecture"
+      className="relative py-32 px-4 lg:px-0 overflow-hidden bg-surface/30"
+      style={{
+        backgroundImage: "radial-gradient(oklch(0.22 0.01 155) 1px, transparent 1px)",
+        backgroundSize: "32px 32px",
+      }}
+    >
+      {/* Amber accent glow -- matches Director's accent color */}
+      <div className="absolute top-0 right-1/4 w-[500px] h-[300px] bg-accent/4 rounded-full blur-[140px] pointer-events-none" />
 
       <div className="max-w-5xl mx-auto relative z-10">
         <div className="text-center mb-20">

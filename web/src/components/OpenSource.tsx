@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { Github } from "lucide-react";
-import { motion, useInView, useReducedMotion } from "motion/react";
+import { motion, useInView } from "motion/react";
 
 const CODE_SNIPPET = `MATERIALS_SCIENCE = DomainConfig(
     name="Materials Science",
@@ -22,13 +22,12 @@ registry.register(MATERIALS_SCIENCE)`;
 export function OpenSource() {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-40px" });
-  const reduced = useReducedMotion();
 
   return (
     <section className="py-32 px-4 lg:px-0 max-w-[1200px] mx-auto border-t border-border">
       <motion.div
         ref={ref}
-        initial={reduced ? false : { opacity: 0, y: 24 }}
+        initial={{ opacity: 0, y: 24 }}
         animate={isInView ? { opacity: 1, y: 0 } : {}}
         transition={{ duration: 0.6, ease: "easeOut" }}
         className="flex flex-col items-start"
@@ -50,7 +49,7 @@ export function OpenSource() {
               <span className="terminal-dot" />
               <span className="terminal-dot" />
               <span className="terminal-dot" />
-              <span className="ml-3 font-mono text-[10px] text-muted-foreground/50 uppercase tracking-wider">
+              <span className="ml-3 font-mono text-[10px] text-muted-foreground/60 uppercase tracking-wider">
                 domain_config.py
               </span>
             </div>

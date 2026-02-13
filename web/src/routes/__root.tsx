@@ -13,18 +13,18 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Ehrlich — AI-Powered Scientific Discovery Engine" },
+      { title: "Ehrlich — Scientific Methodology, Automated" },
       {
         name: "description",
         content:
-          "Hypothesis-driven research across molecular science, training science, and nutrition — powered by Claude. 65 tools, 16 data sources, 3 domains. Open source, AGPL-3.0.",
+          "Formulate hypotheses, design experiments, test against 15 real databases, grade evidence. 67 computational tools across molecular, training, and nutrition science. Not a chatbot. Not a wrapper. Open source, AGPL-3.0.",
       },
       { name: "theme-color", content: "#1a2a1a" },
-      { property: "og:title", content: "Ehrlich — AI Scientific Discovery Engine" },
+      { property: "og:title", content: "Ehrlich — Scientific Methodology, Automated" },
       {
         property: "og:description",
         content:
-          "Hypothesis-driven research across molecular, training, and nutrition science. 65 tools, 16 data sources. Open source.",
+          "67 computational tools. 16 data sources. 3 scientific domains. Hypothesis-driven reasoning grounded in Popper, Fisher, and GRADE. Free tier available.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -36,6 +36,12 @@ export const Route = createRootRoute({
       {
         rel: "preconnect",
         href: "https://fonts.gstatic.com",
+        crossOrigin: "anonymous",
+      },
+      {
+        rel: "preload",
+        as: "style",
+        href: "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap",
         crossOrigin: "anonymous",
       },
       {

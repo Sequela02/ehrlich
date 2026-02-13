@@ -88,7 +88,7 @@ DDD monorepo with 10 bounded contexts. Each context follows `domain/` -> `applic
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence (NO tools)
-Sonnet 4.5 (Researcher) -- Executes experiments with 65 tools (parallel: 2 per batch)
+Sonnet 4.5 (Researcher) -- Executes experiments with 67 tools (parallel: 2 per batch)
 Haiku 4.5 (Summarizer)  -- Compresses large outputs, classifies domains
 ```
 
@@ -387,6 +387,8 @@ Update these files (in the same commit as the code):
 | `README.md` | Tool count, bounded contexts table, tools table, "What Can Ehrlich Investigate" |
 | `docs/architecture.md` | Bounded contexts, tool count, data flow |
 | `docs/roadmap.md` | Add completion entry |
+| `web/src/lib/constants.ts` | STATS counts, DOMAINS array (toolCount, capabilities, sources, vizTools), DATA_SOURCES array |
+| `console/` | Template prompts, domain badges, tool references where applicable |
 
 ### Step 9: Verify
 
@@ -415,6 +417,7 @@ That's it. Your domain is live. The orchestrator will auto-detect it from the us
 3. Write tests
 4. Update the integration test tool count in `tests/integration/test_e2e.py`
 5. Update docs (tool counts in CLAUDE.md, README.md, docs/architecture.md)
+6. Update tool counts and references in `web/src/lib/constants.ts` (STATS, DOMAINS toolCount) and `console/` where applicable
 
 ### Improving Score Definitions
 

@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { ArrowRight, Copy, Check } from "lucide-react";
-import { motion, useInView, useReducedMotion } from "motion/react";
+import { motion, useInView } from "motion/react";
 import { PRICING_TIERS } from "@/lib/constants";
 import { SectionHeader } from "./SectionHeader";
 
@@ -22,7 +22,6 @@ const cardVariants = {
 export function CTA() {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-40px" });
-  const reduced = useReducedMotion();
   const [copied, setCopied] = useState(false);
 
   function handleCopy() {
@@ -33,13 +32,16 @@ export function CTA() {
   }
 
   return (
-    <section id="pricing" className="py-24 px-4 lg:px-0 max-w-[1200px] mx-auto border-t border-border">
+    <section id="pricing" className="relative py-24 px-4 lg:px-0 max-w-[1200px] mx-auto border-t border-border">
+      {/* Primary accent glow -- final push */}
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/3 rounded-full blur-[140px] pointer-events-none" />
+
       <SectionHeader title="Pricing" />
 
       <div className="mb-12 max-w-2xl">
-        <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-4">
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-4">
           Same product at every tier.
-        </h3>
+        </h2>
         <p className="text-base text-muted-foreground leading-relaxed">
           No feature gates. All 67 tools, all 16 data sources, full 6-phase methodology
           at every level. The only variable is the Director model quality: Haiku reasons
@@ -50,7 +52,7 @@ export function CTA() {
       {/* Pricing cards */}
       <motion.div
         ref={ref}
-        initial={reduced ? false : "hidden"}
+        initial="hidden"
         animate={isInView ? "visible" : "hidden"}
         variants={containerVariants}
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-20"
@@ -66,9 +68,9 @@ export function CTA() {
             }`}
           >
             <div className="mb-6">
-              <h4 className="font-mono text-sm uppercase tracking-[0.12em] text-foreground mb-2">
+              <h3 className="font-mono text-sm uppercase tracking-[0.12em] text-foreground mb-2">
                 {tier.name}
-              </h4>
+              </h3>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl font-bold text-foreground">{tier.price}</span>
                 {tier.period && (
@@ -113,14 +115,14 @@ export function CTA() {
 
       {/* Developer quickstart */}
       <motion.div
-        initial={reduced ? false : { opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6, ease: "easeOut" }}
       >
-        <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-4">
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-4">
           Or self-host.
-        </h3>
+        </h2>
         <p className="text-muted-foreground text-base mb-6 max-w-lg">
           Clone the repo, add your API key, run the server. No account needed.
           Full AGPL-3.0 access to everything.
@@ -131,13 +133,13 @@ export function CTA() {
             <span className="terminal-dot" />
             <span className="terminal-dot" />
             <span className="terminal-dot" />
-            <span className="ml-3 font-mono text-[10px] text-muted-foreground/50 uppercase tracking-wider">
+            <span className="ml-3 font-mono text-[10px] text-muted-foreground/60 uppercase tracking-wider">
               terminal
             </span>
             <button
               type="button"
               onClick={handleCopy}
-              className="ml-auto font-mono text-[10px] text-muted-foreground/50 hover:text-primary transition-colors flex items-center gap-1.5 uppercase tracking-wider"
+              className="ml-auto font-mono text-[10px] text-muted-foreground/60 hover:text-primary transition-colors flex items-center gap-1.5 uppercase tracking-wider"
             >
               {copied ? <Check size={12} /> : <Copy size={12} />}
               {copied ? "Copied" : "Copy"}
@@ -158,7 +160,7 @@ export function CTA() {
 
       {/* Final CTA */}
       <motion.div
-        initial={reduced ? false : { opacity: 0, y: 16 }}
+        initial={{ opacity: 0, y: 16 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.5 }}

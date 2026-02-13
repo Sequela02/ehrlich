@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { motion, useInView, useReducedMotion } from "motion/react";
+import { motion, useInView } from "motion/react";
 import { DIFFERENTIATORS } from "@/lib/constants";
 import { SectionHeader } from "./SectionHeader";
 
@@ -16,7 +16,6 @@ const cardVariants = {
 export function Differentiators() {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-40px" });
-  const reduced = useReducedMotion();
 
   return (
     <section
@@ -26,9 +25,9 @@ export function Differentiators() {
       <SectionHeader title="Why Ehrlich" />
 
       <div className="mb-12 max-w-2xl">
-        <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-4">
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-4">
           What makes this different
-        </h3>
+        </h2>
         <p className="text-base text-muted-foreground leading-relaxed">
           The AI implements the scientific methodology. It doesn&apos;t invent it.
           Tools execute on real data. Findings link to real sources.
@@ -37,7 +36,7 @@ export function Differentiators() {
 
       <motion.div
         ref={ref}
-        initial={reduced ? false : "hidden"}
+        initial="hidden"
         animate={isInView ? "visible" : "hidden"}
         variants={containerVariants}
         className="grid grid-cols-1 lg:grid-cols-3 gap-6"
@@ -49,9 +48,9 @@ export function Differentiators() {
             className="bg-surface border border-border rounded-sm p-6 lg:p-8 hover:border-primary/40 transition-colors group flex flex-col"
           >
             <div className="mb-6">
-              <h4 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors mb-1">
+              <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors mb-1">
                 {diff.label}
-              </h4>
+              </h3>
               <span className="font-mono text-[11px] text-muted-foreground/70">
                 {diff.tagline}
               </span>

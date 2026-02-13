@@ -9,10 +9,10 @@
   --color-surface: oklch(0.14 0.008 155);
   --color-primary: oklch(0.72 0.19 155);
   --color-primary-foreground: oklch(0.10 0.005 155);
-  --color-secondary: oklch(0.55 0.10 200);
+  --color-secondary: oklch(0.60 0.10 200);
   --color-accent: oklch(0.75 0.15 80);
   --color-muted: oklch(0.18 0.005 155);
-  --color-muted-foreground: oklch(0.55 0.01 155);
+  --color-muted-foreground: oklch(0.60 0.01 155);
   --color-border: oklch(0.22 0.01 155);
   --color-destructive: oklch(0.60 0.22 25);
 }

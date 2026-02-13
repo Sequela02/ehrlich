@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { motion, useInView, useReducedMotion } from "motion/react";
+import { motion, useInView } from "motion/react";
 import { PLANNED_FEATURES } from "@/lib/constants";
 import { SectionHeader } from "./SectionHeader";
 
@@ -16,7 +16,6 @@ const itemVariants = {
 export function Roadmap() {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-40px" });
-  const reduced = useReducedMotion();
 
   const domains = PLANNED_FEATURES.filter((f) => f.type === "domain");
   const features = PLANNED_FEATURES.filter((f) => f.type === "feature");
@@ -26,9 +25,9 @@ export function Roadmap() {
       <SectionHeader title="Roadmap" />
 
       <div className="mb-12 max-w-2xl">
-        <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-4">
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-4">
           Three domains today. Any domain tomorrow.
-        </h3>
+        </h2>
         <p className="text-base text-muted-foreground leading-relaxed">
           The engine is domain-agnostic. Register a{" "}
           <code className="font-mono text-xs text-primary">DomainConfig</code> with tools,
@@ -39,13 +38,13 @@ export function Roadmap() {
 
       <motion.div
         ref={ref}
-        initial={reduced ? false : "hidden"}
+        initial="hidden"
         animate={isInView ? "visible" : "hidden"}
         variants={containerVariants}
       >
         {/* Planned domains */}
         <div className="mb-8">
-          <span className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-wider block mb-4">
+          <span className="font-mono text-[10px] text-muted-foreground/60 uppercase tracking-wider block mb-4">
             Planned Domains
           </span>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -55,9 +54,9 @@ export function Roadmap() {
                 variants={itemVariants}
                 className="border border-dashed border-border/50 rounded-sm p-5 hover:border-primary/40 transition-colors"
               >
-                <h4 className="font-mono text-sm tracking-[0.08em] uppercase text-muted-foreground/60 mb-2">
+                <h3 className="font-mono text-sm tracking-[0.08em] uppercase text-muted-foreground/60 mb-2">
                   {item.label}
-                </h4>
+                </h3>
                 <p className="text-sm text-muted-foreground/60 leading-relaxed">
                   {item.description}
                 </p>
@@ -68,7 +67,7 @@ export function Roadmap() {
 
         {/* Platform features */}
         <div>
-          <span className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-wider block mb-4">
+          <span className="font-mono text-[10px] text-muted-foreground/60 uppercase tracking-wider block mb-4">
             Platform Features
           </span>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -78,9 +77,9 @@ export function Roadmap() {
                 variants={itemVariants}
                 className="border border-dashed border-border/50 rounded-sm p-5 hover:border-primary/40 transition-colors"
               >
-                <h4 className="font-mono text-sm tracking-[0.08em] uppercase text-foreground/70 mb-2">
+                <h3 className="font-mono text-sm tracking-[0.08em] uppercase text-foreground/70 mb-2">
                   {item.label}
-                </h4>
+                </h3>
                 <p className="text-sm text-muted-foreground/60 leading-relaxed">
                   {item.description}
                 </p>

@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { motion, useInView, useReducedMotion } from "motion/react";
+import { motion, useInView } from "motion/react";
 import { VISUALIZATION_CATEGORIES } from "@/lib/constants";
 import { SectionHeader } from "./SectionHeader";
 
@@ -16,16 +16,15 @@ const cardVariants = {
 export function Visualizations() {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-40px" });
-  const reduced = useReducedMotion();
 
   return (
     <section className="py-24 px-4 lg:px-0 max-w-[1200px] mx-auto border-t border-border">
       <SectionHeader title="Visualizations" />
 
       <div className="mb-12 max-w-2xl">
-        <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-4">
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-4">
           The system picks the right visualization.
-        </h3>
+        </h2>
         <p className="text-base text-muted-foreground leading-relaxed">
           The orchestrator intercepts tool results and renders the matching visualization
           automatically. 3D molecular viewers for docking results. Statistical plots for
@@ -36,7 +35,7 @@ export function Visualizations() {
 
       <motion.div
         ref={ref}
-        initial={reduced ? false : "hidden"}
+        initial="hidden"
         animate={isInView ? "visible" : "hidden"}
         variants={containerVariants}
         className="grid grid-cols-1 md:grid-cols-2 gap-6"
@@ -48,10 +47,10 @@ export function Visualizations() {
             className="bg-surface/30 border border-border rounded-sm p-6 hover:border-primary/40 transition-colors group"
           >
             <div className="flex items-baseline justify-between mb-4">
-              <h4 className="font-mono text-sm tracking-[0.08em] uppercase text-foreground group-hover:text-primary transition-colors">
+              <h3 className="font-mono text-sm tracking-[0.08em] uppercase text-foreground group-hover:text-primary transition-colors">
                 {category.label}
-              </h4>
-              <span className="font-mono text-[10px] text-muted-foreground/40">
+              </h3>
+              <span className="font-mono text-[10px] text-muted-foreground/60">
                 {category.tech}
               </span>
             </div>
@@ -80,15 +79,15 @@ export function Visualizations() {
 
       {/* Extensibility callout */}
       <motion.div
-        initial={reduced ? false : { opacity: 0, y: 12 }}
+        initial={{ opacity: 0, y: 12 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.4 }}
         className="mt-6 bg-transparent border border-dashed border-border/50 rounded-sm p-6 hover:border-primary/50 transition-colors"
       >
-        <h4 className="font-mono text-sm tracking-[0.08em] uppercase text-muted-foreground/60 mb-2">
+        <h3 className="font-mono text-sm tracking-[0.08em] uppercase text-muted-foreground/60 mb-2">
           Add Your Own
-        </h4>
+        </h3>
         <p className="text-sm text-muted-foreground/60 max-w-2xl leading-relaxed">
           When you register a new domain, you can create custom visualization components
           using any rendering library: Recharts, Visx, D3, custom SVG, WebGL, maps, network

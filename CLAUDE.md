@@ -469,20 +469,25 @@ All paths relative to `web/src/`.
 
 | File | Purpose |
 |------|---------|
-| `routes/__root.tsx` | Root layout with shellComponent, HeadContent, SEO meta, font loading |
-| `routes/index.tsx` | Landing page wiring all 10 components |
+| `routes/__root.tsx` | Root layout with shellComponent, HeadContent, SEO meta, font preloading |
+| `routes/index.tsx` | Landing page wiring 12 sections + Nav + Footer |
 | `components/Nav.tsx` | Fixed navbar with scroll progress bar + mobile menu |
 | `components/Footer.tsx` | Minimal footer with links and license |
 | `components/SectionHeader.tsx` | Mono label with left border accent |
-| `components/Hero.tsx` | Bottom-third hero with ASCII bg, stats bar, CTAs |
-| `components/Architecture.tsx` | Director-Worker-Summarizer diagram with fork/merge connectors |
-| `components/Methodology.tsx` | 6-phase pipeline with glow-pulse active node |
-| `components/Domains.tsx` | 3 asymmetric domain cards with tool counts |
-| `components/DataSources.tsx` | 15 sources with large number visual anchor |
-| `components/OpenSource.tsx` | Typography-driven sparse section |
-| `components/CTA.tsx` | Minimal CTA with arrow links |
-| `styles/app.css` | Tailwind 4 + OKLCH tokens + scroll/stagger animations |
+| `components/Hero.tsx` | Bottom-third hero with MolecularNetwork, stats badges, CTAs |
+| `components/MolecularNetwork.tsx` | 3D rotating node graph (Canvas 2D, mouse repulsion, CSS mask edge fade) |
+| `components/HowItWorks.tsx` | 6-phase methodology timeline with vertical connecting line |
+| `components/ConsolePreview.tsx` | Browser-frame mockups (timeline, hypothesis board, candidates, radar) |
+| `components/Architecture.tsx` | Director-Worker-Summarizer model cards, dot grid bg, amber glow |
+| `components/Domains.tsx` | 3 domain cards with tool counts, multi-domain callout |
+| `components/Visualizations.tsx` | 4 visualization category cards with tech labels |
+| `components/DataSources.tsx` | 16 source cards, surface bg with teal glow |
+| `components/WhoItsFor.tsx` | 3 persona cards (Student, Academic, Industry) |
+| `components/Differentiators.tsx` | 3 differentiator cards with capabilities lists |
+| `components/OpenSource.tsx` | Typography-driven section with code snippet + licensing |
+| `components/Roadmap.tsx` | Planned domains + platform features (dashed border cards) |
+| `components/CTA.tsx` | Pricing tiers, terminal quickstart, primary glow accent |
+| `styles/app.css` | Tailwind 4 + OKLCH tokens + scroll/stagger/terminal animations |
 | `lib/constants.ts` | Stats, nav/footer links, domains, data sources, methodology phases |
-| `lib/ascii-patterns.ts` | ASCII art backgrounds (hero, architecture, methodology, data sources) |
 | `lib/use-reveal.ts` | IntersectionObserver scroll reveal hook |
 | `lib/use-scroll-progress.ts` | Scroll progress fraction (0-1) hook |

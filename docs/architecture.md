@@ -138,9 +138,10 @@ Dark-only theme mixing Industrial Scientific + Editorial Academic + Cyberpunk La
 | surface | `oklch(0.14 0.008 155)` | Raised cards, panels |
 | foreground | `oklch(0.93 0.005 155)` | Primary text |
 | primary | `oklch(0.72 0.19 155)` | Molecular Green — CTAs, active states |
-| secondary | `oklch(0.55 0.10 200)` | Teal — completed states |
+| secondary | `oklch(0.60 0.10 200)` | Teal — completed states |
 | accent | `oklch(0.75 0.15 80)` | Amber — director events |
 | muted | `oklch(0.18 0.005 155)` | Muted backgrounds |
+| muted-foreground | `oklch(0.60 0.01 155)` | Secondary text (WCAG AA compliant) |
 | border | `oklch(0.22 0.01 155)` | Subtle borders |
 | destructive | `oklch(0.60 0.22 25)` | Error red |
 
@@ -164,7 +165,7 @@ Dark-only theme mixing Industrial Scientific + Editorial Academic + Cyberpunk La
 - No light mode — dark-only, scientific instrument aesthetic
 - No centered hero — left-aligned, utilitarian layout
 - No blur shadows — hard borders or glow effects only
-- No gradient blobs or decorative elements
+- No animated particle backgrounds — static CSS patterns only (dot grid, radial accents)
 
 ## Landing Site (`web/`)
 
@@ -173,7 +174,7 @@ Separate TanStack Start project for the public-facing landing page. SSR/SSG for 
 - **Console** (`console/`): authenticated SPA for running investigations (TanStack Router, client-side only)
 - **Web** (`web/`): public landing page with SSR/SSG for SEO (TanStack Start + Nitro, server-rendered)
 
-10 components: Nav (scroll progress), Hero (ASCII bg, bottom-third), Architecture (Director-Worker-Summarizer diagram), Methodology (6-phase pipeline), Domains (3 asymmetric cards), DataSources (16 sources), OpenSource, CTA, SectionHeader, Footer. All use OKLCH tokens, `useReveal` scroll animations, staggered children, and ASCII art backgrounds at 3% opacity.
+16 component files: Nav (scroll progress), Hero (MolecularNetwork 3D canvas), HowItWorks (6-phase timeline), ConsolePreview (browser-frame mockups), Architecture (model cards + dot grid bg + amber glow), Domains (3 domain cards), Visualizations (4 category cards), DataSources (16 source cards + teal glow), WhoItsFor (3 persona cards), Differentiators (3 cards), OpenSource (code snippet + licensing), Roadmap (planned domains/features), CTA (pricing tiers + terminal quickstart + primary glow), SectionHeader, Footer, MolecularNetwork. All use OKLCH tokens, Motion scroll animations, and staggered children reveals. Section zoning via alternating `bg-surface/30` backgrounds and strategic radial accent glows (amber on Architecture, teal on DataSources, primary on CTA).
 
 Both deploy independently: console to app server, web to CDN/static hosting.
 

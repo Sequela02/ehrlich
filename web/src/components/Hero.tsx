@@ -1,13 +1,12 @@
 import { useRef } from "react";
 import { ArrowRight } from "lucide-react";
-import { motion, useInView, useReducedMotion } from "motion/react";
+import { motion, useInView } from "motion/react";
 import { STATS } from "@/lib/constants";
-import { AsciiTorus } from "./AsciiTorus";
+import { MolecularNetwork } from "./MolecularNetwork";
 
 export function Hero() {
   const containerRef = useRef<HTMLDivElement>(null);
   const isInView = useInView(containerRef, { once: true });
-  const reduced = useReducedMotion();
 
   return (
     <section ref={containerRef} className="min-h-[85vh] relative flex items-end overflow-hidden">
@@ -21,8 +20,8 @@ export function Hero() {
 
         {/* Left: Value Proposition */}
         <motion.div
-          initial={reduced ? false : { opacity: 0, y: 20 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          initial={{ opacity: 0, y: 20 }}
+          animate={isInView ? { opacity: 1, y: 0 } : undefined}
           transition={{ duration: 0.8, ease: "easeOut" }}
           className="flex flex-col gap-8"
         >
@@ -70,14 +69,14 @@ export function Hero() {
           </div>
         </motion.div>
 
-        {/* Right: ASCII 3D Torus */}
+        {/* Right: 3D Molecular Network */}
         <motion.div
-          initial={reduced ? false : { opacity: 0, scale: 0.95 }}
-          animate={isInView ? { opacity: 1, scale: 1 } : {}}
+          initial={{ opacity: 0 }}
+          animate={isInView ? { opacity: 1 } : undefined}
           transition={{ duration: 1, delay: 0.3, ease: "easeOut" }}
-          className="hidden lg:flex items-center justify-center"
+          className="hidden lg:flex items-center justify-center h-[500px]"
         >
-          <AsciiTorus />
+          <MolecularNetwork />
         </motion.div>
       </div>
 

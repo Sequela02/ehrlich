@@ -197,7 +197,7 @@ The core: Claude as an autonomous scientist.
 - [x] Tests: mock API, verify request/response handling
 
 ### 5B. Tool Registry
-- [x] Register all tools from all contexts (6 chemistry, 3 literature, 6 analysis, 3 prediction, 7 simulation, 11 training, 10 nutrition, 7 investigation control -- 38 at time of Phase 5; now 65 with API tools + visualization tools)
+- [x] Register all tools from all contexts (6 chemistry, 3 literature, 6 analysis, 3 prediction, 7 simulation, 11 training, 10 nutrition, 7 investigation control -- 38 at time of Phase 5; now 67 with API tools + visualization tools + statistics tools)
 - [x] Auto-generate JSON Schema from Python type hints + docstrings
 - [x] `get(name)` -> callable, `list_tools()` -> all registered tools, `list_schemas()` -> Anthropic-compatible schemas
 - [x] Schema format matches Anthropic tool_use specification
@@ -330,7 +330,7 @@ Cost-efficient multi-model orchestration, persistence, and UI polish.
 ### 8C. Multi-Model Orchestrator
 - [x] `MultiModelOrchestrator` with hypothesis-driven Director-Worker-Summarizer pattern
 - [x] Director (Opus) formulates hypotheses, designs experiments, evaluates evidence, synthesizes -- NO tool access
-- [x] Researcher (Sonnet) executes experiments with 65 domain-filtered tools (max 10 iterations per experiment)
+- [x] Researcher (Sonnet) executes experiments with 67 domain-filtered tools (max 10 iterations per experiment)
 - [x] Summarizer (Haiku) compresses large outputs exceeding threshold
 - [x] 7 prompts: director formulation/experiment/evaluation/synthesis, researcher experiment, scientist, summarizer
 - [x] Auto-fallback to single-model Orchestrator when researcher == director
@@ -700,7 +700,7 @@ Fixed incorrect hardcoded pricing and added cache hit/miss token tracking for ac
 
 ### SDK-2: Prompt Caching on Tools Array -- DONE
 
-Cache the 65-tool schema array that repeats on every researcher API call.
+Cache the 67-tool schema array that repeats on every researcher API call.
 
 - [x] Add `cache_control: {"type": "ephemeral"}` to the last tool in the tools array before passing to `messages.create`
 - [x] Only apply when tools list is non-empty
@@ -834,18 +834,23 @@ web/
 │   │   ├── Nav.tsx               # Fixed navbar with scroll progress bar + mobile menu
 │   │   ├── Footer.tsx            # Minimal footer (links, license, year)
 │   │   ├── SectionHeader.tsx     # Mono label with left border accent
-│   │   ├── Hero.tsx              # Bottom-third hero with ASCII bg, stats bar, CTAs
-│   │   ├── Architecture.tsx      # Director-Worker-Summarizer diagram with connectors
-│   │   ├── Methodology.tsx       # 6-phase pipeline with glow-pulse active node
-│   │   ├── Domains.tsx           # 3 asymmetric domain cards with tool counts
-│   │   ├── DataSources.tsx       # 15 sources with large number visual anchor
-│   │   ├── OpenSource.tsx        # Typography-driven sparse section
-│   │   └── CTA.tsx               # Minimal CTA with arrow links
+│   │   ├── Hero.tsx              # Bottom-third hero with MolecularNetwork, stats badges, CTAs
+│   │   ├── MolecularNetwork.tsx  # 3D rotating node graph (Canvas 2D, mouse repulsion, CSS mask)
+│   │   ├── HowItWorks.tsx        # 6-phase methodology timeline with vertical line
+│   │   ├── ConsolePreview.tsx    # Browser-frame mockups (timeline, hypotheses, candidates)
+│   │   ├── Architecture.tsx      # Director-Worker-Summarizer model cards, dot grid bg
+│   │   ├── Domains.tsx           # 3 domain cards with tool counts + multi-domain callout
+│   │   ├── Visualizations.tsx    # 4 visualization category cards
+│   │   ├── DataSources.tsx       # 16 source cards with teal glow
+│   │   ├── WhoItsFor.tsx         # 3 persona cards (Student, Academic, Industry)
+│   │   ├── Differentiators.tsx   # 3 differentiator cards with capabilities
+│   │   ├── OpenSource.tsx        # Code snippet + licensing section
+│   │   ├── Roadmap.tsx           # Planned domains + platform features
+│   │   └── CTA.tsx               # Pricing tiers, terminal quickstart, primary glow
 │   ├── styles/
 │   │   └── app.css               # Tailwind 4 entry + OKLCH tokens + animations
 │   ├── lib/
 │   │   ├── constants.ts          # Stats, links, domain data, methodology phases
-│   │   ├── ascii-patterns.ts     # ASCII art backgrounds (hero, arch, methodology, data)
 │   │   ├── use-reveal.ts         # IntersectionObserver scroll reveal hook
 │   │   └── use-scroll-progress.ts # Scroll progress fraction hook
 │   ├── router.tsx                # TanStack Router factory (getRouter)
@@ -870,13 +875,18 @@ web/
 
 ### WEB-2: Landing Page Sections -- DONE
 
-- [x] **Hero**: bottom-third placement, ASCII background, stats bar (65 tools, 16 sources, 3 domains, 3 models), CTA buttons
-- [x] **Architecture**: Director-Worker-Summarizer diagram with fork/merge connectors, color-coded accent bars, stagger-children animation
-- [x] **Methodology**: 6-phase pipeline with connecting line, glow-pulse on active node (Hypothesis Formulation), theoretical basis block
-- [x] **Domains**: 3 asymmetric grid cards (5/4/3 col spans), tool count badges, capabilities, sources, example prompts
-- [x] **DataSources**: large "13" visual anchor left, 2-column source list right, conditional access badges
-- [x] **OpenSource**: typography-driven sparse section (py-32), 3-column feature grid, GitHub link
-- [x] **CTA**: 3 arrow links (Launch Console, Self-Host with Docker, Read the Docs)
+- [x] **Hero**: bottom-third placement, MolecularNetwork 3D canvas (CSS mask edge fade), stats badges, CTA buttons
+- [x] **HowItWorks**: 6-phase methodology timeline with vertical connecting line, hypothesis/experiment structure callouts
+- [x] **ConsolePreview**: browser-frame mockups (investigation timeline, hypothesis board, candidate table, ADMET radar)
+- [x] **Architecture**: Director-Worker-Summarizer model cards with data pipes, dot grid bg, amber radial glow
+- [x] **Domains**: 3 domain cards with tool counts, multi-domain callout, extensibility card
+- [x] **Visualizations**: 4 visualization category cards with tech labels, extensibility callout
+- [x] **DataSources**: 16 source cards (2-col grid), surface bg with teal radial glow, self-referential research callout
+- [x] **WhoItsFor**: 3 persona cards (Student, Academic, Industry)
+- [x] **Differentiators**: 3 differentiator cards with capabilities lists
+- [x] **OpenSource**: code snippet + dual licensing (AGPL-3.0 + Commercial), GitHub link
+- [x] **Roadmap**: planned domains (3 cards) + platform features (dashed border cards)
+- [x] **CTA**: pricing tiers (4 cards), terminal quickstart with copy, primary radial glow
 
 ### WEB-3: Navigation + Footer + Meta -- DONE
 
@@ -889,14 +899,19 @@ web/
 
 ### WEB-5: Visual Polish + Animations -- DONE
 
-- [x] Scroll-triggered section reveals via `useReveal` (IntersectionObserver, one-shot)
-- [x] Staggered children animation (80ms delay cascade, CSS-only)
-- [x] Phase pipeline glow-pulse on active node
-- [x] Domain cards hover effects (-translate-y-[1px], border-primary)
-- [x] Architecture cards stagger-children animation
-- [x] ASCII art backgrounds at 3% opacity (hero, architecture, methodology, data sources)
+- [x] Motion scroll-triggered reveals (whileInView, once: true)
+- [x] Staggered children animation (80-120ms delay cascade)
+- [x] Architecture data pipe animation (flowing dots between model tiers)
+- [x] Domain/differentiator/persona card hover effects (border-primary, y-shift)
+- [x] MolecularNetwork 3D canvas: 90 nodes, mouse repulsion, shimmer connections, CSS mask edge fade
+- [x] Section zoning: alternating bg-surface/30 + strategic radial glows (amber/teal/primary)
+- [x] CSS dot grid on Architecture (32px, static, graph-paper aesthetic)
 - [x] Scroll progress bar in navbar
+- [x] WCAG AA color contrast (muted-foreground 0.60, secondary 0.60, min /60 opacity)
+- [x] Sequential heading hierarchy (h1 -> h2 -> h3, no skips)
+- [x] Font preloading for Google Fonts (preload + stylesheet)
 - [x] All OKLCH tokens (zero hardcoded gray-* classes)
+- [x] Lighthouse: Performance 67, Accessibility 95, Best Practices 100, SEO 100
 
 ### Verification
 
@@ -970,7 +985,7 @@ Deepened the nutrition bounded context with 1 new data source, 6 new tools, and 
 - [x] `NutritionService` expanded with 6 new methods + interaction repository injection
 - [x] Frontend: 3 lazy-loaded chart components registered in `VizRegistry`
 
-**Counts:** 56 -> 65 tools, 15 -> 16 data sources, 9 -> 12 viz tools. 620 server tests, 107 console tests.
+**Counts:** 56 -> 67 tools, 15 -> 16 data sources, 9 -> 12 viz tools. 643 server tests, 107 console tests.
 
 ---
 
@@ -1070,10 +1085,10 @@ Side-by-side comparison of investigation runs for reproducibility and consensus 
 
 Expose Ehrlich as an MCP tool server for Claude Code / Claude Desktop.
 
-> **Note:** Ehrlich already has an MCP **client** bridge (`investigation/infrastructure/mcp_bridge.py`) that connects TO external MCP servers (e.g., Excalidraw for visual summaries). This backlog item is the reverse: exposing Ehrlich's 65 tools as an MCP server.
+> **Note:** Ehrlich already has an MCP **client** bridge (`investigation/infrastructure/mcp_bridge.py`) that connects TO external MCP servers (e.g., Excalidraw for visual summaries). This backlog item is the reverse: exposing Ehrlich's 67 tools as an MCP server.
 
 - [ ] Stdio + SSE transports for Claude Code / Claude Desktop
-- [ ] Tool registration: expose all 65 Ehrlich tools as MCP tools
+- [ ] Tool registration: expose all 67 Ehrlich tools as MCP tools
 - [ ] `start_investigation(prompt)` -- kick off investigation, return ID
 - [ ] `get_investigation(id)` -- return status, findings, candidates
 - [ ] MCP server config for Claude Code (`claude_desktop_config.json`)

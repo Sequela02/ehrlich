@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { motion, useInView, useReducedMotion } from "motion/react";
+import { motion, useInView } from "motion/react";
 import { SectionHeader } from "./SectionHeader";
 
 const PERSONAS = [
@@ -33,16 +33,15 @@ const cardVariants = {
 export function WhoItsFor() {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-40px" });
-  const reduced = useReducedMotion();
 
   return (
     <section id="who-its-for" className="py-24 px-4 lg:px-0 max-w-[1200px] mx-auto border-t border-border">
       <SectionHeader title="Who It's For" />
 
       <div className="mb-12 max-w-2xl">
-        <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-4">
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-4">
           Same product at every level.
-        </h3>
+        </h2>
         <p className="text-base text-muted-foreground leading-relaxed">
           All 67 tools, all 16 data sources, and the full 6-phase methodology at every tier.
           The only variable is the Director model quality.
@@ -51,7 +50,7 @@ export function WhoItsFor() {
 
       <motion.div
         ref={ref}
-        initial={reduced ? false : "hidden"}
+        initial="hidden"
         animate={isInView ? "visible" : "hidden"}
         variants={containerVariants}
         className="grid grid-cols-1 md:grid-cols-3 gap-6"
@@ -62,9 +61,9 @@ export function WhoItsFor() {
             variants={cardVariants}
             className="bg-surface border border-border rounded-sm p-6 lg:p-8 hover:border-primary/40 transition-colors group"
           >
-            <h4 className="font-mono text-sm tracking-[0.12em] uppercase text-foreground group-hover:text-primary transition-colors mb-1">
+            <h3 className="font-mono text-sm tracking-[0.12em] uppercase text-foreground group-hover:text-primary transition-colors mb-1">
               {persona.label}
-            </h4>
+            </h3>
             <span className="font-mono text-[11px] text-primary/70 block mb-4">
               {persona.usage}
             </span>

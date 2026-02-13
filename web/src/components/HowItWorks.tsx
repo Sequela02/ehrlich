@@ -7,7 +7,7 @@ import {
   ShieldCheck,
   FileText,
 } from "lucide-react";
-import { motion, useInView, useReducedMotion } from "motion/react";
+import { motion, useInView } from "motion/react";
 import { METHODOLOGY_PHASES } from "@/lib/constants";
 import { SectionHeader } from "./SectionHeader";
 
@@ -28,7 +28,6 @@ const itemVariants = {
 export function HowItWorks() {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-60px" });
-  const reduced = useReducedMotion();
 
   return (
     <section
@@ -38,9 +37,9 @@ export function HowItWorks() {
       <SectionHeader title="How It Works" />
 
       <div className="mb-12 max-w-2xl">
-        <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-4">
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-4">
           Six phases. Each grounded in established science.
-        </h3>
+        </h2>
         <p className="text-base text-muted-foreground leading-relaxed">
           Every investigation follows a structured scientific protocol. Ehrlich
           doesn&apos;t just search the internet &mdash; it formulates hypotheses,
@@ -51,7 +50,7 @@ export function HowItWorks() {
 
       <motion.div
         ref={ref}
-        initial={reduced ? false : "hidden"}
+        initial="hidden"
         animate={isInView ? "visible" : "hidden"}
         variants={containerVariants}
         className="relative"
@@ -59,7 +58,7 @@ export function HowItWorks() {
         {/* Vertical connecting line */}
         <motion.div
           className="absolute left-[19px] top-0 bottom-0 w-px bg-border hidden lg:block"
-          initial={reduced ? false : { scaleY: 0 }}
+          initial={{ scaleY: 0 }}
           animate={isInView ? { scaleY: 1 } : {}}
           transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
           style={{ transformOrigin: "top" }}
@@ -90,9 +89,9 @@ export function HowItWorks() {
                     <span className="font-mono text-xs text-primary tracking-wider">
                       {phase.number}
                     </span>
-                    <h4 className="font-mono text-sm uppercase tracking-[0.08em] text-foreground group-hover:text-primary transition-colors">
+                    <h3 className="font-mono text-sm uppercase tracking-[0.08em] text-foreground group-hover:text-primary transition-colors">
                       {phase.label}
-                    </h4>
+                    </h3>
                     <span className="font-mono text-[10px] text-accent/70 border border-accent/20 bg-accent/5 px-1.5 py-0.5 rounded">
                       {phase.foundation}
                     </span>
@@ -109,16 +108,16 @@ export function HowItWorks() {
 
       {/* Hypothesis structure callout */}
       <motion.div
-        initial={reduced ? false : { opacity: 0, y: 16 }}
+        initial={{ opacity: 0, y: 16 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.5, delay: 0.3 }}
         className="mt-16 grid md:grid-cols-2 gap-6"
       >
         <div className="border border-border bg-surface/30 rounded-sm p-6">
-          <h4 className="font-mono text-[10px] text-primary uppercase tracking-wider mb-4">
+          <h3 className="font-mono text-[10px] text-primary uppercase tracking-wider mb-4">
             Every Hypothesis Carries
-          </h4>
+          </h3>
           <div className="space-y-2 font-mono text-[11px] text-muted-foreground">
             <div><span className="text-foreground/70 inline-block w-28">statement</span> The core claim</div>
             <div><span className="text-foreground/70 inline-block w-28">prediction</span> What should be true if correct</div>
@@ -130,9 +129,9 @@ export function HowItWorks() {
         </div>
 
         <div className="border border-border bg-surface/30 rounded-sm p-6">
-          <h4 className="font-mono text-[10px] text-primary uppercase tracking-wider mb-4">
+          <h3 className="font-mono text-[10px] text-primary uppercase tracking-wider mb-4">
             Every Experiment Carries
-          </h4>
+          </h3>
           <div className="space-y-2 font-mono text-[11px] text-muted-foreground">
             <div><span className="text-foreground/70 inline-block w-28">independent_var</span> What is being manipulated</div>
             <div><span className="text-foreground/70 inline-block w-28">dependent_var</span> What is being measured</div>

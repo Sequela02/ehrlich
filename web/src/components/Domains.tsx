@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { motion, useInView, useReducedMotion } from "motion/react";
+import { motion, useInView } from "motion/react";
 import { DOMAINS } from "@/lib/constants";
 import { SectionHeader } from "./SectionHeader";
 
@@ -16,16 +16,15 @@ const cardVariants = {
 export function Domains() {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-40px" });
-  const reduced = useReducedMotion();
 
   return (
     <section id="domains" className="py-24 px-4 lg:px-0 max-w-[1200px] mx-auto border-t border-border">
       <SectionHeader title="Scientific Domains" />
 
       <div className="mb-10 max-w-2xl">
-        <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-4">
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-4">
           Three domains. Domain-agnostic engine.
-        </h3>
+        </h2>
         <p className="text-base text-muted-foreground leading-relaxed">
           Each domain brings its own tools, scoring definitions, and prompt examples.
           The orchestrator, methodology, and persistence work identically across all.
@@ -35,7 +34,7 @@ export function Domains() {
 
       <motion.div
         ref={ref}
-        initial={reduced ? false : "hidden"}
+        initial="hidden"
         animate={isInView ? "visible" : "hidden"}
         variants={containerVariants}
         className="space-y-6"
@@ -50,9 +49,9 @@ export function Domains() {
               {/* Header */}
               <div className="lg:w-64 shrink-0 mb-4 lg:mb-0">
                 <div className="flex items-center justify-between lg:flex-col lg:items-start lg:gap-2">
-                  <h4 className="font-mono text-sm tracking-[0.12em] uppercase text-foreground group-hover:text-primary transition-colors">
+                  <h3 className="font-mono text-sm tracking-[0.12em] uppercase text-foreground group-hover:text-primary transition-colors">
                     {domain.label}
-                  </h4>
+                  </h3>
                   <span className="font-mono text-[10px] text-primary border border-primary/20 bg-primary/5 px-2 py-1 rounded-[1px]">
                     {domain.toolCount} TOOLS
                   </span>
@@ -77,7 +76,7 @@ export function Domains() {
 
               {/* Viz tools */}
               <div className="lg:w-44 shrink-0 mt-4 lg:mt-0">
-                <span className="font-mono text-[10px] text-muted-foreground/50 uppercase block mb-2">
+                <span className="font-mono text-[10px] text-muted-foreground/60 uppercase block mb-2">
                   Visualizations
                 </span>
                 <div className="flex flex-wrap gap-1.5">
@@ -96,7 +95,7 @@ export function Domains() {
             {/* Example prompt */}
             <div className="mt-4 pt-4 border-t border-border/30">
               <div className="bg-background border border-border/50 p-3 rounded-sm">
-                <span className="font-mono text-[9px] text-muted-foreground/40 mb-1 select-none block uppercase">
+                <span className="font-mono text-[9px] text-muted-foreground/60 mb-1 select-none block uppercase">
                   Example:
                 </span>
                 <code className="font-mono text-[11px] text-muted-foreground">
@@ -114,9 +113,9 @@ export function Domains() {
         >
           <div className="flex flex-col md:flex-row md:items-start gap-6">
             <div className="flex-1">
-              <h4 className="font-mono text-sm tracking-[0.08em] uppercase text-primary mb-2">
+              <h3 className="font-mono text-sm tracking-[0.08em] uppercase text-primary mb-2">
                 Multi-Domain Investigations
-              </h4>
+              </h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Ask a question that spans multiple domains and Ehrlich detects it automatically.{" "}
                 <code className="font-mono text-[10px] text-primary">DomainRegistry.detect()</code>{" "}
@@ -144,9 +143,9 @@ export function Domains() {
         >
           <div className="flex flex-col md:flex-row md:items-center gap-6">
             <div className="flex-1">
-              <h4 className="font-mono text-sm tracking-[0.12em] uppercase text-muted-foreground/60 mb-2">
+              <h3 className="font-mono text-sm tracking-[0.12em] uppercase text-muted-foreground/60 mb-2">
                 Add Your Domain
-              </h4>
+              </h3>
               <p className="text-sm text-muted-foreground/60 max-w-lg leading-relaxed">
                 Register a{" "}
                 <code className="font-mono text-xs text-primary/60">DomainConfig</code>{" "}
