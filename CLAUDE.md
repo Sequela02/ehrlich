@@ -469,8 +469,8 @@ All paths relative to `web/src/`.
 
 | File | Purpose |
 |------|---------|
-| `routes/__root.tsx` | Root layout with shellComponent, HeadContent, SEO meta, font preloading |
-| `routes/index.tsx` | Landing page wiring 12 sections + Nav + Footer |
+| `routes/__root.tsx` | Root layout with shellComponent, HeadContent, SEO meta, self-hosted font preloads |
+| `routes/index.tsx` | Landing page with lazy-loaded components (React.lazy + Suspense) |
 | `components/Nav.tsx` | Fixed navbar with scroll progress bar + mobile menu |
 | `components/Footer.tsx` | Minimal footer with links and license |
 | `components/SectionHeader.tsx` | Mono label with left border accent |
@@ -487,7 +487,8 @@ All paths relative to `web/src/`.
 | `components/OpenSource.tsx` | Typography-driven section with code snippet + licensing |
 | `components/Roadmap.tsx` | Planned domains + platform features (dashed border cards) |
 | `components/CTA.tsx` | Pricing tiers, terminal quickstart, primary glow accent |
-| `styles/app.css` | Tailwind 4 + OKLCH tokens + scroll/stagger/terminal animations |
+| `styles/app.css` | Tailwind 4 + OKLCH tokens + @font-face declarations + scroll/stagger/terminal animations |
+| `public/fonts/*.woff2` | Self-hosted fonts (6 files: Space Grotesk 400-700, JetBrains Mono 400-500) |
 | `lib/constants.ts` | Stats, nav/footer links, domains, data sources, methodology phases |
 | `lib/use-reveal.ts` | IntersectionObserver scroll reveal hook |
 | `lib/use-scroll-progress.ts` | Scroll progress fraction (0-1) hook |

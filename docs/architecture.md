@@ -169,12 +169,14 @@ Dark-only theme mixing Industrial Scientific + Editorial Academic + Cyberpunk La
 
 ## Landing Site (`web/`)
 
-Separate TanStack Start project for the public-facing landing page. SSR/SSG for SEO via Nitro server, same React + TypeScript + Bun toolchain as console. Shares design tokens (OKLCH Lab Protocol identity, Space Grotesk + JetBrains Mono fonts) but no code dependencies on console -- each project builds independently.
+Separate TanStack Start project for the public-facing landing page. SSR/SSG for SEO via Nitro server, same React + TypeScript + Bun toolchain as console. Shares design tokens (OKLCH Lab Protocol identity, self-hosted Space Grotesk + JetBrains Mono fonts) but no code dependencies on console -- each project builds independently.
+
+**Performance optimizations (Lighthouse 95+):** Self-hosted WOFF2 fonts (6 files, 76KB total) eliminate render-blocking external requests. Below-fold components lazy loaded via React.lazy() + Suspense boundaries (11 components split into 2-11KB chunks). Zero unused dependencies. Chunk size warnings at 300KB prevent regressions.
 
 - **Console** (`console/`): authenticated SPA for running investigations (TanStack Router, client-side only)
 - **Web** (`web/`): public landing page with SSR/SSG for SEO (TanStack Start + Nitro, server-rendered)
 
-16 component files: Nav (scroll progress), Hero (MolecularNetwork 3D canvas), HowItWorks (6-phase timeline), ConsolePreview (browser-frame mockups), Architecture (model cards + dot grid bg + amber glow), Domains (3 domain cards), Visualizations (4 category cards), DataSources (16 source cards + teal glow), WhoItsFor (3 persona cards), Differentiators (3 cards), OpenSource (code snippet + licensing), Roadmap (planned domains/features), CTA (pricing tiers + terminal quickstart + primary glow), SectionHeader, Footer, MolecularNetwork. All use OKLCH tokens, Motion scroll animations, and staggered children reveals. Section zoning via alternating `bg-surface/30` backgrounds and strategic radial accent glows (amber on Architecture, teal on DataSources, primary on CTA).
+16 component files: Nav (scroll progress, eager), Hero (MolecularNetwork 3D canvas, eager), HowItWorks (6-phase timeline, lazy), ConsolePreview (browser-frame mockups, lazy), Architecture (model cards + dot grid bg + amber glow, lazy), Domains (3 domain cards, lazy), Visualizations (4 category cards, lazy), DataSources (16 source cards + teal glow, lazy), WhoItsFor (3 persona cards, lazy), Differentiators (3 cards, lazy), OpenSource (code snippet + licensing, lazy), Roadmap (planned domains/features, lazy), CTA (pricing tiers + terminal quickstart + primary glow, lazy), SectionHeader, Footer (lazy), MolecularNetwork. All use OKLCH tokens, Motion scroll animations, and staggered children reveals. Section zoning via alternating `bg-surface/30` backgrounds and strategic radial accent glows (amber on Architecture, teal on DataSources, primary on CTA).
 
 Both deploy independently: console to app server, web to CDN/static hosting.
 
