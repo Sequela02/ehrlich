@@ -255,12 +255,15 @@ class MultiModelOrchestrator:
 
                 # Detect domain configs (multi-domain) and yield event
                 if self._domain_registry:
-                    detected_configs = self._domain_registry.detect(domain_categories)
+                    detected_configs, is_fallback = self._domain_registry.detect(
+                        domain_categories
+                    )
                     self._active_config = merge_domain_configs(detected_configs)
                     self._researcher_prompt = build_researcher_prompt(self._active_config)
                     yield DomainDetected(
                         domain=self._active_config.name,
                         display_config=self._active_config.to_display_dict(),
+                        is_fallback=is_fallback,
                         investigation_id=investigation.id,
                     )
 

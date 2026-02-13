@@ -284,6 +284,12 @@ export function useSSE(url: string | null): SSEState {
         break;
       case "domain_detected":
         setDomainConfig(parsed.data.display_config as unknown as DomainDisplayConfig);
+        if (parsed.data.is_fallback) {
+          toast.warning(
+            "No specialized domain matched this research question. Running with general tools — results may be limited.",
+            { duration: 8000 },
+          );
+        }
         break;
       case "literature_survey_completed":
         setLiteratureSurvey(parsed.data as unknown as LiteratureSurveyCompletedData);

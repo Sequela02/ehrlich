@@ -165,6 +165,7 @@ class CostUpdate(DomainEvent):
 class DomainDetected(DomainEvent):
     domain: str = ""
     display_config: dict[str, Any] = field(default_factory=dict)
+    is_fallback: bool = False
     investigation_id: str = ""
 
 

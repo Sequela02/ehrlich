@@ -21,11 +21,11 @@ class DomainRegistry:
     def get(self, name: str) -> DomainConfig | None:
         return self._configs.get(name)
 
-    def detect(self, classified_categories: list[str]) -> list[DomainConfig]:
+    def detect(self, classified_categories: list[str]) -> tuple[list[DomainConfig], bool]:
         """Map classified domain categories to their DomainConfigs.
 
-        Deduplicates configs when multiple categories map to the same domain.
-        Falls back to the first registered config if no categories match.
+        Returns (configs, is_fallback). Falls back to the first registered
+        config if no categories match, with is_fallback=True.
         """
         seen: set[str] = set()
         configs: list[DomainConfig] = []
@@ -35,10 +35,9 @@ class DomainRegistry:
                 seen.add(domain_name)
                 configs.append(self._configs[domain_name])
         if configs:
-            return configs
-        # Fallback to first registered
+            return configs, False
         if self._configs:
-            return [next(iter(self._configs.values()))]
+            return [next(iter(self._configs.values()))], True
         msg = "No domain configs registered"
         raise ValueError(msg)
 

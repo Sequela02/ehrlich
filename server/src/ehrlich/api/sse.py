@@ -240,6 +240,7 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
             data={
                 "domain": event.domain,
                 "display_config": event.display_config,
+                "is_fallback": event.is_fallback,
                 "investigation_id": event.investigation_id,
             },
         )

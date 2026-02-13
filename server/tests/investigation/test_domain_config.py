@@ -75,35 +75,39 @@ class TestDomainRegistryDetect:
         reg.register(_MOLECULAR)
         reg.register(_TRAINING)
 
-        result = reg.detect(["drug_discovery"])
-        assert len(result) == 1
-        assert result[0].name == "molecular_science"
+        configs, is_fallback = reg.detect(["drug_discovery"])
+        assert len(configs) == 1
+        assert configs[0].name == "molecular_science"
+        assert not is_fallback
 
     def test_multiple_categories_same_domain_deduplicates(self) -> None:
         reg = DomainRegistry()
         reg.register(_MOLECULAR)
 
-        result = reg.detect(["drug_discovery", "antimicrobial"])
-        assert len(result) == 1
-        assert result[0].name == "molecular_science"
+        configs, is_fallback = reg.detect(["drug_discovery", "antimicrobial"])
+        assert len(configs) == 1
+        assert configs[0].name == "molecular_science"
+        assert not is_fallback
 
     def test_cross_domain_returns_both(self) -> None:
         reg = DomainRegistry()
         reg.register(_MOLECULAR)
         reg.register(_TRAINING)
 
-        result = reg.detect(["drug_discovery", "training"])
-        assert len(result) == 2
-        names = {c.name for c in result}
+        configs, is_fallback = reg.detect(["drug_discovery", "training"])
+        assert len(configs) == 2
+        names = {c.name for c in configs}
         assert names == {"molecular_science", "training_science"}
+        assert not is_fallback
 
     def test_unknown_category_falls_back_to_first(self) -> None:
         reg = DomainRegistry()
         reg.register(_MOLECULAR)
         reg.register(_TRAINING)
 
-        result = reg.detect(["astrophysics"])
-        assert len(result) == 1
+        configs, is_fallback = reg.detect(["astrophysics"])
+        assert len(configs) == 1
+        assert is_fallback
 
     def test_empty_registry_raises(self) -> None:
         reg = DomainRegistry()
@@ -115,9 +119,10 @@ class TestDomainRegistryDetect:
         reg.register(_MOLECULAR)
         reg.register(_TRAINING)
 
-        result = reg.detect(["training", "drug_discovery"])
-        assert result[0].name == "training_science"
-        assert result[1].name == "molecular_science"
+        configs, is_fallback = reg.detect(["training", "drug_discovery"])
+        assert configs[0].name == "training_science"
+        assert configs[1].name == "molecular_science"
+        assert not is_fallback
 
 
 class TestMergeDomainConfigs:
