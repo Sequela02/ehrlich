@@ -197,7 +197,7 @@ The core: Claude as an autonomous scientist.
 - [x] Tests: mock API, verify request/response handling
 
 ### 5B. Tool Registry
-- [x] Register all tools from all contexts (6 chemistry, 3 literature, 6 analysis, 3 prediction, 7 simulation, 6 training, 4 nutrition, 7 investigation control -- 38 at time of Phase 5; now 48 with API tools + visualization tools)
+- [x] Register all tools from all contexts (6 chemistry, 3 literature, 6 analysis, 3 prediction, 7 simulation, 11 training, 10 nutrition, 7 investigation control -- 38 at time of Phase 5; now 65 with API tools + visualization tools)
 - [x] Auto-generate JSON Schema from Python type hints + docstrings
 - [x] `get(name)` -> callable, `list_tools()` -> all registered tools, `list_schemas()` -> Anthropic-compatible schemas
 - [x] Schema format matches Anthropic tool_use specification
@@ -330,7 +330,7 @@ Cost-efficient multi-model orchestration, persistence, and UI polish.
 ### 8C. Multi-Model Orchestrator
 - [x] `MultiModelOrchestrator` with hypothesis-driven Director-Worker-Summarizer pattern
 - [x] Director (Opus) formulates hypotheses, designs experiments, evaluates evidence, synthesizes -- NO tool access
-- [x] Researcher (Sonnet) executes experiments with 48 domain-filtered tools (max 10 iterations per experiment)
+- [x] Researcher (Sonnet) executes experiments with 65 domain-filtered tools (max 10 iterations per experiment)
 - [x] Summarizer (Haiku) compresses large outputs exceeding threshold
 - [x] 7 prompts: director formulation/experiment/evaluation/synthesis, researcher experiment, scientist, summarizer
 - [x] Auto-fallback to single-model Orchestrator when researcher == director
@@ -462,7 +462,7 @@ Phase 2A-C    Phase 2D-E
      │     │              │
 Training  Nutrition   Competitive
 Enhancement Enhancement  Sports
-  (TODO)    (TODO)     Domain (TODO)
+  (DONE)    (DONE)     Domain (TODO)
      │     │              │
      └─────┼──────────────┘
            |
@@ -575,12 +575,18 @@ Generalized the entire engine from molecular-science-specific to domain-agnostic
 - [x] `compute_training_metrics` -- ACWR, monotony, strain, RPE load
 - [x] `search_clinical_trials` -- ClinicalTrials.gov exercise/training RCT search
 
-### Nutrition Science Bounded Context (4 tools)
+### Nutrition Science Bounded Context (10 tools)
 - [x] `search_supplement_evidence` -- supplement meta-analysis search
 - [x] `search_supplement_labels` -- NIH DSLD supplement product ingredient lookup
 - [x] `search_nutrient_data` -- USDA FoodData Central nutrient profiles
 - [x] `search_supplement_safety` -- OpenFDA CAERS adverse event reports for supplements
-- [x] Tests: training (8 tests) + nutrition (10 tests), all passing
+- [x] `compare_nutrients` -- side-by-side nutrient comparison (added in Nutrition Enhancement)
+- [x] `assess_nutrient_adequacy` -- DRI-based adequacy assessment (added in Nutrition Enhancement)
+- [x] `check_intake_safety` -- UL safety screening (added in Nutrition Enhancement)
+- [x] `check_interactions` -- RxNav drug interactions (added in Nutrition Enhancement)
+- [x] `analyze_nutrient_ratios` -- nutrient ratio analysis (added in Nutrition Enhancement)
+- [x] `compute_inflammatory_index` -- DII scoring (added in Nutrition Enhancement)
+- [x] Tests: training (8 tests) + nutrition (10 tests initially, expanded in Enhancement), all passing
 
 **Verification:** 288 server tests, 107 console tests. All quality gates green: ruff 0, mypy 0 (117 files), tsc 0, vitest 107/107.
 
@@ -694,7 +700,7 @@ Fixed incorrect hardcoded pricing and added cache hit/miss token tracking for ac
 
 ### SDK-2: Prompt Caching on Tools Array -- DONE
 
-Cache the 48-tool schema array that repeats on every researcher API call.
+Cache the 65-tool schema array that repeats on every researcher API call.
 
 - [x] Add `cache_control: {"type": "ephemeral"}` to the last tool in the tools array before passing to `messages.create`
 - [x] Only apply when tools list is non-empty
@@ -832,7 +838,7 @@ web/
 │   │   ├── Architecture.tsx      # Director-Worker-Summarizer diagram with connectors
 │   │   ├── Methodology.tsx       # 6-phase pipeline with glow-pulse active node
 │   │   ├── Domains.tsx           # 3 asymmetric domain cards with tool counts
-│   │   ├── DataSources.tsx       # 13 sources with large number visual anchor
+│   │   ├── DataSources.tsx       # 15 sources with large number visual anchor
 │   │   ├── OpenSource.tsx        # Typography-driven sparse section
 │   │   └── CTA.tsx               # Minimal CTA with arrow links
 │   ├── styles/
@@ -864,7 +870,7 @@ web/
 
 ### WEB-2: Landing Page Sections -- DONE
 
-- [x] **Hero**: bottom-third placement, ASCII background, stats bar (48 tools, 13 sources, 3 domains, 3 models), CTA buttons
+- [x] **Hero**: bottom-third placement, ASCII background, stats bar (65 tools, 16 sources, 3 domains, 3 models), CTA buttons
 - [x] **Architecture**: Director-Worker-Summarizer diagram with fork/merge connectors, color-coded accent bars, stagger-children animation
 - [x] **Methodology**: 6-phase pipeline with connecting line, glow-pulse on active node (Hypothesis Formulation), theoretical basis block
 - [x] **Domains**: 3 asymmetric grid cards (5/4/3 col spans), tool count badges, capabilities, sources, example prompts
@@ -901,44 +907,70 @@ web/
 
 ---
 
-## Training Science Enhancement -- TODO
+## Training Science Enhancement (Feb 12) -- DONE
 
-Deepen the training bounded context with more data sources and richer analytical capabilities.
+Deepened the training bounded context with 2 new data sources, 4 new tools, and 3 new visualization tools.
 
 ### New Data Sources
-- [ ] PubMed API (`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/`) -- exercise physiology literature (better biomedical coverage than Semantic Scholar alone for RCTs and clinical studies)
-- [ ] Exercise database -- muscle groups, movement patterns, biomechanics reference data (Wger API or curated YAML)
+- [x] PubMed API (`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/`) -- exercise physiology literature via E-utilities (ESearch + EFetch)
+- [x] wger API (`https://wger.de/api/v2`) -- exercise database with muscles, equipment, categories
 
 ### New Tools
-- [ ] `search_pubmed_training` -- PubMed E-utilities search for exercise/training papers (MeSH terms, structured abstracts)
-- [ ] `search_exercise_database` -- exercise lookup by muscle group, movement pattern, equipment
+- [x] `search_pubmed_training` -- PubMed E-utilities search for exercise/training papers (MeSH terms, structured abstracts)
+- [x] `search_exercise_database` -- exercise lookup by muscle group, movement pattern, equipment
+- [x] `compute_performance_model` -- Banister fitness-fatigue model (CTL/ATL/TSB via EWMA)
+- [x] `compute_dose_response` -- dose-response curve from dose-effect data points
 
-### Improvements
-- [ ] PubMed integration in literature survey (alongside Semantic Scholar for broader coverage)
-- [ ] Richer injury risk model (integrate epidemiological data from PubMed systematic reviews)
-- [ ] Periodization analysis tool (macro/meso/micro cycle planning based on evidence)
+### New Visualization Tools
+- [x] `render_performance_chart` -- Recharts ComposedChart with fitness/fatigue/performance curves
+- [x] `render_funnel_plot` -- Visx scatter plot for publication bias detection
+- [x] `render_dose_response` -- Visx area+line chart for dose-response curves
+
+### Infrastructure
+- [x] `PubMedRepository` ABC + `PubMedClient` adapter (ESearch JSON + EFetch XML parsing)
+- [x] `ExerciseRepository` ABC + `WgerClient` adapter (REST with pagination)
+- [x] 4 new domain entities: `PubMedArticle`, `Exercise`, `PerformanceModelPoint`, `DoseResponsePoint`
+- [x] Frontend: 3 lazy-loaded chart components registered in `VizRegistry`
+
+### Phase 2 (Deferred Items -- Now Complete)
+- [x] PubMed integration in literature survey (domain-specific prompt guidance + search stats tracking)
+- [x] Richer injury risk model (epidemiological context from PubMed systematic reviews)
+- [x] `plan_periodization` tool (linear/undulating/block models with evidence-based prescriptions)
+- [x] 2 new domain entities: `PeriodizationBlock`, `PeriodizationPlan`
+- [x] `SEARCH_TOOLS` module-level frozenset for search stats tracking
+
+**Counts:** 48 → 56 tools, 13 → 15 data sources, 6 → 9 viz tools. 577 server tests, 107 console tests.
 
 ---
 
-## Nutrition Science Enhancement -- TODO
+## Nutrition Science Enhancement (Feb 12) -- DONE
 
-Deepen the nutrition bounded context with analytical tools, visualization, and interaction screening.
+Deepened the nutrition bounded context with 1 new data source, 6 new tools, and 3 new visualization tools.
+
+### New Data Source
+- [x] RxNav API (`https://rxnav.nlm.nih.gov/REST`) -- Drug interaction screening via RxCUI resolution
 
 ### New Tools
-- [ ] `compare_nutrients` -- side-by-side nutrient comparison between 2+ foods or supplements (macros, micros, amino acid profiles)
-- [ ] `analyze_dose_response` -- dose-response modeling from literature data (optimal dose ranges, diminishing returns)
-- [ ] `check_interactions` -- supplement-drug and supplement-supplement interaction screening (contraindications, synergies)
+- [x] `compare_nutrients` -- side-by-side nutrient comparison between 2+ foods/supplements
+- [x] `assess_nutrient_adequacy` -- DRI-based nutrient adequacy assessment (EAR, RDA, AI, UL)
+- [x] `check_intake_safety` -- Tolerable Upper Intake Level safety screening
+- [x] `check_interactions` -- Drug-supplement interaction screening via RxNav
+- [x] `analyze_nutrient_ratios` -- Key nutrient ratio analysis (omega-6:3, Ca:Mg, Na:K, Zn:Cu, Ca:P, Fe:Cu)
+- [x] `compute_inflammatory_index` -- Simplified Dietary Inflammatory Index (DII) scoring
 
-### New Visualization
-- [ ] `render_nutrient_comparison` -- bar/radar chart comparing nutrient profiles across foods/supplements (Recharts)
+### New Visualization Tools
+- [x] `render_nutrient_comparison` -- Recharts grouped BarChart comparing nutrient profiles
+- [x] `render_nutrient_adequacy` -- Recharts horizontal BarChart with MAR score and DRI zones
+- [x] `render_therapeutic_window` -- Visx custom range chart with EAR/RDA/AI/UL therapeutic zones
 
-### New Data Sources
-- [ ] PubMed API -- nutrition and supplement research (shared with training context via literature bounded context)
-- [ ] Drug interaction database (DrugBank open data or OpenFDA drug labels) for interaction checking
+### Infrastructure
+- [x] `InteractionRepository` ABC + `RxNavClient` adapter (RxCUI resolution + interaction lookup)
+- [x] `dri.py` DRI reference module (~30 nutrients, EAR/RDA/AI/UL by age_group/sex)
+- [x] 3 new domain entities: `DrugInteraction`, `NutrientRatio`, `AdequacyResult`
+- [x] `NutritionService` expanded with 6 new methods + interaction repository injection
+- [x] Frontend: 3 lazy-loaded chart components registered in `VizRegistry`
 
-### Improvements
-- [ ] RDA/DRI reference data (WHO/USDA recommended daily allowances) for context in nutrient comparisons
-- [ ] Bioavailability annotations on nutrient data (e.g., heme vs non-heme iron absorption rates)
+**Counts:** 56 -> 65 tools, 15 -> 16 data sources, 9 -> 12 viz tools. 620 server tests, 107 console tests.
 
 ---
 
@@ -1038,10 +1070,10 @@ Side-by-side comparison of investigation runs for reproducibility and consensus 
 
 Expose Ehrlich as an MCP tool server for Claude Code / Claude Desktop.
 
-> **Note:** Ehrlich already has an MCP **client** bridge (`investigation/infrastructure/mcp_bridge.py`) that connects TO external MCP servers (e.g., Excalidraw for visual summaries). This backlog item is the reverse: exposing Ehrlich's 48 tools as an MCP server.
+> **Note:** Ehrlich already has an MCP **client** bridge (`investigation/infrastructure/mcp_bridge.py`) that connects TO external MCP servers (e.g., Excalidraw for visual summaries). This backlog item is the reverse: exposing Ehrlich's 65 tools as an MCP server.
 
 - [ ] Stdio + SSE transports for Claude Code / Claude Desktop
-- [ ] Tool registration: expose all 48 Ehrlich tools as MCP tools
+- [ ] Tool registration: expose all 65 Ehrlich tools as MCP tools
 - [ ] `start_investigation(prompt)` -- kick off investigation, return ID
 - [ ] `get_investigation(id)` -- return status, findings, candidates
 - [ ] MCP server config for Claude Code (`claude_desktop_config.json`)

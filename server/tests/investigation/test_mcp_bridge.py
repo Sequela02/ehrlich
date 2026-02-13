@@ -205,9 +205,7 @@ class TestMCPBridge:
         mock_session = AsyncMock()
         mock_call_result = MagicMock()
         mock_call_result.isError = True
-        mock_call_result.content = [
-            MCPTextContent(type="text", text="Something went wrong")
-        ]
+        mock_call_result.content = [MCPTextContent(type="text", text="Something went wrong")]
         mock_session.call_tool.return_value = mock_call_result
 
         bridge._sessions["srv"] = mock_session
@@ -278,9 +276,7 @@ class TestToolRegistryMCPIntegration:
         bridge._sessions["ext"] = mock_session
         bridge._configs["ext"] = config
 
-        registered = await registry.register_mcp_tools(
-            bridge, "ext", frozenset({"visualization"})
-        )
+        registered = await registry.register_mcp_tools(bridge, "ext", frozenset({"visualization"}))
 
         assert registered == ["ext:draw"]
         assert "ext:draw" in registry.list_tools()
@@ -330,9 +326,7 @@ class TestToolRegistryMCPIntegration:
         ]
         mock_bridge.call_tool.return_value = '{"done": true}'
 
-        registered = await registry.register_mcp_tools(
-            mock_bridge, "srv", frozenset()
-        )
+        registered = await registry.register_mcp_tools(mock_bridge, "srv", frozenset())
         assert registered == ["srv:action"]
 
         func = registry.get("srv:action")

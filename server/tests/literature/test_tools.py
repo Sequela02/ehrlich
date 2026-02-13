@@ -21,9 +21,7 @@ def _mock_paper(title: str = "Mock Paper") -> Paper:
 class TestSearchLiterature:
     @pytest.mark.asyncio
     async def test_returns_papers(self) -> None:
-        with patch.object(
-            tools._service, "search_papers", new_callable=AsyncMock
-        ) as mock:
+        with patch.object(tools._service, "search_papers", new_callable=AsyncMock) as mock:
             mock.return_value = [_mock_paper()]
             result = json.loads(await tools.search_literature("MRSA"))
             assert result["query"] == "MRSA"
@@ -35,12 +33,8 @@ class TestSearchLiterature:
     @pytest.mark.asyncio
     async def test_empty_abstract_handled(self) -> None:
         paper = _mock_paper()
-        paper = Paper(
-            title="T", authors=[], year=2024, abstract="", doi="", citations=0
-        )
-        with patch.object(
-            tools._service, "search_papers", new_callable=AsyncMock
-        ) as mock:
+        paper = Paper(title="T", authors=[], year=2024, abstract="", doi="", citations=0)
+        with patch.object(tools._service, "search_papers", new_callable=AsyncMock) as mock:
             mock.return_value = [paper]
             result = json.loads(await tools.search_literature("test"))
             assert result["papers"][0]["abstract"] == ""
@@ -49,9 +43,7 @@ class TestSearchLiterature:
 class TestSearchCitationsTool:
     @pytest.mark.asyncio
     async def test_returns_results(self) -> None:
-        with patch.object(
-            tools._service, "search_citations", new_callable=AsyncMock
-        ) as mock:
+        with patch.object(tools._service, "search_citations", new_callable=AsyncMock) as mock:
             mock.return_value = [_mock_paper("Cited")]
             result = json.loads(
                 await tools.search_citations("10.1234/test", direction="references")

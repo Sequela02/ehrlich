@@ -4,39 +4,35 @@
  * Each pattern is designed to tile or fill a section background.
  */
 
-/** Hero: scientific notation, chemical structures, and hypothesis formulas */
+/** Hero: domain-agnostic investigation protocol and scientific notation */
 export const HERO_ASCII = `
-    H   H           O           H₃C    CH₃         O    OH
-     \\ /           //               \\  /           //
-      C            C                 N            C
-     / \\          / \\               / \\          / \\
-    H   OH       HO   NH₂         H   C=O      HO   NH₂
-                                       |
-  C₆H₅-NH-CO-CH₃    SMILES: CC(=O)Nc1ccccc1    MW: 135.17
-  ─────────────────────────────────────────────────────────
+  ┌─ INVESTIGATION PROTOCOL ────────────────────────────┐
+  │  P(H|E) = P(E|H) · P(H) / P(E)                    │
+  │  prior: 0.65  →  posterior: 0.89                    │
+  │  status: SUPPORTED   evidence: 4/5 concordant       │
+  └─────────────────────────────────────────────────────┘
 
-  ┌─ Hypothesis H₁ ──────────────────────────────────────┐
-  │  P(H|E) = P(E|H) · P(H) / P(E)                     │
-  │  prior: 0.65  →  posterior: 0.89                     │
-  │  status: SUPPORTED  evidence: 4/5 concordant         │
-  └──────────────────────────────────────────────────────┘
+  PHASE  01 ──→ 02 ──→ 03 ──→ 04 ──→ 05 ──→ 06
+         PICO   LIT    FORM   TEST   CTRL   SYNTH
 
-      O        OH       NH₂
-      ║        |         |
-  HO─C─CH₂─CH─CH₂─NH─C─CH₃
-      |                  ║
-      OH                 O
+  ┌─ HYPOTHESIS ──────────────┐  ┌─ EXPERIMENT ────────────┐
+  │  prediction: μ₁ > μ₂     │  │  IV: treatment          │
+  │  null: μ₁ = μ₂           │  │  DV: outcome_measure    │
+  │  criteria: Δ > threshold  │  │  controls: [pos, neg]   │
+  │  prior: 0.65              │  │  analysis: Bayes + freq │
+  └───────────────────────────┘  └─────────────────────────┘
 
-  Ki = 2.4 nM    IC₅₀ = 0.18 μM    LogP = 2.31
-  ─────────────────────────────────────────────────────────
-  MIC ≤ 0.5 μg/mL    TPSA = 89.4 Å²    QED = 0.74
+  H₀: μ₁ = μ₂     H₁: μ₁ ≠ μ₂     α = 0.05
 
-    ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐
-    │Li│  │Be│  │ B│  │ C│  │ N│  │ O│
-    └──┘  └──┘  └──┘  └──┘  └──┘  └──┘
-    ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐
-    │Na│  │Mg│  │Al│  │Si│  │ P│  │ S│
-    └──┘  └──┘  └──┘  └──┘  └──┘  └──┘
+  effect_size = (M₁ - M₂) / SD_pooled
+  Z' = 1 - (3·σ₊ + 3·σ₋) / |μ₊ - μ₋|
+
+  ┌──────┬──────┬──────┬──────┬──────┬──────┐
+  │ TOOL │ TOOL │ TOOL │ TOOL │ TOOL │ TOOL │
+  │  01  │  02  │  03  │  ...  │  47  │  48  │
+  └──────┴──────┴──────┴──────┴──────┴──────┘
+
+  GRADE: ⊕⊕⊕⊕ HIGH  │  PICO: P-I-C-O  │  AMSTAR-2
 `.trim();
 
 /** Architecture: data flow and pipeline notation */
@@ -53,9 +49,9 @@ export const ARCHITECTURE_ASCII = `
   │snт│     │snт│    batch_size = 2
   └─┬─┘     └─┬─┘    max_iter = 10
     │         │
-    ▼         ▼       tool_calls: 48
+    ▼         ▼       tool_calls: 65
   ┌─────────────┐     domains: 3
-  │ SUMMARIZER  │     sources: 13
+  │ SUMMARIZER  │     sources: 15
   │  haiku-4.5  │
   └─────────────┘
 

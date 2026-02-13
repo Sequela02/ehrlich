@@ -71,7 +71,7 @@ class TestMethodology:
     def test_total_tool_count(self, client: TestClient) -> None:
         data = client.get("/api/v1/methodology").json()
         total = sum(len(g["tools"]) for g in data["tools"])
-        assert total == 48
+        assert total == 65
 
     def test_tool_has_name_and_description(self, client: TestClient) -> None:
         data = client.get("/api/v1/methodology").json()
@@ -83,7 +83,7 @@ class TestMethodology:
 
     def test_data_sources_count(self, client: TestClient) -> None:
         data = client.get("/api/v1/methodology").json()
-        assert len(data["data_sources"]) == 13
+        assert len(data["data_sources"]) == 16
 
     def test_data_source_fields(self, client: TestClient) -> None:
         data = client.get("/api/v1/methodology").json()

@@ -21,9 +21,7 @@ class FoodDataClient(NutrientRepository):
         self._api_key = api_key or os.environ.get("USDA_API_KEY", "DEMO_KEY")
         self._client = httpx.AsyncClient(timeout=_TIMEOUT)
 
-    async def search(
-        self, query: str, max_results: int = 5
-    ) -> list[NutrientProfile]:
+    async def search(self, query: str, max_results: int = 5) -> list[NutrientProfile]:
         data = await self._get(
             f"{_BASE_URL}/foods/search",
             params={
@@ -35,15 +33,9 @@ class FoodDataClient(NutrientRepository):
         foods = data.get("foods", [])
         if not isinstance(foods, list):
             foods = []
-        return [
-            self._parse_food(f)
-            for f in foods[:max_results]
-            if isinstance(f, dict)
-        ]
+        return [self._parse_food(f) for f in foods[:max_results] if isinstance(f, dict)]
 
-    async def _get(
-        self, url: str, params: dict[str, str | int]
-    ) -> dict[str, object]:
+    async def _get(self, url: str, params: dict[str, str | int]) -> dict[str, object]:
         last_error: Exception | None = None
         for attempt in range(_MAX_RETRIES):
             try:
@@ -59,9 +51,7 @@ class FoodDataClient(NutrientRepository):
                     if attempt < _MAX_RETRIES - 1:
                         await asyncio.sleep(delay)
                         continue
-                    raise ExternalServiceError(
-                        "USDA FoodData", "Rate limit exceeded"
-                    )
+                    raise ExternalServiceError("USDA FoodData", "Rate limit exceeded")
                 resp.raise_for_status()
                 return resp.json()  # type: ignore[no-any-return]
             except httpx.TimeoutException as e:
@@ -77,9 +67,7 @@ class FoodDataClient(NutrientRepository):
                     await asyncio.sleep(delay)
                     continue
             except httpx.HTTPStatusError as e:
-                raise ExternalServiceError(
-                    "USDA FoodData", f"HTTP {e.response.status_code}"
-                ) from e
+                raise ExternalServiceError("USDA FoodData", f"HTTP {e.response.status_code}") from e
         raise ExternalServiceError(
             "USDA FoodData",
             f"Request failed after {_MAX_RETRIES} attempts: {last_error}",

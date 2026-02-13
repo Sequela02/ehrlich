@@ -721,9 +721,7 @@ class TestParallelExecution:
             _evaluation_json(),  # eval B
             _synthesis_json(),
         )
-        researcher.create_message = AsyncMock(
-            return_value=_make_text_response("Done.")
-        )
+        researcher.create_message = AsyncMock(return_value=_make_text_response("Done."))
 
         orchestrator = MultiModelOrchestrator(
             director=director,

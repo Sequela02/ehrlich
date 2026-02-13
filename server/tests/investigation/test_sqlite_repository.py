@@ -367,9 +367,7 @@ class TestSearchFindings:
         assert results[0]["investigation_prompt"] == "Investigate MRSA resistance"
 
     @pytest.mark.asyncio
-    async def test_search_respects_limit(
-        self, repository: SqliteInvestigationRepository
-    ) -> None:
+    async def test_search_respects_limit(self, repository: SqliteInvestigationRepository) -> None:
         inv = Investigation(prompt="Test")
         await repository.save(inv)
 

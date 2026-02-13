@@ -10,7 +10,7 @@ TRAINING_SCIENCE = DomainConfig(
     identifier_type="protocol",
     identifier_label="Protocol",
     candidate_label="Training Protocols",
-    tool_tags=frozenset({"training", "literature", "clinical"}),
+    tool_tags=frozenset({"training", "literature", "clinical", "exercise"}),
     score_definitions=(
         ScoreDefinition(
             key="evidence_score",
@@ -70,6 +70,16 @@ TRAINING_SCIENCE = DomainConfig(
                 "injury prevention in female soccer players. Analyze which exercise "
                 "components (plyometrics, balance, strength) have the strongest "
                 "protective effect and optimal training frequency."
+            ),
+        },
+        {
+            "title": "Exercise Dose-Response for Health",
+            "domain": "Exercise Physiology",
+            "prompt": (
+                "What is the dose-response relationship between weekly exercise "
+                "volume and all-cause mortality risk? Determine the minimum "
+                "effective dose and point of diminishing returns using evidence "
+                "from large prospective cohort studies and meta-analyses."
             ),
         },
     ),

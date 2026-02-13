@@ -48,15 +48,9 @@ class ToolRegistry:
 
     def list_tools_for_domain(self, domain_tags: frozenset[str]) -> list[str]:
         """Return tool names matching any of the domain tags, plus untagged tools."""
-        return [
-            name
-            for name, tags in self._tags.items()
-            if not tags or tags & domain_tags
-        ]
+        return [name for name, tags in self._tags.items() if not tags or tags & domain_tags]
 
-    def list_schemas_for_domain(
-        self, domain_tags: frozenset[str]
-    ) -> list[dict[str, Any]]:
+    def list_schemas_for_domain(self, domain_tags: frozenset[str]) -> list[dict[str, Any]]:
         """Return tool schemas matching any of the domain tags, plus untagged tools."""
         allowed = set(self.list_tools_for_domain(domain_tags))
         return [s for s in self._schemas.values() if s["name"] in allowed]

@@ -30,9 +30,7 @@ async def search_literature(query: str, limit: int = 10) -> str:
     return json.dumps({"query": query, "count": len(results), "papers": results})
 
 
-async def search_citations(
-    paper_id: str, direction: str = "both", limit: int = 10
-) -> str:
+async def search_citations(paper_id: str, direction: str = "both", limit: int = 10) -> str:
     """Search for papers that cite or are referenced by a given paper.
 
     Use this for citation chasing (snowballing) to discover related work.

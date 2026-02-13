@@ -78,7 +78,6 @@ class TestTrain:
         with pytest.raises(ValueError, match="too small"):
             await service.train("Test")
 
-
     @pytest.mark.asyncio
     async def test_train_includes_random_metrics(self, service: PredictionService) -> None:
         result = await service.train("Staphylococcus aureus")

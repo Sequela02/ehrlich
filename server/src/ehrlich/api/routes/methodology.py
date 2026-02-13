@@ -90,7 +90,7 @@ MODELS: list[dict[str, str]] = [
         "role": "Researcher",
         "model_id": "claude-sonnet-4-5-20250929",
         "purpose": (
-            "Executes experiments with 42 tools in parallel batches. "
+            "Executes experiments with 65 tools in parallel batches. "
             "Records findings with evidence provenance and citations."
         ),
     },
@@ -169,6 +169,20 @@ DATA_SOURCES: list[dict[str, str]] = [
         "context": "training",
     },
     {
+        "name": "PubMed",
+        "url": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils",
+        "purpose": "Biomedical literature search with MeSH terms (E-utilities)",
+        "auth": "none",
+        "context": "training",
+    },
+    {
+        "name": "wger",
+        "url": "https://wger.de/api/v2",
+        "purpose": "Exercise database (muscles, equipment, categories)",
+        "auth": "none",
+        "context": "training",
+    },
+    {
         "name": "NIH DSLD",
         "url": "https://api.ods.od.nih.gov/dsld/v9",
         "purpose": "Dietary supplement label database (ingredients, amounts)",
@@ -186,6 +200,13 @@ DATA_SOURCES: list[dict[str, str]] = [
         "name": "OpenFDA CAERS",
         "url": "https://api.fda.gov/food/event.json",
         "purpose": "Supplement adverse event reports (safety monitoring)",
+        "auth": "none",
+        "context": "nutrition",
+    },
+    {
+        "name": "RxNav",
+        "url": "https://rxnav.nlm.nih.gov/REST",
+        "purpose": "Drug-supplement and drug-nutrient interactions (RxNorm)",
         "auth": "none",
         "context": "nutrition",
     },
@@ -208,8 +229,10 @@ _TAG_TO_CONTEXT: dict[str, str] = {
     "simulation": "Simulation",
     "training": "Training Science",
     "clinical": "Training Science",
+    "exercise": "Training Science",
     "nutrition": "Nutrition Science",
     "safety": "Nutrition Science",
+    "interaction": "Nutrition Science",
 }
 
 

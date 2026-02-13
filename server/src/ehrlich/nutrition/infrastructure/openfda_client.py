@@ -19,9 +19,7 @@ class OpenFDAClient(AdverseEventRepository):
     def __init__(self) -> None:
         self._client = httpx.AsyncClient(timeout=_TIMEOUT)
 
-    async def search(
-        self, product_name: str, max_results: int = 10
-    ) -> list[AdverseEvent]:
+    async def search(self, product_name: str, max_results: int = 10) -> list[AdverseEvent]:
         safe_name = product_name.replace('"', '\\"')
         params: dict[str, str | int] = {
             "search": f'products.name_brand:"{safe_name}"',
@@ -31,11 +29,7 @@ class OpenFDAClient(AdverseEventRepository):
         results = data.get("results", [])
         if not isinstance(results, list):
             results = []
-        return [
-            self._parse_event(e)
-            for e in results[:max_results]
-            if isinstance(e, dict)
-        ]
+        return [self._parse_event(e) for e in results[:max_results] if isinstance(e, dict)]
 
     async def _get(self, params: dict[str, str | int]) -> dict[str, object]:
         last_error: Exception | None = None
@@ -55,9 +49,7 @@ class OpenFDAClient(AdverseEventRepository):
                     if attempt < _MAX_RETRIES - 1:
                         await asyncio.sleep(delay)
                         continue
-                    raise ExternalServiceError(
-                        "OpenFDA", "Rate limit exceeded"
-                    )
+                    raise ExternalServiceError("OpenFDA", "Rate limit exceeded")
                 resp.raise_for_status()
                 return resp.json()  # type: ignore[no-any-return]
             except httpx.TimeoutException as e:
@@ -73,9 +65,7 @@ class OpenFDAClient(AdverseEventRepository):
                     await asyncio.sleep(delay)
                     continue
             except httpx.HTTPStatusError as e:
-                raise ExternalServiceError(
-                    "OpenFDA", f"HTTP {e.response.status_code}"
-                ) from e
+                raise ExternalServiceError("OpenFDA", f"HTTP {e.response.status_code}") from e
         raise ExternalServiceError(
             "OpenFDA",
             f"Request failed after {_MAX_RETRIES} attempts: {last_error}",
@@ -100,12 +90,10 @@ class OpenFDAClient(AdverseEventRepository):
             report_id=str(event.get("report_number", "")),
             date=str(event.get("date_started", "")),
             products=tuple(
-                str(p.get("name_brand", "")) if isinstance(p, dict) else str(p)
-                for p in products
+                str(p.get("name_brand", "")) if isinstance(p, dict) else str(p) for p in products
             ),
             reactions=tuple(
-                str(r.get("reaction", "")) if isinstance(r, dict) else str(r)
-                for r in reactions
+                str(r.get("reaction", "")) if isinstance(r, dict) else str(r) for r in reactions
             ),
             outcomes=tuple(str(o) for o in outcomes),
             consumer_age=str(consumer.get("age", "")),

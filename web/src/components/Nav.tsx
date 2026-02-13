@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import { useScrollProgress } from "@/lib/use-scroll-progress";
 import { NAV_LINKS } from "@/lib/constants";
@@ -6,6 +6,31 @@ import { NAV_LINKS } from "@/lib/constants";
 export function Nav() {
   const [open, setOpen] = useState(false);
   const progress = useScrollProgress();
+  const [activeSection, setActiveSection] = useState("");
+
+  useEffect(() => {
+    const sections = NAV_LINKS.filter((l) => l.href.startsWith("#")).map(
+      (l) => l.href.slice(1),
+    );
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+          }
+        }
+      },
+      { rootMargin: "-30% 0px -60% 0px" },
+    );
+
+    for (const id of sections) {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    }
+
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <nav className="fixed top-0 left-0 right-0 h-12 bg-background/90 backdrop-blur-sm z-50 border-b border-border">
@@ -20,7 +45,11 @@ export function Nav() {
             <a
               key={link.href}
               href={link.href}
-              className="font-mono text-xs uppercase tracking-wider text-muted-foreground hover:text-primary transition-colors"
+              className={`font-mono text-xs uppercase tracking-wider transition-colors ${
+                link.href.startsWith("#") && activeSection === link.href.slice(1)
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-primary"
+              }`}
             >
               {link.label}
             </a>
@@ -29,7 +58,7 @@ export function Nav() {
             href="/console"
             className="ml-2 px-4 py-1.5 bg-primary text-primary-foreground font-mono text-xs uppercase tracking-wider rounded"
           >
-            Launch Console
+            Try Ehrlich
           </a>
         </div>
 
@@ -61,7 +90,7 @@ export function Nav() {
             href="/console"
             className="mt-2 px-4 py-1.5 bg-primary text-primary-foreground font-mono text-xs uppercase tracking-wider rounded text-center"
           >
-            Launch Console
+            Try Ehrlich
           </a>
         </div>
       )}

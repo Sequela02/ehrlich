@@ -121,5 +121,6 @@ show_missing = true
 [dependency-groups]
 dev = [
     "pandas-stubs>=3.0.0.260204",
+    "pillow>=12.1.0",
     "scipy-stubs>=1.17.0.2",
 ]

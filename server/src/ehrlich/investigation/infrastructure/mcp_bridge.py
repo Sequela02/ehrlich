@@ -65,11 +65,13 @@ class MCPBridge:
             for tool in result.tools:
                 tool_name = f"{name}:{tool.name}" if config.tool_prefix else tool.name
                 schema = tool.inputSchema or {"type": "object", "properties": {}}
-                tools.append({
-                    "name": tool_name,
-                    "description": tool.description or "",
-                    "input_schema": schema,
-                })
+                tools.append(
+                    {
+                        "name": tool_name,
+                        "description": tool.description or "",
+                        "input_schema": schema,
+                    }
+                )
         return tools
 
     async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> str:
@@ -122,9 +124,7 @@ class MCPBridge:
             return session
 
         if config.transport == "streamable_http":
-            transport = await self._stack.enter_async_context(
-                streamablehttp_client(config.url)
-            )
+            transport = await self._stack.enter_async_context(streamablehttp_client(config.url))
             read_stream, write_stream, _get_session_id = transport
             session = await self._stack.enter_async_context(
                 ClientSession(read_stream, write_stream)

@@ -10,7 +10,7 @@ NUTRITION_SCIENCE = DomainConfig(
     identifier_type="intervention",
     identifier_label="Intervention",
     candidate_label="Nutritional Interventions",
-    tool_tags=frozenset({"nutrition", "safety", "literature"}),
+    tool_tags=frozenset({"nutrition", "safety", "literature", "visualization"}),
     score_definitions=(
         ScoreDefinition(
             key="evidence_score",
@@ -108,7 +108,8 @@ strength</hypothesis>
 analyze effect sizes and safety data",
   "tool_plan": ["search_supplement_evidence", \
 "search_supplement_labels", "search_supplement_safety", \
-"search_nutrient_data"],
+"search_nutrient_data", "assess_nutrient_adequacy", \
+"check_interactions", "analyze_nutrient_ratios"],
   "independent_variable": "Creatine supplementation (3-5g/day vs placebo)",
   "dependent_variable": "Maximal strength (1RM, effect size d)",
   "controls": ["positive: standard loading protocol (20g/day x 5 days)", \

@@ -1,68 +1,165 @@
+import { useRef, useEffect, useState } from "react";
 import { ArrowRight } from "lucide-react";
-import { useReveal } from "@/lib/use-reveal";
+import {
+  motion,
+  useInView,
+  useScroll,
+  useTransform,
+  useSpring,
+  useReducedMotion,
+} from "motion/react";
 import { STATS } from "@/lib/constants";
 import { HERO_ASCII } from "@/lib/ascii-patterns";
 
-export function Hero() {
-  const revealRef = useReveal();
+const EXAMPLE_PROMPTS = [
+  "Compare HIIT vs steady-state training for VO2max improvement",
+  "Find antimicrobial compounds effective against MRSA",
+  "Evaluate creatine supplementation for strength performance",
+] as const;
+
+function AnimatedCounter({ target }: { target: number }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const isInView = useInView(ref, { once: true });
+  const reduced = useReducedMotion();
+  const spring = useSpring(0, { stiffness: 50, damping: 20 });
+  const [display, setDisplay] = useState(reduced ? target : 0);
+
+  useEffect(() => {
+    if (isInView) spring.set(target);
+  }, [isInView, target, spring]);
+
+  useEffect(() => {
+    return spring.on("change", (v) => setDisplay(Math.round(v)));
+  }, [spring]);
+
+  return <span ref={ref}>{display}</span>;
+}
+
+function RotatingPlaceholder() {
+  const [index, setIndex] = useState(0);
+  const reduced = useReducedMotion();
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIndex((prev) => (prev + 1) % EXAMPLE_PROMPTS.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
-    <section className="min-h-screen relative flex flex-col justify-end pb-20 pt-32 px-4 lg:px-0 max-w-[1200px] mx-auto border-l border-r border-border/30">
-      <div className="ascii-bg">
+    <motion.span
+      key={index}
+      initial={reduced ? false : { opacity: 0, y: 8 }}
+      animate={{ opacity: 0.5, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.3 }}
+      className="pointer-events-none select-none truncate"
+    >
+      {EXAMPLE_PROMPTS[index]}
+    </motion.span>
+  );
+}
+
+export function Hero() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const isInView = useInView(contentRef, { once: true });
+  const reduced = useReducedMotion();
+
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start start", "end start"],
+  });
+  const asciiY = useTransform(scrollYProgress, [0, 1], [0, -80]);
+
+  return (
+    <section
+      ref={sectionRef}
+      className="min-h-screen relative flex flex-col justify-center px-4 lg:px-0 max-w-[1200px] mx-auto border-l border-r border-border/30"
+    >
+      {/* ASCII background with parallax */}
+      <motion.div className="ascii-bg" style={reduced ? undefined : { y: asciiY }}>
         <pre>{HERO_ASCII}</pre>
-      </div>
+      </motion.div>
 
-      <div ref={revealRef} className="reveal-section w-full lg:w-3/4">
-        <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-primary/80 mb-2 block">
-          Open Source &middot; AGPL-3.0
-        </span>
-
-        <h1 className="text-6xl md:text-8xl font-bold tracking-tighter text-foreground mb-4">
-          Ehrlich
-        </h1>
-
-        <h2 className="text-xl md:text-2xl text-foreground/80 font-normal mb-8">
-          AI-Powered Scientific Discovery Engine
-        </h2>
-
-        <p className="text-lg text-muted-foreground max-w-2xl leading-relaxed mb-12">
-          Hypothesis-driven research across molecular science, training science,
-          and nutrition — powered by Claude.
-        </p>
-
-        <div className="flex flex-wrap items-center gap-4 mb-16">
-          <a
-            href="/console"
-            className="bg-primary text-primary-foreground hover:opacity-90 transition-colors font-medium text-sm px-6 py-3 rounded-sm flex items-center gap-2 group"
-          >
-            Launch Console
-            <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
-          </a>
-          <span className="font-mono text-[10px] text-muted-foreground uppercase tracking-wide">
-            No account required &middot; runs locally
+      <div ref={contentRef} className="relative z-10 w-full max-w-3xl">
+        <motion.div
+          initial={reduced ? false : { opacity: 0, y: 24 }}
+          animate={isInView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.7, ease: [0.25, 0.1, 0.25, 1] }}
+        >
+          <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-primary/80 mb-4 block">
+            Open Source &middot; AGPL-3.0
           </span>
-          <a
-            href="https://github.com"
-            className="border border-border text-foreground hover:border-primary hover:text-primary transition-colors font-medium text-sm px-6 py-3 rounded-sm"
-          >
-            View on GitHub
-          </a>
-        </div>
 
-        <div className="border-t border-border pt-6 flex flex-wrap gap-8 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.12em]">
-          <span>
-            <span className="text-primary">{STATS.tools}</span> tools
-          </span>
-          <span>
-            <span className="text-primary">{STATS.dataSources}</span> data sources
-          </span>
-          <span>
-            <span className="text-primary">{STATS.domains}</span> domains
-          </span>
-          <span>
-            <span className="text-primary">{STATS.models}</span> models
-          </span>
-        </div>
+          <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter text-foreground mb-6">
+            Ask any scientific question.
+          </h1>
+
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl leading-relaxed mb-10">
+            Ehrlich is a hypothesis-driven research engine that designs
+            experiments, queries real databases, and delivers evidence-graded
+            answers &mdash; across molecular science, training science, and
+            nutrition.
+          </p>
+
+          {/* Search prompt -- the primary CTA */}
+          <div className="mb-6">
+            <a
+              href="/console"
+              className="group flex items-center gap-3 w-full bg-surface border border-border hover:border-primary rounded-sm px-5 py-4 transition-colors"
+            >
+              <span className="flex-1 font-mono text-sm text-muted-foreground overflow-hidden">
+                <RotatingPlaceholder />
+              </span>
+              <span className="flex-shrink-0 bg-primary text-primary-foreground px-4 py-2 rounded-sm font-mono text-xs uppercase tracking-wider flex items-center gap-2">
+                Start Investigating
+                <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
+              </span>
+            </a>
+          </div>
+
+          {/* Example prompts */}
+          <div className="flex flex-wrap gap-2 mb-14">
+            {EXAMPLE_PROMPTS.map((prompt) => (
+              <a
+                key={prompt}
+                href="/console"
+                className="font-mono text-[10px] text-muted-foreground/60 hover:text-primary border border-border/50 hover:border-primary/30 px-3 py-1.5 rounded-sm transition-colors truncate max-w-[300px]"
+              >
+                {prompt}
+              </a>
+            ))}
+          </div>
+
+          {/* Stats bar with animated counters */}
+          <div className="border-t border-border pt-6 flex flex-wrap gap-8 font-mono text-[11px] text-muted-foreground uppercase tracking-[0.12em]">
+            <span>
+              <span className="text-primary">
+                <AnimatedCounter target={STATS.tools} />
+              </span>{" "}
+              tools
+            </span>
+            <span>
+              <span className="text-primary">
+                <AnimatedCounter target={STATS.dataSources} />
+              </span>{" "}
+              data sources
+            </span>
+            <span>
+              <span className="text-primary">
+                <AnimatedCounter target={STATS.domains} />
+              </span>{" "}
+              domains
+            </span>
+            <span>
+              <span className="text-primary">
+                <AnimatedCounter target={STATS.models} />
+              </span>{" "}
+              AI models
+            </span>
+          </div>
+        </motion.div>
       </div>
     </section>
   );

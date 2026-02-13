@@ -9,9 +9,15 @@ import pytest
 from ehrlich.investigation.tools_viz import (
     render_admet_radar,
     render_binding_scatter,
+    render_dose_response,
     render_evidence_matrix,
     render_forest_plot,
+    render_funnel_plot,
     render_muscle_heatmap,
+    render_nutrient_adequacy,
+    render_nutrient_comparison,
+    render_performance_chart,
+    render_therapeutic_window,
     render_training_timeline,
 )
 
@@ -60,9 +66,7 @@ class TestRenderADMETRadar:
     @pytest.mark.asyncio
     async def test_basic_radar(self) -> None:
         props = {"absorption": 0.8, "metabolism": 0.6, "toxicity": 0.2}
-        result = json.loads(
-            await render_admet_radar("Ibuprofen", props)
-        )
+        result = json.loads(await render_admet_radar("Ibuprofen", props))
         assert result["viz_type"] == "admet_radar"
         assert "Ibuprofen" in result["title"]
         assert len(result["data"]["properties"]) == 3
@@ -70,9 +74,7 @@ class TestRenderADMETRadar:
 
     @pytest.mark.asyncio
     async def test_values_clamped(self) -> None:
-        result = json.loads(
-            await render_admet_radar("Test", {"a": 1.5, "b": -0.3})
-        )
+        result = json.loads(await render_admet_radar("Test", {"a": 1.5, "b": -0.3}))
         props = {p["axis"]: p["value"] for p in result["data"]["properties"]}
         assert props["a"] == 1.0
         assert props["b"] == 0.0
@@ -196,3 +198,209 @@ class TestRenderEvidenceMatrix:
             )
         )
         assert result["data"]["values"][0][0] == 1.0
+
+
+class TestRenderPerformanceChart:
+    @pytest.mark.asyncio
+    async def test_basic_chart(self) -> None:
+        data = [
+            {"day": 1, "fitness": 10.0, "fatigue": 15.0, "form": -5.0},
+            {"day": 2, "fitness": 12.0, "fatigue": 14.0, "form": -2.0},
+            {"day": 3, "fitness": 15.0, "fatigue": 10.0, "form": 5.0},
+        ]
+        result = json.loads(await render_performance_chart(data))
+        assert result["viz_type"] == "performance_chart"
+        assert len(result["data"]["points"]) == 3
+        assert result["data"]["peak_form"] == 5.0
+        assert result["config"]["domain"] == "training"
+
+    @pytest.mark.asyncio
+    async def test_empty_data(self) -> None:
+        result = json.loads(await render_performance_chart([]))
+        assert result["data"]["points"] == []
+
+
+class TestRenderFunnelPlot:
+    @pytest.mark.asyncio
+    async def test_basic_funnel(self) -> None:
+        studies = [
+            {"name": "Study A", "effect_size": 0.5, "se": 0.1, "sample_size": 100},
+            {"name": "Study B", "effect_size": 0.3, "se": 0.2, "sample_size": 50},
+            {"name": "Study C", "effect_size": 0.6, "se": 0.15, "sample_size": 75},
+        ]
+        result = json.loads(await render_funnel_plot(studies))
+        assert result["viz_type"] == "funnel_plot"
+        assert len(result["data"]["studies"]) == 3
+        assert "pooled_effect" in result["data"]
+        assert len(result["data"]["funnel_bounds"]) == 5
+
+    @pytest.mark.asyncio
+    async def test_empty_studies(self) -> None:
+        result = json.loads(await render_funnel_plot([]))
+        assert result["data"]["studies"] == []
+
+
+class TestRenderDoseResponse:
+    @pytest.mark.asyncio
+    async def test_basic_curve(self) -> None:
+        points = [
+            {"dose": 10, "effect": -0.2, "ci_lower": -0.3, "ci_upper": -0.1},
+            {"dose": 5, "effect": -0.1, "ci_lower": -0.2, "ci_upper": 0.0},
+            {"dose": 20, "effect": -0.25, "ci_lower": -0.35, "ci_upper": -0.15},
+        ]
+        result = json.loads(await render_dose_response(points, dose_label="MET-h/wk"))
+        assert result["viz_type"] == "dose_response"
+        assert len(result["data"]["points"]) == 3
+        assert result["data"]["points"][0]["dose"] == 5  # sorted by dose
+        assert result["data"]["dose_label"] == "MET-h/wk"
+        assert result["config"]["domain"] == "training"
+
+    @pytest.mark.asyncio
+    async def test_empty_points(self) -> None:
+        result = json.loads(await render_dose_response([]))
+        assert result["data"]["points"] == []
+
+
+class TestRenderNutrientComparison:
+    @pytest.mark.asyncio
+    async def test_basic(self) -> None:
+        foods = [
+            {
+                "name": "Chicken breast",
+                "nutrients": [
+                    {"name": "Protein", "amount": 31, "unit": "g", "pct_rda": 0.62},
+                    {"name": "Iron", "amount": 1.0, "unit": "mg", "pct_rda": 0.13},
+                ],
+            },
+            {
+                "name": "Salmon",
+                "nutrients": [
+                    {"name": "Protein", "amount": 25, "unit": "g", "pct_rda": 0.50},
+                    {"name": "Iron", "amount": 0.8, "unit": "mg", "pct_rda": 0.10},
+                ],
+            },
+        ]
+        result = json.loads(await render_nutrient_comparison(foods))
+        assert result["viz_type"] == "nutrient_comparison"
+        assert len(result["data"]["foods"]) == 2
+        assert set(result["data"]["nutrient_labels"]) == {"Protein", "Iron"}
+        assert result["config"]["domain"] == "nutrition"
+
+    @pytest.mark.asyncio
+    async def test_empty(self) -> None:
+        result = json.loads(await render_nutrient_comparison([]))
+        assert result["data"]["foods"] == []
+        assert result["data"]["nutrient_labels"] == []
+
+    @pytest.mark.asyncio
+    async def test_with_filter(self) -> None:
+        foods = [
+            {
+                "name": "Egg",
+                "nutrients": [
+                    {"name": "Protein", "amount": 6, "unit": "g", "pct_rda": 0.12},
+                    {"name": "Vitamin D", "amount": 1.1, "unit": "mcg", "pct_rda": 0.07},
+                ],
+            },
+        ]
+        result = json.loads(await render_nutrient_comparison(foods, nutrients=["Protein"]))
+        assert result["data"]["nutrient_labels"] == ["Protein"]
+        assert len(result["data"]["foods"][0]["nutrients"]) == 1
+
+
+class TestRenderNutrientAdequacy:
+    @pytest.mark.asyncio
+    async def test_basic(self) -> None:
+        data = [
+            {"name": "Vitamin C", "pct_rda": 1.2, "intake": 108, "rda": 90, "unit": "mg"},
+            {"name": "Vitamin D", "pct_rda": 0.4, "intake": 6, "rda": 15, "unit": "mcg"},
+        ]
+        result = json.loads(await render_nutrient_adequacy(data))
+        assert result["viz_type"] == "nutrient_adequacy"
+        assert len(result["data"]["nutrients"]) == 2
+        assert result["config"]["domain"] == "nutrition"
+
+    @pytest.mark.asyncio
+    async def test_mar_computation(self) -> None:
+        data = [
+            {"name": "A", "pct_rda": 1.5, "intake": 0, "rda": 1, "unit": "mg"},
+            {"name": "B", "pct_rda": 0.5, "intake": 0, "rda": 1, "unit": "mg"},
+        ]
+        result = json.loads(await render_nutrient_adequacy(data))
+        # MAR = mean(min(1.5, 1.0), min(0.5, 1.0)) = (1.0 + 0.5) / 2 = 0.75
+        assert result["data"]["mar_score"] == pytest.approx(0.75)
+
+    @pytest.mark.asyncio
+    async def test_status_assignment(self) -> None:
+        data = [
+            {"name": "Low", "pct_rda": 0.3, "intake": 0, "rda": 1, "unit": "mg"},
+            {"name": "Mid", "pct_rda": 0.6, "intake": 0, "rda": 1, "unit": "mg"},
+            {"name": "High", "pct_rda": 0.9, "intake": 0, "rda": 1, "unit": "mg"},
+        ]
+        result = json.loads(await render_nutrient_adequacy(data))
+        statuses = {n["name"]: n["status"] for n in result["data"]["nutrients"]}
+        assert statuses["Low"] == "deficient"
+        assert statuses["Mid"] == "inadequate"
+        assert statuses["High"] == "adequate"
+
+
+class TestRenderTherapeuticWindow:
+    @pytest.mark.asyncio
+    async def test_basic(self) -> None:
+        nutrients = [
+            {
+                "name": "Vitamin C",
+                "ear": 75,
+                "rda": 90,
+                "ul": 2000,
+                "current_intake": 100,
+                "unit": "mg",
+            },
+        ]
+        result = json.loads(await render_therapeutic_window(nutrients))
+        assert result["viz_type"] == "therapeutic_window"
+        assert len(result["data"]["nutrients"]) == 1
+        assert result["config"]["domain"] == "nutrition"
+
+    @pytest.mark.asyncio
+    async def test_zone_computation(self) -> None:
+        nutrients = [
+            {
+                "name": "Deficient",
+                "ear": 100,
+                "rda": 150,
+                "ul": 500,
+                "current_intake": 50,
+                "unit": "mg",
+            },
+            {
+                "name": "Inadequate",
+                "ear": 100,
+                "rda": 150,
+                "ul": 500,
+                "current_intake": 120,
+                "unit": "mg",
+            },
+            {
+                "name": "Adequate",
+                "ear": 100,
+                "rda": 150,
+                "ul": 500,
+                "current_intake": 200,
+                "unit": "mg",
+            },
+            {
+                "name": "Excessive",
+                "ear": 100,
+                "rda": 150,
+                "ul": 500,
+                "current_intake": 600,
+                "unit": "mg",
+            },
+        ]
+        result = json.loads(await render_therapeutic_window(nutrients))
+        zones = {n["name"]: n["zone"] for n in result["data"]["nutrients"]}
+        assert zones["Deficient"] == "deficient"
+        assert zones["Inadequate"] == "inadequate"
+        assert zones["Adequate"] == "adequate"
+        assert zones["Excessive"] == "excessive"

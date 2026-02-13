@@ -945,6 +945,18 @@ def build_literature_survey_prompt(config: DomainConfig | None, pico: dict[str, 
     terms = pico.get("search_terms", [])
     terms_str = ", ".join(f'"{t}"' for t in terms) if isinstance(terms, list) else str(terms)
 
+    # Domain-specific search guidance
+    domain_guidance = ""
+    if config and config.tool_tags & {"training", "clinical"}:
+        domain_guidance = (
+            "\n<domain_sources>\n"
+            "Training/clinical tools are available -- use multiple sources:\n"
+            "- Use `search_pubmed_training` with MeSH terms for precise biomedical literature\n"
+            "- Use `search_training_literature` for broader coverage via Semantic Scholar\n"
+            "- Combine both sources for comprehensive evidence gathering\n"
+            "</domain_sources>\n"
+        )
+
     return (
         "You are a research scientist conducting a rapid scoping review "
         "(Arksey & O'Malley 2005) to map the evidence landscape.\n\n"
@@ -965,8 +977,7 @@ def build_literature_survey_prompt(config: DomainConfig | None, pico: dict[str, 
         "Greenhalgh & Peacock (2005) found 51% of sources come from snowballing.\n\n"
         "3. SATURATION RULE: Stop when additional queries yield fewer than "
         "2 new unique results not already covered by previous searches.\n"
-        "</search_protocol>\n\n"
-        "<evidence_grading>\n"
+        "</search_protocol>\n\n" + domain_guidance + "<evidence_grading>\n"
         "When recording findings with `record_finding`, assign an evidence_level:\n"
         "  1 = Systematic review / meta-analysis\n"
         "  2 = Randomized controlled trial / large-scale validated study\n"

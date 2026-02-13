@@ -17,14 +17,14 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "Hypothesis-driven research across molecular science, training science, and nutrition — powered by Claude. 48 tools, 13 data sources, 3 domains. Open source, AGPL-3.0.",
+          "Hypothesis-driven research across molecular science, training science, and nutrition — powered by Claude. 65 tools, 16 data sources, 3 domains. Open source, AGPL-3.0.",
       },
       { name: "theme-color", content: "#1a2a1a" },
       { property: "og:title", content: "Ehrlich — AI Scientific Discovery Engine" },
       {
         property: "og:description",
         content:
-          "Hypothesis-driven research across molecular, training, and nutrition science. 48 tools, 13 data sources. Open source.",
+          "Hypothesis-driven research across molecular, training, and nutrition science. 65 tools, 16 data sources. Open source.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

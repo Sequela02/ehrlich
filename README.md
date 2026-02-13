@@ -39,7 +39,7 @@ Ehrlich follows Domain-Driven Design with ten bounded contexts:
 | **prediction** | ML modeling: train, predict, ensemble, cluster |
 | **simulation** | Molecular docking, ADMET, resistance, target discovery (RCSB PDB), toxicity (EPA CompTox) |
 | **training** | Exercise physiology: evidence analysis, protocol comparison, injury risk, training metrics, clinical trials |
-| **nutrition** | Nutrition science: supplement evidence, supplement labels, nutrient data, supplement safety |
+| **nutrition** | Nutrition science: supplement evidence, labels, nutrients, safety, interactions, adequacy, inflammatory index |
 | **investigation** | Multi-model agent orchestration with Director-Worker-Summarizer pattern + domain registry + MCP bridge |
 
 ### Multi-Model Architecture
@@ -48,7 +48,7 @@ Ehrlich uses a three-tier Claude model architecture for cost-efficient investiga
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesizes (3-5 calls)
-Sonnet 4.5 (Researcher) -- Executes experiments with 48 tools (10-20 calls)
+Sonnet 4.5 (Researcher) -- Executes experiments with 65 tools (10-20 calls)
 Haiku 4.5 (Summarizer)  -- Compresses large outputs, classifies domains (5-10 calls)
 ```
 
@@ -67,13 +67,16 @@ Cost: ~$3-4 per investigation (vs ~$11 with all-Opus).
 | [Open Targets](https://platform.opentargets.org/) | Disease-target associations (scored evidence) | 60K+ targets |
 | [GtoPdb](https://www.guidetopharmacology.org/) | Expert-curated pharmacology (pKi, pIC50) | 11K+ ligands |
 | [ClinicalTrials.gov](https://clinicaltrials.gov/) | Registered exercise/training RCTs | 500K+ studies |
+| [PubMed](https://pubmed.ncbi.nlm.nih.gov/) | Biomedical literature with MeSH terms | 37M+ articles |
+| [wger](https://wger.de/) | Exercise database (muscles, equipment, categories) | 300+ exercises |
 | [NIH DSLD](https://dsld.od.nih.gov/) | Dietary supplement label database | 120K+ products |
 | [USDA FoodData](https://fdc.nal.usda.gov/) | Nutrient profiles for foods and supplements | 1.1M+ foods |
 | [OpenFDA CAERS](https://open.fda.gov/) | Supplement adverse event reports | 200K+ reports |
+| [RxNav](https://rxnav.nlm.nih.gov/) | Drug interaction screening (RxCUI resolution) | 100K+ drugs |
 
 All data sources are free and open-access.
 
-## 48 Tools
+## 65 Tools
 
 | Context | Tool | Description |
 |---------|------|-------------|
@@ -108,16 +111,33 @@ All data sources are free and open-access.
 | Training | `assess_injury_risk` | Knowledge-based injury risk scoring |
 | Training | `compute_training_metrics` | ACWR, monotony, strain, session RPE load |
 | Training | `search_clinical_trials` | ClinicalTrials.gov exercise/training RCT search |
+| Training | `search_pubmed_training` | PubMed literature search with MeSH terms |
+| Training | `search_exercise_database` | Exercise database by muscle/equipment/category |
+| Training | `compute_performance_model` | Banister fitness-fatigue model (CTL/ATL/TSB) |
+| Training | `compute_dose_response` | Dose-response curve from dose-effect data |
+| Training | `plan_periodization` | Evidence-based periodization planning (linear/undulating/block) |
 | Nutrition | `search_supplement_evidence` | Supplement efficacy literature search |
 | Nutrition | `search_supplement_labels` | NIH DSLD supplement product ingredient lookup |
 | Nutrition | `search_nutrient_data` | USDA FoodData Central nutrient profiles |
 | Nutrition | `search_supplement_safety` | OpenFDA CAERS adverse event reports |
+| Nutrition | `compare_nutrients` | Side-by-side nutrient comparison between foods/supplements |
+| Nutrition | `assess_nutrient_adequacy` | DRI-based nutrient adequacy assessment |
+| Nutrition | `check_intake_safety` | Tolerable Upper Intake Level safety screening |
+| Nutrition | `check_interactions` | Drug-supplement interaction screening via RxNav |
+| Nutrition | `analyze_nutrient_ratios` | Key nutrient ratio analysis (omega-6:3, Ca:Mg, etc.) |
+| Nutrition | `compute_inflammatory_index` | Simplified Dietary Inflammatory Index scoring |
 | Visualization | `render_binding_scatter` | Scatter plot of compound binding affinities |
 | Visualization | `render_admet_radar` | Radar chart of ADMET/drug-likeness properties |
 | Visualization | `render_training_timeline` | Training load timeline with ACWR danger zones |
 | Visualization | `render_muscle_heatmap` | Anatomical body diagram with muscle activation |
 | Visualization | `render_forest_plot` | Forest plot for meta-analysis results |
 | Visualization | `render_evidence_matrix` | Hypothesis-by-evidence support/contradiction heatmap |
+| Visualization | `render_performance_chart` | Banister fitness-fatigue performance chart |
+| Visualization | `render_funnel_plot` | Funnel plot for publication bias assessment |
+| Visualization | `render_dose_response` | Dose-response curve with confidence intervals |
+| Visualization | `render_nutrient_comparison` | Grouped bar chart comparing nutrient profiles |
+| Visualization | `render_nutrient_adequacy` | Horizontal bar chart with DRI adequacy + MAR score |
+| Visualization | `render_therapeutic_window` | Therapeutic window chart (EAR/RDA/AI/UL zones) |
 | Investigation | `propose_hypothesis` | Register testable hypothesis |
 | Investigation | `design_experiment` | Plan experiment with tool sequence |
 | Investigation | `evaluate_hypothesis` | Assess outcome with confidence score |

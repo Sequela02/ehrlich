@@ -1,3 +1,4 @@
+from ehrlich.investigation.application.multi_orchestrator import SEARCH_TOOLS
 from ehrlich.investigation.application.prompts import (
     DIRECTOR_EVALUATION_PROMPT,
     DIRECTOR_EXPERIMENT_PROMPT,
@@ -271,3 +272,35 @@ class TestBuildSynthesisPrompt:
         assert "training protocols" in prompt_training.lower()
         prompt_nutrition = build_synthesis_prompt(NUTRITION_SCIENCE)
         assert "nutritional interventions" in prompt_nutrition.lower()
+
+
+class TestSearchToolsTracking:
+    def test_includes_pubmed_training(self) -> None:
+        assert "search_pubmed_training" in SEARCH_TOOLS
+
+    def test_includes_clinical_trials(self) -> None:
+        assert "search_clinical_trials" in SEARCH_TOOLS
+
+    def test_includes_exercise_database(self) -> None:
+        assert "search_exercise_database" in SEARCH_TOOLS
+
+    def test_includes_core_literature_tools(self) -> None:
+        assert "search_literature" in SEARCH_TOOLS
+        assert "search_citations" in SEARCH_TOOLS
+        assert "search_prior_research" in SEARCH_TOOLS
+
+
+class TestLiteratureSurveyPubMedGuidance:
+    def test_training_domain_includes_pubmed_guidance(self) -> None:
+        prompt = build_literature_survey_prompt(TRAINING_SCIENCE, {})
+        assert "search_pubmed_training" in prompt
+        assert "MeSH" in prompt
+        assert "search_training_literature" in prompt
+
+    def test_molecular_domain_excludes_pubmed_guidance(self) -> None:
+        prompt = build_literature_survey_prompt(MOLECULAR_SCIENCE, {})
+        assert "search_pubmed_training" not in prompt
+
+    def test_no_config_excludes_pubmed_guidance(self) -> None:
+        prompt = build_literature_survey_prompt(None, {})
+        assert "search_pubmed_training" not in prompt

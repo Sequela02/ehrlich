@@ -56,9 +56,7 @@ class AnthropicClientAdapter:
         last_error: Exception | None = None
         for attempt in range(_MAX_RETRIES):
             try:
-                kwargs = self._build_kwargs(
-                    system, messages, tools, tool_choice, output_config
-                )
+                kwargs = self._build_kwargs(system, messages, tools, tool_choice, output_config)
                 response = await self._client.messages.create(**kwargs)
                 content = _parse_content_blocks(response.content)
                 usage = response.usage
@@ -103,9 +101,7 @@ class AnthropicClientAdapter:
         last_error: Exception | None = None
         for attempt in range(_MAX_RETRIES):
             try:
-                kwargs = self._build_kwargs(
-                    system, messages, tools, tool_choice, output_config
-                )
+                kwargs = self._build_kwargs(system, messages, tools, tool_choice, output_config)
                 async with self._client.messages.stream(**kwargs) as stream:
                     async for event in stream:
                         if event.type == "thinking":
@@ -115,12 +111,8 @@ class AnthropicClientAdapter:
 
                     final = await stream.get_final_message()
                     usage = final.usage
-                    cache_read = (
-                        getattr(usage, "cache_read_input_tokens", 0) or 0
-                    )
-                    cache_write = (
-                        getattr(usage, "cache_creation_input_tokens", 0) or 0
-                    )
+                    cache_read = getattr(usage, "cache_read_input_tokens", 0) or 0
+                    cache_write = getattr(usage, "cache_creation_input_tokens", 0) or 0
 
                     yield {
                         "type": "result",

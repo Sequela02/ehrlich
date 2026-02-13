@@ -106,8 +106,70 @@ body {
   font-size: 10px;
   line-height: 1.4;
   color: var(--color-primary);
-  opacity: 0.03;
+  opacity: 0.06;
   white-space: pre;
+  animation: ascii-drift 60s linear infinite;
+}
+
+@keyframes ascii-drift {
+  from { transform: translateY(0); }
+  to { transform: translateY(-20px); }
+}
+
+/* Investigation terminal */
+.terminal-frame {
+  background-color: oklch(0.08 0.005 155);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.terminal-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border);
+  background-color: oklch(0.12 0.005 155);
+}
+
+.terminal-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--color-border);
+}
+
+.terminal-dot:first-child { background-color: oklch(0.60 0.22 25); }
+.terminal-dot:nth-child(2) { background-color: var(--color-accent); }
+.terminal-dot:nth-child(3) { background-color: var(--color-primary); }
+
+.terminal-body {
+  padding: 16px 20px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  min-height: 320px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.terminal-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 14px;
+  background-color: var(--color-primary);
+  animation: blink 1s step-end infinite;
+  vertical-align: text-bottom;
+  margin-left: 2px;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+.terminal-finding {
+  text-shadow: 0 0 8px oklch(0.72 0.19 155 / 0.3);
 }
 
 /* Pipeline sequential animation */

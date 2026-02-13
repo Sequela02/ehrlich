@@ -1,8 +1,10 @@
 """Visualization tools for the investigation engine.
 
-6 tools that generate structured chart payloads for the frontend:
+12 tools that generate structured chart payloads for the frontend:
 binding scatter, ADMET radar, training timeline, muscle heatmap,
-forest plot, and evidence matrix.
+forest plot, evidence matrix, performance chart, funnel plot,
+dose-response curve, nutrient comparison, nutrient adequacy,
+and therapeutic window.
 """
 
 from __future__ import annotations
@@ -10,18 +12,40 @@ from __future__ import annotations
 import json
 from typing import Any
 
-_KNOWN_MUSCLES_FRONT = frozenset({
-    "chest", "pectorals", "deltoids", "biceps", "forearms",
-    "quadriceps", "hip_flexors", "tibialis_anterior", "abdominals",
-    "obliques", "adductors",
-})
+_KNOWN_MUSCLES_FRONT = frozenset(
+    {
+        "chest",
+        "pectorals",
+        "deltoids",
+        "biceps",
+        "forearms",
+        "quadriceps",
+        "hip_flexors",
+        "tibialis_anterior",
+        "abdominals",
+        "obliques",
+        "adductors",
+    }
+)
 
-_KNOWN_MUSCLES_BACK = frozenset({
-    "trapezius", "rhomboids", "latissimus_dorsi", "lats",
-    "erector_spinae", "lower_back", "triceps", "rear_deltoids",
-    "hamstrings", "glutes", "gluteus_maximus", "calves",
-    "gastrocnemius", "soleus",
-})
+_KNOWN_MUSCLES_BACK = frozenset(
+    {
+        "trapezius",
+        "rhomboids",
+        "latissimus_dorsi",
+        "lats",
+        "erector_spinae",
+        "lower_back",
+        "triceps",
+        "rear_deltoids",
+        "hamstrings",
+        "glutes",
+        "gluteus_maximus",
+        "calves",
+        "gastrocnemius",
+        "soleus",
+    }
+)
 
 _ALL_KNOWN_MUSCLES = _KNOWN_MUSCLES_FRONT | _KNOWN_MUSCLES_BACK
 
@@ -50,16 +74,18 @@ async def render_binding_scatter(
         }
         points.append(point)
 
-    return json.dumps({
-        "viz_type": "binding_scatter",
-        "title": title,
-        "data": {
-            "points": points,
-            "x_label": x_property,
-            "y_label": y_property,
-        },
-        "config": {"domain": "molecular"},
-    })
+    return json.dumps(
+        {
+            "viz_type": "binding_scatter",
+            "title": title,
+            "data": {
+                "points": points,
+                "x_label": x_property,
+                "y_label": y_property,
+            },
+            "config": {"domain": "molecular"},
+        }
+    )
 
 
 async def render_admet_radar(
@@ -76,20 +102,19 @@ async def render_admet_radar(
                    excretion, toxicity, qed, lipinski
         title: Chart title (defaults to compound name)
     """
-    axes = [
-        {"axis": k, "value": max(0.0, min(1.0, float(v)))}
-        for k, v in properties.items()
-    ]
+    axes = [{"axis": k, "value": max(0.0, min(1.0, float(v)))} for k, v in properties.items()]
 
-    return json.dumps({
-        "viz_type": "admet_radar",
-        "title": title or f"ADMET Profile: {compound_name}",
-        "data": {
-            "compound": compound_name,
-            "properties": axes,
-        },
-        "config": {"domain": "molecular"},
-    })
+    return json.dumps(
+        {
+            "viz_type": "admet_radar",
+            "title": title or f"ADMET Profile: {compound_name}",
+            "data": {
+                "compound": compound_name,
+                "properties": axes,
+            },
+            "config": {"domain": "molecular"},
+        }
+    )
 
 
 async def render_training_timeline(
@@ -128,24 +153,28 @@ async def render_training_timeline(
         chronic = sum(chronic_window) / len(chronic_window) if chronic_window else 0.0
 
         ratio = acute / chronic if chronic > 0 else 0.0
-        acwr_series.append({
-            "date": timeline[i]["date"] if i < len(timeline) else "",
-            "acwr": round(ratio, 3),
-        })
+        acwr_series.append(
+            {
+                "date": timeline[i]["date"] if i < len(timeline) else "",
+                "acwr": round(ratio, 3),
+            }
+        )
 
-    return json.dumps({
-        "viz_type": "training_timeline",
-        "title": title,
-        "data": {
-            "timeline": timeline,
-            "acwr": acwr_series,
-            "danger_zones": [
-                {"min": 1.3, "max": 2.0, "label": "High Risk"},
-                {"min": 0.0, "max": 0.8, "label": "Undertraining"},
-            ],
-        },
-        "config": {"domain": "training"},
-    })
+    return json.dumps(
+        {
+            "viz_type": "training_timeline",
+            "title": title,
+            "data": {
+                "timeline": timeline,
+                "acwr": acwr_series,
+                "danger_zones": [
+                    {"min": 1.3, "max": 2.0, "label": "High Risk"},
+                    {"min": 0.0, "max": 0.8, "label": "Undertraining"},
+                ],
+            },
+            "config": {"domain": "training"},
+        }
+    )
 
 
 async def render_muscle_heatmap(
@@ -166,21 +195,25 @@ async def render_muscle_heatmap(
         muscle = entry.get("muscle", "").lower().strip()
         intensity = max(0.0, min(1.0, float(entry.get("intensity", 0.0))))
         known = muscle in _ALL_KNOWN_MUSCLES
-        validated.append({
-            "muscle": muscle,
-            "intensity": intensity,
-            "known": known,
-        })
+        validated.append(
+            {
+                "muscle": muscle,
+                "intensity": intensity,
+                "known": known,
+            }
+        )
 
-    return json.dumps({
-        "viz_type": "muscle_heatmap",
-        "title": title,
-        "data": {
-            "muscles": validated,
-            "view": view if view in ("front", "back") else "front",
-        },
-        "config": {"domain": "training", "color_scale": "intensity"},
-    })
+    return json.dumps(
+        {
+            "viz_type": "muscle_heatmap",
+            "title": title,
+            "data": {
+                "muscles": validated,
+                "view": view if view in ("front", "back") else "front",
+            },
+            "config": {"domain": "training", "color_scale": "intensity"},
+        }
+    )
 
 
 async def render_forest_plot(
@@ -203,13 +236,15 @@ async def render_forest_plot(
         effect = float(s.get("effect_size", 0.0))
         total_weight += weight
         weighted_sum += effect * weight
-        processed.append({
-            "name": s.get("name", ""),
-            "effect_size": effect,
-            "ci_lower": float(s.get("ci_lower", 0.0)),
-            "ci_upper": float(s.get("ci_upper", 0.0)),
-            "weight": weight,
-        })
+        processed.append(
+            {
+                "name": s.get("name", ""),
+                "effect_size": effect,
+                "ci_lower": float(s.get("ci_lower", 0.0)),
+                "ci_upper": float(s.get("ci_upper", 0.0)),
+                "weight": weight,
+            }
+        )
 
     pooled_effect = weighted_sum / total_weight if total_weight > 0 else 0.0
 
@@ -217,29 +252,31 @@ async def render_forest_plot(
     pooled_lower = 0.0
     pooled_upper = 0.0
     if total_weight > 0:
-        pooled_lower = sum(
-            float(s.get("ci_lower", 0.0)) * float(s.get("weight", 0.0))
-            for s in studies
-        ) / total_weight
-        pooled_upper = sum(
-            float(s.get("ci_upper", 0.0)) * float(s.get("weight", 0.0))
-            for s in studies
-        ) / total_weight
+        pooled_lower = (
+            sum(float(s.get("ci_lower", 0.0)) * float(s.get("weight", 0.0)) for s in studies)
+            / total_weight
+        )
+        pooled_upper = (
+            sum(float(s.get("ci_upper", 0.0)) * float(s.get("weight", 0.0)) for s in studies)
+            / total_weight
+        )
 
-    return json.dumps({
-        "viz_type": "forest_plot",
-        "title": title,
-        "data": {
-            "studies": processed,
-            "pooled": {
-                "effect_size": round(pooled_effect, 4),
-                "ci_lower": round(pooled_lower, 4),
-                "ci_upper": round(pooled_upper, 4),
+    return json.dumps(
+        {
+            "viz_type": "forest_plot",
+            "title": title,
+            "data": {
+                "studies": processed,
+                "pooled": {
+                    "effect_size": round(pooled_effect, 4),
+                    "ci_lower": round(pooled_lower, 4),
+                    "ci_upper": round(pooled_upper, 4),
+                },
+                "effect_measure": effect_measure,
             },
-            "effect_measure": effect_measure,
-        },
-        "config": {},
-    })
+            "config": {},
+        }
+    )
 
 
 async def render_evidence_matrix(
@@ -257,18 +294,321 @@ async def render_evidence_matrix(
         title: Chart title
     """
     # Clamp values to [-1, 1]
-    clamped = [
-        [max(-1.0, min(1.0, float(v))) for v in row]
-        for row in matrix
-    ]
+    clamped = [[max(-1.0, min(1.0, float(v))) for v in row] for row in matrix]
 
-    return json.dumps({
-        "viz_type": "evidence_matrix",
-        "title": title,
-        "data": {
-            "rows": hypotheses,
-            "cols": evidence_sources,
-            "values": clamped,
-        },
-        "config": {"color_scale": "diverging"},
-    })
+    return json.dumps(
+        {
+            "viz_type": "evidence_matrix",
+            "title": title,
+            "data": {
+                "rows": hypotheses,
+                "cols": evidence_sources,
+                "values": clamped,
+            },
+            "config": {"color_scale": "diverging"},
+        }
+    )
+
+
+async def render_performance_chart(
+    daily_data: list[dict[str, Any]],
+    title: str = "Performance Management Chart",
+) -> str:
+    """Render a Banister fitness-fatigue performance chart (CTL/ATL/TSB).
+
+    Shows fitness (chronic training load), fatigue (acute training load),
+    and form (training stress balance) over time.
+
+    Args:
+        daily_data: List of dicts with 'day' (int), 'fitness' (float),
+                   'fatigue' (float), 'form' (float)
+        title: Chart title
+    """
+    points: list[dict[str, Any]] = []
+    for entry in daily_data:
+        points.append(
+            {
+                "day": int(entry.get("day", 0)),
+                "fitness": round(float(entry.get("fitness", 0.0)), 2),
+                "fatigue": round(float(entry.get("fatigue", 0.0)), 2),
+                "form": round(float(entry.get("form", 0.0)), 2),
+            }
+        )
+
+    form_values = [p["form"] for p in points]
+    peak_form = max(form_values) if form_values else 0.0
+
+    return json.dumps(
+        {
+            "viz_type": "performance_chart",
+            "title": title,
+            "data": {
+                "points": points,
+                "peak_form": round(peak_form, 2),
+                "form_zones": [
+                    {"min": 15, "max": 25, "label": "Peak Performance"},
+                    {"min": -30, "max": -10, "label": "Overreaching Risk"},
+                ],
+            },
+            "config": {"domain": "training"},
+        }
+    )
+
+
+async def render_funnel_plot(
+    studies: list[dict[str, Any]],
+    title: str = "Funnel Plot",
+    effect_measure: str = "SMD",
+) -> str:
+    """Render a funnel plot for publication bias assessment.
+
+    Plots study effect sizes against their precision (1/SE).
+    Asymmetry suggests publication bias.
+
+    Args:
+        studies: List of dicts with 'name', 'effect_size', 'se' (standard error),
+                'sample_size' (optional, for display)
+        title: Chart title
+        effect_measure: Label for effect measure (SMD, OR, RR, MD)
+    """
+    processed: list[dict[str, Any]] = []
+    all_effects: list[float] = []
+    total_weight = 0.0
+    weighted_sum = 0.0
+
+    for s in studies:
+        effect = float(s.get("effect_size", 0.0))
+        se = max(0.001, float(s.get("se", 0.1)))
+        precision = 1.0 / se
+        weight = precision**2
+        total_weight += weight
+        weighted_sum += effect * weight
+        all_effects.append(effect)
+        processed.append(
+            {
+                "name": s.get("name", ""),
+                "effect_size": effect,
+                "se": se,
+                "precision": round(precision, 3),
+                "sample_size": int(s.get("sample_size", 0)),
+            }
+        )
+
+    pooled_effect = weighted_sum / total_weight if total_weight > 0 else 0.0
+
+    max_precision = max((p["precision"] for p in processed), default=1.0)
+    funnel_bounds: list[dict[str, float]] = []
+    for prec_frac in [0.1, 0.25, 0.5, 0.75, 1.0]:
+        precision = max_precision * prec_frac
+        se_at_level = 1.0 / precision if precision > 0 else 1.0
+        funnel_bounds.append(
+            {
+                "precision": round(precision, 3),
+                "ci_lower": round(pooled_effect - 1.96 * se_at_level, 4),
+                "ci_upper": round(pooled_effect + 1.96 * se_at_level, 4),
+            }
+        )
+
+    return json.dumps(
+        {
+            "viz_type": "funnel_plot",
+            "title": title,
+            "data": {
+                "studies": processed,
+                "pooled_effect": round(pooled_effect, 4),
+                "funnel_bounds": funnel_bounds,
+                "effect_measure": effect_measure,
+            },
+            "config": {},
+        }
+    )
+
+
+async def render_dose_response(
+    data_points: list[dict[str, Any]],
+    title: str = "Dose-Response Curve",
+    dose_label: str = "Dose",
+    effect_label: str = "Effect",
+) -> str:
+    """Render a dose-response curve for exercise interventions.
+
+    Shows the relationship between exercise dose and health/performance
+    outcomes with confidence intervals.
+
+    Args:
+        data_points: List of dicts with 'dose', 'effect', 'ci_lower', 'ci_upper'
+        title: Chart title
+        dose_label: Label for dose axis (e.g. 'MET-hours/week', 'Sets/week')
+        effect_label: Label for effect axis (e.g. 'Hazard Ratio', 'Effect Size')
+    """
+    processed: list[dict[str, Any]] = []
+    for entry in data_points:
+        processed.append(
+            {
+                "dose": float(entry.get("dose", 0.0)),
+                "effect": float(entry.get("effect", 0.0)),
+                "ci_lower": float(entry.get("ci_lower", 0.0)),
+                "ci_upper": float(entry.get("ci_upper", 0.0)),
+            }
+        )
+    processed.sort(key=lambda p: p["dose"])
+
+    return json.dumps(
+        {
+            "viz_type": "dose_response",
+            "title": title,
+            "data": {
+                "points": processed,
+                "dose_label": dose_label,
+                "effect_label": effect_label,
+            },
+            "config": {"domain": "training"},
+        }
+    )
+
+
+async def render_nutrient_comparison(
+    foods: list[dict[str, Any]],
+    nutrients: list[str] | None = None,
+    title: str = "Nutrient Comparison",
+) -> str:
+    """Render grouped bar chart comparing nutrient profiles across foods.
+
+    Args:
+        foods: List of dicts with 'name' and 'nutrients' (list of {name, amount, unit, pct_rda})
+        nutrients: Optional filter for specific nutrients to compare
+        title: Chart title
+    """
+    nutrient_filter = set(nutrients) if nutrients else None
+    processed_foods: list[dict[str, Any]] = []
+    all_labels: set[str] = set()
+
+    for food in foods:
+        food_entry: dict[str, Any] = {"name": food.get("name", "")}
+        nutrient_list: list[dict[str, Any]] = []
+        for n in food.get("nutrients", []):
+            n_name = n.get("name", "")
+            if nutrient_filter and n_name not in nutrient_filter:
+                continue
+            all_labels.add(n_name)
+            nutrient_list.append(
+                {
+                    "name": n_name,
+                    "amount": float(n.get("amount", 0.0)),
+                    "unit": n.get("unit", ""),
+                    "pct_rda": float(n.get("pct_rda", 0.0)),
+                }
+            )
+        food_entry["nutrients"] = nutrient_list
+        processed_foods.append(food_entry)
+
+    return json.dumps(
+        {
+            "viz_type": "nutrient_comparison",
+            "title": title,
+            "data": {
+                "foods": processed_foods,
+                "nutrient_labels": sorted(all_labels),
+            },
+            "config": {"domain": "nutrition"},
+        }
+    )
+
+
+async def render_nutrient_adequacy(
+    nutrient_data: list[dict[str, Any]],
+    title: str = "Nutrient Adequacy",
+) -> str:
+    """Render horizontal bar chart showing % of RDA achieved per nutrient.
+
+    Args:
+        nutrient_data: List of dicts with 'name', 'pct_rda', 'intake', 'rda', 'unit'
+        title: Chart title
+    """
+    processed: list[dict[str, Any]] = []
+    mar_sum = 0.0
+
+    for n in nutrient_data:
+        pct_rda = float(n.get("pct_rda", 0.0))
+        mar_sum += min(pct_rda, 1.0)
+
+        if pct_rda < 0.5:
+            status = "deficient"
+        elif pct_rda < 0.8:
+            status = "inadequate"
+        else:
+            status = "adequate"
+
+        processed.append(
+            {
+                "name": n.get("name", ""),
+                "pct_rda": pct_rda,
+                "status": status,
+                "intake": float(n.get("intake", 0.0)),
+                "rda": float(n.get("rda", 0.0)),
+                "unit": n.get("unit", ""),
+            }
+        )
+
+    mar_score = mar_sum / len(nutrient_data) if nutrient_data else 0.0
+
+    return json.dumps(
+        {
+            "viz_type": "nutrient_adequacy",
+            "title": title,
+            "data": {
+                "nutrients": processed,
+                "mar_score": round(mar_score, 4),
+            },
+            "config": {"domain": "nutrition"},
+        }
+    )
+
+
+async def render_therapeutic_window(
+    nutrients: list[dict[str, Any]],
+    title: str = "Therapeutic Window",
+) -> str:
+    """Render range chart showing safety zones (EAR-RDA-UL) per nutrient.
+
+    Args:
+        nutrients: List of dicts with 'name', 'ear', 'rda', 'ul', 'current_intake', 'unit'
+        title: Chart title
+    """
+    processed: list[dict[str, Any]] = []
+
+    for n in nutrients:
+        ear = float(n.get("ear", 0.0))
+        rda = float(n.get("rda", 0.0))
+        ul = float(n.get("ul", 0.0))
+        intake = float(n.get("current_intake", 0.0))
+
+        if intake < ear:
+            zone = "deficient"
+        elif intake < rda:
+            zone = "inadequate"
+        elif ul > 0 and intake >= ul:
+            zone = "excessive"
+        else:
+            zone = "adequate"
+
+        processed.append(
+            {
+                "name": n.get("name", ""),
+                "ear": ear,
+                "rda": rda,
+                "ul": ul,
+                "current_intake": intake,
+                "unit": n.get("unit", ""),
+                "zone": zone,
+            }
+        )
+
+    return json.dumps(
+        {
+            "viz_type": "therapeutic_window",
+            "title": title,
+            "data": {"nutrients": processed},
+            "config": {"domain": "nutrition"},
+        }
+    )

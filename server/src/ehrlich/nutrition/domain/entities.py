@@ -46,3 +46,39 @@ class AdverseEvent:
     outcomes: tuple[str, ...]
     consumer_age: str
     consumer_gender: str
+
+
+@dataclass(frozen=True)
+class DrugInteraction:
+    drug_a: str
+    drug_b: str
+    severity: str
+    description: str
+    source: str
+
+
+@dataclass(frozen=True)
+class NutrientRatio:
+    name: str
+    value: float
+    optimal_min: float
+    optimal_max: float
+    status: str
+
+
+@dataclass(frozen=True)
+class AdequacyResult:
+    nutrient: str
+    intake: float
+    unit: str
+    rda: float
+    ear: float
+    ul: float
+    pct_rda: float
+    status: str
+
+
+@dataclass(frozen=True)
+class InteractionResult:
+    interactions: tuple[DrugInteraction, ...]
+    query_substance: str

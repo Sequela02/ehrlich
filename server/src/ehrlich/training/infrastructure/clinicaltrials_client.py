@@ -51,9 +51,7 @@ class ClinicalTrialsClient(ClinicalTrialRepository):
                     if attempt < _MAX_RETRIES - 1:
                         await asyncio.sleep(delay)
                         continue
-                    raise ExternalServiceError(
-                        "ClinicalTrials.gov", "Rate limit exceeded"
-                    )
+                    raise ExternalServiceError("ClinicalTrials.gov", "Rate limit exceeded")
                 resp.raise_for_status()
                 return resp.json()  # type: ignore[no-any-return]
             except httpx.TimeoutException as e:
@@ -139,8 +137,7 @@ class ClinicalTrialsClient(ClinicalTrialRepository):
             enrollment=enrollment,
             conditions=tuple(str(c) for c in conditions),
             interventions=tuple(
-                str(i.get("name", "")) if isinstance(i, dict) else str(i)
-                for i in interventions
+                str(i.get("name", "")) if isinstance(i, dict) else str(i) for i in interventions
             ),
             primary_outcomes=tuple(
                 str(o.get("measure", "")) if isinstance(o, dict) else str(o)

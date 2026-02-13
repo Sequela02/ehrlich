@@ -119,9 +119,7 @@ class TestCostTracker:
 
     def test_cache_tokens_in_to_dict(self) -> None:
         tracker = CostTracker()
-        tracker.add_usage(
-            1000, 500, cache_read_tokens=2000, cache_write_tokens=1000
-        )
+        tracker.add_usage(1000, 500, cache_read_tokens=2000, cache_write_tokens=1000)
         result = tracker.to_dict()
         assert result["cache_read_tokens"] == 2000
         assert result["cache_write_tokens"] == 1000

@@ -31,7 +31,7 @@ Simulation and target discovery (Molecular Science domain): docking (AutoDock Vi
 Exercise physiology and sports medicine research: evidence-based training analysis, protocol comparison, injury risk assessment, training load monitoring, and clinical trial search (ClinicalTrials.gov). Uses Semantic Scholar for literature search.
 
 ### Nutrition
-Nutrition science research: supplement evidence analysis, supplement label lookup (NIH DSLD), nutrient data (USDA FoodData), and supplement safety monitoring (OpenFDA CAERS). Uses Semantic Scholar for literature search.
+Nutrition science research: supplement evidence analysis, supplement label lookup (NIH DSLD), nutrient data (USDA FoodData), supplement safety monitoring (OpenFDA CAERS), drug interaction screening (RxNav), DRI-based nutrient adequacy assessment, nutrient ratio analysis, and inflammatory index scoring. Uses Semantic Scholar for literature search.
 
 ### Investigation
 Hypothesis-driven agent orchestration. Manages the Claude-driven research loop: literature survey, hypothesis formulation (with predictions, criteria, scope), parallel experiment execution, criteria-based evaluation, negative controls, and synthesis. Uses multi-model architecture (Director/Researcher/Summarizer) with user-guided steering, domain classification, and multi-investigation memory. Includes domain configuration system (`DomainConfig` + `DomainRegistry`) for pluggable scientific domains with tool tagging, score definitions, prompt adaptation, and visualization control. Optional MCP bridge (`MCPBridge`) connects to external MCP servers for extensibility (e.g. Excalidraw for visual summaries).
@@ -44,7 +44,7 @@ Ehrlich uses a three-tier Claude model architecture for cost-efficient investiga
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesizes (3-5 calls)
     │                       NO tool access, structured JSON responses only
     │
-    ├── Sonnet 4.5 (Researcher) -- Executes experiments with 48 domain-filtered tools (10-20 calls, parallel x2)
+    ├── Sonnet 4.5 (Researcher) -- Executes experiments with 65 domain-filtered tools (10-20 calls, parallel x2)
     │                               Tool-calling loop with max_iterations_per_experiment guard
     │
     └── Haiku 4.5 (Summarizer)  -- Compresses large tool outputs >2000 chars, PICO+classification, evidence grading
@@ -107,7 +107,7 @@ Invalid SMILES on `/depict` returns a dark error SVG (200 status). Invalid SMILE
 
 ## Domain-Specific Visualization
 
-6 visualization tools produce structured `VisualizationPayload` JSON (viz_type, title, data, config, domain). The orchestrator intercepts viz tool results via `_maybe_viz_event()` and emits a `VisualizationRendered` SSE event. On the frontend, `VizRegistry` maps each `viz_type` to a lazy-loaded React component rendered in the `VisualizationPanel` grid.
+12 visualization tools produce structured `VisualizationPayload` JSON (viz_type, title, data, config, domain). The orchestrator intercepts viz tool results via `_maybe_viz_event()` and emits a `VisualizationRendered` SSE event. On the frontend, `VizRegistry` maps each `viz_type` to a lazy-loaded React component rendered in the `VisualizationPanel` grid.
 
 | Tool | Chart Library | Purpose |
 |------|--------------|---------|
@@ -117,6 +117,12 @@ Invalid SMILES on `/depict` returns a dark error SVG (200 status). Invalid SMILE
 | `render_muscle_heatmap` | Custom SVG | Anatomical body diagram with activation/risk |
 | `render_forest_plot` | Visx | Meta-analysis forest plot |
 | `render_evidence_matrix` | Visx HeatmapRect | Hypothesis-by-evidence heatmap |
+| `render_performance_chart` | Recharts ComposedChart | Banister fitness-fatigue model curves |
+| `render_funnel_plot` | Visx | Publication bias funnel plot |
+| `render_dose_response` | Visx | Dose-response curve with confidence band |
+| `render_nutrient_comparison` | Recharts BarChart | Grouped nutrient profile comparison |
+| `render_nutrient_adequacy` | Recharts BarChart | DRI adequacy assessment with MAR score |
+| `render_therapeutic_window` | Visx | Therapeutic window with EAR/RDA/AI/UL zones |
 
 Chart theming uses OKLCH color tokens consistent with the application's visual identity.
 
@@ -167,7 +173,7 @@ Separate TanStack Start project for the public-facing landing page. SSR/SSG for 
 - **Console** (`console/`): authenticated SPA for running investigations (TanStack Router, client-side only)
 - **Web** (`web/`): public landing page with SSR/SSG for SEO (TanStack Start + Nitro, server-rendered)
 
-10 components: Nav (scroll progress), Hero (ASCII bg, bottom-third), Architecture (Director-Worker-Summarizer diagram), Methodology (6-phase pipeline), Domains (3 asymmetric cards), DataSources (13 sources), OpenSource, CTA, SectionHeader, Footer. All use OKLCH tokens, `useReveal` scroll animations, staggered children, and ASCII art backgrounds at 3% opacity.
+10 components: Nav (scroll progress), Hero (ASCII bg, bottom-third), Architecture (Director-Worker-Summarizer diagram), Methodology (6-phase pipeline), Domains (3 asymmetric cards), DataSources (16 sources), OpenSource, CTA, SectionHeader, Footer. All use OKLCH tokens, `useReveal` scroll animations, staggered children, and ASCII art backgrounds at 3% opacity.
 
 Both deploy independently: console to app server, web to CDN/static hosting.
 

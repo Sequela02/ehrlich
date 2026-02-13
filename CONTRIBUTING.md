@@ -88,7 +88,7 @@ DDD monorepo with 10 bounded contexts. Each context follows `domain/` -> `applic
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence (NO tools)
-Sonnet 4.5 (Researcher) -- Executes experiments with 48 tools (parallel: 2 per batch)
+Sonnet 4.5 (Researcher) -- Executes experiments with 65 tools (parallel: 2 per batch)
 Haiku 4.5 (Summarizer)  -- Compresses large outputs, classifies domains
 ```
 
@@ -104,7 +104,7 @@ Haiku 4.5 (Summarizer)  -- Compresses large outputs, classifies domains
 | prediction | Molecular | ML models (XGBoost, Chemprop) |
 | simulation | Molecular | Docking, ADMET, targets (RCSB PDB, UniProt, Open Targets, EPA CompTox) |
 | training | Training | Exercise physiology (evidence analysis, protocol comparison, injury risk, training metrics, clinical trials) |
-| nutrition | Nutrition | Nutrition science (supplement evidence, supplement labels, nutrient data, supplement safety) |
+| nutrition | Nutrition | Nutrition science (supplement evidence, labels, nutrients, safety, interactions, adequacy, inflammatory index) |
 | investigation | All | Multi-model orchestration + domain registry + SQLite persistence |
 
 ## Testing

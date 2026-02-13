@@ -13,8 +13,13 @@ from ehrlich.training.tools import (
     analyze_training_evidence,
     assess_injury_risk,
     compare_protocols,
+    compute_dose_response,
+    compute_performance_model,
     compute_training_metrics,
+    plan_periodization,
     search_clinical_trials,
+    search_exercise_database,
+    search_pubmed_training,
     search_training_literature,
 )
 
@@ -65,9 +70,7 @@ class TestAnalyzeTrainingEvidence:
             {"effect_size": 0.75, "sample_size": 35, "quality_score": 0.7},
             {"effect_size": 0.85, "sample_size": 28, "quality_score": 0.9},
         ]
-        result = json.loads(
-            await analyze_training_evidence("HIIT", "VO2max", studies)
-        )
+        result = json.loads(await analyze_training_evidence("HIIT", "VO2max", studies))
         assert result["study_count"] == 5
         assert result["evidence_grade"] == "A"
         assert result["effect_magnitude"] == "large"
@@ -76,16 +79,12 @@ class TestAnalyzeTrainingEvidence:
     @pytest.mark.asyncio()
     async def test_limited_evidence(self) -> None:
         studies = [{"effect_size": 0.3, "sample_size": 10, "quality_score": 0.4}]
-        result = json.loads(
-            await analyze_training_evidence("stretching", "flexibility", studies)
-        )
+        result = json.loads(await analyze_training_evidence("stretching", "flexibility", studies))
         assert result["evidence_grade"] == "D"
 
     @pytest.mark.asyncio()
     async def test_empty_studies(self) -> None:
-        result = json.loads(
-            await analyze_training_evidence("HIIT", "VO2max", [])
-        )
+        result = json.loads(await analyze_training_evidence("HIIT", "VO2max", []))
         assert "error" in result
 
 
@@ -120,6 +119,15 @@ class TestCompareProtocols:
 
 
 class TestAssessInjuryRisk:
+    @pytest.fixture(autouse=True)
+    def _no_pubmed(self):
+        with patch(
+            "ehrlich.training.tools._service._pubmed.search",
+            new_callable=AsyncMock,
+            return_value=[],
+        ):
+            yield
+
     @pytest.mark.asyncio()
     async def test_low_risk(self) -> None:
         result = json.loads(
@@ -133,6 +141,7 @@ class TestAssessInjuryRisk:
         )
         assert result["risk_level"] == "low"
         assert result["risk_score"] < 0.35
+        assert result["epidemiological_context"] == []
 
     @pytest.mark.asyncio()
     async def test_high_risk(self) -> None:
@@ -147,6 +156,7 @@ class TestAssessInjuryRisk:
         )
         assert result["risk_level"] == "high"
         assert len(result["recommendations"]) > 0
+        assert result["epidemiological_context"] == []
 
     @pytest.mark.asyncio()
     async def test_unknown_sport(self) -> None:
@@ -158,6 +168,43 @@ class TestAssessInjuryRisk:
             )
         )
         assert "risk_score" in result
+        assert "epidemiological_context" in result
+
+    @pytest.mark.asyncio()
+    async def test_with_pubmed_context(self) -> None:
+        from ehrlich.training.domain.entities import PubMedArticle
+
+        articles = [
+            PubMedArticle(
+                pmid="99001",
+                title="Injury incidence in soccer: a systematic review",
+                abstract="Review of soccer injury rates.",
+                authors=("Lopez A",),
+                journal="Br J Sports Med",
+                year=2024,
+                doi="10.1136/test",
+                mesh_terms=("Athletic Injuries",),
+                publication_type="Review",
+            ),
+        ]
+        with patch(
+            "ehrlich.training.tools._service._pubmed.search",
+            new_callable=AsyncMock,
+            return_value=articles,
+        ):
+            result = json.loads(
+                await assess_injury_risk(
+                    sport="soccer",
+                    training_load=1.0,
+                    previous_injuries=[],
+                )
+            )
+        ctx = result["epidemiological_context"]
+        assert len(ctx) == 1
+        assert ctx[0]["pmid"] == "99001"
+        assert ctx[0]["title"] == "Injury incidence in soccer: a systematic review"
+        assert ctx[0]["year"] == "2024"
+        assert "soccer" in ctx[0]["relevance_note"]
 
 
 class TestComputeTrainingMetrics:
@@ -218,3 +265,177 @@ class TestSearchClinicalTrials:
         ):
             result = json.loads(await search_clinical_trials("nothing"))
             assert result["count"] == 0
+
+
+class TestSearchPubmedTraining:
+    @pytest.mark.asyncio()
+    async def test_returns_articles(self) -> None:
+        from ehrlich.training.domain.entities import PubMedArticle
+
+        articles = [
+            PubMedArticle(
+                pmid="12345",
+                title="HIIT meta-analysis",
+                abstract="This is the abstract.",
+                authors=("Smith J",),
+                journal="J Sports Med",
+                year=2024,
+                doi="10.1234/test",
+                mesh_terms=("Exercise",),
+                publication_type="Journal Article",
+            )
+        ]
+        with patch(
+            "ehrlich.training.tools._service.search_pubmed",
+            new_callable=AsyncMock,
+            return_value=articles,
+        ):
+            result = json.loads(await search_pubmed_training("HIIT"))
+            assert result["count"] == 1
+            assert result["articles"][0]["pmid"] == "12345"
+
+    @pytest.mark.asyncio()
+    async def test_empty_results(self) -> None:
+        with patch(
+            "ehrlich.training.tools._service.search_pubmed",
+            new_callable=AsyncMock,
+            return_value=[],
+        ):
+            result = json.loads(await search_pubmed_training("nothing"))
+            assert result["count"] == 0
+
+
+class TestSearchExerciseDatabase:
+    @pytest.mark.asyncio()
+    async def test_returns_exercises(self) -> None:
+        from ehrlich.training.domain.entities import Exercise
+
+        exercises = [
+            Exercise(
+                id=1,
+                name="Bench Press",
+                category="Chest",
+                muscles_primary=("Pectoralis major",),
+                muscles_secondary=("Triceps",),
+                equipment=("Barbell",),
+                description="Lie on bench and press.",
+            )
+        ]
+        with patch(
+            "ehrlich.training.tools._service.search_exercises",
+            new_callable=AsyncMock,
+            return_value=exercises,
+        ):
+            result = json.loads(await search_exercise_database(muscle_group="chest"))
+            assert result["count"] == 1
+            assert result["exercises"][0]["name"] == "Bench Press"
+
+    @pytest.mark.asyncio()
+    async def test_empty_results(self) -> None:
+        with patch(
+            "ehrlich.training.tools._service.search_exercises",
+            new_callable=AsyncMock,
+            return_value=[],
+        ):
+            result = json.loads(await search_exercise_database())
+            assert result["count"] == 0
+
+
+class TestComputePerformanceModel:
+    @pytest.mark.asyncio()
+    async def test_returns_model(self) -> None:
+        loads = [50.0] * 20
+        result = json.loads(await compute_performance_model(loads))
+        assert result["days"] == 20
+        assert result["fitness_tau"] == 42
+        assert result["fatigue_tau"] == 7
+        assert len(result["model"]) == 20
+        assert "peak_form_day" in result
+
+    @pytest.mark.asyncio()
+    async def test_too_few_days(self) -> None:
+        result = json.loads(await compute_performance_model([50.0] * 5))
+        assert "error" in result
+
+
+class TestComputeDoseResponse:
+    @pytest.mark.asyncio()
+    async def test_returns_curve(self) -> None:
+        result = json.loads(
+            await compute_dose_response(
+                dose_levels=[5.0, 10.0, 15.0],
+                effect_sizes=[-0.1, -0.2, -0.25],
+                ci_lower=[-0.2, -0.3, -0.35],
+                ci_upper=[0.0, -0.1, -0.15],
+            )
+        )
+        assert result["point_count"] == 3
+        assert result["points"][0]["dose"] == 5.0  # sorted
+
+    @pytest.mark.asyncio()
+    async def test_too_few_levels(self) -> None:
+        result = json.loads(
+            await compute_dose_response(
+                dose_levels=[5.0],
+                effect_sizes=[-0.1],
+                ci_lower=[-0.2],
+                ci_upper=[0.0],
+            )
+        )
+        assert "error" in result
+
+
+class TestPlanPeriodization:
+    @pytest.mark.asyncio()
+    async def test_linear_model(self) -> None:
+        result = json.loads(await plan_periodization("strength", total_weeks=12, model="linear"))
+        assert result["model"] == "linear"
+        assert result["total_weeks"] == 12
+        assert len(result["blocks"]) == 3
+        # Intensity should increase across blocks
+        blocks = result["blocks"]
+        assert blocks[0]["intensity_range"][1] < blocks[2]["intensity_range"][0]
+
+    @pytest.mark.asyncio()
+    async def test_undulating_model(self) -> None:
+        result = json.loads(
+            await plan_periodization("hypertrophy", total_weeks=8, model="undulating")
+        )
+        assert result["model"] == "undulating"
+        assert len(result["blocks"]) == 1
+        assert result["blocks"][0]["name"] == "Undulating"
+        assert len(result["weekly_load_progression"]) == 8
+
+    @pytest.mark.asyncio()
+    async def test_block_model(self) -> None:
+        result = json.loads(await plan_periodization("power", total_weeks=12, model="block"))
+        assert result["model"] == "block"
+        phase_types = [b["phase_type"] for b in result["blocks"]]
+        assert "accumulation" in phase_types
+        assert "transmutation" in phase_types
+        assert "realization" in phase_types
+
+    @pytest.mark.asyncio()
+    async def test_short_plan(self) -> None:
+        result = json.loads(
+            await plan_periodization("general fitness", total_weeks=4, model="linear")
+        )
+        assert result["total_weeks"] == 4
+        total_block_weeks = sum(b["weeks"] for b in result["blocks"])
+        assert total_block_weeks == 4
+
+    @pytest.mark.asyncio()
+    async def test_invalid_model(self) -> None:
+        result = json.loads(await plan_periodization("strength", model="conjugate"))
+        assert "error" in result
+
+    @pytest.mark.asyncio()
+    async def test_deload_weeks(self) -> None:
+        result = json.loads(await plan_periodization("strength", total_weeks=12, model="block"))
+        progression = result["weekly_load_progression"]
+        assert len(progression) == 12
+        # Every 4th week should be a deload (lower than surrounding weeks)
+        for i in range(len(progression)):
+            if (i + 1) % 4 == 0:
+                # Deload weeks should be notably lower
+                assert progression[i] < 0.60

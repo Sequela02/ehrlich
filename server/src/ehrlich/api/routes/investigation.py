@@ -50,13 +50,25 @@ from ehrlich.investigation.tools import (
 from ehrlich.investigation.tools_viz import (
     render_admet_radar,
     render_binding_scatter,
+    render_dose_response,
     render_evidence_matrix,
     render_forest_plot,
+    render_funnel_plot,
     render_muscle_heatmap,
+    render_nutrient_adequacy,
+    render_nutrient_comparison,
+    render_performance_chart,
+    render_therapeutic_window,
     render_training_timeline,
 )
 from ehrlich.literature.tools import get_reference, search_citations, search_literature
 from ehrlich.nutrition.tools import (
+    analyze_nutrient_ratios,
+    assess_nutrient_adequacy,
+    check_intake_safety,
+    check_interactions,
+    compare_nutrients,
+    compute_inflammatory_index,
     search_nutrient_data,
     search_supplement_evidence,
     search_supplement_labels,
@@ -76,8 +88,13 @@ from ehrlich.training.tools import (
     analyze_training_evidence,
     assess_injury_risk,
     compare_protocols,
+    compute_dose_response,
+    compute_performance_model,
     compute_training_metrics,
+    plan_periodization,
     search_clinical_trials,
+    search_exercise_database,
+    search_pubmed_training,
     search_training_literature,
 )
 
@@ -150,12 +167,14 @@ def _build_registry() -> ToolRegistry:
     _sim = frozenset({"simulation"})
     _training = frozenset({"training"})
     _training_clinical = frozenset({"training", "clinical"})
+    _training_exercise = frozenset({"training", "exercise"})
     _nutrition = frozenset({"nutrition"})
     _nutrition_safety = frozenset({"nutrition", "safety"})
     _viz = frozenset({"visualization"})
     _chem_viz = frozenset({"chemistry", "visualization"})
     _sim_viz = frozenset({"simulation", "visualization"})
     _training_viz = frozenset({"training", "visualization"})
+    _nutrition_viz = frozenset({"nutrition", "visualization"})
 
     tagged_tools: list[tuple[str, Any, frozenset[str] | None]] = [
         # Chemistry (6)
@@ -188,25 +207,42 @@ def _build_registry() -> ToolRegistry:
         ("assess_resistance", assess_resistance, _sim),
         ("get_protein_annotation", get_protein_annotation, _sim),
         ("search_disease_targets", search_disease_targets, _sim),
-        # Training Science (6)
+        # Training Science (11)
         ("search_training_literature", search_training_literature, _training),
         ("analyze_training_evidence", analyze_training_evidence, _training),
         ("compare_protocols", compare_protocols, _training),
         ("assess_injury_risk", assess_injury_risk, _training),
         ("compute_training_metrics", compute_training_metrics, _training),
         ("search_clinical_trials", search_clinical_trials, _training_clinical),
-        # Nutrition Science (4)
+        ("search_pubmed_training", search_pubmed_training, _training),
+        ("search_exercise_database", search_exercise_database, _training_exercise),
+        ("compute_performance_model", compute_performance_model, _training),
+        ("compute_dose_response", compute_dose_response, _training),
+        ("plan_periodization", plan_periodization, _training_exercise),
+        # Nutrition Science (10)
         ("search_supplement_evidence", search_supplement_evidence, _nutrition),
         ("search_supplement_labels", search_supplement_labels, _nutrition),
         ("search_nutrient_data", search_nutrient_data, _nutrition),
         ("search_supplement_safety", search_supplement_safety, _nutrition_safety),
-        # Visualization (6)
+        ("compare_nutrients", compare_nutrients, _nutrition),
+        ("assess_nutrient_adequacy", assess_nutrient_adequacy, _nutrition),
+        ("check_intake_safety", check_intake_safety, _nutrition_safety),
+        ("check_interactions", check_interactions, _nutrition_safety),
+        ("analyze_nutrient_ratios", analyze_nutrient_ratios, _nutrition),
+        ("compute_inflammatory_index", compute_inflammatory_index, _nutrition),
+        # Visualization (12)
         ("render_binding_scatter", render_binding_scatter, _chem_viz),
         ("render_admet_radar", render_admet_radar, _sim_viz),
         ("render_training_timeline", render_training_timeline, _training_viz),
         ("render_muscle_heatmap", render_muscle_heatmap, _training_viz),
         ("render_forest_plot", render_forest_plot, _viz),
         ("render_evidence_matrix", render_evidence_matrix, _viz),
+        ("render_performance_chart", render_performance_chart, _training_viz),
+        ("render_funnel_plot", render_funnel_plot, _viz),
+        ("render_dose_response", render_dose_response, _training_viz),
+        ("render_nutrient_comparison", render_nutrient_comparison, _nutrition_viz),
+        ("render_nutrient_adequacy", render_nutrient_adequacy, _nutrition_viz),
+        ("render_therapeutic_window", render_therapeutic_window, _nutrition_viz),
         # Investigation control (7) -- universal, no tags
         ("record_finding", record_finding, None),
         ("conclude_investigation", conclude_investigation, None),

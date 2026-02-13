@@ -86,6 +86,7 @@ class _DirectorResult:
 def _build_output_config(schema: dict[str, Any]) -> dict[str, Any]:
     return {"format": {"type": "json_schema", "schema": schema}}
 
+
 logger = logging.getLogger(__name__)
 
 _COMPACT_SCHEMAS: dict[str, list[str]] = {
@@ -97,6 +98,23 @@ _COMPACT_SCHEMAS: dict[str, list[str]] = {
     "search_protein_targets": ["query", "count", "targets"],
     "tanimoto_similarity": ["similarity"],
 }
+
+SEARCH_TOOLS: frozenset[str] = frozenset(
+    {
+        "search_literature",
+        "search_citations",
+        "explore_dataset",
+        "search_bioactivity",
+        "search_compounds",
+        "search_pharmacology",
+        "search_training_literature",
+        "search_pubmed_training",
+        "search_clinical_trials",
+        "search_exercise_database",
+        "search_supplement_evidence",
+        "search_prior_research",
+    }
+)
 
 
 def _compact_result(tool_name: str, result: str) -> str:
@@ -1089,17 +1107,7 @@ class MultiModelOrchestrator:
                 cost.add_tool_call()
 
                 # Track search stats
-                if tool_name in (
-                    "search_literature",
-                    "search_citations",
-                    "explore_dataset",
-                    "search_bioactivity",
-                    "search_compounds",
-                    "search_pharmacology",
-                    "search_training_literature",
-                    "search_supplement_evidence",
-                    "search_prior_research",
-                ):
+                if tool_name in SEARCH_TOOLS:
                     search_queries += 1
 
                 yield ToolCalled(

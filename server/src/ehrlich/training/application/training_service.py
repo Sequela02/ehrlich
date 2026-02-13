@@ -5,17 +5,27 @@ from typing import TYPE_CHECKING
 
 from ehrlich.training.domain.entities import (
     ClinicalTrial,
+    DoseResponsePoint,
     EvidenceAnalysis,
     EvidenceGrade,
+    Exercise,
     InjuryRiskAssessment,
+    PerformanceModelPoint,
+    PeriodizationBlock,
+    PeriodizationPlan,
     ProtocolComparison,
+    PubMedArticle,
     WorkloadMetrics,
 )
 
 if TYPE_CHECKING:
     from ehrlich.literature.domain.paper import Paper
     from ehrlich.literature.domain.repository import PaperSearchRepository
-    from ehrlich.training.domain.repository import ClinicalTrialRepository
+    from ehrlich.training.domain.repository import (
+        ClinicalTrialRepository,
+        ExerciseRepository,
+        PubMedRepository,
+    )
 
 _SPORT_BASE_RISK: dict[str, float] = {
     "running": 0.3,
@@ -36,9 +46,13 @@ class TrainingService:
         self,
         paper_repo: PaperSearchRepository,
         clinical_trials: ClinicalTrialRepository | None = None,
+        pubmed: PubMedRepository | None = None,
+        exercises: ExerciseRepository | None = None,
     ) -> None:
         self._papers = paper_repo
         self._clinical_trials = clinical_trials
+        self._pubmed = pubmed
+        self._exercises = exercises
 
     async def search_literature(self, query: str, limit: int = 10) -> list[Paper]:
         training_query = f"training science {query}"
@@ -149,7 +163,7 @@ class TrainingService:
         recommended = ranked[0].name if ranked else None
         return ranked, recommended
 
-    def assess_injury_risk(
+    async def assess_injury_risk(
         self,
         sport: str,
         training_load: float,
@@ -198,6 +212,21 @@ class TrainingService:
         if exp_factor > 0:
             recommendations.append("Progress training volume gradually (10% rule)")
 
+        epidemiological_context: tuple[dict[str, str], ...] = ()
+        if self._pubmed:
+            articles = await self._pubmed.search(
+                f"injury incidence {sport} systematic review", max_results=3
+            )
+            epidemiological_context = tuple(
+                {
+                    "pmid": a.pmid,
+                    "title": a.title,
+                    "year": str(a.year),
+                    "relevance_note": f"Systematic review on {sport} injury epidemiology",
+                }
+                for a in articles
+            )
+
         return InjuryRiskAssessment(
             sport=sport,
             training_load=training_load,
@@ -212,6 +241,7 @@ class TrainingService:
             },
             previous_injuries=tuple(previous_injuries),
             recommendations=tuple(recommendations),
+            epidemiological_context=epidemiological_context,
         )
 
     def compute_training_metrics(
@@ -274,3 +304,247 @@ class TrainingService:
         if not self._clinical_trials:
             return []
         return await self._clinical_trials.search(condition, intervention, max_results)
+
+    async def search_pubmed(
+        self, query: str, mesh_terms: list[str] | None = None, max_results: int = 10
+    ) -> list[PubMedArticle]:
+        if not self._pubmed:
+            return []
+        return await self._pubmed.search(query, mesh_terms, max_results)
+
+    async def search_exercises(
+        self, muscle_group: str = "", equipment: str = "", category: str = "", limit: int = 20
+    ) -> list[Exercise]:
+        if not self._exercises:
+            return []
+        return await self._exercises.search(muscle_group, equipment, category, limit)
+
+    def compute_performance_model(
+        self, daily_loads: list[float], fitness_tau: int = 42, fatigue_tau: int = 7
+    ) -> list[PerformanceModelPoint]:
+        """Banister fitness-fatigue model using EWMA."""
+        points: list[PerformanceModelPoint] = []
+        fitness = 0.0
+        fatigue = 0.0
+        alpha_f = 2.0 / (fitness_tau + 1)
+        alpha_a = 2.0 / (fatigue_tau + 1)
+        for i, load in enumerate(daily_loads):
+            fitness = alpha_f * load + (1 - alpha_f) * fitness
+            fatigue = alpha_a * load + (1 - alpha_a) * fatigue
+            points.append(
+                PerformanceModelPoint(
+                    day=i + 1,
+                    fitness=round(fitness, 2),
+                    fatigue=round(fatigue, 2),
+                    form=round(fitness - fatigue, 2),
+                )
+            )
+        return points
+
+    def compute_dose_response(
+        self,
+        dose_levels: list[float],
+        effect_sizes: list[float],
+        ci_lower: list[float],
+        ci_upper: list[float],
+    ) -> list[DoseResponsePoint]:
+        """Build dose-response curve from dose-effect pairs."""
+        n = min(len(dose_levels), len(effect_sizes), len(ci_lower), len(ci_upper))
+        points = [
+            DoseResponsePoint(
+                dose=round(dose_levels[i], 3),
+                effect=round(effect_sizes[i], 4),
+                ci_lower=round(ci_lower[i], 4),
+                ci_upper=round(ci_upper[i], 4),
+            )
+            for i in range(n)
+        ]
+        return sorted(points, key=lambda p: p.dose)
+
+    def plan_periodization(
+        self,
+        goal: str,
+        total_weeks: int,
+        model: str,
+        training_days_per_week: int,
+    ) -> PeriodizationPlan | dict[str, str]:
+        """Generate an evidence-based periodization plan.
+
+        Implements linear (Rhea 2003), undulating/DUP (Miranda 2011),
+        and block (Issurin 2010) periodization models.
+        """
+        if total_weeks < 4:
+            return {"error": "total_weeks must be >= 4"}
+        if model not in ("linear", "undulating", "block"):
+            return {"error": f"Unknown model '{model}'. Use 'linear', 'undulating', or 'block'."}
+        if not 2 <= training_days_per_week <= 7:
+            return {"error": "training_days_per_week must be between 2 and 7"}
+
+        freq = training_days_per_week
+
+        if model == "linear":
+            blocks, progression, rationale = self._plan_linear(goal, total_weeks, freq)
+        elif model == "undulating":
+            blocks, progression, rationale = self._plan_undulating(goal, total_weeks, freq)
+        else:
+            blocks, progression, rationale = self._plan_block(goal, total_weeks, freq)
+
+        return PeriodizationPlan(
+            goal=goal,
+            total_weeks=total_weeks,
+            model=model,
+            blocks=tuple(blocks),
+            rationale=rationale,
+            weekly_load_progression=tuple(round(v, 2) for v in progression),
+        )
+
+    def _plan_linear(
+        self, goal: str, total_weeks: int, freq: int
+    ) -> tuple[list[PeriodizationBlock], list[float], str]:
+        """Linear periodization (Rhea 2003): progressive overload across phases."""
+        phase_specs = [
+            ("Hypertrophy", "accumulation", (0.65, 0.75), (12, 20), "High-volume hypertrophy"),
+            ("Strength", "transmutation", (0.75, 0.85), (9, 15), "Moderate-volume strength"),
+            ("Peaking", "realization", (0.85, 0.95), (6, 10), "Low-volume peaking"),
+        ]
+        base_weeks = total_weeks // 3
+        remainder = total_weeks % 3
+        blocks: list[PeriodizationBlock] = []
+        for i, (name, phase_type, intensity, volume, focus) in enumerate(phase_specs):
+            weeks = base_weeks + (1 if i < remainder else 0)
+            blocks.append(
+                PeriodizationBlock(
+                    name=name,
+                    phase_type=phase_type,
+                    weeks=weeks,
+                    intensity_range=intensity,
+                    volume_range=volume,
+                    frequency=freq,
+                    focus=f"{focus} for {goal}",
+                )
+            )
+
+        progression = self._generate_progression(blocks)
+        rationale = (
+            "Linear periodization (Rhea 2003): systematic progression from high-volume/"
+            "low-intensity to low-volume/high-intensity across sequential phases."
+        )
+        return blocks, progression, rationale
+
+    def _plan_undulating(
+        self, goal: str, total_weeks: int, freq: int
+    ) -> tuple[list[PeriodizationBlock], list[float], str]:
+        """Undulating/DUP periodization (Miranda 2011): daily variation within weeks."""
+        blocks = [
+            PeriodizationBlock(
+                name="Undulating",
+                phase_type="accumulation",
+                weeks=total_weeks,
+                intensity_range=(0.60, 0.82),
+                volume_range=(8, 20),
+                frequency=freq,
+                focus=f"Daily undulating variation for {goal}",
+            )
+        ]
+
+        cycle = [0.70, 0.82, 0.60]  # moderate, heavy, light
+        progression: list[float] = []
+        for week in range(total_weeks):
+            if (week + 1) % 4 == 0:
+                progression.append(0.50)  # deload
+            else:
+                base = cycle[week % len(cycle)]
+                ramp = min(0.10, week * 0.02)
+                progression.append(min(1.0, base + ramp))
+
+        rationale = (
+            "Daily undulating periodization (Miranda 2011): intensity varies within "
+            "each week (moderate/heavy/light rotation) with deload every 4th week."
+        )
+        return blocks, progression, rationale
+
+    def _plan_block(
+        self, goal: str, total_weeks: int, freq: int
+    ) -> tuple[list[PeriodizationBlock], list[float], str]:
+        """Block periodization (Issurin 2010): concentrated loads in sequential mesocycles."""
+        accum_weeks = max(1, round(total_weeks * 0.4))
+        trans_weeks = max(1, round(total_weeks * 0.3))
+        real_weeks = max(1, total_weeks - accum_weeks - trans_weeks - 1)
+        recov_weeks = total_weeks - accum_weeks - trans_weeks - real_weeks
+
+        blocks_specs = [
+            (
+                "Accumulation",
+                "accumulation",
+                (0.60, 0.75),
+                (15, 25),
+                accum_weeks,
+                "High-volume work capacity",
+            ),
+            (
+                "Transmutation",
+                "transmutation",
+                (0.75, 0.85),
+                (10, 15),
+                trans_weeks,
+                "Sport-specific strength transfer",
+            ),
+            (
+                "Realization",
+                "realization",
+                (0.85, 0.95),
+                (6, 10),
+                real_weeks,
+                "Competition readiness / peak performance",
+            ),
+        ]
+        if recov_weeks > 0:
+            blocks_specs.append(
+                (
+                    "Recovery",
+                    "recovery",
+                    (0.40, 0.55),
+                    (4, 8),
+                    recov_weeks,
+                    "Active recovery and regeneration",
+                )
+            )
+
+        blocks: list[PeriodizationBlock] = []
+        for name, phase_type, intensity, volume, weeks, focus in blocks_specs:
+            blocks.append(
+                PeriodizationBlock(
+                    name=name,
+                    phase_type=phase_type,
+                    weeks=weeks,
+                    intensity_range=intensity,
+                    volume_range=volume,
+                    frequency=freq,
+                    focus=f"{focus} for {goal}",
+                )
+            )
+
+        progression = self._generate_progression(blocks)
+        rationale = (
+            "Block periodization (Issurin 2010): concentrated training loads in sequential "
+            "mesocycles -- accumulation (volume), transmutation (intensity), "
+            "realization (peaking)."
+        )
+        return blocks, progression, rationale
+
+    @staticmethod
+    def _generate_progression(blocks: list[PeriodizationBlock]) -> list[float]:
+        """Generate weekly load progression with deload every 4th week."""
+        progression: list[float] = []
+        global_week = 0
+        for block in blocks:
+            base = (block.intensity_range[0] + block.intensity_range[1]) / 2
+            for w in range(block.weeks):
+                global_week += 1
+                if global_week % 4 == 0:
+                    progression.append(round(base * 0.55, 2))  # deload: ~45% reduction
+                else:
+                    ramp_frac = w / max(1, block.weeks - 1) if block.weeks > 1 else 0.5
+                    load = base + ramp_frac * 0.10
+                    progression.append(round(min(1.0, load), 2))
+        return progression

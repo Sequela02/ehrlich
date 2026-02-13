@@ -10,7 +10,7 @@ The engine is domain-agnostic: a pluggable `DomainConfig` + `DomainRegistry` sys
 
 - **Molecular Science** -- antimicrobial resistance, drug discovery, toxicology, agricultural biocontrol
 - **Training Science** -- exercise physiology, protocol optimization, injury risk assessment, clinical trials
-- **Nutrition Science** -- supplement evidence analysis, dietary supplement safety, nutrient profiling
+- **Nutrition Science** -- supplement evidence analysis, dietary supplement safety, nutrient profiling, DRI adequacy assessment, drug-nutrient interactions, inflammatory index scoring
 
 ## Architecture
 
@@ -20,7 +20,7 @@ DDD monorepo: `server/` (Python 3.12) + `console/` (React 19 / TypeScript / Bun)
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, designs experiments, evaluates evidence, synthesizes (NO tools)
-Sonnet 4.5 (Researcher) -- Executes experiments with 48 tools (parallel: 2 experiments per batch)
+Sonnet 4.5 (Researcher) -- Executes experiments with 65 tools (parallel: 2 experiments per batch)
 Haiku 4.5 (Summarizer)  -- Compresses large tool outputs (>2000 chars), PICO decomposition, evidence grading
 ```
 
@@ -37,11 +37,11 @@ Always uses `MultiModelOrchestrator`. Hypotheses tested in parallel batches of 2
 | analysis | `server/src/ehrlich/analysis/` | Dataset exploration (ChEMBL, PubChem, GtoPdb), enrichment |
 | prediction | `server/src/ehrlich/prediction/` | ML models (Chemprop, XGBoost) |
 | simulation | `server/src/ehrlich/simulation/` | Docking, ADMET, resistance, target discovery (RCSB PDB, UniProt, Open Targets), toxicity (EPA CompTox) |
-| training | `server/src/ehrlich/training/` | Evidence analysis, protocol comparison, injury risk, training metrics, clinical trials (ClinicalTrials.gov) |
-| nutrition | `server/src/ehrlich/nutrition/` | Supplement evidence, supplement labels (NIH DSLD), nutrient data (USDA FoodData), supplement safety (OpenFDA CAERS) |
+| training | `server/src/ehrlich/training/` | Evidence analysis, protocol comparison, injury risk, training metrics, clinical trials (ClinicalTrials.gov), PubMed literature (E-utilities), exercise database (wger) |
+| nutrition | `server/src/ehrlich/nutrition/` | Supplement evidence, supplement labels (NIH DSLD), nutrient data (USDA FoodData), supplement safety (OpenFDA CAERS), drug-nutrient interactions (RxNav), DRI adequacy, nutrient ratios, inflammatory index |
 | investigation | `server/src/ehrlich/investigation/` | Multi-model orchestration + SQLite persistence + domain registry + MCP bridge |
 
-### External Data Sources (12 external + 1 internal)
+### External Data Sources (15 external + 1 internal)
 
 | Source | API | Purpose | Auth |
 |--------|-----|---------|------|
@@ -54,9 +54,12 @@ Always uses `MultiModelOrchestrator`. Hypotheses tested in parallel batches of 2
 | Open Targets | `https://api.platform.opentargets.org` | Disease-target associations (GraphQL, scored evidence) | None |
 | GtoPdb | `https://www.guidetopharmacology.org/services` | Expert-curated pharmacology (pKi, pIC50, receptor classification) | None |
 | ClinicalTrials.gov | `https://clinicaltrials.gov/api/v2` | Registered clinical trials for exercise/training RCTs | None |
+| PubMed | `https://eutils.ncbi.nlm.nih.gov/entrez/eutils` | Biomedical literature search with MeSH terms (E-utilities) | None |
+| wger | `https://wger.de/api/v2` | Exercise database (muscles, equipment, categories) | None |
 | NIH DSLD | `https://api.ods.od.nih.gov/dsld/v9` | Dietary supplement label database (ingredients, amounts) | None |
 | USDA FoodData | `https://api.nal.usda.gov/fdc/v1` | Nutrient profiles for foods and supplements | API key |
 | OpenFDA CAERS | `https://api.fda.gov/food/event.json` | Supplement adverse event reports (safety monitoring) | None |
+| RxNav | `https://rxnav.nlm.nih.gov/REST` | Drug-supplement and drug-nutrient interactions (RxNorm) | None |
 | Ehrlich FTS5 | internal | Full-text search of past investigation findings | None |
 
 ### Dependency Rules (STRICT)
@@ -127,7 +130,7 @@ Types: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`
 
 Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation, training, nutrition, investigation, api, console, mol, data, ci, docs, infra
 
-## Tools (48 Total)
+## Tools (65 Total)
 
 ### Chemistry (6) -- RDKit cheminformatics, domain-agnostic
 - `validate_smiles` -- Validate SMILES string
@@ -164,27 +167,44 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - `fetch_toxicity_profile` -- EPA CompTox environmental toxicity data
 - `assess_resistance` -- Knowledge-based resistance mutation scoring
 
-### Training Science (6) -- Exercise physiology and sports medicine
+### Training Science (11) -- Exercise physiology and sports medicine
 - `search_training_literature` -- Semantic Scholar with training science context
 - `analyze_training_evidence` -- Pooled effect sizes, heterogeneity, evidence grading (A-D)
 - `compare_protocols` -- Evidence-weighted protocol comparison with composite scoring
 - `assess_injury_risk` -- Knowledge-based injury risk scoring (sport, load, history, age)
 - `compute_training_metrics` -- ACWR, monotony, strain, session RPE load
 - `search_clinical_trials` -- ClinicalTrials.gov exercise/training RCT search
+- `search_pubmed_training` -- PubMed E-utilities with MeSH term support
+- `search_exercise_database` -- wger exercise database by muscle/equipment/category
+- `compute_performance_model` -- Banister fitness-fatigue model (CTL/ATL/TSB)
+- `compute_dose_response` -- Dose-response curve from dose-effect data points
+- `plan_periodization` -- Evidence-based periodization planning (linear/undulating/block)
 
-### Nutrition Science (4) -- Supplement evidence and safety
+### Nutrition Science (10) -- Supplement evidence, safety, adequacy, interactions
 - `search_supplement_evidence` -- Supplement efficacy literature search
 - `search_supplement_labels` -- NIH DSLD supplement product ingredient lookup
 - `search_nutrient_data` -- USDA FoodData Central nutrient profiles
 - `search_supplement_safety` -- OpenFDA CAERS adverse event reports for supplements
+- `compare_nutrients` -- Side-by-side nutrient comparison across multiple foods
+- `assess_nutrient_adequacy` -- DRI-based nutrient adequacy assessment (EAR/RDA/AI/UL)
+- `check_intake_safety` -- Tolerable Upper Intake Level (UL) safety screening
+- `check_interactions` -- Drug-supplement and drug-nutrient interaction screening (RxNav)
+- `analyze_nutrient_ratios` -- Clinically relevant nutrient ratios (omega-6:3, Ca:Mg, Na:K, Zn:Cu, Ca:P, Fe:Cu)
+- `compute_inflammatory_index` -- Simplified Dietary Inflammatory Index (DII) scoring
 
-### Visualization (6) -- Domain-specific interactive charts
+### Visualization (12) -- Domain-specific interactive charts
 - `render_binding_scatter` -- Scatter plot of compound binding affinities (Recharts)
 - `render_admet_radar` -- Radar chart of ADMET/drug-likeness properties (Recharts)
 - `render_training_timeline` -- Training load timeline with ACWR danger zones (Recharts)
 - `render_muscle_heatmap` -- Anatomical body diagram with muscle activation/risk (Custom SVG)
 - `render_forest_plot` -- Forest plot for meta-analysis results (Visx)
 - `render_evidence_matrix` -- Hypothesis-by-evidence heatmap (Visx)
+- `render_performance_chart` -- Banister fitness-fatigue performance chart (Recharts)
+- `render_funnel_plot` -- Funnel plot for publication bias assessment (Visx)
+- `render_dose_response` -- Dose-response curve with confidence intervals (Visx)
+- `render_nutrient_comparison` -- Grouped bar chart comparing nutrient profiles across foods (Recharts)
+- `render_nutrient_adequacy` -- Horizontal bar chart showing % RDA with MAR score (Recharts)
+- `render_therapeutic_window` -- Range chart showing EAR/RDA/UL safety zones per nutrient (Visx)
 
 ### Investigation (7) -- Hypothesis lifecycle + self-referential
 - `propose_hypothesis` -- Register testable hypothesis
@@ -239,7 +259,7 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 
 ### UI Patterns
 
-- **Visualization pipeline**: 6 viz tools return `VisualizationPayload` JSON; orchestrator intercepts via `_maybe_viz_event()` and emits `VisualizationRendered` SSE event; `VizRegistry` maps `viz_type` to lazy-loaded React component; `VisualizationPanel` renders all charts
+- **Visualization pipeline**: 12 viz tools return `VisualizationPayload` JSON; orchestrator intercepts via `_maybe_viz_event()` and emits `VisualizationRendered` SSE event; `VizRegistry` maps `viz_type` to lazy-loaded React component; `VisualizationPanel` renders all charts
 - **LiveLabViewer**: 3Dmol.js scene driven by SSE events -- protein targets load, ligands dock, candidates color by score. SSE event mapping: `dock_against_target` -> ligand in binding pocket, `predict_candidates` -> color by probability, `completed` -> top candidates glow. Interactive rotate/zoom/click, split-pane with Timeline
 - **React Flow diagrams**: `@xyflow/react` node graph with custom `InvestigationNode` and `AnnotationNode` types; status-colored nodes (proposed=gray, testing=blue, supported=green, refuted=red, revised=orange); dashed edges for revisions, solid smoothstep for links; read-only with zoom/pan/minimap; lazy-loaded (~188KB chunk)
 - **Investigation report**: 8 sections (Research Question, Executive Summary, Hypotheses & Outcomes, Methodology, Key Findings, Candidate Molecules, Model Validation, Cost & Performance); shown post-completion with full audit trail; markdown export via client-side generation
@@ -300,23 +320,27 @@ All paths relative to `server/src/ehrlich/`.
 
 | File | Purpose |
 |------|---------|
-| `tools.py` | 6 training science tools |
-| `domain/entities.py` | EvidenceGrade, StudyResult, EvidenceAnalysis, TrainingProtocol, ProtocolComparison, InjuryRiskAssessment, WorkloadMetrics, ClinicalTrial |
-| `domain/repository.py` | ClinicalTrialRepository ABC |
-| `application/training_service.py` | TrainingService (evidence analysis, protocol comparison, injury risk, metrics, clinical trials) |
+| `tools.py` | 10 training science tools |
+| `domain/entities.py` | EvidenceGrade, StudyResult, EvidenceAnalysis, TrainingProtocol, ProtocolComparison, InjuryRiskAssessment, WorkloadMetrics, ClinicalTrial, PubMedArticle, Exercise, PerformanceModelPoint, DoseResponsePoint |
+| `domain/repository.py` | ClinicalTrialRepository, PubMedRepository, ExerciseRepository ABCs |
+| `application/training_service.py` | TrainingService (evidence analysis, protocol comparison, injury risk, metrics, clinical trials, PubMed, exercises, performance model, dose-response) |
 | `infrastructure/clinicaltrials_client.py` | ClinicalTrials.gov v2 API |
+| `infrastructure/pubmed_client.py` | PubMed E-utilities API (ESearch + EFetch) |
+| `infrastructure/wger_client.py` | wger exercise database REST API |
 
 ### nutrition/
 
 | File | Purpose |
 |------|---------|
-| `tools.py` | 4 nutrition science tools |
-| `domain/entities.py` | IngredientEntry, SupplementLabel, NutrientEntry, NutrientProfile, AdverseEvent |
-| `domain/repository.py` | SupplementRepository, NutrientRepository, AdverseEventRepository ABCs |
-| `application/nutrition_service.py` | NutritionService (supplement evidence, labels, nutrients, safety) |
+| `tools.py` | 10 nutrition science tools |
+| `domain/entities.py` | IngredientEntry, SupplementLabel, NutrientEntry, NutrientProfile, AdverseEvent, DrugInteraction, NutrientRatio, AdequacyResult |
+| `domain/repository.py` | SupplementRepository, NutrientRepository, AdverseEventRepository, InteractionRepository ABCs |
+| `domain/dri.py` | Dietary Reference Intake (DRI) tables -- EAR, RDA, AI, UL for ~30 nutrients by age/sex |
+| `application/nutrition_service.py` | NutritionService (supplement evidence, labels, nutrients, safety, comparison, adequacy, interactions, ratios, inflammatory index) |
 | `infrastructure/dsld_client.py` | NIH DSLD supplement label database |
 | `infrastructure/fooddata_client.py` | USDA FoodData Central nutrient profiles |
 | `infrastructure/openfda_client.py` | OpenFDA CAERS adverse event reporting |
+| `infrastructure/rxnav_client.py` | RxNav drug-nutrient interaction API |
 
 ### investigation/
 
@@ -343,7 +367,7 @@ All paths relative to `server/src/ehrlich/`.
 | `domain/domains/training.py` | `TRAINING_SCIENCE` config |
 | `domain/domains/nutrition.py` | `NUTRITION_SCIENCE` config |
 | `domain/mcp_config.py` | `MCPServerConfig` frozen dataclass |
-| `tools_viz.py` | 6 visualization tools |
+| `tools_viz.py` | 12 visualization tools |
 | `infrastructure/sqlite_repository.py` | SQLite persistence + FTS5 findings search |
 | `infrastructure/anthropic_client.py` | Anthropic API adapter with retry, streaming, and structured outputs |
 | `infrastructure/mcp_bridge.py` | MCP client bridge (stdio/SSE/streamable_http) |
@@ -354,7 +378,7 @@ All paths relative to `server/src/ehrlich/api/`.
 
 | File | Purpose |
 |------|---------|
-| `routes/investigation.py` | REST + SSE endpoints, 48-tool registry, domain registry, MCP bridge |
+| `routes/investigation.py` | REST + SSE endpoints, 65-tool registry, domain registry, MCP bridge |
 | `routes/methodology.py` | GET /methodology: phases, domains, tools, data sources, models |
 | `routes/molecule.py` | Molecule depiction, conformer, descriptors, targets endpoints |
 | `routes/stats.py` | GET /stats: aggregate counts |
@@ -413,6 +437,12 @@ All paths relative to `console/src/`.
 | `features/visualization/charts/TrainingTimeline.tsx` | Recharts ComposedChart with ACWR + Brush |
 | `features/visualization/charts/ForestPlot.tsx` | Visx custom forest plot |
 | `features/visualization/charts/EvidenceMatrix.tsx` | Visx HeatmapRect with OKLCH scale |
+| `features/visualization/charts/PerformanceChart.tsx` | Recharts ComposedChart for Banister fitness-fatigue model |
+| `features/visualization/charts/FunnelPlot.tsx` | Visx funnel plot for publication bias assessment |
+| `features/visualization/charts/DoseResponseCurve.tsx` | Visx dose-response curve with confidence band |
+| `features/visualization/charts/NutrientComparison.tsx` | Recharts grouped BarChart for food nutrient comparison |
+| `features/visualization/charts/NutrientAdequacy.tsx` | Recharts horizontal BarChart showing % RDA with MAR score |
+| `features/visualization/charts/TherapeuticWindow.tsx` | Visx custom range chart with EAR/RDA/UL safety zones |
 | `features/visualization/anatomy/BodyDiagram.tsx` | Custom SVG anatomical body diagram |
 | `features/visualization/anatomy/body-paths.ts` | SVG path data for front/back views |
 | `features/visualization/anatomy/color-scale.ts` | OKLCH intensity color interpolation |
@@ -440,7 +470,7 @@ All paths relative to `web/src/`.
 | `components/Architecture.tsx` | Director-Worker-Summarizer diagram with fork/merge connectors |
 | `components/Methodology.tsx` | 6-phase pipeline with glow-pulse active node |
 | `components/Domains.tsx` | 3 asymmetric domain cards with tool counts |
-| `components/DataSources.tsx` | 13 sources with large number visual anchor |
+| `components/DataSources.tsx` | 15 sources with large number visual anchor |
 | `components/OpenSource.tsx` | Typography-driven sparse section |
 | `components/CTA.tsx` | Minimal CTA with arrow links |
 | `styles/app.css` | Tailwind 4 + OKLCH tokens + scroll/stagger animations |

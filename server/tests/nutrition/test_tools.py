@@ -9,13 +9,22 @@ import pytest
 
 from ehrlich.literature.domain.paper import Paper
 from ehrlich.nutrition.domain.entities import (
+    AdequacyResult,
     AdverseEvent,
+    DrugInteraction,
     IngredientEntry,
     NutrientEntry,
     NutrientProfile,
+    NutrientRatio,
     SupplementLabel,
 )
 from ehrlich.nutrition.tools import (
+    analyze_nutrient_ratios,
+    assess_nutrient_adequacy,
+    check_intake_safety,
+    check_interactions,
+    compare_nutrients,
+    compute_inflammatory_index,
     search_nutrient_data,
     search_supplement_evidence,
     search_supplement_labels,
@@ -44,12 +53,44 @@ def mock_scholar():
         yield mock
 
 
+_SAMPLE_PROFILE = NutrientProfile(
+    fdc_id=171077,
+    description="Chicken breast",
+    brand="",
+    category="Poultry",
+    nutrients=(
+        NutrientEntry(name="Protein", amount=23.0, unit="G", nutrient_number="203"),
+        NutrientEntry(name="Calcium, Ca", amount=800.0, unit="MG", nutrient_number="301"),
+        NutrientEntry(name="Iron, Fe", amount=10.0, unit="MG", nutrient_number="303"),
+        NutrientEntry(name="Magnesium, Mg", amount=400.0, unit="MG", nutrient_number="304"),
+        NutrientEntry(name="Zinc, Zn", amount=11.0, unit="MG", nutrient_number="309"),
+        NutrientEntry(name="Copper, Cu", amount=0.9, unit="MG", nutrient_number="312"),
+        NutrientEntry(name="Sodium, Na", amount=500.0, unit="MG", nutrient_number="307"),
+        NutrientEntry(name="Potassium, K", amount=1000.0, unit="MG", nutrient_number="306"),
+        NutrientEntry(name="Phosphorus, P", amount=700.0, unit="MG", nutrient_number="305"),
+        NutrientEntry(
+            name="Vitamin C, total ascorbic acid", amount=90.0, unit="MG", nutrient_number="401"
+        ),
+        NutrientEntry(name="Fiber, total dietary", amount=30.0, unit="G", nutrient_number="291"),
+        NutrientEntry(
+            name="Fatty acids, total saturated", amount=5.0, unit="G", nutrient_number="606"
+        ),
+        NutrientEntry(name="Cholesterol", amount=80.0, unit="MG", nutrient_number="601"),
+        NutrientEntry(name="Vitamin A, RAE", amount=900.0, unit="UG", nutrient_number="320"),
+        NutrientEntry(name="Vitamin D (D2 + D3)", amount=15.0, unit="UG", nutrient_number="328"),
+        NutrientEntry(
+            name="Vitamin E (alpha-tocopherol)", amount=15.0, unit="MG", nutrient_number="323"
+        ),
+        NutrientEntry(name="Selenium, Se", amount=55.0, unit="UG", nutrient_number="317"),
+        NutrientEntry(name="Folate, total", amount=400.0, unit="UG", nutrient_number="417"),
+    ),
+)
+
+
 class TestSearchSupplementEvidence:
     @pytest.mark.asyncio()
     async def test_returns_papers(self, mock_scholar: AsyncMock) -> None:
-        result = json.loads(
-            await search_supplement_evidence("creatine", "strength")
-        )
+        result = json.loads(await search_supplement_evidence("creatine", "strength"))
         assert result["supplement"] == "creatine"
         assert result["outcome"] == "strength"
         assert result["count"] == 1
@@ -63,9 +104,7 @@ class TestSearchSupplementLabels:
                 report_id="123",
                 product_name="Creatine Plus",
                 brand="Brand",
-                ingredients=(
-                    IngredientEntry(name="Creatine", amount="5", unit="g"),
-                ),
+                ingredients=(IngredientEntry(name="Creatine", amount="5", unit="g"),),
                 serving_size="1 scoop",
             )
         ]
@@ -128,3 +167,225 @@ class TestSearchSupplementSafety:
             assert result["count"] == 1
             assert result["adverse_events"][0]["report_id"] == "FDA-001"
             assert "NAUSEA" in result["adverse_events"][0]["reactions"]
+
+
+class TestCompareNutrients:
+    @pytest.mark.asyncio()
+    async def test_returns_comparison(self) -> None:
+        profiles = [_SAMPLE_PROFILE]
+        with patch(
+            "ehrlich.nutrition.tools._service.compare_nutrients",
+            new_callable=AsyncMock,
+            return_value=profiles,
+        ):
+            result = json.loads(await compare_nutrients("chicken breast, salmon"))
+            assert result["count"] == 1
+            assert result["queries"] == ["chicken breast", "salmon"]
+            assert result["foods"][0]["description"] == "Chicken breast"
+
+    @pytest.mark.asyncio()
+    async def test_empty_query(self) -> None:
+        with patch(
+            "ehrlich.nutrition.tools._service.compare_nutrients",
+            new_callable=AsyncMock,
+            return_value=[],
+        ):
+            result = json.loads(await compare_nutrients(""))
+            assert result["count"] == 0
+
+
+class TestAssessNutrientAdequacy:
+    @pytest.mark.asyncio()
+    async def test_returns_assessments(self) -> None:
+        assessments = [
+            AdequacyResult(
+                nutrient="Calcium, Ca",
+                intake=800.0,
+                unit="MG",
+                rda=1000.0,
+                ear=800.0,
+                ul=2500.0,
+                pct_rda=80.0,
+                status="marginal",
+            )
+        ]
+        with (
+            patch(
+                "ehrlich.nutrition.tools._service.search_nutrient_data",
+                new_callable=AsyncMock,
+                return_value=[_SAMPLE_PROFILE],
+            ),
+            patch(
+                "ehrlich.nutrition.tools._service.assess_nutrient_adequacy",
+                return_value=assessments,
+            ),
+        ):
+            result = json.loads(await assess_nutrient_adequacy("chicken breast"))
+            assert result["count"] == 1
+            assert result["food"] == "Chicken breast"
+            assert result["assessments"][0]["nutrient"] == "Calcium, Ca"
+            assert result["assessments"][0]["status"] == "marginal"
+
+    @pytest.mark.asyncio()
+    async def test_no_food_found(self) -> None:
+        with patch(
+            "ehrlich.nutrition.tools._service.search_nutrient_data",
+            new_callable=AsyncMock,
+            return_value=[],
+        ):
+            result = json.loads(await assess_nutrient_adequacy("nonexistent"))
+            assert result["count"] == 0
+            assert result["assessments"] == []
+
+
+class TestCheckIntakeSafety:
+    @pytest.mark.asyncio()
+    async def test_returns_warnings(self) -> None:
+        warnings = [
+            AdequacyResult(
+                nutrient="Iron, Fe",
+                intake=50.0,
+                unit="MG",
+                rda=8.0,
+                ear=6.0,
+                ul=45.0,
+                pct_rda=625.0,
+                status="exceeds_ul",
+            )
+        ]
+        with (
+            patch(
+                "ehrlich.nutrition.tools._service.search_nutrient_data",
+                new_callable=AsyncMock,
+                return_value=[_SAMPLE_PROFILE],
+            ),
+            patch(
+                "ehrlich.nutrition.tools._service.check_intake_safety",
+                return_value=warnings,
+            ),
+        ):
+            result = json.loads(await check_intake_safety("beef liver"))
+            assert result["count"] == 1
+            assert result["warnings"][0]["status"] == "exceeds_ul"
+
+    @pytest.mark.asyncio()
+    async def test_no_food_found(self) -> None:
+        with patch(
+            "ehrlich.nutrition.tools._service.search_nutrient_data",
+            new_callable=AsyncMock,
+            return_value=[],
+        ):
+            result = json.loads(await check_intake_safety("nonexistent"))
+            assert result["count"] == 0
+            assert result["warnings"] == []
+
+
+class TestCheckInteractions:
+    @pytest.mark.asyncio()
+    async def test_returns_interactions(self) -> None:
+        interactions = [
+            DrugInteraction(
+                drug_a="warfarin",
+                drug_b="aspirin",
+                severity="high",
+                description="Increased bleeding risk",
+                source="RxNav",
+            )
+        ]
+        with patch(
+            "ehrlich.nutrition.tools._service.check_interactions",
+            new_callable=AsyncMock,
+            return_value=interactions,
+        ):
+            result = json.loads(await check_interactions("warfarin"))
+            assert result["count"] == 1
+            assert result["substance"] == "warfarin"
+            assert result["interactions"][0]["severity"] == "high"
+
+    @pytest.mark.asyncio()
+    async def test_no_interactions(self) -> None:
+        with patch(
+            "ehrlich.nutrition.tools._service.check_interactions",
+            new_callable=AsyncMock,
+            return_value=[],
+        ):
+            result = json.loads(await check_interactions("water"))
+            assert result["count"] == 0
+
+
+class TestAnalyzeNutrientRatios:
+    @pytest.mark.asyncio()
+    async def test_returns_ratios(self) -> None:
+        ratios = [
+            NutrientRatio(
+                name="calcium_to_magnesium",
+                value=2.0,
+                optimal_min=1.5,
+                optimal_max=2.5,
+                status="optimal",
+            )
+        ]
+        with (
+            patch(
+                "ehrlich.nutrition.tools._service.search_nutrient_data",
+                new_callable=AsyncMock,
+                return_value=[_SAMPLE_PROFILE],
+            ),
+            patch(
+                "ehrlich.nutrition.tools._service.analyze_nutrient_ratios",
+                return_value=ratios,
+            ),
+        ):
+            result = json.loads(await analyze_nutrient_ratios("salmon"))
+            assert result["count"] == 1
+            assert result["food"] == "Chicken breast"
+            assert result["ratios"][0]["name"] == "calcium_to_magnesium"
+            assert result["ratios"][0]["status"] == "optimal"
+
+    @pytest.mark.asyncio()
+    async def test_no_food_found(self) -> None:
+        with patch(
+            "ehrlich.nutrition.tools._service.search_nutrient_data",
+            new_callable=AsyncMock,
+            return_value=[],
+        ):
+            result = json.loads(await analyze_nutrient_ratios("nonexistent"))
+            assert result["count"] == 0
+            assert result["ratios"] == []
+
+
+class TestComputeInflammatoryIndex:
+    @pytest.mark.asyncio()
+    async def test_returns_dii(self) -> None:
+        dii_result: dict[str, object] = {
+            "dii_score": -2.0,
+            "classification": "anti-inflammatory",
+            "components": {"Fiber, total dietary": -1.0, "Vitamin C": -1.0},
+        }
+        with (
+            patch(
+                "ehrlich.nutrition.tools._service.search_nutrient_data",
+                new_callable=AsyncMock,
+                return_value=[_SAMPLE_PROFILE],
+            ),
+            patch(
+                "ehrlich.nutrition.tools._service.compute_inflammatory_index",
+                return_value=dii_result,
+            ),
+        ):
+            result = json.loads(await compute_inflammatory_index("salmon"))
+            assert result["food"] == "Chicken breast"
+            assert result["classification"] == "anti-inflammatory"
+            assert result["dii_score"] == -2.0
+            assert "components" in result
+
+    @pytest.mark.asyncio()
+    async def test_no_food_found(self) -> None:
+        with patch(
+            "ehrlich.nutrition.tools._service.search_nutrient_data",
+            new_callable=AsyncMock,
+            return_value=[],
+        ):
+            result = json.loads(await compute_inflammatory_index("nonexistent"))
+            assert result["classification"] == "neutral"
+            assert result["dii_score"] == 0.0

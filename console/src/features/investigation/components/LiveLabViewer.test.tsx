@@ -30,13 +30,13 @@ describe("LiveLabViewer", () => {
 
   it("shows waiting message when no content and not completed", () => {
     render(<LiveLabViewer events={[]} completed={false} />);
-    const messages = screen.getAllByText(/waiting for molecular data/i);
+    const messages = screen.getAllByText(/waiting for molecular structures/i);
     expect(messages.length).toBeGreaterThanOrEqual(1);
   });
 
   it("shows no-data message when completed with no content", () => {
     render(<LiveLabViewer events={[]} completed={true} />);
-    const messages = screen.getAllByText(/no molecular data was visualized/i);
+    const messages = screen.getAllByText(/no molecular structures were visualized/i);
     expect(messages.length).toBeGreaterThanOrEqual(1);
   });
 });
