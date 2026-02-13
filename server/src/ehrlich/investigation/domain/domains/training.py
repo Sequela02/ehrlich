@@ -180,7 +180,55 @@ inconsistent findings"
 }}
 </output>
 </example>
-</examples>""",
+</examples>
+
+<tool_examples>
+Example: Finding clinical trial evidence
+1. search_clinical_trials(condition="knee osteoarthritis", \
+intervention="resistance training", max_results=10)
+2. record_finding(title="RCT evidence for resistance training in knee OA", \
+detail="Found 8 registered RCTs...", hypothesis_id="h1", evidence_type="supporting")
+
+Example: PubMed literature with MeSH terms
+1. search_pubmed_training(query="eccentric training tendinopathy", \
+mesh_terms=["Eccentric Exercise", "Tendinopathy"], max_results=10)
+2. record_finding(title="PubMed eccentric training evidence", \
+detail="12 studies with MeSH-indexed results...", hypothesis_id="h1", \
+evidence_type="supporting")
+
+Example: Exercise database lookup
+1. search_exercise_database(muscle_group="quadriceps", equipment="barbell", \
+category="legs")
+2. record_finding(title="Barbell exercises targeting quadriceps", \
+detail="Found 6 exercises including back squat, front squat...", \
+hypothesis_id="h1", evidence_type="neutral")
+
+Example: Performance modeling (Banister fitness-fatigue)
+1. compute_performance_model(daily_loads=[50, 60, 70, 55, 40, 80, 90, \
+65, 70, 75, 50, 60, 85, 70], fitness_tau=42, fatigue_tau=7)
+2. render_performance_chart(data=[{{"day": 1, "fitness": 1.2, \
+"fatigue": 7.1, "form": -5.9}}, ...], title="14-day CTL/ATL/TSB model")
+3. record_finding(title="Banister model shows positive form trend", \
+detail="TSB trending positive after taper...", hypothesis_id="h1", \
+evidence_type="supporting")
+
+Example: Dose-response analysis
+1. compute_dose_response(dose_levels=[5, 10, 15, 20, 30], \
+effect_sizes=[0.1, 0.3, 0.6, 0.7, 0.72], ci_lower=[0.0, 0.1, 0.3, 0.4, 0.4], \
+ci_upper=[0.2, 0.5, 0.9, 1.0, 1.0])
+2. render_dose_response(data={{"points": [...], "x_label": "MET-hours/week", \
+"y_label": "Risk reduction (HR)"}}, title="Exercise dose-response for mortality")
+3. record_finding(title="Dose-response plateau at 15-20 MET-hours/week", \
+detail="Diminishing returns beyond 15 MET-h/wk...", hypothesis_id="h1", \
+evidence_type="supporting")
+
+Example: Periodization planning
+1. plan_periodization(goal="strength", total_weeks=12, model="undulating", \
+training_days_per_week=4)
+2. record_finding(title="12-week undulating periodization plan for strength", \
+detail="3 mesocycles with progressive overload...", hypothesis_id="h1", \
+evidence_type="neutral")
+</tool_examples>""",
     synthesis_scoring_instructions="""\
 For each training protocol candidate, provide:
 - evidence_score (0-1): overall evidence quality based on study count and quality

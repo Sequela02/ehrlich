@@ -228,6 +228,24 @@ Example: Identifying disease-target associations
 1. search_disease_targets(disease="Alzheimer", limit=10)
 2. get_protein_annotation(uniprot_id="P56817")
 3. search_bioactivity(target="BACE1", assay_type="IC50")
+
+Example: Clustering compounds for SAR analysis
+1. search_bioactivity(target="Pseudomonas aeruginosa", assay_types="Ki")
+2. cluster_compounds(smiles_list=[...active SMILES...], n_clusters=5)
+3. record_finding(title="Structural clusters in Ki-active compounds", ...)
+
+Example: Assessing resistance mutation risk
+1. dock_against_target(smiles="CC1=CC(=O)...", target_id="1fqg")
+2. assess_resistance(smiles="CC1=CC(=O)...", target_id="1fqg")
+3. record_finding(title="Resistance risk for docked candidate", ...)
+
+Example: Pharmacology data from GtoPdb
+1. search_pharmacology(target="5-HT2A", family="5-Hydroxytryptamine")
+2. record_finding(title="Curated receptor affinities from GtoPdb", ...)
+
+Example: Environmental toxicity profiling
+1. fetch_toxicity_profile(identifier="Bisphenol A")
+2. record_finding(title="EPA CompTox toxicity profile", ...)
 </tool_examples>""",
     synthesis_scoring_instructions="""\
 Scoring fields for candidates:

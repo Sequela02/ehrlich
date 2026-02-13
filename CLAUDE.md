@@ -20,7 +20,7 @@ DDD monorepo: `server/` (Python 3.12) + `console/` (React 19 / TypeScript / Bun)
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, designs experiments, evaluates evidence, synthesizes (NO tools)
-Sonnet 4.5 (Researcher) -- Executes experiments with 65 tools (parallel: 2 experiments per batch)
+Sonnet 4.5 (Researcher) -- Executes experiments with 67 tools (parallel: 2 experiments per batch)
 Haiku 4.5 (Summarizer)  -- Compresses large tool outputs (>2000 chars), PICO decomposition, evidence grading
 ```
 
@@ -130,7 +130,7 @@ Types: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`
 
 Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation, training, nutrition, investigation, api, console, mol, data, ci, docs, infra
 
-## Tools (65 Total)
+## Tools (67 Total)
 
 ### Chemistry (6) -- RDKit cheminformatics, domain-agnostic
 - `validate_smiles` -- Validate SMILES string
@@ -206,6 +206,10 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - `render_nutrient_adequacy` -- Horizontal bar chart showing % RDA with MAR score (Recharts)
 - `render_therapeutic_window` -- Range chart showing EAR/RDA/UL safety zones per nutrient (Visx)
 
+### Statistics (2) -- Domain-agnostic hypothesis testing (scipy.stats)
+- `run_statistical_test` -- Compare two numeric groups (auto-selects t-test/Welch/Mann-Whitney, returns p-value, Cohen's d, 95% CI)
+- `run_categorical_test` -- Test contingency tables (auto-selects Fisher's exact/chi-squared, returns p-value, odds ratio/Cramer's V)
+
 ### Investigation (7) -- Hypothesis lifecycle + self-referential
 - `propose_hypothesis` -- Register testable hypothesis
 - `design_experiment` -- Plan experiment with tool sequence
@@ -222,6 +226,7 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - **Hypothesis-driven investigation loop**: formulate hypotheses (with predictions, criteria, scope, prior confidence) -> design structured experiment protocols -> execute tools with methodology guidance -> evaluate with scientific methodology -> revise/reject -> synthesize. See `docs/scientific-methodology.md` for full details
 - **Hypothesis model**: Based on Popper (falsifiability), Platt (strong inference), Feynman (compute consequences), Bayesian updating. Each hypothesis carries: prediction, null_prediction, success_criteria, failure_criteria, scope, hypothesis_type, prior_confidence, certainty_of_evidence. Evaluation uses 8-tier evidence hierarchy, effect size thresholds, Bayesian prior-to-posterior updating, contradiction resolution, and convergence checks
 - **Experiment protocols**: Based on Fisher (1935), Platt (1964), Cohen (1988), Saltelli (2008), OECD (2007), Tropsha (2010). Each experiment carries: independent_variable, dependent_variable, controls, confounders, analysis_plan, success_criteria, failure_criteria. Director designs with 5-principle methodology (VARIABLES, CONTROLS, CONFOUNDERS, ANALYSIS PLAN, SENSITIVITY). Researcher executes with 5-principle methodology (SENSITIVITY, APPLICABILITY DOMAIN, UNCERTAINTY, VERIFICATION, NEGATIVE RESULTS)
+- **Statistical testing in experiments** -- Director plans statistical tests (test type, alpha, effect size) in experiment design via optional `statistical_test_plan`; Researcher executes `run_statistical_test` (continuous) or `run_categorical_test` (categorical) after gathering comparison data; results recorded as findings with evidence_type based on significance
 - **Evidence-linked findings**: every finding references a `hypothesis_id` + `evidence_type` (supporting/contradicting/neutral)
 - **Controls**: negative controls validate model predictions with known-inactive compounds (`NegativeControl` entity); positive controls validate pipeline with known-active compounds (`PositiveControl` entity, correctly_classified >= 0.5, quality: sufficient/marginal/insufficient)
 - **Validation metrics**: Z'-factor assay quality (Zhang et al., 1999), permutation significance (Y-scrambling, p-value), scaffold-split vs random-split comparison; controls scored through trained models; `ValidationMetricsComputed` event
@@ -247,6 +252,7 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 ### Integration Patterns
 
 - **Domain configuration**: `DomainConfig` defines per-domain tool tags, score definitions, prompt examples; `DomainRegistry` auto-detects domain; `DomainDetected` SSE event sends display config to frontend
+- **Domain tool examples**: each `DomainConfig` includes `tool_examples` in `experiment_examples` showing realistic tool chaining patterns; ensures Researcher (Sonnet 4.5) has usage guidance for all domain-specific tools
 - **Multi-domain investigations**: `DomainRegistry.detect()` returns `list[DomainConfig]`; `merge_domain_configs()` creates synthetic merged config with union of tool_tags, concatenated score_definitions, joined prompt examples
 - **Tool tagging**: Tools tagged with frozenset domain tags (chemistry, analysis, prediction, simulation, training, clinical, nutrition, safety, literature, visualization); investigation control tools are universal (no tags); researcher sees only domain-relevant tools
 - **Self-referential research**: `search_prior_research` queries FTS5 full-text index of past findings; indexed on completion via `_rebuild_fts()`; intercepted in orchestrator `_dispatch_tool()` and routed to repository; "ehrlich" source type links to past investigations
@@ -302,6 +308,8 @@ All paths relative to `server/src/ehrlich/`.
 
 | File | Purpose |
 |------|---------|
+| `domain/statistics.py` | `StatisticalResult` frozen dataclass |
+| `application/statistics_service.py` | `StatisticsService` -- scipy.stats hypothesis testing (t-test, Welch, Mann-Whitney, chi-squared, Fisher) |
 | `infrastructure/chembl_loader.py` | ChEMBL bioactivity loader (flexible assay types) |
 | `infrastructure/pubchem_client.py` | PubChem PUG REST compound search |
 | `infrastructure/gtopdb_client.py` | GtoPdb REST client for curated pharmacology |
@@ -378,7 +386,7 @@ All paths relative to `server/src/ehrlich/api/`.
 
 | File | Purpose |
 |------|---------|
-| `routes/investigation.py` | REST + SSE endpoints, 65-tool registry, domain registry, MCP bridge |
+| `routes/investigation.py` | REST + SSE endpoints, 67-tool registry, domain registry, MCP bridge |
 | `routes/methodology.py` | GET /methodology: phases, domains, tools, data sources, models |
 | `routes/molecule.py` | Molecule depiction, conformer, descriptors, targets endpoints |
 | `routes/stats.py` | GET /stats: aggregate counts |

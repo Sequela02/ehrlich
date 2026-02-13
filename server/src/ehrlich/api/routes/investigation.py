@@ -13,6 +13,8 @@ from ehrlich.analysis.tools import (
     analyze_substructures,
     compute_properties,
     explore_dataset,
+    run_categorical_test,
+    run_statistical_test,
     search_bioactivity,
     search_compounds,
     search_pharmacology,
@@ -243,6 +245,9 @@ def _build_registry() -> ToolRegistry:
         ("render_nutrient_comparison", render_nutrient_comparison, _nutrition_viz),
         ("render_nutrient_adequacy", render_nutrient_adequacy, _nutrition_viz),
         ("render_therapeutic_window", render_therapeutic_window, _nutrition_viz),
+        # Statistics (2) -- universal, no tags
+        ("run_statistical_test", run_statistical_test, None),
+        ("run_categorical_test", run_categorical_test, None),
         # Investigation control (7) -- universal, no tags
         ("record_finding", record_finding, None),
         ("conclude_investigation", conclude_investigation, None),

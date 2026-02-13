@@ -34,7 +34,7 @@ Exercise physiology and sports medicine research: evidence-based training analys
 Nutrition science research: supplement evidence analysis, supplement label lookup (NIH DSLD), nutrient data (USDA FoodData), supplement safety monitoring (OpenFDA CAERS), drug interaction screening (RxNav), DRI-based nutrient adequacy assessment, nutrient ratio analysis, and inflammatory index scoring. Uses Semantic Scholar for literature search.
 
 ### Investigation
-Hypothesis-driven agent orchestration. Manages the Claude-driven research loop: literature survey, hypothesis formulation (with predictions, criteria, scope), parallel experiment execution, criteria-based evaluation, negative controls, and synthesis. Uses multi-model architecture (Director/Researcher/Summarizer) with user-guided steering, domain classification, and multi-investigation memory. Includes domain configuration system (`DomainConfig` + `DomainRegistry`) for pluggable scientific domains with tool tagging, score definitions, prompt adaptation, and visualization control. Optional MCP bridge (`MCPBridge`) connects to external MCP servers for extensibility (e.g. Excalidraw for visual summaries).
+Hypothesis-driven agent orchestration. Manages the Claude-driven research loop: literature survey, hypothesis formulation (with predictions, criteria, scope), parallel experiment execution, criteria-based evaluation, negative controls, and synthesis. Uses multi-model architecture (Director/Researcher/Summarizer) with user-guided steering, domain classification, and multi-investigation memory. Includes domain configuration system (`DomainConfig` + `DomainRegistry`) for pluggable scientific domains with tool tagging, score definitions, prompt adaptation, and visualization control. Each domain config includes `tool_examples` in `experiment_examples` with realistic tool chaining patterns for complete tool coverage. Optional MCP bridge (`MCPBridge`) connects to external MCP servers for extensibility (e.g. Excalidraw for visual summaries).
 
 ## Multi-Model Architecture
 
@@ -44,7 +44,7 @@ Ehrlich uses a three-tier Claude model architecture for cost-efficient investiga
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesizes (3-5 calls)
     │                       NO tool access, structured JSON responses only
     │
-    ├── Sonnet 4.5 (Researcher) -- Executes experiments with 65 domain-filtered tools (10-20 calls, parallel x2)
+    ├── Sonnet 4.5 (Researcher) -- Executes experiments with 67 domain-filtered tools (10-20 calls, parallel x2)
     │                               Tool-calling loop with max_iterations_per_experiment guard
     │
     └── Haiku 4.5 (Summarizer)  -- Compresses large tool outputs >2000 chars, PICO+classification, evidence grading
@@ -200,7 +200,7 @@ api/ -> investigation/application/ only
 6. **Director** (Opus) formulates 2-4 hypotheses with predictions, criteria, scope, Bayesian priors; receives structured XML literature context (PICO + graded findings)
 7. **User Approval Gate** -- user approves/rejects hypotheses (5-min timeout auto-approves)
 8. For each batch of 2 hypotheses:
-   a. **Director** designs experiment protocol (description, tool plan, variables, controls, confounders, analysis plan, criteria)
+   a. **Director** designs experiment protocol (description, tool plan, variables, controls, confounders, analysis plan, criteria, optional statistical test plan)
    b. **2 Researchers** (Sonnet) execute in parallel via asyncio.Queue
    c. **Summarizer** (Haiku) compresses outputs exceeding threshold
    d. **Director** evaluates hypothesis against pre-defined success/failure criteria

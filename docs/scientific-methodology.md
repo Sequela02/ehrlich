@@ -164,9 +164,17 @@ Experiment entity fields (7 new protocol fields):
 
 Director experiment prompt: +<methodology> section with 5 principles
   (VARIABLES, CONTROLS, CONFOUNDERS, ANALYSIS PLAN, SENSITIVITY)
+  ANALYSIS PLAN principle instructs Director to plan statistical tests
+  (test type, alpha, effect size threshold) when designing experiments
 
-Researcher experiment prompt: +<methodology> section with 5 principles
-  (SENSITIVITY, APPLICABILITY DOMAIN, UNCERTAINTY, VERIFICATION, NEGATIVE RESULTS)
+Experiment design schema: optional statistical_test_plan field
+  {test_type, alpha, effect_size_threshold, data_source}
+
+Researcher experiment prompt: +<methodology> section with 6 principles
+  (SENSITIVITY, APPLICABILITY DOMAIN, UNCERTAINTY, VERIFICATION, NEGATIVE RESULTS, STATISTICAL TESTING)
+  Principle #6 instructs Researcher to call run_statistical_test or run_categorical_test
+  after gathering comparison data, and record results as findings with evidence_type
+  based on significance
 
 Director evaluation prompt: +<methodology_checks> section
   (control validation, criteria comparison, analysis plan adherence, confounder check)

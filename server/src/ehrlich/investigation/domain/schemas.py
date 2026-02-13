@@ -136,6 +136,28 @@ EXPERIMENT_DESIGN_SCHEMA: dict[str, Any] = {
         "analysis_plan": {"type": "string"},
         "success_criteria": {"type": "string"},
         "failure_criteria": {"type": "string"},
+        "statistical_test_plan": {
+            "type": "object",
+            "properties": {
+                "test_type": {
+                    "type": "string",
+                    "enum": [
+                        "run_statistical_test",
+                        "run_categorical_test",
+                    ],
+                },
+                "alpha": {"type": "number"},
+                "effect_size_threshold": {"type": "string"},
+                "data_source": {"type": "string"},
+            },
+            "required": [
+                "test_type",
+                "alpha",
+                "effect_size_threshold",
+                "data_source",
+            ],
+            "additionalProperties": False,
+        },
     },
     "required": [
         "description",

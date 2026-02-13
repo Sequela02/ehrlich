@@ -125,7 +125,28 @@ safety concerns from CAERS data"
 }}
 </output>
 </example>
-</examples>""",
+</examples>
+
+<tool_examples>
+Example: Comparing nutrient profiles across foods
+1. search_nutrient_data(food_query="chicken breast")
+2. search_nutrient_data(food_query="salmon fillet")
+3. compare_nutrients(food_queries="chicken breast, salmon fillet, tofu")
+4. render_nutrient_comparison(data={{"foods": [...], "nutrients": ["protein", \
+"omega-3", "iron", "zinc"]}})
+
+Example: Safety screening against Upper Intake Levels
+1. check_intake_safety(food_query="brazil nuts", age_group="adult", sex="male")
+2. check_intake_safety(food_query="beef liver", age_group="adult", sex="female")
+3. record_finding(title="UL exceedance risk for selenium in brazil nuts", \
+detail="...", hypothesis_id="...", evidence_type="supporting")
+
+Example: Dietary inflammatory index scoring
+1. compute_inflammatory_index(food_query="salmon")
+2. compute_inflammatory_index(food_query="bacon")
+3. record_finding(title="Anti-inflammatory profile of salmon vs bacon", \
+detail="...", hypothesis_id="...", evidence_type="supporting")
+</tool_examples>""",
     synthesis_scoring_instructions="""\
 For each nutritional intervention candidate, provide:
 - evidence_score (0-1): overall evidence quality based on study count, design, and consistency
