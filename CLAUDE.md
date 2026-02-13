@@ -39,7 +39,7 @@ Always uses `MultiModelOrchestrator`. Hypotheses tested in parallel batches of 2
 | simulation | `server/src/ehrlich/simulation/` | Docking, ADMET, resistance, target discovery (RCSB PDB, UniProt, Open Targets), toxicity (EPA CompTox) |
 | training | `server/src/ehrlich/training/` | Evidence analysis, protocol comparison, injury risk, training metrics, clinical trials (ClinicalTrials.gov), PubMed literature (E-utilities), exercise database (wger) |
 | nutrition | `server/src/ehrlich/nutrition/` | Supplement evidence, supplement labels (NIH DSLD), nutrient data (USDA FoodData), supplement safety (OpenFDA CAERS), drug-nutrient interactions (RxNav), DRI adequacy, nutrient ratios, inflammatory index |
-| investigation | `server/src/ehrlich/investigation/` | Multi-model orchestration + SQLite persistence + domain registry + MCP bridge |
+| investigation | `server/src/ehrlich/investigation/` | Multi-model orchestration + PostgreSQL persistence + domain registry + MCP bridge |
 
 ### External Data Sources (15 external + 1 internal)
 
@@ -60,7 +60,7 @@ Always uses `MultiModelOrchestrator`. Hypotheses tested in parallel batches of 2
 | USDA FoodData | `https://api.nal.usda.gov/fdc/v1` | Nutrient profiles for foods and supplements | API key |
 | OpenFDA CAERS | `https://api.fda.gov/food/event.json` | Supplement adverse event reports (safety monitoring) | None |
 | RxNav | `https://rxnav.nlm.nih.gov/REST` | Drug-supplement and drug-nutrient interactions (RxNorm) | None |
-| Ehrlich FTS5 | internal | Full-text search of past investigation findings | None |
+| Ehrlich tsvector | internal | Full-text search of past investigation findings (PostgreSQL GIN index) | None |
 
 ### Dependency Rules (STRICT)
 
@@ -88,6 +88,8 @@ uv run ruff format src/ tests/                           # Format
 uv run mypy src/ehrlich/                                 # Type check
 ```
 
+Required env vars: `ANTHROPIC_API_KEY`, `EHRLICH_DATABASE_URL` (PostgreSQL), `EHRLICH_WORKOS_CLIENT_ID`, `EHRLICH_WORKOS_API_KEY`.
+
 Optional extras: `deeplearning` (chemprop), `all` (everything).
 
 ### Console
@@ -100,6 +102,10 @@ bun test             # Vitest
 bun run build        # vite build (generates route tree + bundles)
 bun run typecheck    # tsc --noEmit (run after build for route types)
 ```
+
+Required env vars in `console/.env.local`: `VITE_API_URL` (e.g. `http://localhost:8000/api/v1`), `VITE_WORKOS_CLIENT_ID`, `VITE_WORKOS_REDIRECT_URI` (e.g. `http://localhost:5173/callback`).
+
+WorkOS dashboard must whitelist the console origin (e.g. `http://localhost:5173`) in **Authentication > Sessions > CORS**.
 
 ### Web (Landing Page)
 
@@ -216,7 +222,7 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - `evaluate_hypothesis` -- Assess outcome (supported/refuted/revised)
 - `record_finding` -- Record finding linked to hypothesis + evidence_type
 - `record_negative_control` -- Validate model with known-inactive compounds
-- `search_prior_research` -- Search Ehrlich's own past findings via FTS5
+- `search_prior_research` -- Search Ehrlich's own past findings via full-text search
 - `conclude_investigation` -- Final summary with ranked candidates
 
 ## Key Patterns
@@ -243,11 +249,14 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - **Context compaction**: `_build_prior_context()` compresses completed hypotheses into XML summary for Director
 - **Prompt engineering**: XML-tagged instructions (`<instructions>`, `<examples>`, `<output_format>`, `<tool_reference>`), multishot examples (2 per Director prompt), tool usage examples for Researcher
 - **ToolCache**: in-memory TTL-based caching for deterministic and API tool results
-- **Event persistence**: all SSE events stored in SQLite `events` table (WAL mode); completed investigations replay full timeline on page reload
+- **Event persistence**: all SSE events stored in PostgreSQL `events` table; completed investigations replay full timeline on page reload
 - **CostTracker**: per-model token usage with tiered pricing; `CostUpdate` event yields cost snapshots after each phase/batch
 - **Structured outputs**: Director calls use `output_config` with JSON schemas (6 schemas in `domain/schemas.py`) to guarantee valid JSON; eliminates parsing fallbacks
 - **Director streaming**: `_director_call()` is an async generator using `stream_message()`; yields `Thinking` events in real time as tokens arrive; Researcher and Summarizer remain non-streaming
 - All external API clients follow same pattern: `httpx.AsyncClient`, retry with exponential backoff, structured error handling
+- **Authentication**: WorkOS JWT middleware (`api/auth.py`); JWKS verification via `PyJWKClient`; `get_current_user` (header) and `get_current_user_sse` (header or `?token=` query param for EventSource); `get_optional_user` for public routes
+- **Credit system**: director tier selection (haiku=1cr, sonnet=3cr, opus=5cr); credits deducted on investigation start; refunded on failure; `credit_transactions` table for audit trail; `GET /credits/balance` endpoint
+- **BYOK (Bring Your Own Key)**: `X-Anthropic-Key` header pass-through; bypasses credit system; API key forwarded to `AnthropicClientAdapter`; checked on both `POST /investigate` and `GET /investigate/{id}/stream`
 
 ### Integration Patterns
 
@@ -255,7 +264,7 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - **Domain tool examples**: each `DomainConfig` includes `tool_examples` in `experiment_examples` showing realistic tool chaining patterns; ensures Researcher (Sonnet 4.5) has usage guidance for all domain-specific tools
 - **Multi-domain investigations**: `DomainRegistry.detect()` returns `list[DomainConfig]`; `merge_domain_configs()` creates synthetic merged config with union of tool_tags, concatenated score_definitions, joined prompt examples
 - **Tool tagging**: Tools tagged with frozenset domain tags (chemistry, analysis, prediction, simulation, training, clinical, nutrition, safety, literature, visualization); investigation control tools are universal (no tags); researcher sees only domain-relevant tools
-- **Self-referential research**: `search_prior_research` queries FTS5 full-text index of past findings; indexed on completion via `_rebuild_fts()`; intercepted in orchestrator `_dispatch_tool()` and routed to repository; "ehrlich" source type links to past investigations
+- **Self-referential research**: `search_prior_research` queries PostgreSQL `tsvector` + GIN index of past findings; indexed on completion; intercepted in orchestrator `_dispatch_tool()` and routed to repository; "ehrlich" source type links to past investigations
 - **MCP bridge**: Optional `MCPBridge` connects to external MCP servers (e.g. Excalidraw); tools registered dynamically via `ToolRegistry.register_mcp_tools()`; lifecycle managed by orchestrator; enabled via `EHRLICH_MCP_EXCALIDRAW=true`
 - **SSE streaming**: 20 event types for real-time updates; reconnection with exponential backoff (1s, 2s, 4s, max 3 retries)
 - **Phase progress**: `PhaseChanged` event tracks 6 orchestrator phases (Classification & PICO -> Literature Survey -> Formulation -> Hypothesis Testing -> Negative Controls -> Synthesis); frontend renders 6-segment progress bar
@@ -376,7 +385,7 @@ All paths relative to `server/src/ehrlich/`.
 | `domain/domains/nutrition.py` | `NUTRITION_SCIENCE` config |
 | `domain/mcp_config.py` | `MCPServerConfig` frozen dataclass |
 | `tools_viz.py` | 12 visualization tools |
-| `infrastructure/sqlite_repository.py` | SQLite persistence + FTS5 findings search |
+| `infrastructure/repository.py` | PostgreSQL persistence (asyncpg) + tsvector findings search + user/credit management |
 | `infrastructure/anthropic_client.py` | Anthropic API adapter with retry, streaming, and structured outputs |
 | `infrastructure/mcp_bridge.py` | MCP client bridge (stdio/SSE/streamable_http) |
 
@@ -386,7 +395,8 @@ All paths relative to `server/src/ehrlich/api/`.
 
 | File | Purpose |
 |------|---------|
-| `routes/investigation.py` | REST + SSE endpoints, 67-tool registry, domain registry, MCP bridge |
+| `auth.py` | WorkOS JWT middleware (JWKS verification, header + query param auth for SSE) |
+| `routes/investigation.py` | REST + SSE endpoints, 67-tool registry, domain registry, MCP bridge, credit system, BYOK |
 | `routes/methodology.py` | GET /methodology: phases, domains, tools, data sources, models |
 | `routes/molecule.py` | Molecule depiction, conformer, descriptors, targets endpoints |
 | `routes/stats.py` | GET /stats: aggregate counts |
@@ -411,10 +421,11 @@ All paths relative to `console/src/`.
 | `features/investigation/components/HypothesisCard.tsx` | Expandable hypothesis card with confidence bar |
 | `features/investigation/components/HypothesisApprovalCard.tsx` | Approve/reject before testing |
 | `features/investigation/components/ActiveExperimentCard.tsx` | Live experiment activity card |
-| `features/investigation/components/CompletionSummaryCard.tsx` | Post-completion summary card |
+| `features/investigation/components/CompletionSummaryCard.tsx` | Post-completion summary card with expandable cost breakdown |
 | `features/investigation/components/NegativeControlPanel.tsx` | Negative control validation table |
 | `features/investigation/components/TemplateCards.tsx` | 7 cross-domain research prompt templates |
-| `features/investigation/components/PromptInput.tsx` | Controlled prompt input |
+| `features/investigation/components/PromptInput.tsx` | Controlled prompt input with director tier selector pills |
+| `features/investigation/components/BYOKSettings.tsx` | API key management for BYOK users |
 
 ### Investigation lib + hooks
 
@@ -424,6 +435,7 @@ All paths relative to `console/src/`.
 | `features/investigation/lib/diagram-builder.ts` | Hypotheses/experiments/findings to React Flow nodes + edges |
 | `features/investigation/lib/export-markdown.ts` | Client-side markdown report generation |
 | `features/investigation/hooks/use-methodology.ts` | React hook for methodology data |
+| `features/investigation/hooks/use-credits.ts` | Credit balance hook (TanStack Query) |
 
 ### Molecule components
 
@@ -459,9 +471,12 @@ All paths relative to `console/src/`.
 
 | File | Purpose |
 |------|---------|
+| `shared/hooks/use-auth.ts` | WorkOS auth hook wrapper (AuthKitProvider integration) |
+| `shared/lib/api.ts` | Authenticated fetch with BYOK `X-Anthropic-Key` header support |
 | `shared/components/ErrorBoundary.tsx` | Error boundary for LiveLabViewer and InvestigationDiagram |
 | `shared/components/ui/Toaster.tsx` | Sonner toast wrapper with dark OKLCH theme |
 | `routes/methodology.tsx` | Methodology page |
+| `routes/callback.tsx` | WorkOS OAuth callback (waits for auth, then redirects home) |
 
 ## Key Files (Web Landing Page)
 
