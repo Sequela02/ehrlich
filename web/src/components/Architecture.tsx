@@ -1,23 +1,24 @@
-import { useRef } from "react";
-import { motion, useInView, useReducedMotion } from "motion/react";
-import { SectionHeader } from "./SectionHeader";
-import { ARCHITECTURE_ASCII } from "@/lib/ascii-patterns";
+import { motion, useReducedMotion } from "motion/react";
+import { Cpu, Activity, FileText, Network } from "lucide-react";
 
 const CARD_STYLES = {
   accent: {
-    bar: "bg-accent",
-    hover: "hover:border-accent",
+    border: "border-accent/50",
+    bg: "bg-accent/5",
     text: "text-accent",
+    icon: Cpu,
   },
   primary: {
-    bar: "bg-primary",
-    hover: "hover:border-primary",
+    border: "border-primary/50",
+    bg: "bg-primary/5",
     text: "text-primary",
+    icon: Activity,
   },
   secondary: {
-    bar: "bg-secondary",
-    hover: "hover:border-secondary",
+    border: "border-secondary/50",
+    bg: "bg-secondary/5",
     text: "text-secondary",
+    icon: FileText,
   },
 } as const;
 
@@ -25,202 +26,159 @@ function ModelCard({
   label,
   model,
   variant,
+  reason,
   children,
+  delay = 0,
 }: {
   label: string;
   model: string;
   variant: keyof typeof CARD_STYLES;
+  reason: string;
   children: React.ReactNode;
+  delay?: number;
 }) {
   const styles = CARD_STYLES[variant];
+  const Icon = styles.icon;
 
   return (
     <motion.div
-      variants={cardVariants}
-      whileHover={{ y: -2, transition: { type: "spring", stiffness: 400, damping: 25 } }}
-      className={`w-full max-w-md bg-background border border-border rounded-sm p-5 ${styles.hover} transition-colors group relative`}
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay, duration: 0.5 }}
+      whileHover={{ y: -4, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.5)" }}
+      className={`relative w-full max-w-sm border ${styles.border} ${styles.bg} backdrop-blur-sm rounded-lg p-6 group overflow-hidden`}
     >
-      <div className={`absolute top-0 left-0 w-1 h-full ${styles.bar} opacity-50 group-hover:opacity-100 transition-opacity`} />
-      <div className="flex justify-between items-start mb-2">
-        <span className={`font-mono text-[10px] ${styles.text} tracking-[0.12em] uppercase`}>
-          {label}
-        </span>
-        <span className="font-mono text-xs text-foreground/70 bg-surface px-2 py-0.5 rounded-sm border border-border">
-          {model}
-        </span>
+      <div className={`absolute top-0 left-0 w-full h-1 ${styles.bg.replace("/5", "/40")} origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500`} />
+
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-md ${styles.bg} ${styles.text}`}>
+            <Icon size={18} />
+          </div>
+          <div>
+            <div className={`font-mono text-[10px] ${styles.text} bg-black/40 px-2 py-0.5 rounded border ${styles.border} uppercase tracking-wider mb-1 inline-block`}>
+              {label}
+            </div>
+            <div className="font-bold text-lg leading-none">{model}</div>
+          </div>
+        </div>
       </div>
-      {children}
+
+      <div className="text-sm text-muted-foreground/80 leading-relaxed mb-3">
+        {children}
+      </div>
+
+      <div className={`font-mono text-[10px] ${styles.text} opacity-70`}>
+        {reason}
+      </div>
     </motion.div>
   );
 }
 
-function Connector() {
+function DataPipe({ height = 40, delay = 0 }) {
   return (
     <motion.div
-      variants={connectorVariants}
-      className="flex justify-center"
-      style={{ transformOrigin: "top" }}
+      initial={{ opacity: 0, height: 0 }}
+      whileInView={{ opacity: 1, height }}
+      viewport={{ once: true }}
+      transition={{ delay, duration: 0.5 }}
+      className="w-px border-l border-dashed border-border relative flex justify-center"
     >
-      <div className="h-12 w-px bg-border" />
+      <motion.div
+        animate={{ top: ["0%", "100%"], opacity: [0, 1, 0] }}
+        transition={{ duration: 1.5, repeat: Infinity, ease: "linear", delay }}
+        className="absolute w-1.5 h-3 bg-foreground/50 rounded-full"
+      />
     </motion.div>
   );
 }
-
-function Fork() {
-  return (
-    <motion.div variants={connectorVariants} className="flex justify-center" style={{ transformOrigin: "top" }}>
-      <div className="relative w-full max-w-md">
-        <div className="flex justify-center">
-          <div className="h-6 w-px bg-border" />
-        </div>
-        <div className="h-px bg-border mx-[25%]" />
-        <div className="flex justify-between mx-[25%]">
-          <div className="h-6 w-px bg-border" />
-          <div className="h-6 w-px bg-border" />
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-function Merge() {
-  return (
-    <motion.div variants={connectorVariants} className="flex justify-center" style={{ transformOrigin: "bottom" }}>
-      <div className="relative w-full max-w-md">
-        <div className="flex justify-between mx-[25%]">
-          <div className="h-6 w-px bg-border" />
-          <div className="h-6 w-px bg-border" />
-        </div>
-        <div className="h-px bg-border mx-[25%]" />
-        <div className="flex justify-center">
-          <div className="h-6 w-px bg-border" />
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-const orchestrationVariants = {
-  hidden: {},
-  visible: {
-    transition: { staggerChildren: 0.15, delayChildren: 0.1 },
-  },
-};
-
-const cardVariants = {
-  hidden: { opacity: 0, scale: 0.96 },
-  visible: {
-    opacity: 1,
-    scale: 1,
-    transition: { type: "spring" as const, stiffness: 200, damping: 20 },
-  },
-};
-
-const connectorVariants = {
-  hidden: { opacity: 0, scaleY: 0 },
-  visible: {
-    opacity: 1,
-    scaleY: 1,
-    transition: { duration: 0.3, ease: "easeOut" as const },
-  },
-};
 
 export function Architecture() {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-60px" });
   const reduced = useReducedMotion();
 
   return (
-    <section id="architecture" className="py-24 px-4 lg:px-0 max-w-[1200px] mx-auto relative border-t border-border">
-      <div className="ascii-bg">
-        <pre>{ARCHITECTURE_ASCII}</pre>
-      </div>
+    <section id="architecture" className="relative py-32 px-4 lg:px-0 overflow-hidden">
 
-      <SectionHeader title="Architecture" />
+      <div className="max-w-5xl mx-auto relative z-10">
+        <div className="text-center mb-20">
+          <div className="inline-flex items-center gap-2 mb-4 px-3 py-1 rounded-full border border-border bg-surface/50 backdrop-blur-sm">
+            <Network size={14} className="text-primary" />
+            <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Multi-Model Architecture</span>
+          </div>
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">
+            Cost-optimized <span className="text-primary">reasoning.</span>
+          </h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Each model is chosen for what it does best. Opus reasons deeply about hypotheses.
+            Sonnet executes tools fast. Haiku compresses results cheaply.
+            The result: ~$3-4 per investigation instead of ~$11 all-Opus.
+          </p>
+        </div>
 
-      <div className="mb-10 max-w-2xl">
-        <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-4">
-          Three AI Models Working Together
-        </h3>
-        <p className="text-base text-muted-foreground leading-relaxed">
-          One model reasons and plans. Two execute experiments in parallel. A
-          fourth compresses and grades. Each optimized for its role &mdash;
-          keeping costs low and quality high.
-        </p>
-      </div>
-
-      <div className="w-full bg-surface border border-border rounded-sm p-8 lg:p-12 relative overflow-hidden">
-        {/* Subtle grid background */}
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage:
-              "linear-gradient(to right, var(--color-border) 1px, transparent 1px), linear-gradient(to bottom, var(--color-border) 1px, transparent 1px)",
-            backgroundSize: "40px 40px",
-          }}
-        />
-
-        <motion.div
-          ref={ref}
-          initial={reduced ? false : "hidden"}
-          animate={isInView ? "visible" : "hidden"}
-          variants={orchestrationVariants}
-          className="relative z-10 flex flex-col items-center"
-        >
-          {/* Director */}
-          <ModelCard label="DIRECTOR" model="Opus 4.6" variant="accent">
-            <p className="text-sm text-muted-foreground">
-              Formulates hypotheses, designs experiments, evaluates evidence,
-              synthesizes conclusions. Extended thinking.{" "}
-              <span className="text-destructive/80">No tool access.</span>
-            </p>
-          </ModelCard>
-
-          <Fork />
-
-          {/* Researchers */}
-          <motion.div
-            variants={{
-              hidden: {},
-              visible: { transition: { staggerChildren: 0.08 } },
-            }}
-            className="flex flex-col md:flex-row gap-6 w-full max-w-[calc(32rem+1.5rem)] justify-center"
+        <div className="flex flex-col items-center">
+          {/* Tier 1: Director */}
+          <ModelCard
+            label="Director"
+            model="Opus 4.6"
+            variant="accent"
+            reason="WHY: Hypothesis quality requires deep reasoning. No tool access -- pure scientific thinking."
           >
-            <ModelCard label="RESEARCHER 01" model="Sonnet 4.5" variant="primary">
-              <div className="mb-2">
-                <span className="inline-block font-mono text-[9px] border border-primary/30 text-primary px-1.5 py-0.5 rounded-[1px]">
-                  65 TOOLS
-                </span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Executes experiments with domain-filtered tools. Real API calls
-                to ChEMBL, PubChem, RCSB PDB, and 12 more.
-              </p>
-            </ModelCard>
-
-            <ModelCard label="RESEARCHER 02" model="Sonnet 4.5" variant="primary">
-              <div className="mb-2">
-                <span className="inline-block font-mono text-[9px] border border-primary/30 text-primary px-1.5 py-0.5 rounded-[1px]">
-                  65 TOOLS
-                </span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Parallel execution. Literature synthesis &amp; negative control
-                validation.
-              </p>
-            </ModelCard>
-          </motion.div>
-
-          <Merge />
-
-          {/* Summarizer */}
-          <ModelCard label="SUMMARIZER" model="Haiku 4.5" variant="secondary">
-            <p className="text-sm text-muted-foreground">
-              Compresses outputs &gt;2000 chars. PICO decomposition, evidence
-              grading, and confidence scoring.
-            </p>
+            Formulates hypotheses with predictions, criteria, and Bayesian priors.
+            Designs experiments with controls and confounders.
+            Evaluates evidence and synthesizes findings with GRADE certainty.
+            <span className="text-accent/80"> Streaming with 10K token extended thinking.</span>
           </ModelCard>
-        </motion.div>
+
+          <DataPipe height={60} delay={0.2} />
+
+          {/* Tier 2: Researchers (Parallel) */}
+          <div className="relative p-8 border border-border/40 rounded-2xl bg-black/20 backdrop-blur-sm grid md:grid-cols-2 gap-8 w-full max-w-4xl">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-background px-4 font-mono text-[10px] text-muted-foreground uppercase tracking-widest border border-border/40 rounded-full">
+              Parallel Execution &middot; 2 experiments per batch
+            </div>
+
+            <div className="flex flex-col items-center">
+              <ModelCard
+                label="Researcher A"
+                model="Sonnet 4.5"
+                variant="primary"
+                delay={0.4}
+                reason="WHY: Fast tool execution. Domain-filtered to only relevant tools."
+              >
+                Executes experiment protocol. Queries ChEMBL, runs docking, trains
+                ML models, screens compounds. Max 10 tool calls per experiment.
+              </ModelCard>
+            </div>
+            <div className="flex flex-col items-center">
+              <ModelCard
+                label="Researcher B"
+                model="Sonnet 4.5"
+                variant="primary"
+                delay={0.5}
+                reason="WHY: Parallel execution halves wall-clock time per batch."
+              >
+                Independent experiment on a different hypothesis. Cross-references
+                citations, validates controls, runs statistical tests.
+              </ModelCard>
+            </div>
+          </div>
+
+          <DataPipe height={60} delay={0.6} />
+
+          {/* Tier 3: Summarizer */}
+          <ModelCard
+            label="Summarizer"
+            model="Haiku 4.5"
+            variant="secondary"
+            delay={0.8}
+            reason="WHY: Compression is mechanical, not creative. Haiku is 60x cheaper than Opus."
+          >
+            Compresses tool outputs over 2000 characters. PICO decomposition. Domain
+            classification. GRADE evidence grading. Keeps the Director focused on
+            reasoning, not parsing.
+          </ModelCard>
+        </div>
       </div>
     </section>
   );

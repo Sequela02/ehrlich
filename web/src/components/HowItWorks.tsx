@@ -8,53 +8,10 @@ import {
   FileText,
 } from "lucide-react";
 import { motion, useInView, useReducedMotion } from "motion/react";
-import { METHODOLOGY_ASCII } from "@/lib/ascii-patterns";
+import { METHODOLOGY_PHASES } from "@/lib/constants";
 import { SectionHeader } from "./SectionHeader";
 
-const PHASES = [
-  {
-    number: "01",
-    label: "Classification & PICO",
-    icon: FlaskConical,
-    description:
-      "Decompose your question into Population, Intervention, Comparison, Outcome. Auto-detect which scientific domains apply.",
-  },
-  {
-    number: "02",
-    label: "Literature Survey",
-    icon: BookOpen,
-    description:
-      "Systematic search with citation chasing. GRADE-adapted body-of-evidence grading. AMSTAR-2 quality self-assessment.",
-  },
-  {
-    number: "03",
-    label: "Hypothesis Formulation",
-    icon: Lightbulb,
-    description:
-      "Generate falsifiable hypotheses with predictions, null predictions, success criteria, failure criteria, scope, and prior confidence.",
-  },
-  {
-    number: "04",
-    label: "Experiment Testing",
-    icon: TestTube2,
-    description:
-      "Parallel execution: 2 experiments per batch. 65 tools across chemistry, literature, analysis, prediction, simulation, training, and nutrition.",
-  },
-  {
-    number: "05",
-    label: "Negative Controls",
-    icon: ShieldCheck,
-    description:
-      "Validate predictions with known-inactive compounds. Z\u2032-factor assay quality scoring. Permutation significance testing.",
-  },
-  {
-    number: "06",
-    label: "Synthesis",
-    icon: FileText,
-    description:
-      "GRADE certainty grading. Priority tiers. Structured limitations taxonomy. Knowledge gap analysis. Follow-up recommendations.",
-  },
-] as const;
+const PHASE_ICONS = [FlaskConical, BookOpen, Lightbulb, TestTube2, ShieldCheck, FileText];
 
 const containerVariants = {
   hidden: {},
@@ -78,21 +35,17 @@ export function HowItWorks() {
       id="how-it-works"
       className="relative py-24 px-4 lg:px-0 max-w-[1200px] mx-auto border-t border-border"
     >
-      <div className="ascii-bg">
-        <pre>{METHODOLOGY_ASCII}</pre>
-      </div>
-
       <SectionHeader title="How It Works" />
 
       <div className="mb-12 max-w-2xl">
         <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-4">
-          Six Phases of Rigorous Discovery
+          Six phases. Each grounded in established science.
         </h3>
         <p className="text-base text-muted-foreground leading-relaxed">
           Every investigation follows a structured scientific protocol. Ehrlich
           doesn&apos;t just search the internet &mdash; it formulates hypotheses,
-          designs experiments, tests them against real data, and grades the
-          evidence.
+          designs experiments, tests them against real data, validates with controls,
+          and grades the evidence using peer-reviewed frameworks.
         </p>
       </div>
 
@@ -113,8 +66,8 @@ export function HowItWorks() {
         />
 
         <div className="space-y-6 lg:space-y-4">
-          {PHASES.map((phase) => {
-            const Icon = phase.icon;
+          {METHODOLOGY_PHASES.map((phase, i) => {
+            const Icon = PHASE_ICONS[i];
             return (
               <motion.div
                 key={phase.number}
@@ -133,21 +86,61 @@ export function HowItWorks() {
 
                 {/* Content */}
                 <div className="flex-1 pb-4 border-b border-border/50 lg:border-b-0 lg:pb-0">
-                  <div className="flex items-baseline gap-3 mb-1">
+                  <div className="flex items-baseline gap-3 mb-1 flex-wrap">
                     <span className="font-mono text-xs text-primary tracking-wider">
                       {phase.number}
                     </span>
                     <h4 className="font-mono text-sm uppercase tracking-[0.08em] text-foreground group-hover:text-primary transition-colors">
                       {phase.label}
                     </h4>
+                    <span className="font-mono text-[10px] text-accent/70 border border-accent/20 bg-accent/5 px-1.5 py-0.5 rounded">
+                      {phase.foundation}
+                    </span>
                   </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed max-w-lg">
+                  <p className="text-sm text-muted-foreground leading-relaxed max-w-xl">
                     {phase.description}
                   </p>
                 </div>
               </motion.div>
             );
           })}
+        </div>
+      </motion.div>
+
+      {/* Hypothesis structure callout */}
+      <motion.div
+        initial={reduced ? false : { opacity: 0, y: 16 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+        className="mt-16 grid md:grid-cols-2 gap-6"
+      >
+        <div className="border border-border bg-surface/30 rounded-sm p-6">
+          <h4 className="font-mono text-[10px] text-primary uppercase tracking-wider mb-4">
+            Every Hypothesis Carries
+          </h4>
+          <div className="space-y-2 font-mono text-[11px] text-muted-foreground">
+            <div><span className="text-foreground/70 inline-block w-28">statement</span> The core claim</div>
+            <div><span className="text-foreground/70 inline-block w-28">prediction</span> What should be true if correct</div>
+            <div><span className="text-foreground/70 inline-block w-28">null_prediction</span> What to expect if wrong</div>
+            <div><span className="text-foreground/70 inline-block w-28">success_criteria</span> Measurable threshold for support</div>
+            <div><span className="text-foreground/70 inline-block w-28">failure_criteria</span> Measurable threshold for refutation</div>
+            <div><span className="text-foreground/70 inline-block w-28">prior_confidence</span> Bayesian prior (0-1)</div>
+          </div>
+        </div>
+
+        <div className="border border-border bg-surface/30 rounded-sm p-6">
+          <h4 className="font-mono text-[10px] text-primary uppercase tracking-wider mb-4">
+            Every Experiment Carries
+          </h4>
+          <div className="space-y-2 font-mono text-[11px] text-muted-foreground">
+            <div><span className="text-foreground/70 inline-block w-28">independent_var</span> What is being manipulated</div>
+            <div><span className="text-foreground/70 inline-block w-28">dependent_var</span> What is being measured</div>
+            <div><span className="text-foreground/70 inline-block w-28">controls</span> Positive and negative controls</div>
+            <div><span className="text-foreground/70 inline-block w-28">confounders</span> Known confounding variables</div>
+            <div><span className="text-foreground/70 inline-block w-28">analysis_plan</span> Statistical approach + thresholds</div>
+            <div><span className="text-foreground/70 inline-block w-28">sensitivity</span> How robust to parameter changes</div>
+          </div>
         </div>
       </motion.div>
     </section>

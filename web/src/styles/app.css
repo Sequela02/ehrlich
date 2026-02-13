@@ -91,31 +91,6 @@ body {
   }
 }
 
-/* ASCII background layer */
-.ascii-bg {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  user-select: none;
-  z-index: 0;
-}
-
-.ascii-bg pre {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  line-height: 1.4;
-  color: var(--color-primary);
-  opacity: 0.06;
-  white-space: pre;
-  animation: ascii-drift 60s linear infinite;
-}
-
-@keyframes ascii-drift {
-  from { transform: translateY(0); }
-  to { transform: translateY(-20px); }
-}
-
 /* Investigation terminal */
 .terminal-frame {
   background-color: oklch(0.08 0.005 155);

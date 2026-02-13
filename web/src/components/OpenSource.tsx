@@ -38,9 +38,9 @@ export function OpenSource() {
         </h2>
 
         <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mb-16 leading-relaxed font-light">
-          AGPL-3.0 licensed. Built in public. Anyone can extend Ehrlich with
-          new scientific domains &mdash; materials science, environmental
-          research, clinical medicine, or anything else.
+          AGPL-3.0 dual licensed. Use it free for research and teaching.
+          Purchase a commercial license for private modifications.
+          Self-host, extend, contribute.
         </p>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 w-full mb-16">
@@ -61,39 +61,38 @@ export function OpenSource() {
             </div>
           </div>
 
-          {/* Feature list */}
+          {/* Licensing + features */}
           <div className="flex flex-col justify-center gap-8">
             <div>
               <h3 className="text-foreground text-lg font-bold mb-2">
-                Add a Domain
+                AGPL-3.0 (Free Use)
               </h3>
               <p className="text-muted-foreground leading-relaxed text-sm">
-                Zero changes to existing code. Define a{" "}
-                <code className="font-mono text-xs text-primary">
-                  DomainConfig
-                </code>
-                , register your tools, and the engine handles orchestration,
-                persistence, and reporting.
+                Students, academics, and individual researchers use Ehrlich freely.
+                Self-host internally without restrictions.
+                If you offer Ehrlich as a network service, modifications must be open-sourced.
               </p>
             </div>
             <div>
               <h3 className="text-foreground text-lg font-bold mb-2">
-                65 Tools Across 3 Domains
+                Commercial License
               </h3>
               <p className="text-muted-foreground leading-relaxed text-sm">
-                Chemistry, literature, analysis, prediction, simulation,
-                training, nutrition, and visualization. Each tagged with domain
-                metadata for automatic filtering.
+                Companies that want private modifications purchase an AGPL exemption.
+                Includes commercial support, SLA, and custom domain development.
+                Precedent: MongoDB, Confluent, GitLab, Spree Commerce.
               </p>
             </div>
             <div>
               <h3 className="text-foreground text-lg font-bold mb-2">
-                Domain-Agnostic Engine
+                67 Tools, Domain-Agnostic
               </h3>
               <p className="text-muted-foreground leading-relaxed text-sm">
-                The orchestrator, persistence layer, and reporting system work
-                identically across all domains. Your tools are the only
-                domain-specific code.
+                Chemistry, literature, analysis, prediction, simulation, training,
+                nutrition, visualization, and statistics. Each tagged with domain
+                metadata for automatic filtering. Add a{" "}
+                <code className="font-mono text-xs text-primary">DomainConfig</code>{" "}
+                and the engine handles the rest.
               </p>
             </div>
           </div>
