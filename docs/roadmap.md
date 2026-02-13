@@ -710,15 +710,13 @@ Cache the 70-tool schema array that repeats on every researcher API call.
 
 ### SDK-3: Effort Parameter -- DONE
 
-Use `effort` to control token spend per model role.
+Use `effort` to control token spend. Only supported by Opus models (4.5+); Sonnet and Haiku do not support it.
 
 - [x] Add `effort: str | None = None` parameter to `AnthropicClientAdapter.__init__`
 - [x] Pass `effort` via `output_config` dict to `messages.create()` (SDK 0.79+ requires it nested, not top-level)
-- [x] Configure per-model in `Settings`:
-  - Director (Opus 4.6): `effort="high"` (default, explicit)
-  - Researcher (Sonnet 4.5): `effort="high"` (default, explicit)
-  - Summarizer (Haiku 4.5): `effort="low"` (simple compression tasks)
-- [x] Add `EHRLICH_DIRECTOR_EFFORT`, `EHRLICH_RESEARCHER_EFFORT`, `EHRLICH_SUMMARIZER_EFFORT` env vars
+- [x] Configure Director effort in `Settings`: `effort="high"` (default), gated on Opus model name
+- [x] Add `EHRLICH_DIRECTOR_EFFORT` env var (only applied when Director model contains "opus")
+- [x] Researcher (Sonnet) and Summarizer (Haiku) never receive effort -- unsupported by those models
 - [x] Wire in API route when creating adapters
 
 **Files:** `config.py`, `anthropic_client.py`, `routes/investigation.py`
