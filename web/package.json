@@ -16,15 +16,12 @@
     "lucide-react": "^0.474.0",
     "motion": "^12.34.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "textmode.js": "^0.10.0",
-    "three": "^0.182.0"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.18",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@types/three": "^0.182.0",
     "@vitejs/plugin-react": "^4.6.0",
     "nitro": "3.0.1-alpha.2",
     "tailwindcss": "^4.1.18",

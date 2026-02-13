@@ -1,22 +1,60 @@
+import { lazy, Suspense } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Nav } from "@/components/Nav";
 import { Hero } from "@/components/Hero";
-import { HowItWorks } from "@/components/HowItWorks";
-import { ConsolePreview } from "@/components/ConsolePreview";
-import { Architecture } from "@/components/Architecture";
-import { Domains } from "@/components/Domains";
-import { Visualizations } from "@/components/Visualizations";
-import { DataSources } from "@/components/DataSources";
-import { WhoItsFor } from "@/components/WhoItsFor";
-import { Differentiators } from "@/components/Differentiators";
-import { OpenSource } from "@/components/OpenSource";
-import { Roadmap } from "@/components/Roadmap";
-import { CTA } from "@/components/CTA";
-import { Footer } from "@/components/Footer";
+
+const HowItWorks = lazy(() =>
+  import("@/components/HowItWorks").then((m) => ({ default: m.HowItWorks })),
+);
+const ConsolePreview = lazy(() =>
+  import("@/components/ConsolePreview").then((m) => ({
+    default: m.ConsolePreview,
+  })),
+);
+const Architecture = lazy(() =>
+  import("@/components/Architecture").then((m) => ({
+    default: m.Architecture,
+  })),
+);
+const Domains = lazy(() =>
+  import("@/components/Domains").then((m) => ({ default: m.Domains })),
+);
+const Visualizations = lazy(() =>
+  import("@/components/Visualizations").then((m) => ({
+    default: m.Visualizations,
+  })),
+);
+const DataSources = lazy(() =>
+  import("@/components/DataSources").then((m) => ({
+    default: m.DataSources,
+  })),
+);
+const WhoItsFor = lazy(() =>
+  import("@/components/WhoItsFor").then((m) => ({ default: m.WhoItsFor })),
+);
+const Differentiators = lazy(() =>
+  import("@/components/Differentiators").then((m) => ({
+    default: m.Differentiators,
+  })),
+);
+const OpenSource = lazy(() =>
+  import("@/components/OpenSource").then((m) => ({ default: m.OpenSource })),
+);
+const Roadmap = lazy(() =>
+  import("@/components/Roadmap").then((m) => ({ default: m.Roadmap })),
+);
+const CTA = lazy(() =>
+  import("@/components/CTA").then((m) => ({ default: m.CTA })),
+);
+const Footer = lazy(() =>
+  import("@/components/Footer").then((m) => ({ default: m.Footer })),
+);
 
 export const Route = createFileRoute("/")({
   component: LandingPage,
 });
+
+const SectionFallback = <div className="h-24" />;
 
 function LandingPage() {
   return (
@@ -24,19 +62,43 @@ function LandingPage() {
       <Nav />
       <main>
         <Hero />
-        <HowItWorks />
-        <ConsolePreview />
-        <Architecture />
-        <Domains />
-        <Visualizations />
-        <DataSources />
-        <WhoItsFor />
-        <Differentiators />
-        <OpenSource />
-        <Roadmap />
-        <CTA />
+        <Suspense fallback={SectionFallback}>
+          <HowItWorks />
+        </Suspense>
+        <Suspense fallback={SectionFallback}>
+          <ConsolePreview />
+        </Suspense>
+        <Suspense fallback={SectionFallback}>
+          <Architecture />
+        </Suspense>
+        <Suspense fallback={SectionFallback}>
+          <Domains />
+        </Suspense>
+        <Suspense fallback={SectionFallback}>
+          <Visualizations />
+        </Suspense>
+        <Suspense fallback={SectionFallback}>
+          <DataSources />
+        </Suspense>
+        <Suspense fallback={SectionFallback}>
+          <WhoItsFor />
+        </Suspense>
+        <Suspense fallback={SectionFallback}>
+          <Differentiators />
+        </Suspense>
+        <Suspense fallback={SectionFallback}>
+          <OpenSource />
+        </Suspense>
+        <Suspense fallback={SectionFallback}>
+          <Roadmap />
+        </Suspense>
+        <Suspense fallback={SectionFallback}>
+          <CTA />
+        </Suspense>
       </main>
-      <Footer />
+      <Suspense fallback={SectionFallback}>
+        <Footer />
+      </Suspense>
     </>
   );
 }

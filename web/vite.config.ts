@@ -14,4 +14,7 @@ export default defineConfig({
     viteReact(),
     nitro(),
   ],
+  build: {
+    chunkSizeWarningLimit: 300,
+  },
 });
