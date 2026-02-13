@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from ehrlich.investigation.application.cost_tracker import CostTracker
@@ -54,6 +55,14 @@ from ehrlich.investigation.domain.hypothesis import Hypothesis, HypothesisStatus
 from ehrlich.investigation.domain.investigation import Investigation, InvestigationStatus
 from ehrlich.investigation.domain.negative_control import NegativeControl
 from ehrlich.investigation.domain.positive_control import PositiveControl
+from ehrlich.investigation.domain.schemas import (
+    EVALUATION_SCHEMA,
+    EXPERIMENT_DESIGN_SCHEMA,
+    FORMULATION_SCHEMA,
+    LITERATURE_GRADING_SCHEMA,
+    PICO_SCHEMA,
+    SYNTHESIS_SCHEMA,
+)
 from ehrlich.investigation.domain.validation import compute_z_prime
 
 if TYPE_CHECKING:
@@ -66,6 +75,16 @@ if TYPE_CHECKING:
     from ehrlich.investigation.domain.repository import InvestigationRepository
     from ehrlich.investigation.infrastructure.anthropic_client import AnthropicClientAdapter
     from ehrlich.investigation.infrastructure.mcp_bridge import MCPBridge
+
+
+@dataclass(frozen=True)
+class _DirectorResult:
+    data: dict[str, Any]
+    thinking: str
+
+
+def _build_output_config(schema: dict[str, Any]) -> dict[str, Any]:
+    return {"format": {"type": "json_schema", "schema": schema}}
 
 logger = logging.getLogger(__name__)
 
@@ -143,6 +162,8 @@ class MultiModelOrchestrator:
         return CostUpdate(
             input_tokens=cost.input_tokens,
             output_tokens=cost.output_tokens,
+            cache_read_tokens=cost.cache_read_tokens,
+            cache_write_tokens=cost.cache_write_tokens,
             total_tokens=cost.total_tokens,
             total_cost_usd=round(cost.total_cost, 6),
             tool_calls=cost.tool_calls,
@@ -185,17 +206,20 @@ class MultiModelOrchestrator:
                     system=pico_prompt,
                     messages=[{"role": "user", "content": investigation.prompt}],
                     tools=[],
+                    output_config=_build_output_config(PICO_SCHEMA),
                 )
                 cost.add_usage(
                     pico_response.input_tokens,
                     pico_response.output_tokens,
                     self._summarizer.model,
+                    cache_read_tokens=pico_response.cache_read_input_tokens,
+                    cache_write_tokens=pico_response.cache_write_input_tokens,
                 )
                 pico_text = ""
                 for block in pico_response.content:
                     if block.get("type") == "text":
                         pico_text += block["text"]
-                pico_data = _parse_json(pico_text)
+                pico_data = json.loads(pico_text)
                 raw_domain = pico_data.get("domain", "other")
                 domain_categories: list[str] = (
                     [d.strip().lower() for d in raw_domain]
@@ -263,14 +287,22 @@ class MultiModelOrchestrator:
 
             # Build structured XML context from PICO + findings
             literature_context = self._build_literature_context(investigation, pico)
-            formulation = await self._director_call(
+            result = _DirectorResult(data={}, thinking="")
+            async for director_event in self._director_call(
                 cost,
                 formulation_prompt,
                 f"Research prompt: {investigation.prompt}\n\n"
                 f"{literature_context}\n\n"
                 f"Formulate 2-4 testable hypotheses and identify negative controls."
                 + prior_section,
-            )
+                investigation.id,
+                output_config=_build_output_config(FORMULATION_SCHEMA),
+            ):
+                if isinstance(director_event, _DirectorResult):
+                    result = director_event
+                else:
+                    yield director_event
+            formulation = result.data
 
             # Create hypothesis entities
             for h_data in formulation.get("hypotheses", []):
@@ -367,7 +399,8 @@ class MultiModelOrchestrator:
                         if self._active_config
                         else DIRECTOR_EXPERIMENT_PROMPT
                     )
-                    design = await self._director_call(
+                    result = _DirectorResult(data={}, thinking="")
+                    async for director_event in self._director_call(
                         cost,
                         experiment_prompt,
                         f"Research prompt: {investigation.prompt}"
@@ -377,7 +410,14 @@ class MultiModelOrchestrator:
                         f"Available tools: {tools_csv}\n\n"
                         f"Design an experiment to test this "
                         f"hypothesis.",
-                    )
+                        investigation.id,
+                        output_config=_build_output_config(EXPERIMENT_DESIGN_SCHEMA),
+                    ):
+                        if isinstance(director_event, _DirectorResult):
+                            result = director_event
+                        else:
+                            yield director_event
+                    design = result.data
 
                     desc = design.get(
                         "description",
@@ -439,7 +479,8 @@ class MultiModelOrchestrator:
                         f"- [{f.evidence_type}] {f.title}: {f.detail}" for f in findings_for_hyp
                     )
                     controls_text = ", ".join(experiment.controls) or "None specified"
-                    evaluation = await self._director_call(
+                    result = _DirectorResult(data={}, thinking="")
+                    async for director_event in self._director_call(
                         cost,
                         DIRECTOR_EVALUATION_PROMPT,
                         f"Hypothesis: {hypothesis.statement}\n"
@@ -458,7 +499,14 @@ class MultiModelOrchestrator:
                         f"\nFindings:\n{findings_text}\n\n"
                         f"Compare the findings against the pre-defined "
                         f"success/failure criteria. Evaluate this hypothesis.",
-                    )
+                        investigation.id,
+                        output_config=_build_output_config(EVALUATION_SCHEMA),
+                    ):
+                        if isinstance(director_event, _DirectorResult):
+                            result = director_event
+                        else:
+                            yield director_event
+                    evaluation = result.data
 
                     eval_status = evaluation.get("status", "supported")
                     eval_confidence = float(evaluation.get("confidence", 0.5))
@@ -688,7 +736,8 @@ class MultiModelOrchestrator:
                 if self._active_config
                 else DIRECTOR_SYNTHESIS_PROMPT
             )
-            synthesis = await self._director_call(
+            result = _DirectorResult(data={}, thinking="")
+            async for director_event in self._director_call(
                 cost,
                 synthesis_prompt,
                 f"Original prompt: {investigation.prompt}\n\n"
@@ -698,7 +747,14 @@ class MultiModelOrchestrator:
                 f"Positive controls:\n{pc_text or 'None recorded'}\n\n"
                 f"{vm_text}\n"
                 f"Synthesize final report.",
-            )
+                investigation.id,
+                output_config=_build_output_config(SYNTHESIS_SCHEMA),
+            ):
+                if isinstance(director_event, _DirectorResult):
+                    result = director_event
+                else:
+                    yield director_event
+            synthesis = result.data
 
             # Apply synthesis
             validation_quality = synthesis.get("model_validation_quality", "insufficient")
@@ -833,12 +889,8 @@ class MultiModelOrchestrator:
         elements = _build_excalidraw_elements(investigation)
         elements_json = json.dumps(elements)
         try:
-            await self._mcp_bridge.call_tool(
-                "excalidraw:read_me", {}
-            )
-            await self._mcp_bridge.call_tool(
-                "excalidraw:create_view", {"elements": elements_json}
-            )
+            await self._mcp_bridge.call_tool("excalidraw:read_me", {})
+            await self._mcp_bridge.call_tool("excalidraw:create_view", {"elements": elements_json})
             export_result = await self._mcp_bridge.call_tool(
                 "excalidraw:export_to_excalidraw",
                 {"json": json.dumps({"elements": elements, "appState": {}})},
@@ -883,18 +935,36 @@ class MultiModelOrchestrator:
         cost: CostTracker,
         system: str,
         user_message: str,
-    ) -> dict[str, Any]:
-        response = await self._director.create_message(
+        investigation_id: str,
+        output_config: dict[str, Any] | None = None,
+    ) -> AsyncGenerator[Thinking | _DirectorResult, None]:
+        text = ""
+        thinking_text = ""
+        response = None
+        async for event in self._director.stream_message(
             system=system,
             messages=[{"role": "user", "content": user_message}],
             tools=[],
-        )
-        cost.add_usage(response.input_tokens, response.output_tokens, self._director.model)
-        text = ""
-        for block in response.content:
-            if block["type"] == "text":
-                text += block["text"]
-        return _parse_json(text)
+            output_config=output_config,
+        ):
+            if event["type"] == "thinking":
+                thinking_text += event["text"]
+                yield Thinking(text=event["text"], investigation_id=investigation_id)
+            elif event["type"] == "text":
+                text += event["text"]
+            elif event["type"] == "result":
+                response = event["response"]
+
+        if response:
+            cost.add_usage(
+                response.input_tokens,
+                response.output_tokens,
+                self._director.model,
+                cache_read_tokens=response.cache_read_input_tokens,
+                cache_write_tokens=response.cache_write_input_tokens,
+            )
+
+        yield _DirectorResult(data=json.loads(text), thinking=thinking_text)
 
     async def _summarize_output(
         self,
@@ -913,7 +983,13 @@ class MultiModelOrchestrator:
             ],
             tools=[],
         )
-        cost.add_usage(response.input_tokens, response.output_tokens, self._summarizer.model)
+        cost.add_usage(
+            response.input_tokens,
+            response.output_tokens,
+            self._summarizer.model,
+            cache_read_tokens=response.cache_read_input_tokens,
+            cache_write_tokens=response.cache_write_input_tokens,
+        )
         summarized = ""
         for block in response.content:
             if block["type"] == "text":
@@ -975,12 +1051,20 @@ class MultiModelOrchestrator:
 
         for _iteration in range(self._max_iterations_per_experiment):
             investigation.iteration += 1
+            tool_choice = {"type": "any"} if _iteration == 0 else None
             response = await self._researcher.create_message(
                 system=survey_prompt,
                 messages=messages,
                 tools=tool_schemas,
+                tool_choice=tool_choice,
             )
-            cost.add_usage(response.input_tokens, response.output_tokens, self._researcher.model)
+            cost.add_usage(
+                response.input_tokens,
+                response.output_tokens,
+                self._researcher.model,
+                cache_read_tokens=response.cache_read_input_tokens,
+                cache_write_tokens=response.cache_write_input_tokens,
+            )
 
             assistant_content: list[dict[str, Any]] = []
             tool_use_blocks: list[dict[str, Any]] = []
@@ -1050,9 +1134,7 @@ class MultiModelOrchestrator:
                 )
 
                 # Emit visualization event if tool returned viz payload
-                viz_event = self._maybe_viz_event(
-                    result_str, "", investigation.id
-                )
+                viz_event = self._maybe_viz_event(result_str, "", investigation.id)
                 if viz_event is not None:
                     yield viz_event
 
@@ -1102,17 +1184,20 @@ class MultiModelOrchestrator:
                 system=build_literature_assessment_prompt(),
                 messages=[{"role": "user", "content": findings_for_grading}],
                 tools=[],
+                output_config=_build_output_config(LITERATURE_GRADING_SCHEMA),
             )
             cost.add_usage(
                 grade_response.input_tokens,
                 grade_response.output_tokens,
                 self._summarizer.model,
+                cache_read_tokens=grade_response.cache_read_input_tokens,
+                cache_write_tokens=grade_response.cache_write_input_tokens,
             )
             grade_text = ""
             for block in grade_response.content:
                 if block.get("type") == "text":
                     grade_text += block["text"]
-            grade_data = _parse_json(grade_text)
+            grade_data = json.loads(grade_text)
             evidence_grade = grade_data.get("evidence_grade", "")
             assessment = grade_data.get("assessment", "")
 
@@ -1185,16 +1270,20 @@ class MultiModelOrchestrator:
 
         for _iteration in range(self._max_iterations_per_experiment):
             investigation.iteration += 1
+            tool_choice = {"type": "any"} if _iteration == 0 else None
             response = await self._researcher.create_message(
                 system=self._researcher_prompt,
                 messages=messages,
                 tools=tool_schemas,
+                tool_choice=tool_choice,
             )
             async with self._state_lock:
                 cost.add_usage(
                     response.input_tokens,
                     response.output_tokens,
                     self._researcher.model,
+                    cache_read_tokens=response.cache_read_input_tokens,
+                    cache_write_tokens=response.cache_write_input_tokens,
                 )
 
             assistant_content: list[dict[str, Any]] = []
@@ -1249,9 +1338,7 @@ class MultiModelOrchestrator:
                 )
 
                 # Emit visualization event if tool returned viz payload
-                viz_event = self._maybe_viz_event(
-                    result_str, experiment.id, investigation.id
-                )
+                viz_event = self._maybe_viz_event(result_str, experiment.id, investigation.id)
                 if viz_event is not None:
                     yield viz_event
 
@@ -1293,9 +1380,7 @@ class MultiModelOrchestrator:
                         train_result = json.loads(result_str)
                         if isinstance(train_result, dict) and "model_id" in train_result:
                             async with self._state_lock:
-                                investigation.trained_model_ids.append(
-                                    train_result["model_id"]
-                                )
+                                investigation.trained_model_ids.append(train_result["model_id"])
                     except (json.JSONDecodeError, TypeError):
                         pass
 
@@ -1435,14 +1520,21 @@ def _build_excalidraw_elements(investigation: Investigation) -> list[dict[str, A
     y_offset = 0
 
     # Title
-    elements.append({
-        "type": "text",
-        "x": 300, "y": y_offset, "width": 600, "height": 40,
-        "text": f"Evidence Synthesis: {investigation.prompt[:80]}",
-        "fontSize": 24, "fontFamily": 1, "textAlign": "center",
-        "strokeColor": "#e2e8f0",
-        "id": "title",
-    })
+    elements.append(
+        {
+            "type": "text",
+            "x": 300,
+            "y": y_offset,
+            "width": 600,
+            "height": 40,
+            "text": f"Evidence Synthesis: {investigation.prompt[:80]}",
+            "fontSize": 24,
+            "fontFamily": 1,
+            "textAlign": "center",
+            "strokeColor": "#e2e8f0",
+            "id": "title",
+        }
+    )
     y_offset += 80
 
     # Hypotheses
@@ -1459,63 +1551,71 @@ def _build_excalidraw_elements(investigation: Investigation) -> list[dict[str, A
         x = 50 + (i % 3) * 350
         y = y_offset + (i // 3) * 160
         color = status_colors.get(h.status.value, "#374151")
-        elements.append({
-            "type": "rectangle",
-            "x": x, "y": y, "width": 300, "height": 120,
-            "backgroundColor": color,
-            "strokeColor": "#94a3b8",
-            "roundness": {"type": 3},
-            "id": f"hyp-{h.id}",
-        })
+        elements.append(
+            {
+                "type": "rectangle",
+                "x": x,
+                "y": y,
+                "width": 300,
+                "height": 120,
+                "backgroundColor": color,
+                "strokeColor": "#94a3b8",
+                "roundness": {"type": 3},
+                "id": f"hyp-{h.id}",
+            }
+        )
         label = f"{h.status.value.upper()}\n{h.statement[:60]}"
         if h.confidence > 0:
             label += f"\nConf: {h.confidence:.0%}"
-        elements.append({
-            "type": "text",
-            "x": x + 10, "y": y + 10, "width": 280, "height": 100,
-            "text": label,
-            "fontSize": 14, "fontFamily": 1,
-            "strokeColor": "#e2e8f0",
-            "id": f"hyp-label-{h.id}",
-        })
+        elements.append(
+            {
+                "type": "text",
+                "x": x + 10,
+                "y": y + 10,
+                "width": 280,
+                "height": 100,
+                "text": label,
+                "fontSize": 14,
+                "fontFamily": 1,
+                "strokeColor": "#e2e8f0",
+                "id": f"hyp-label-{h.id}",
+            }
+        )
         hyp_positions[h.id] = (x + 150, y + 120)
 
     y_offset += ((len(investigation.hypotheses) + 2) // 3) * 160 + 40
 
     # Findings summary
     if investigation.findings:
-        elements.append({
-            "type": "text",
-            "x": 50, "y": y_offset, "width": 400, "height": 30,
-            "text": f"Findings: {len(investigation.findings)} recorded",
-            "fontSize": 18, "fontFamily": 1,
-            "strokeColor": "#94a3b8",
-            "id": "findings-header",
-        })
+        elements.append(
+            {
+                "type": "text",
+                "x": 50,
+                "y": y_offset,
+                "width": 400,
+                "height": 30,
+                "text": f"Findings: {len(investigation.findings)} recorded",
+                "fontSize": 18,
+                "fontFamily": 1,
+                "strokeColor": "#94a3b8",
+                "id": "findings-header",
+            }
+        )
         y_offset += 50
         for j, f in enumerate(investigation.findings[:12]):
-            elements.append({
-                "type": "text",
-                "x": 60, "y": y_offset + j * 25, "width": 900, "height": 20,
-                "text": f"[{f.evidence_type}] {f.title[:90]}",
-                "fontSize": 12, "fontFamily": 3,
-                "strokeColor": "#94a3b8",
-                "id": f"finding-{j}",
-            })
+            elements.append(
+                {
+                    "type": "text",
+                    "x": 60,
+                    "y": y_offset + j * 25,
+                    "width": 900,
+                    "height": 20,
+                    "text": f"[{f.evidence_type}] {f.title[:90]}",
+                    "fontSize": 12,
+                    "fontFamily": 3,
+                    "strokeColor": "#94a3b8",
+                    "id": f"finding-{j}",
+                }
+            )
 
     return elements
-
-
-def _parse_json(text: str) -> dict[str, Any]:
-    text = text.strip()
-    if text.startswith("```"):
-        lines = text.split("\n")
-        lines = [line for line in lines if not line.strip().startswith("```")]
-        text = "\n".join(lines)
-    try:
-        result = json.loads(text)
-        if isinstance(result, dict):
-            return result
-    except json.JSONDecodeError:
-        pass
-    return {"raw_text": text}

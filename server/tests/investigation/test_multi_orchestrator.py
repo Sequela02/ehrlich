@@ -19,6 +19,7 @@ from ehrlich.investigation.domain.events import (
     InvestigationError,
     NegativeControlRecorded,
     OutputSummarized,
+    Thinking,
     ToolCalled,
     ToolResultEvent,
     ValidationMetricsComputed,
@@ -32,6 +33,8 @@ class FakeResponse:
     stop_reason: str
     input_tokens: int
     output_tokens: int
+    cache_read_input_tokens: int = 0
+    cache_write_input_tokens: int = 0
 
 
 def _make_text_response(text: str) -> FakeResponse:
@@ -55,6 +58,28 @@ def _make_tool_use_response(
         input_tokens=100,
         output_tokens=50,
     )
+
+
+def _make_director_side_effect(*text_responses: str):
+    """Return a callable async generator that yields stream events for successive calls."""
+    call_idx = 0
+
+    async def _stream(**kwargs: Any):
+        nonlocal call_idx
+        text = text_responses[call_idx]
+        call_idx += 1
+        yield {"type": "text", "text": text}
+        yield {
+            "type": "result",
+            "response": FakeResponse(
+                content=[{"type": "text", "text": text}],
+                stop_reason="end_turn",
+                input_tokens=100,
+                output_tokens=50,
+            ),
+        }
+
+    return _stream
 
 
 def _formulation_json() -> str:
@@ -177,16 +202,12 @@ class TestHypothesisFormulation:
     async def test_director_creates_hypotheses(self) -> None:
         director, researcher, summarizer = _make_clients()
 
-        # Director: formulation, experiment design, evaluation, synthesis
-        director.create_message = AsyncMock(
-            side_effect=[
-                _make_text_response(_formulation_json()),
-                _make_text_response(_experiment_design_json()),
-                _make_text_response(_evaluation_json()),
-                _make_text_response(_synthesis_json()),
-            ]
+        director.stream_message = _make_director_side_effect(
+            _formulation_json(),
+            _experiment_design_json(),
+            _evaluation_json(),
+            _synthesis_json(),
         )
-        # Researcher: literature survey (end_turn), experiment execution (end_turn)
         researcher.create_message = AsyncMock(return_value=_make_text_response("Done."))
 
         orchestrator = MultiModelOrchestrator(
@@ -211,13 +232,11 @@ class TestExperimentExecution:
     async def test_researcher_calls_tools_during_experiment(self) -> None:
         director, researcher, summarizer = _make_clients()
 
-        director.create_message = AsyncMock(
-            side_effect=[
-                _make_text_response(_formulation_json()),
-                _make_text_response(_experiment_design_json()),
-                _make_text_response(_evaluation_json()),
-                _make_text_response(_synthesis_json()),
-            ]
+        director.stream_message = _make_director_side_effect(
+            _formulation_json(),
+            _experiment_design_json(),
+            _evaluation_json(),
+            _synthesis_json(),
         )
         # Literature survey: end_turn. Experiment: tool call then end_turn.
         researcher.create_message = AsyncMock(
@@ -250,13 +269,11 @@ class TestExperimentExecution:
     async def test_experiment_started_and_completed_events(self) -> None:
         director, researcher, summarizer = _make_clients()
 
-        director.create_message = AsyncMock(
-            side_effect=[
-                _make_text_response(_formulation_json()),
-                _make_text_response(_experiment_design_json()),
-                _make_text_response(_evaluation_json()),
-                _make_text_response(_synthesis_json()),
-            ]
+        director.stream_message = _make_director_side_effect(
+            _formulation_json(),
+            _experiment_design_json(),
+            _evaluation_json(),
+            _synthesis_json(),
         )
         researcher.create_message = AsyncMock(return_value=_make_text_response("Done."))
 
@@ -282,13 +299,11 @@ class TestExperimentExecution:
     async def test_researcher_records_finding_linked_to_hypothesis(self) -> None:
         director, researcher, summarizer = _make_clients()
 
-        director.create_message = AsyncMock(
-            side_effect=[
-                _make_text_response(_formulation_json()),
-                _make_text_response(_experiment_design_json()),
-                _make_text_response(_evaluation_json()),
-                _make_text_response(_synthesis_json()),
-            ]
+        director.stream_message = _make_director_side_effect(
+            _formulation_json(),
+            _experiment_design_json(),
+            _evaluation_json(),
+            _synthesis_json(),
         )
         # Literature: end_turn. Experiment: record_finding then end_turn.
         researcher.create_message = AsyncMock(
@@ -330,13 +345,11 @@ class TestHypothesisEvaluation:
     async def test_director_evaluates_hypothesis(self) -> None:
         director, researcher, summarizer = _make_clients()
 
-        director.create_message = AsyncMock(
-            side_effect=[
-                _make_text_response(_formulation_json()),
-                _make_text_response(_experiment_design_json()),
-                _make_text_response(_evaluation_json("supported")),
-                _make_text_response(_synthesis_json()),
-            ]
+        director.stream_message = _make_director_side_effect(
+            _formulation_json(),
+            _experiment_design_json(),
+            _evaluation_json("supported"),
+            _synthesis_json(),
         )
         researcher.create_message = AsyncMock(return_value=_make_text_response("Done."))
 
@@ -361,15 +374,13 @@ class TestHypothesisEvaluation:
         director, researcher, summarizer = _make_clients()
 
         # formulation, design#1, evaluate#1 (revised), design#2, evaluate#2, synthesis
-        director.create_message = AsyncMock(
-            side_effect=[
-                _make_text_response(_formulation_json()),
-                _make_text_response(_experiment_design_json()),
-                _make_text_response(_revision_evaluation_json()),
-                _make_text_response(_experiment_design_json()),
-                _make_text_response(_evaluation_json("supported")),
-                _make_text_response(_synthesis_json()),
-            ]
+        director.stream_message = _make_director_side_effect(
+            _formulation_json(),
+            _experiment_design_json(),
+            _revision_evaluation_json(),
+            _experiment_design_json(),
+            _evaluation_json("supported"),
+            _synthesis_json(),
         )
         researcher.create_message = AsyncMock(return_value=_make_text_response("Done."))
 
@@ -396,13 +407,11 @@ class TestNegativeControls:
     async def test_negative_controls_from_formulation(self) -> None:
         director, researcher, summarizer = _make_clients()
 
-        director.create_message = AsyncMock(
-            side_effect=[
-                _make_text_response(_formulation_json()),
-                _make_text_response(_experiment_design_json()),
-                _make_text_response(_evaluation_json()),
-                _make_text_response(_synthesis_json()),
-            ]
+        director.stream_message = _make_director_side_effect(
+            _formulation_json(),
+            _experiment_design_json(),
+            _evaluation_json(),
+            _synthesis_json(),
         )
         researcher.create_message = AsyncMock(return_value=_make_text_response("Done."))
 
@@ -429,13 +438,11 @@ class TestValidationMetrics:
     async def test_phase5_emits_validation_metrics(self) -> None:
         director, researcher, summarizer = _make_clients()
 
-        director.create_message = AsyncMock(
-            side_effect=[
-                _make_text_response(_formulation_json()),
-                _make_text_response(_experiment_design_json()),
-                _make_text_response(_evaluation_json()),
-                _make_text_response(_synthesis_json()),
-            ]
+        director.stream_message = _make_director_side_effect(
+            _formulation_json(),
+            _experiment_design_json(),
+            _evaluation_json(),
+            _synthesis_json(),
         )
         researcher.create_message = AsyncMock(return_value=_make_text_response("Done."))
 
@@ -458,13 +465,11 @@ class TestValidationMetrics:
     async def test_phase5_captures_model_id(self) -> None:
         director, researcher, summarizer = _make_clients()
 
-        director.create_message = AsyncMock(
-            side_effect=[
-                _make_text_response(_formulation_json()),
-                _make_text_response(_experiment_design_json()),
-                _make_text_response(_evaluation_json()),
-                _make_text_response(_synthesis_json()),
-            ]
+        director.stream_message = _make_director_side_effect(
+            _formulation_json(),
+            _experiment_design_json(),
+            _evaluation_json(),
+            _synthesis_json(),
         )
 
         # Researcher calls train_model, returns a model_id
@@ -503,13 +508,11 @@ class TestValidationMetrics:
     async def test_completed_event_has_validation_metrics(self) -> None:
         director, researcher, summarizer = _make_clients()
 
-        director.create_message = AsyncMock(
-            side_effect=[
-                _make_text_response(_formulation_json()),
-                _make_text_response(_experiment_design_json()),
-                _make_text_response(_evaluation_json()),
-                _make_text_response(_synthesis_json()),
-            ]
+        director.stream_message = _make_director_side_effect(
+            _formulation_json(),
+            _experiment_design_json(),
+            _evaluation_json(),
+            _synthesis_json(),
         )
         researcher.create_message = AsyncMock(return_value=_make_text_response("Done."))
 
@@ -535,13 +538,11 @@ class TestSummarizerCompression:
     async def test_large_output_is_summarized(self) -> None:
         director, researcher, summarizer = _make_clients()
 
-        director.create_message = AsyncMock(
-            side_effect=[
-                _make_text_response(_formulation_json()),
-                _make_text_response(_experiment_design_json()),
-                _make_text_response(_evaluation_json()),
-                _make_text_response(_synthesis_json()),
-            ]
+        director.stream_message = _make_director_side_effect(
+            _formulation_json(),
+            _experiment_design_json(),
+            _evaluation_json(),
+            _synthesis_json(),
         )
 
         large_output = "x" * 3000
@@ -586,13 +587,11 @@ class TestSummarizerCompression:
     async def test_small_output_not_summarized(self) -> None:
         director, researcher, summarizer = _make_clients()
 
-        director.create_message = AsyncMock(
-            side_effect=[
-                _make_text_response(_formulation_json()),
-                _make_text_response(_experiment_design_json()),
-                _make_text_response(_evaluation_json()),
-                _make_text_response(_synthesis_json()),
-            ]
+        director.stream_message = _make_director_side_effect(
+            _formulation_json(),
+            _experiment_design_json(),
+            _evaluation_json(),
+            _synthesis_json(),
         )
         researcher.create_message = AsyncMock(
             side_effect=[
@@ -624,13 +623,11 @@ class TestDirectorSynthesis:
     async def test_synthesis_populates_investigation(self) -> None:
         director, researcher, summarizer = _make_clients()
 
-        director.create_message = AsyncMock(
-            side_effect=[
-                _make_text_response(_formulation_json()),
-                _make_text_response(_experiment_design_json()),
-                _make_text_response(_evaluation_json()),
-                _make_text_response(_synthesis_json()),
-            ]
+        director.stream_message = _make_director_side_effect(
+            _formulation_json(),
+            _experiment_design_json(),
+            _evaluation_json(),
+            _synthesis_json(),
         )
         researcher.create_message = AsyncMock(return_value=_make_text_response("Done."))
 
@@ -664,13 +661,11 @@ class TestFullFlow:
     async def test_complete_flow_event_types(self) -> None:
         director, researcher, summarizer = _make_clients()
 
-        director.create_message = AsyncMock(
-            side_effect=[
-                _make_text_response(_formulation_json()),
-                _make_text_response(_experiment_design_json()),
-                _make_text_response(_evaluation_json()),
-                _make_text_response(_synthesis_json()),
-            ]
+        director.stream_message = _make_director_side_effect(
+            _formulation_json(),
+            _experiment_design_json(),
+            _evaluation_json(),
+            _synthesis_json(),
         )
         researcher.create_message = AsyncMock(
             side_effect=[
@@ -718,15 +713,13 @@ class TestParallelExecution:
             }
         )
 
-        director.create_message = AsyncMock(
-            side_effect=[
-                _make_text_response(two_hyp_formulation),
-                _make_text_response(_experiment_design_json()),  # design A
-                _make_text_response(_experiment_design_json()),  # design B
-                _make_text_response(_evaluation_json()),  # eval A
-                _make_text_response(_evaluation_json()),  # eval B
-                _make_text_response(_synthesis_json()),
-            ]
+        director.stream_message = _make_director_side_effect(
+            two_hyp_formulation,
+            _experiment_design_json(),  # design A
+            _experiment_design_json(),  # design B
+            _evaluation_json(),  # eval A
+            _evaluation_json(),  # eval B
+            _synthesis_json(),
         )
         researcher.create_message = AsyncMock(
             return_value=_make_text_response("Done.")
@@ -757,7 +750,12 @@ class TestErrorHandling:
     @pytest.mark.asyncio
     async def test_director_api_error(self) -> None:
         director, researcher, summarizer = _make_clients()
-        director.create_message = AsyncMock(side_effect=RuntimeError("API down"))
+
+        async def _failing_stream(**kwargs: Any):
+            raise RuntimeError("API down")
+            yield  # noqa: RUF027 -- makes this an async generator
+
+        director.stream_message = _failing_stream
         researcher.create_message = AsyncMock(return_value=_make_text_response("Done."))
 
         orchestrator = MultiModelOrchestrator(
@@ -779,13 +777,11 @@ class TestErrorHandling:
     async def test_researcher_tool_error_handled_gracefully(self) -> None:
         director, researcher, summarizer = _make_clients()
 
-        director.create_message = AsyncMock(
-            side_effect=[
-                _make_text_response(_formulation_json()),
-                _make_text_response(_experiment_design_json()),
-                _make_text_response(_evaluation_json()),
-                _make_text_response(_synthesis_json()),
-            ]
+        director.stream_message = _make_director_side_effect(
+            _formulation_json(),
+            _experiment_design_json(),
+            _evaluation_json(),
+            _synthesis_json(),
         )
         # Literature: end_turn. Experiment: unknown tool then end_turn.
         researcher.create_message = AsyncMock(
@@ -810,3 +806,137 @@ class TestErrorHandling:
 
         # Should still complete (tool error returns error JSON, doesn't crash)
         assert investigation.status == InvestigationStatus.COMPLETED
+
+
+class TestExtendedThinking:
+    @pytest.mark.asyncio
+    async def test_thinking_blocks_emitted_as_events(self) -> None:
+        director, researcher, summarizer = _make_clients()
+
+        call_idx = 0
+        responses = [
+            (_formulation_json(), "Let me analyze..."),
+            (_experiment_design_json(), ""),
+            (_evaluation_json(), ""),
+            (_synthesis_json(), ""),
+        ]
+
+        async def _stream_with_thinking(**kwargs: Any):
+            nonlocal call_idx
+            text, thinking = responses[call_idx]
+            call_idx += 1
+            if thinking:
+                yield {"type": "thinking", "text": thinking}
+            yield {"type": "text", "text": text}
+            yield {
+                "type": "result",
+                "response": FakeResponse(
+                    content=[{"type": "text", "text": text}],
+                    stop_reason="end_turn",
+                    input_tokens=100,
+                    output_tokens=50,
+                ),
+            }
+
+        director.stream_message = _stream_with_thinking
+        researcher.create_message = AsyncMock(return_value=_make_text_response("Done."))
+
+        orchestrator = MultiModelOrchestrator(
+            director=director,
+            researcher=researcher,
+            summarizer=summarizer,
+            registry=_build_registry(),
+            max_iterations_per_experiment=1,
+        )
+
+        investigation = Investigation(prompt="Test thinking")
+        events = [e async for e in orchestrator.run(investigation)]
+
+        thinking_events = [e for e in events if isinstance(e, Thinking)]
+        director_thinking = [t for t in thinking_events if "Let me analyze" in t.text]
+        assert len(director_thinking) == 1
+
+
+class TestToolChoice:
+    @pytest.mark.asyncio
+    async def test_researcher_first_turn_forces_tool_use(self) -> None:
+        director, researcher, summarizer = _make_clients()
+
+        director.stream_message = _make_director_side_effect(
+            _formulation_json(),
+            _experiment_design_json(),
+            _evaluation_json(),
+            _synthesis_json(),
+        )
+        researcher.create_message = AsyncMock(return_value=_make_text_response("Done."))
+
+        orchestrator = MultiModelOrchestrator(
+            director=director,
+            researcher=researcher,
+            summarizer=summarizer,
+            registry=_build_registry(),
+            max_iterations_per_experiment=1,
+        )
+
+        investigation = Investigation(prompt="Test tool_choice")
+        async for _ in orchestrator.run(investigation):
+            pass
+
+        # First researcher call (literature survey) should use tool_choice={"type": "any"}
+        first_call_kwargs = researcher.create_message.call_args_list[0]
+        assert first_call_kwargs.kwargs.get("tool_choice") == {"type": "any"}
+
+
+class TestStructuredOutputs:
+    @pytest.mark.asyncio
+    async def test_director_calls_pass_output_config(self) -> None:
+        """Verify that _director_call passes output_config to stream_message."""
+        director, researcher, summarizer = _make_clients()
+
+        captured_kwargs: list[dict[str, Any]] = []
+
+        call_idx = 0
+        texts = [
+            _formulation_json(),
+            _experiment_design_json(),
+            _evaluation_json(),
+            _synthesis_json(),
+        ]
+
+        async def _capturing_stream(**kwargs: Any):
+            nonlocal call_idx
+            captured_kwargs.append(kwargs)
+            text = texts[call_idx]
+            call_idx += 1
+            yield {"type": "text", "text": text}
+            yield {
+                "type": "result",
+                "response": FakeResponse(
+                    content=[{"type": "text", "text": text}],
+                    stop_reason="end_turn",
+                    input_tokens=100,
+                    output_tokens=50,
+                ),
+            }
+
+        director.stream_message = _capturing_stream
+        researcher.create_message = AsyncMock(return_value=_make_text_response("Done."))
+
+        orchestrator = MultiModelOrchestrator(
+            director=director,
+            researcher=researcher,
+            summarizer=summarizer,
+            registry=_build_registry(),
+            max_iterations_per_experiment=1,
+        )
+
+        investigation = Investigation(prompt="Test structured outputs")
+        async for _ in orchestrator.run(investigation):
+            pass
+
+        assert investigation.status == InvestigationStatus.COMPLETED
+        # All 4 director calls should have output_config set
+        assert len(captured_kwargs) == 4
+        for kw in captured_kwargs:
+            assert kw.get("output_config") is not None
+            assert kw["output_config"]["format"]["type"] == "json_schema"

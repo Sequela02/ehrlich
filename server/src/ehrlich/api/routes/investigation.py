@@ -346,7 +346,12 @@ async def stream_investigation(investigation_id: str) -> EventSourceResponse:
     _subscribers[investigation.id] = []
 
     orchestrator = _create_orchestrator(
-        settings, registry, repo, domain_registry, mcp_bridge, mcp_configs,
+        settings,
+        registry,
+        repo,
+        domain_registry,
+        mcp_bridge,
+        mcp_configs,
     )
     _active_orchestrators[investigation.id] = orchestrator
 
@@ -391,9 +396,31 @@ def _create_orchestrator(
     mcp_configs: list[MCPServerConfig] | None = None,
 ) -> MultiModelOrchestrator:
     api_key = settings.anthropic_api_key or None
-    director = AnthropicClientAdapter(model=settings.director_model, api_key=api_key)
-    researcher = AnthropicClientAdapter(model=settings.researcher_model, api_key=api_key)
-    summarizer = AnthropicClientAdapter(model=settings.summarizer_model, api_key=api_key)
+
+    thinking = None
+    if settings.director_thinking == "enabled":
+        thinking = {
+            "type": "enabled",
+            "budget_tokens": settings.director_thinking_budget,
+        }
+
+    director = AnthropicClientAdapter(
+        model=settings.director_model,
+        api_key=api_key,
+        max_tokens=32768,
+        effort=settings.director_effort,
+        thinking=thinking,
+    )
+    researcher = AnthropicClientAdapter(
+        model=settings.researcher_model,
+        api_key=api_key,
+        effort=settings.researcher_effort,
+    )
+    summarizer = AnthropicClientAdapter(
+        model=settings.summarizer_model,
+        api_key=api_key,
+        effort=settings.summarizer_effort,
+    )
     return MultiModelOrchestrator(
         director=director,
         researcher=researcher,

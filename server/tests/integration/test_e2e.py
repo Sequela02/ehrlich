@@ -26,6 +26,8 @@ class FakeResponse:
     stop_reason: str
     input_tokens: int
     output_tokens: int
+    cache_read_input_tokens: int = 0
+    cache_write_input_tokens: int = 0
 
 
 def _make_response(
@@ -102,6 +104,28 @@ def _synthesis_json() -> str:
     )
 
 
+def _make_director_side_effect(*text_responses: str):
+    """Return a callable async generator that yields stream events for successive calls."""
+    call_idx = 0
+
+    async def _stream(**kwargs: Any):
+        nonlocal call_idx
+        text = text_responses[call_idx]
+        call_idx += 1
+        yield {"type": "text", "text": text}
+        yield {
+            "type": "result",
+            "response": FakeResponse(
+                content=[_text(text)],
+                stop_reason="end_turn",
+                input_tokens=100,
+                output_tokens=50,
+            ),
+        }
+
+    return _stream
+
+
 def _make_clients() -> tuple[AsyncMock, AsyncMock, AsyncMock]:
     director = AsyncMock()
     director.model = "claude-opus-4-6"
@@ -162,13 +186,11 @@ class TestE2EPipeline:
         """Simulate a full investigation with multi-model orchestrator."""
         director, researcher, summarizer = _make_clients()
 
-        director.create_message = AsyncMock(
-            side_effect=[
-                _make_response([_text(_formulation_json())]),
-                _make_response([_text(_experiment_design_json())]),
-                _make_response([_text(_evaluation_json())]),
-                _make_response([_text(_synthesis_json())]),
-            ]
+        director.stream_message = _make_director_side_effect(
+            _formulation_json(),
+            _experiment_design_json(),
+            _evaluation_json(),
+            _synthesis_json(),
         )
         researcher.create_message = AsyncMock(
             side_effect=[
@@ -213,13 +235,11 @@ class TestE2EPipeline:
         """Verify all domain events convert to SSE events."""
         director, researcher, summarizer = _make_clients()
 
-        director.create_message = AsyncMock(
-            side_effect=[
-                _make_response([_text(_formulation_json())]),
-                _make_response([_text(_experiment_design_json())]),
-                _make_response([_text(_evaluation_json())]),
-                _make_response([_text(_synthesis_json())]),
-            ]
+        director.stream_message = _make_director_side_effect(
+            _formulation_json(),
+            _experiment_design_json(),
+            _evaluation_json(),
+            _synthesis_json(),
         )
         researcher.create_message = AsyncMock(
             return_value=_make_response([_text("Done.")])
@@ -255,13 +275,11 @@ class TestE2EPipeline:
         """Verify chemistry tools dispatch correctly through orchestrator."""
         director, researcher, summarizer = _make_clients()
 
-        director.create_message = AsyncMock(
-            side_effect=[
-                _make_response([_text(_formulation_json())]),
-                _make_response([_text(_experiment_design_json())]),
-                _make_response([_text(_evaluation_json())]),
-                _make_response([_text(_synthesis_json())]),
-            ]
+        director.stream_message = _make_director_side_effect(
+            _formulation_json(),
+            _experiment_design_json(),
+            _evaluation_json(),
+            _synthesis_json(),
         )
         researcher.create_message = AsyncMock(
             side_effect=[

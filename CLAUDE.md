@@ -220,6 +220,8 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - **ToolCache**: in-memory TTL-based caching for deterministic and API tool results
 - **Event persistence**: all SSE events stored in SQLite `events` table (WAL mode); completed investigations replay full timeline on page reload
 - **CostTracker**: per-model token usage with tiered pricing; `CostUpdate` event yields cost snapshots after each phase/batch
+- **Structured outputs**: Director calls use `output_config` with JSON schemas (6 schemas in `domain/schemas.py`) to guarantee valid JSON; eliminates parsing fallbacks
+- **Director streaming**: `_director_call()` is an async generator using `stream_message()`; yields `Thinking` events in real time as tokens arrive; Researcher and Summarizer remain non-streaming
 - All external API clients follow same pattern: `httpx.AsyncClient`, retry with exponential backoff, structured error handling
 
 ### Integration Patterns
@@ -325,6 +327,7 @@ All paths relative to `server/src/ehrlich/`.
 | `application/tool_cache.py` | In-memory TTL cache for tool results |
 | `application/tool_registry.py` | `ToolRegistry` with domain tag filtering |
 | `application/prompts.py` | Domain-adaptive prompts (PICO, literature survey, director, researcher, summarizer) |
+| `domain/schemas.py` | JSON schemas for structured output responses (6 schemas: PICO, Formulation, Experiment Design, Evaluation, Synthesis, Literature Grading) |
 | `domain/hypothesis.py` | Hypothesis entity + HypothesisStatus + HypothesisType enums |
 | `domain/experiment.py` | Experiment entity + ExperimentStatus enum |
 | `domain/candidate.py` | Candidate dataclass (identifier, scores, attributes) |
@@ -342,7 +345,7 @@ All paths relative to `server/src/ehrlich/`.
 | `domain/mcp_config.py` | `MCPServerConfig` frozen dataclass |
 | `tools_viz.py` | 6 visualization tools |
 | `infrastructure/sqlite_repository.py` | SQLite persistence + FTS5 findings search |
-| `infrastructure/anthropic_client.py` | Anthropic API adapter with retry |
+| `infrastructure/anthropic_client.py` | Anthropic API adapter with retry, streaming, and structured outputs |
 | `infrastructure/mcp_bridge.py` | MCP client bridge (stdio/SSE/streamable_http) |
 
 ## Key Files (API)

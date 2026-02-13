@@ -288,6 +288,8 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
             data={
                 "input_tokens": event.input_tokens,
                 "output_tokens": event.output_tokens,
+                "cache_read_tokens": event.cache_read_tokens,
+                "cache_write_tokens": event.cache_write_tokens,
                 "total_tokens": event.total_tokens,
                 "total_cost_usd": event.total_cost_usd,
                 "tool_calls": event.tool_calls,
