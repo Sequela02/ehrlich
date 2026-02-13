@@ -466,7 +466,7 @@ Enhancement Enhancement  Sports
      │     │              │
      └─────┼──────────────┘
            |
-     Phase 12: SaaS Infrastructure -- TODO
+     Phase 12: SaaS Infrastructure -- DONE
      (PostgreSQL + WorkOS Auth + BYOK + Credits)
            |
      Demo + Video -- TODO
@@ -1081,115 +1081,82 @@ Side-by-side comparison of investigation runs for reproducibility and consensus 
 
 ---
 
-## MCP Server -- BACKLOG
+## ~~MCP Server~~ -- REJECTED
 
-Expose Ehrlich as an MCP tool server for Claude Code / Claude Desktop.
+Exposing Ehrlich's 67 tools as an MCP server was considered and rejected. The tools alone (ChEMBL queries, RDKit computations, etc.) are commodity API wrappers -- the value is the multi-model orchestration (Director-Worker-Summarizer), hypothesis-driven methodology, and parallel experiment execution. An MCP client consuming Ehrlich's tools would lose the scientific rigor that the orchestration guarantees.
 
-> **Note:** Ehrlich already has an MCP **client** bridge (`investigation/infrastructure/mcp_bridge.py`) that connects TO external MCP servers (e.g., Excalidraw for visual summaries). This backlog item is the reverse: exposing Ehrlich's 67 tools as an MCP server.
-
-- [ ] Stdio + SSE transports for Claude Code / Claude Desktop
-- [ ] Tool registration: expose all 67 Ehrlich tools as MCP tools
-- [ ] `start_investigation(prompt)` -- kick off investigation, return ID
-- [ ] `get_investigation(id)` -- return status, findings, candidates
-- [ ] MCP server config for Claude Code (`claude_desktop_config.json`)
-- [ ] Demo: Claude Code running an investigation via MCP
+Ehrlich remains an MCP **consumer** via `MCPBridge` (connecting to external servers like Excalidraw), which adds value by extending the Researcher's toolkit.
 
 ---
 
-## Phase 12: SaaS Infrastructure -- TODO
+## Phase 12: SaaS Infrastructure (Feb 13) -- DONE
 
-Production deployment with authentication, credit-based billing, and model-tiered investigations.
+Production-ready authentication, credit-based billing, model-tiered investigations, and PostgreSQL persistence.
 
 > Business rationale and pricing research: see [business-strategy.md](business-strategy.md)
 
-### 12A. PostgreSQL Migration
+### 12A. PostgreSQL Migration -- DONE
 
-Replace SQLite with PostgreSQL for multi-tenant persistence.
+Replaced SQLite with PostgreSQL for multi-tenant persistence.
 
-- [ ] `PostgresInvestigationRepository` implementing existing `InvestigationRepository` ABC
-- [ ] `asyncpg` connection pooling (replace `aiosqlite`)
-- [ ] FTS5 to PostgreSQL `tsvector` + GIN index (self-referential research)
-- [ ] `JSONB` columns for hypotheses, experiments, findings, candidates
-- [ ] `users` table: id, email, credits_balance, encrypted_api_key, created_at
-- [ ] `credit_transactions` table: user_id, amount, type (purchase/spend/bonus/expire), investigation_id, created_at
-- [ ] `DATABASE_URL` env var (replaces `EHRLICH_DB_PATH`)
-- [ ] Migration script (SQLite data export -> PostgreSQL import)
-- [ ] Tests with testcontainers-postgresql
+- [x] `InvestigationRepository` implementing existing `InvestigationRepository` ABC
+- [x] `asyncpg` connection pooling (replaced `aiosqlite`)
+- [x] `tsvector` + GIN index for self-referential research (replaces FTS5)
+- [x] `JSONB` columns for hypotheses, experiments, findings, candidates
+- [x] `users` table: id (UUID), workos_id, email, credits, encrypted_api_key, created_at
+- [x] `credit_transactions` table: user_id, amount, type, investigation_id, created_at
+- [x] `EHRLICH_DATABASE_URL` env var (replaces `EHRLICH_DB_PATH`)
+- [x] `sqlite_repository.py` deleted, `aiosqlite` removed from dependencies
 
-### 12B. Authentication (WorkOS AuthKit)
+### 12B. Authentication (WorkOS AuthKit) -- DONE
 
-User identity via WorkOS (1M MAU free tier). JWT-based, provider-swappable.
+User identity via WorkOS (1M MAU free tier). JWT-based.
 
-- [ ] WorkOS dashboard setup (Google social login, redirect URIs)
-- [ ] Frontend: `@workos-inc/authkit-react` provider + `<AuthKitProvider>`
-- [ ] Backend: JWT verification middleware on protected routes
-- [ ] `user_id` extraction from JWT, linked to `users` table
-- [ ] Public routes: `GET /health`, `GET /methodology`, `GET /stats`
-- [ ] Protected routes: `POST /investigate`, `GET /investigate/{id}/stream`, credit endpoints
-- [ ] Env vars: `WORKOS_API_KEY`, `WORKOS_CLIENT_ID`
+- [x] `api/auth.py` with JWKS verification via `PyJWKClient`
+- [x] Frontend: `@workos-inc/authkit-react` provider + `<AuthKitProvider>`
+- [x] Backend: `get_current_user`, `get_current_user_sse`, `get_optional_user` dependencies
+- [x] `user_id` extraction from JWT, linked to `users` table via `get_or_create_user()`
+- [x] Public routes: `GET /health`, `GET /methodology`, `GET /stats`, `GET /molecule/*`, `GET /investigate/{id}`
+- [x] Protected routes: `POST /investigate`, `GET /investigate`, `GET /investigate/{id}/stream`, `POST /investigate/{id}/approve`, `GET /credits/balance`
+- [x] Env vars: `EHRLICH_WORKOS_API_KEY`, `EHRLICH_WORKOS_CLIENT_ID`
+- [x] SSE auth via `?token=` query param fallback (EventSource does not support headers)
 
-### 12C. Universal Credit System
+### 12C. Universal Credit System -- DONE
 
 One currency. User decides model quality per investigation.
 
-- [ ] Credit spending table: Haiku Director = 1 credit, Sonnet Director = 3 credits, Opus Director = 5 credits
-- [ ] Researcher always Sonnet 4.5, Summarizer always Haiku 4.5 (regardless of tier)
-- [ ] `POST /credits/purchase` -- buy credit pack (5, 25, 50)
-- [ ] `GET /credits/balance` -- current balance + transaction history
-- [ ] `POST /investigate` accepts `director_tier: "haiku" | "sonnet" | "opus"` parameter
-- [ ] Credit deduction on investigation start (not completion -- prevents abuse)
-- [ ] Credit refund on investigation error (partial refund policy)
-- [ ] Monthly auto-refill subscription: 30 credits/month, 60-day expiry on unused credits
-- [ ] Free tier: 3 Haiku credits/month (auto-refill, non-accumulating)
+- [x] Credit spending: Haiku Director = 1 credit, Sonnet Director = 3 credits, Opus Director = 5 credits
+- [x] Researcher always Sonnet 4.5, Summarizer always Haiku 4.5 (regardless of tier)
+- [x] `GET /credits/balance` -- current balance + BYOK status
+- [x] `POST /investigate` accepts `director_tier: "haiku" | "sonnet" | "opus"` parameter
+- [x] Credit deduction on investigation start (not completion -- prevents abuse)
+- [x] Credit refund on investigation failure
+- [x] Default 5 credits for new users
 
-### 12D. BYOK (Bring Your Own Key) -- Enterprise
+### 12D. BYOK (Bring Your Own Key) -- DONE
 
-Users provide their own Anthropic API key. Enterprise tier.
+Users provide their own Anthropic API key. Bypasses credit system.
 
-- [ ] Frontend: API key input in settings, stored in `localStorage`
-- [ ] `X-Anthropic-Key` header sent per SSE connection
-- [ ] Backend: use provided key for that investigation, fall back to platform key
-- [ ] Key validation endpoint (`POST /validate-key`)
-- [ ] BYOK users bypass credit system -- pay Anthropic directly
-- [ ] Platform fee for BYOK users (tools, data sources, methodology engine)
+- [x] Frontend: `BYOKSettings.tsx` for API key management, stored in `localStorage`
+- [x] `X-Anthropic-Key` header sent with requests
+- [x] Backend: `api_key_override` forwarded to `AnthropicClientAdapter`
+- [x] BYOK users bypass credit system -- pay Anthropic directly
 
-### 12E. Cost Transparency
+### 12E. Cost Transparency -- DONE
 
-Radical cost transparency -- users see exactly what each investigation costs.
+Users see exactly what each investigation costs.
 
-- [ ] `CostBreakdown` component: primary metric + expandable detail panel
-- [ ] Primary metric adapts to billing mode: credits (credit users) vs dollar cost (BYOK users)
-- [ ] Expandable detail: tokens (input/output/cache read/cache write) by model role (Director/Researcher/Summarizer)
-- [ ] Cache savings highlight: "Saved $X.XX via prompt caching"
-- [ ] Cost data in investigation detail page (completed) and real-time during SSE stream
+- [x] `CompletionSummaryCard` with expandable cost breakdown
+- [x] Tokens (input/output/cache read/cache write) by model role (Director/Researcher/Summarizer)
+- [x] Cost data in real-time during SSE stream via `CostUpdate` events
 
-### 12F. Ad-Funded Bonus Credits
+### 12F-H. Deferred to Post-Hackathon
 
-Optional rewarded ads for additional free Haiku credits.
+- [ ] Ad-funded bonus credits (12F)
+- [ ] AGPL dual licensing docs (12G)
+- [ ] Production deployment (12H)
 
-- [ ] "Watch ad for 1 Haiku credit" button when free credits exhausted
-- [ ] Ads clearly separated from investigation results
-- [ ] Ads never influence scientific output
-- [ ] B2B ad network integration (scientific tools, SaaS, research services)
-- [ ] Supplementary mechanism, not primary revenue
-
-### 12G. AGPL Dual Licensing
-
-- [ ] Commercial license terms document
-- [ ] License FAQ page (who needs commercial license, who doesn't)
-- [ ] Contact form for enterprise license inquiries
-- [ ] License badge in README and landing page
-
-### 12H. Deployment
-
-- [ ] Docker multi-stage build (Python backend)
-- [ ] PostgreSQL instance (managed or containerized)
-- [ ] Frontend: Vercel or CDN (static Vite build)
-- [ ] DNS: backend API + frontend app
-- [ ] Secrets management via environment variables
-- [ ] SSL via Let's Encrypt / platform provider
-
-**Verification:** Full E2E: sign in -> free Haiku investigation -> credits deducted -> buy credit pack -> Opus investigation -> cost breakdown -> BYOK key input -> investigation uses user key -> credits unchanged.
+**Verification:** Auth flow, credit deduction/refund, BYOK pass-through, tier selection, cost breakdown all working.
 
 ---
 

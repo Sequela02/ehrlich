@@ -8,7 +8,7 @@ Architecture and infrastructure decisions made before and during initial develop
 
 | File | Topic |
 |------|-------|
-| [mcp-server.md](platform/mcp-server.md) | MCP protocol, Python server, tool design |
+| [mcp-server.md](platform/mcp-server.md) | MCP protocol research (explored, not pursued -- Ehrlich is an MCP consumer, not provider) |
 | [agent-patterns.md](platform/agent-patterns.md) | Claude agent loop, scientist persona, streaming |
 | [literature-api.md](platform/literature-api.md) | Semantic Scholar / PubMed APIs, citation model, reliability |
 
