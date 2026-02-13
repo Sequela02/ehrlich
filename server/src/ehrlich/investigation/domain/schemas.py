@@ -2,6 +2,11 @@
 
 Each schema is a valid JSON Schema (draft-07) dict suitable for passing to
 ``output_config={"format": {"type": "json_schema", "schema": SCHEMA}}``.
+
+Only structural keywords are used (type, properties, required, additionalProperties,
+items, enum).  Validation-only keywords (minimum, maximum, minItems, minLength,
+pattern, format) are NOT supported by the Anthropic constrained-decoding grammar
+and will cause 400 errors.  Value-range constraints are communicated via prompts.
 """
 
 from __future__ import annotations
@@ -23,7 +28,6 @@ PICO_SCHEMA: dict[str, Any] = {
         "domain": {
             "type": "array",
             "items": {"type": "string"},
-            "minItems": 1,
         },
         "population": {"type": "string"},
         "intervention": {"type": "string"},
@@ -32,7 +36,6 @@ PICO_SCHEMA: dict[str, Any] = {
         "search_terms": {
             "type": "array",
             "items": {"type": "string"},
-            "minItems": 1,
         },
     },
     "required": [
@@ -51,7 +54,6 @@ FORMULATION_SCHEMA: dict[str, Any] = {
     "properties": {
         "hypotheses": {
             "type": "array",
-            "minItems": 1,
             "items": {
                 "type": "object",
                 "properties": {
@@ -63,11 +65,7 @@ FORMULATION_SCHEMA: dict[str, Any] = {
                     "failure_criteria": {"type": "string"},
                     "scope": {"type": "string"},
                     "hypothesis_type": {"type": "string"},
-                    "prior_confidence": {
-                        "type": "number",
-                        "minimum": 0,
-                        "maximum": 1,
-                    },
+                    "prior_confidence": {"type": "number"},
                 },
                 "required": [
                     "statement",
@@ -180,11 +178,7 @@ EVALUATION_SCHEMA: dict[str, Any] = {
             "type": "string",
             "enum": ["supported", "refuted", "revised"],
         },
-        "confidence": {
-            "type": "number",
-            "minimum": 0,
-            "maximum": 1,
-        },
+        "confidence": {"type": "number"},
         "certainty_of_evidence": {
             "type": "string",
             "enum": ["high", "moderate", "low", "very_low"],
@@ -263,11 +257,7 @@ SYNTHESIS_SCHEMA: dict[str, Any] = {
                         "type": "string",
                         "enum": ["supported", "refuted", "revised"],
                     },
-                    "confidence": {
-                        "type": "number",
-                        "minimum": 0,
-                        "maximum": 1,
-                    },
+                    "confidence": {"type": "number"},
                     "certainty": {
                         "type": "string",
                         "enum": ["high", "moderate", "low", "very_low"],
