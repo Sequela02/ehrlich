@@ -80,7 +80,7 @@ Always uses `MultiModelOrchestrator`. Hypotheses tested in parallel batches of 2
 ```bash
 cd server
 uv sync --extra dev                                      # Core + dev deps
-# uv sync --extra all --extra dev                        # All deps (docking + deep learning)
+# uv sync --extra all --extra dev                        # All deps (deep learning)
 uv run uvicorn ehrlich.api.app:create_app --factory --reload --port 8000
 uv run pytest --cov=ehrlich --cov-report=term-missing    # Tests
 uv run ruff check src/ tests/                            # Lint
@@ -88,7 +88,7 @@ uv run ruff format src/ tests/                           # Format
 uv run mypy src/ehrlich/                                 # Type check
 ```
 
-Optional extras: `docking` (vina, meeko), `deeplearning` (chemprop), `all` (everything).
+Optional extras: `deeplearning` (chemprop), `all` (everything).
 
 ### Console
 
@@ -162,7 +162,7 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - `search_protein_targets` -- RCSB PDB search by organism/function/keyword
 - `get_protein_annotation` -- UniProt protein function, disease links, GO terms
 - `search_disease_targets` -- Open Targets disease-target associations (scored)
-- `dock_against_target` -- AutoDock Vina docking (or RDKit fallback)
+- `dock_against_target` -- Descriptor-based binding energy estimation
 - `predict_admet` -- Drug-likeness profiling (absorption, metabolism, toxicity)
 - `fetch_toxicity_profile` -- EPA CompTox environmental toxicity data
 - `assess_resistance` -- Knowledge-based resistance mutation scoring

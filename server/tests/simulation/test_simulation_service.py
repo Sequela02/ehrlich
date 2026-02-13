@@ -7,7 +7,6 @@ from ehrlich.kernel.types import SMILES
 from ehrlich.simulation.application.simulation_service import SimulationService
 from ehrlich.simulation.infrastructure.pkcsm_client import PkCSMClient
 from ehrlich.simulation.infrastructure.protein_store import ProteinStore
-from ehrlich.simulation.infrastructure.vina_adapter import VinaAdapter
 
 
 @pytest.fixture
@@ -16,7 +15,6 @@ def service(tmp_path: object) -> SimulationService:
     return SimulationService(
         protein_store=ProteinStore(proteins_dir=tmp_path),  # type: ignore[arg-type]
         rdkit=rdkit,
-        vina=VinaAdapter(),
         admet_client=PkCSMClient(rdkit=rdkit),
     )
 

@@ -48,7 +48,7 @@ Ehrlich uses a three-tier Claude model architecture for cost-efficient investiga
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesizes (3-5 calls)
-Sonnet 4.5 (Researcher) -- Executes experiments with 65 tools (10-20 calls)
+Sonnet 4.5 (Researcher) -- Executes experiments with 67 tools (10-20 calls)
 Haiku 4.5 (Summarizer)  -- Compresses large outputs, classifies domains (5-10 calls)
 ```
 
@@ -99,7 +99,7 @@ All data sources are free and open-access.
 | Prediction | `predict_candidates` | Score compounds with trained model |
 | Prediction | `cluster_compounds` | Butina structural clustering |
 | Simulation | `search_protein_targets` | RCSB PDB target discovery by organism/function |
-| Simulation | `dock_against_target` | AutoDock Vina docking (or RDKit fallback) |
+| Simulation | `dock_against_target` | Descriptor-based binding energy estimation |
 | Simulation | `predict_admet` | Drug-likeness profiling |
 | Simulation | `fetch_toxicity_profile` | EPA CompTox environmental toxicity |
 | Simulation | `assess_resistance` | Resistance mutation scoring |
@@ -151,7 +151,7 @@ All data sources are free and open-access.
 - **Server:** Python 3.12, FastAPI, uv, SQLite (aiosqlite), httpx
 - **Console:** React 19, TypeScript 5.6+, Bun, Vite 7+, TanStack Router, 3Dmol.js
 - **AI:** Claude Opus 4.6 + Sonnet 4.5 + Haiku 4.5 (Anthropic API) with tool use
-- **Science:** RDKit, Chemprop, XGBoost, AutoDock Vina, Meeko, PyArrow
+- **Science:** RDKit, Chemprop, XGBoost, PyArrow
 - **Visualization:** 3Dmol.js (live 3D molecular scene), React Flow (investigation diagrams)
 - **Data:** ChEMBL, RCSB PDB, PubChem, EPA CompTox, Semantic Scholar (all free APIs)
 
@@ -186,13 +186,12 @@ All data sources are free and open-access.
 ```bash
 cd server
 uv sync --extra dev                    # Core + dev dependencies
-# uv sync --extra all --extra dev      # All deps including docking + deep learning
+# uv sync --extra all --extra dev      # All deps including deep learning
 export EHRLICH_ANTHROPIC_API_KEY=sk-ant-...
 uv run uvicorn ehrlich.api.app:create_app --factory --reload --port 8000
 ```
 
 Optional dependency groups:
-- `docking` -- AutoDock Vina + Meeko (requires Boost C++ libraries)
 - `deeplearning` -- Chemprop D-MPNN (pulls PyTorch)
 - `all` -- everything
 

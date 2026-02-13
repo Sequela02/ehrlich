@@ -17,7 +17,6 @@ from ehrlich.config import get_settings
 logger = logging.getLogger(__name__)
 
 _OPTIONAL_DEPS = {
-    "vina": "AutoDock Vina (molecular docking)",
     "chemprop": "Chemprop D-MPNN (deep learning)",
 }
 

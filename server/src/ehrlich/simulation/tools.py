@@ -13,7 +13,6 @@ from ehrlich.simulation.infrastructure.pkcsm_client import PkCSMClient
 from ehrlich.simulation.infrastructure.protein_store import ProteinStore
 from ehrlich.simulation.infrastructure.rcsb_client import RCSBClient
 from ehrlich.simulation.infrastructure.uniprot_client import UniProtClient
-from ehrlich.simulation.infrastructure.vina_adapter import VinaAdapter
 
 _rdkit = RDKitAdapter()
 _rcsb_client = RCSBClient()
@@ -22,12 +21,10 @@ _opentargets_client = OpenTargetsClient()
 _settings = get_settings()
 _comptox_client = CompToxClient(api_key=_settings.comptox_api_key)
 _protein_store = ProteinStore(rcsb_client=_rcsb_client)
-_vina = VinaAdapter()
 _admet_client = PkCSMClient(rdkit=_rdkit)
 _service = SimulationService(
     protein_store=_protein_store,
     rdkit=_rdkit,
-    vina=_vina,
     admet_client=_admet_client,
     rcsb_client=_rcsb_client,
     comptox_client=_comptox_client,

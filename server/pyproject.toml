@@ -28,15 +28,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-docking = [
-    "vina>=1.2,<2",
-    "meeko>=0.6,<1",
-]
 deeplearning = [
     "chemprop>=2.2.2,<3",
 ]
 all = [
-    "ehrlich[docking,deeplearning]",
+    "ehrlich[deeplearning]",
 ]
 dev = [
     "pytest>=8,<9",
@@ -90,10 +86,6 @@ disable_error_code = ["import-untyped"]
 
 [[tool.mypy.overrides]]
 module = "ehrlich.prediction.infrastructure.chemprop_adapter"
-disable_error_code = ["import-not-found"]
-
-[[tool.mypy.overrides]]
-module = "ehrlich.simulation.infrastructure.vina_adapter"
 disable_error_code = ["import-not-found"]
 
 [[tool.mypy.overrides]]

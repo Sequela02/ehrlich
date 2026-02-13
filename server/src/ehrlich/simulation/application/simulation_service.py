@@ -8,7 +8,6 @@ import yaml
 
 from ehrlich.simulation.domain.docking_result import DockingResult
 from ehrlich.simulation.domain.resistance_assessment import MutationRisk, ResistanceAssessment
-from ehrlich.simulation.infrastructure.vina_adapter import VinaAdapter, interpret_energy
 
 if TYPE_CHECKING:
     from ehrlich.kernel.types import SMILES
@@ -51,12 +50,21 @@ def _load_resistance_data(
     return mutations, patterns
 
 
+def _interpret_energy(energy: float) -> str:
+    if energy <= -10.0:
+        return "excellent"
+    if energy <= -8.0:
+        return "strong"
+    if energy <= -6.0:
+        return "moderate"
+    return "weak"
+
+
 class SimulationService:
     def __init__(
         self,
         protein_store: ProteinStore,
         rdkit: ChemistryPort,
-        vina: VinaAdapter,
         admet_client: PkCSMClient,
         rcsb_client: ProteinTargetRepository | None = None,
         comptox_client: ToxicityRepository | None = None,
@@ -66,7 +74,6 @@ class SimulationService:
     ) -> None:
         self._proteins = protein_store
         self._rdkit = rdkit
-        self._vina = vina
         self._admet = admet_client
         self._rcsb = rcsb_client
         self._comptox = comptox_client
@@ -104,28 +111,7 @@ class SimulationService:
         return await self._comptox.fetch(identifier)
 
     async def dock(self, smiles: SMILES, target_id: str) -> DockingResult:
-        target = self._proteins.get_target(target_id)
-
-        if VinaAdapter.is_available():
-            try:
-                pdbqt = await self._proteins.get_pdbqt(target_id)
-                conformer = self._rdkit.generate_conformer(smiles)
-                center = (target.center_x, target.center_y, target.center_z)
-                result = await self._vina.dock(
-                    str(conformer.mol_block), pdbqt, center, target.box_size
-                )
-                energy = result.get("energy", 0.0)
-                rmsd = result.get("rmsd", 0.0)
-                return DockingResult(
-                    smiles=smiles,
-                    target_id=target_id,
-                    binding_energy=energy,
-                    pose_rmsd=rmsd,
-                    interactions={"interpretation": [interpret_energy(energy)]},
-                )
-            except (FileNotFoundError, NotImplementedError):
-                logger.info("Vina docking unavailable for %s, using estimate", target_id)
-
+        self._proteins.get_target(target_id)
         return self._estimate_docking(smiles, target_id)
 
     async def predict_admet(self, smiles: SMILES) -> ADMETProfile:
@@ -189,8 +175,8 @@ class SimulationService:
             pose_rmsd=0.0,
             interactions={
                 "method": ["rdkit_estimate"],
-                "interpretation": [interpret_energy(energy)],
-                "note": ["Estimated from molecular descriptors (Vina unavailable)"],
+                "interpretation": [_interpret_energy(energy)],
+                "note": ["Estimated from molecular descriptors (QED + LogP heuristic)"],
             },
         )
 

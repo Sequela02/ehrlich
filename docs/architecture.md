@@ -25,7 +25,7 @@ Dataset exploration and statistical analysis. Loads bioactivity data from ChEMBL
 Machine learning for activity/outcome prediction. Supports XGBoost models with Morgan fingerprints (all domains) and Chemprop D-MPNN (molecular only). Ensemble predictions combine multiple models.
 
 ### Simulation
-Simulation and target discovery (Molecular Science domain): docking (AutoDock Vina/RDKit fallback), ADMET prediction, resistance assessment, protein targets (RCSB PDB), protein annotations (UniProt), disease-target associations (Open Targets), environmental toxicity (EPA CompTox).
+Simulation and target discovery (Molecular Science domain): descriptor-based binding energy estimation, ADMET prediction, resistance assessment, protein targets (RCSB PDB), protein annotations (UniProt), disease-target associations (Open Targets), environmental toxicity (EPA CompTox).
 
 ### Training
 Exercise physiology and sports medicine research: evidence-based training analysis, protocol comparison, injury risk assessment, training load monitoring, and clinical trial search (ClinicalTrials.gov). Uses Semantic Scholar for literature search.
