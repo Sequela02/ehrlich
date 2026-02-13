@@ -117,7 +117,7 @@ export function InvestigationReport({
           <SectionHeader
             icon={Target}
             title="Research Question"
-            description="The original scientific question that initiated this investigation. Defines the domain, target, and scope of molecular discovery."
+            description="The original scientific question that initiated this investigation. Defines the domain, target, and scope of scientific discovery."
           />
           <div className="rounded-lg border border-border bg-surface p-5">
             <p className="text-sm leading-relaxed">{prompt}</p>

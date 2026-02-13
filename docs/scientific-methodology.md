@@ -140,10 +140,10 @@ Formulation context: Structured XML replaces raw text summary
 
 | # | Component | Description |
 |---|-----------|-------------|
-| 1 | Independent Variable | Factor being manipulated (e.g. substituent pattern, protocol type) |
-| 2 | Dependent Variable | Outcome being measured (e.g. Ki, docking score, effect size) |
+| 1 | Independent Variable | Factor being manipulated (e.g., compound structure, training protocol, supplement dose) |
+| 2 | Dependent Variable | Outcome being measured (e.g., Ki/IC50, docking score, effect size, evidence grade) |
 | 3 | Controls | Positive (known active) and negative (known inactive) baselines |
-| 4 | Confounders | Identified threats to validity (dataset bias, assay mismatch, etc.) |
+| 4 | Confounders | Identified threats to validity (dataset bias, measurement error, confounding variables) |
 | 5 | Analysis Plan | Pre-specified metrics and thresholds (prevents post-hoc rationalization) |
 | 6 | Success Criteria | Quantitative threshold for supporting the hypothesis |
 | 7 | Failure Criteria | Quantitative threshold for refuting the hypothesis |
@@ -208,7 +208,7 @@ Orchestrator wiring:
 | # | Component | Description |
 |---|-----------|-------------|
 | 1 | Evidence Hierarchy | 8-tier ranking from replicated experimental data (highest) to qualitative literature (lowest) |
-| 2 | Effect Size Thresholds | Domain-specific noise floors (IC50 <2-fold, docking <0.5 kcal/mol, ML <0.1 prob) |
+| 2 | Effect Size Thresholds | Domain-specific noise floors (molecular: IC50 <2-fold, docking <0.5 kcal/mol; training: Cohen's d threshold; nutrition: effect size threshold) |
 | 3 | Bayesian Updating | Prior confidence × evidence multiplier → posterior (supporting tiers 1-3: ×1.3-1.5, contradicting: ×0.3-0.5) |
 | 4 | Contradiction Resolution | 4-step hierarchy: identity check → assay comparability → temporal relevance → severity classification |
 | 5 | Convergence Check | Independent method agreement (converging/mixed/contradictory) modulates confidence |

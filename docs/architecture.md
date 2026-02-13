@@ -22,10 +22,10 @@ Cheminformatics operations: molecular descriptors, fingerprints, 3D conformer ge
 Dataset exploration and statistical analysis. Loads bioactivity data from ChEMBL, compound search via PubChem, curated pharmacology via GtoPdb, substructure enrichment analysis, property distributions.
 
 ### Prediction
-Machine learning for antimicrobial activity prediction. Supports Chemprop (D-MPNN) and XGBoost models with Morgan fingerprints. Ensemble predictions combine multiple models.
+Machine learning for activity/outcome prediction. Supports XGBoost models with Morgan fingerprints (all domains) and Chemprop D-MPNN (molecular only). Ensemble predictions combine multiple models.
 
 ### Simulation
-Molecular simulation and target discovery: docking (AutoDock Vina/RDKit fallback), ADMET prediction, resistance assessment, protein targets (RCSB PDB), protein annotations (UniProt), disease-target associations (Open Targets), environmental toxicity (EPA CompTox).
+Simulation and target discovery (Molecular Science domain): docking (AutoDock Vina/RDKit fallback), ADMET prediction, resistance assessment, protein targets (RCSB PDB), protein annotations (UniProt), disease-target associations (Open Targets), environmental toxicity (EPA CompTox).
 
 ### Training
 Exercise physiology and sports medicine research: evidence-based training analysis, protocol comparison, injury risk assessment, training load monitoring, and clinical trial search (ClinicalTrials.gov). Uses Semantic Scholar for literature search.
@@ -211,4 +211,4 @@ api/ -> investigation/application/ only
     - `ValidationMetricsComputed` carries Z'-factor, quality, control separation stats
     - `InvestigationCompleted` includes candidates, hypotheses, findings, negative controls, validation metrics
 12. Investigation persisted to SQLite with full state + events for timeline replay
-13. Console displays: phase indicator, hypothesis board, lab view (3Dmol.js, molecular only), investigation diagram (React Flow), findings with source badges, dynamic candidate table with domain-specific score columns, structured 8-section report with markdown export
+13. Console displays: phase indicator, hypothesis board, lab view (3Dmol.js, molecular domain only), investigation diagram (React Flow), domain-specific visualizations (charts, diagrams), findings with source badges, dynamic candidate table with domain-specific score columns, structured 8-section report with markdown export

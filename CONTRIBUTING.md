@@ -94,18 +94,18 @@ Haiku 4.5 (Summarizer)  -- Compresses large outputs, classifies domains
 
 ### Bounded Contexts
 
-| Context | Purpose |
-|---------|---------|
-| kernel | Shared primitives (SMILES, Molecule, exceptions) |
-| shared | Cross-cutting ports and value objects (ChemistryPort, Fingerprint, Conformer3D) |
-| literature | Paper search (Semantic Scholar) |
-| chemistry | RDKit cheminformatics |
-| analysis | Dataset exploration (ChEMBL, PubChem, GtoPdb) |
-| prediction | ML models (XGBoost, Chemprop) |
-| simulation | Docking, ADMET, targets (RCSB PDB, UniProt, Open Targets, EPA CompTox) |
-| training | Exercise physiology (evidence analysis, protocol comparison, injury risk, training metrics, clinical trials) |
-| nutrition | Nutrition science (supplement evidence, supplement labels, nutrient data, supplement safety) |
-| investigation | Multi-model orchestration + domain registry + SQLite persistence |
+| Context | Domain | Purpose |
+|---------|--------|---------|
+| kernel | All | Shared primitives (SMILES, Molecule, exceptions) |
+| shared | All | Cross-cutting ports and value objects (ChemistryPort, Fingerprint, Conformer3D) |
+| literature | All | Paper search (Semantic Scholar) |
+| chemistry | Molecular | RDKit cheminformatics |
+| analysis | Molecular | Dataset exploration (ChEMBL, PubChem, GtoPdb) |
+| prediction | Molecular | ML models (XGBoost, Chemprop) |
+| simulation | Molecular | Docking, ADMET, targets (RCSB PDB, UniProt, Open Targets, EPA CompTox) |
+| training | Training | Exercise physiology (evidence analysis, protocol comparison, injury risk, training metrics, clinical trials) |
+| nutrition | Nutrition | Nutrition science (supplement evidence, supplement labels, nutrient data, supplement safety) |
+| investigation | All | Multi-model orchestration + domain registry + SQLite persistence |
 
 ## Testing
 
@@ -141,7 +141,7 @@ research/yourdomain/
     prior-work.md         # Existing tools and approaches in this field
 ```
 
-See `research/molecular/` and `research/methodology/` for examples of thorough domain research.
+See `research/molecular/`, `research/methodology/`, and the `training/` and `nutrition/` bounded contexts for examples of thorough domain research and implementation.
 
 ### Step 1: Create the Bounded Context
 

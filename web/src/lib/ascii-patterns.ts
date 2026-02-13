@@ -4,7 +4,7 @@
  * Each pattern is designed to tile or fill a section background.
  */
 
-/** Hero: molecular structures and chemical notation */
+/** Hero: scientific notation, chemical structures, and hypothesis formulas */
 export const HERO_ASCII = `
     H   H           O           H₃C    CH₃         O    OH
      \\ /           //               \\  /           //

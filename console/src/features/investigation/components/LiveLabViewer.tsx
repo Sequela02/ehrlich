@@ -112,8 +112,8 @@ export function LiveLabViewer({ events, completed, experiments }: LiveLabViewerP
           <FlaskConical className="h-8 w-8 text-muted-foreground/30" />
           <p className="text-sm text-muted-foreground/50">
             {completed
-              ? "No molecular data was visualized"
-              : "Waiting for molecular data..."}
+              ? "No molecular structures were visualized"
+              : "Waiting for molecular structures..."}
           </p>
         </div>
       )}

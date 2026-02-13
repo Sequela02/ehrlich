@@ -82,7 +82,7 @@ export default function VisualizationPanel({
       {showLab && (
         <div>
           <p className="mb-2 pl-3 text-[11px] leading-relaxed text-muted-foreground/50">
-            Real-time 3D visualization of molecules as they are analyzed.
+            Real-time 3D molecular visualization as structures are analyzed.
           </p>
           <ErrorBoundary fallbackMessage="Failed to load 3D viewer">
             <LiveLabViewer

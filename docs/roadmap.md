@@ -23,7 +23,7 @@ Hackathon: Feb 10-16, 2026. Each phase ends with something testable.
 
 ## Phase 1: Chemistry Context (Feb 10) -- DONE
 
-The foundation. Every other context depends on molecular processing.
+Foundation for the Molecular Science domain. Provides RDKit cheminformatics for SMILES processing, descriptors, fingerprints, and 3D conformers.
 
 ### 1A. RDKit Adapter -- Core Operations
 - [x] `validate_smiles(smiles)` -- `Chem.MolFromSmiles`, null-check, return bool
@@ -102,7 +102,7 @@ Two independent contexts. Can be built in parallel.
 
 ## Phase 3: Prediction Context (Feb 10) -- DONE
 
-ML models for antimicrobial activity prediction.
+ML models for activity/outcome prediction (domain-agnostic scoring).
 
 ### 3A. XGBoost Adapter
 - [x] Train: Morgan fingerprints (2048-bit) + activities -> XGBoost classifier
@@ -1051,17 +1051,20 @@ Expose Ehrlich as an MCP tool server for Claude Code / Claude Desktop.
 
 ## Phase 12: SaaS Infrastructure -- TODO
 
-Production deployment with authentication, API key management, and usage tracking.
+Production deployment with authentication, credit-based billing, and model-tiered investigations.
+
+> Business rationale and pricing research: see [business-strategy.md](business-strategy.md)
 
 ### 12A. PostgreSQL Migration
 
-Replace SQLite with PostgreSQL for production persistence.
+Replace SQLite with PostgreSQL for multi-tenant persistence.
 
 - [ ] `PostgresInvestigationRepository` implementing existing `InvestigationRepository` ABC
 - [ ] `asyncpg` connection pooling (replace `aiosqlite`)
 - [ ] FTS5 to PostgreSQL `tsvector` + GIN index (self-referential research)
 - [ ] `JSONB` columns for hypotheses, experiments, findings, candidates
-- [ ] `users` table: id, email, credits, encrypted_api_key, created_at
+- [ ] `users` table: id, email, credits_balance, encrypted_api_key, created_at
+- [ ] `credit_transactions` table: user_id, amount, type (purchase/spend/bonus/expire), investigation_id, created_at
 - [ ] `DATABASE_URL` env var (replaces `EHRLICH_DB_PATH`)
 - [ ] Migration script (SQLite data export -> PostgreSQL import)
 - [ ] Tests with testcontainers-postgresql
@@ -1075,66 +1078,71 @@ User identity via WorkOS (1M MAU free tier). JWT-based, provider-swappable.
 - [ ] Backend: JWT verification middleware on protected routes
 - [ ] `user_id` extraction from JWT, linked to `users` table
 - [ ] Public routes: `GET /health`, `GET /methodology`, `GET /stats`
-- [ ] Protected routes: `POST /investigate`, `GET /investigate/{id}/stream`, BYOK endpoints
+- [ ] Protected routes: `POST /investigate`, `GET /investigate/{id}/stream`, credit endpoints
 - [ ] Env vars: `WORKOS_API_KEY`, `WORKOS_CLIENT_ID`
 
-### 12C. BYOK (Bring Your Own Key)
+### 12C. Universal Credit System
 
-Users provide their own Anthropic API key. Key never persisted in plaintext.
+One currency. User decides model quality per investigation.
+
+- [ ] Credit spending table: Haiku Director = 1 credit, Sonnet Director = 3 credits, Opus Director = 5 credits
+- [ ] Researcher always Sonnet 4.5, Summarizer always Haiku 4.5 (regardless of tier)
+- [ ] `POST /credits/purchase` -- buy credit pack (5, 25, 50)
+- [ ] `GET /credits/balance` -- current balance + transaction history
+- [ ] `POST /investigate` accepts `director_tier: "haiku" | "sonnet" | "opus"` parameter
+- [ ] Credit deduction on investigation start (not completion -- prevents abuse)
+- [ ] Credit refund on investigation error (partial refund policy)
+- [ ] Monthly auto-refill subscription: 30 credits/month, 60-day expiry on unused credits
+- [ ] Free tier: 3 Haiku credits/month (auto-refill, non-accumulating)
+
+### 12D. BYOK (Bring Your Own Key) -- Enterprise
+
+Users provide their own Anthropic API key. Enterprise tier.
 
 - [ ] Frontend: API key input in settings, stored in `localStorage`
 - [ ] `X-Anthropic-Key` header sent per SSE connection
 - [ ] Backend: use provided key for that investigation, fall back to platform key
 - [ ] Key validation endpoint (`POST /validate-key`)
 - [ ] BYOK users bypass credit system -- pay Anthropic directly
+- [ ] Platform fee for BYOK users (tools, data sources, methodology engine)
 
-### 12D. Credit System
+### 12E. Cost Transparency
 
-Usage-based credits tracked per user. Free tier on signup, BYOK unlimited.
-
-- [ ] `credits` column on `users` table (default: 5 free on signup)
-- [ ] Credit deduction on investigation completion (mapped from `CostTracker` actual cost)
-- [ ] `GET /user/credits` -- current balance
-- [ ] Frontend: credit badge in header, exhaustion prompt (BYOK or wait)
-- [ ] Credit tiers: Free (5), BYOK (unlimited), future paid packs
-- [ ] Credit-to-dollar conversion rate configurable (e.g., 1 credit = $0.25)
-
-### 12E. Cost Transparency (PostHog Model)
-
-Radical cost transparency -- since the codebase is open source (AGPL-3.0), hiding costs would be disingenuous. Users can see the `_MODEL_PRICING` dict in the source code anyway. Instead, use cost visibility as a differentiator.
-
-**Industry context:** 79/500 SaaS companies use credit models (up 126% YoY). 65% of IT leaders report surprise AI charges. PostHog openly shows their 20% markup on LLM costs.
-
-**Dual-mode cost display (adapts to user's billing mode):**
-
-| Mode | Primary Display | Expandable Detail |
-|------|----------------|-------------------|
-| BYOK | `$0.47 API cost` (user's money, billed by Anthropic) | Token breakdown by model, cache savings |
-| Credits | `2 credits used` (platform billing unit) | Token breakdown, equivalent API cost, cache savings |
-
-**Implementation:**
+Radical cost transparency -- users see exactly what each investigation costs.
 
 - [ ] `CostBreakdown` component: primary metric + expandable detail panel
-- [ ] Primary metric adapts to billing mode (credits vs BYOK dollar cost)
-- [ ] Expandable detail always shows: tokens (input/output/cache read/cache write) by model (Director/Researcher/Summarizer), cache savings estimate, total API cost
-- [ ] Cache savings highlight: "Saved $X.XX via prompt caching" -- validates the SDK optimization work (SDK-1, SDK-2)
-- [ ] `CostTracker` feeds both modes: `total_cost` for BYOK display, `total_cost` -> credit conversion for credit display
-- [ ] Cost data available in investigation detail page (completed investigations) and real-time during SSE stream
-- [ ] No cost obfuscation -- raw API cost always accessible in expandable detail regardless of billing mode
+- [ ] Primary metric adapts to billing mode: credits (credit users) vs dollar cost (BYOK users)
+- [ ] Expandable detail: tokens (input/output/cache read/cache write) by model role (Director/Researcher/Summarizer)
+- [ ] Cache savings highlight: "Saved $X.XX via prompt caching"
+- [ ] Cost data in investigation detail page (completed) and real-time during SSE stream
 
-**Files:** `console/src/features/investigation/components/CostBreakdown.tsx`, update `InvestigationReport.tsx`, update SSE event handling for cache-aware cost data
+### 12F. Ad-Funded Bonus Credits
 
-### 12F. Deployment
+Optional rewarded ads for additional free Haiku credits.
+
+- [ ] "Watch ad for 1 Haiku credit" button when free credits exhausted
+- [ ] Ads clearly separated from investigation results
+- [ ] Ads never influence scientific output
+- [ ] B2B ad network integration (scientific tools, SaaS, research services)
+- [ ] Supplementary mechanism, not primary revenue
+
+### 12G. AGPL Dual Licensing
+
+- [ ] Commercial license terms document
+- [ ] License FAQ page (who needs commercial license, who doesn't)
+- [ ] Contact form for enterprise license inquiries
+- [ ] License badge in README and landing page
+
+### 12H. Deployment
 
 - [ ] Docker multi-stage build (Python backend)
 - [ ] PostgreSQL instance (managed or containerized)
-- [ ] Frontend: Vercel (static Vite build)
+- [ ] Frontend: Vercel or CDN (static Vite build)
 - [ ] DNS: backend API + frontend app
 - [ ] Secrets management via environment variables
 - [ ] SSL via Let's Encrypt / platform provider
-- [ ] Backup schedule for PostgreSQL
 
-**Verification:** Full E2E: sign in with Google -> start investigation -> credits deducted -> cost breakdown shows credits + token detail -> BYOK key input -> investigation uses user key -> cost breakdown shows dollar cost + token detail -> credits unchanged.
+**Verification:** Full E2E: sign in -> free Haiku investigation -> credits deducted -> buy credit pack -> Opus investigation -> cost breakdown -> BYOK key input -> investigation uses user key -> credits unchanged.
 
 ---
 

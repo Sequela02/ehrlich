@@ -265,9 +265,9 @@ Server at :8000, Console at :3000.
    - *"What are the most effective training protocols for improving VO2max?"*
    - *"Evaluate ACL injury prevention programs for female soccer players"*
 5. Watch the investigation unfold in real-time via SSE streaming
-6. See the Live Lab: 3D molecular scene updates as experiments run -- proteins load, ligands dock, candidates glow by score
-7. View ranked candidates with 2D structure thumbnails in the results table
-8. Click any candidate row to expand the detail panel with 3D conformer viewer, molecular properties, and Lipinski assessment
+6. See domain-specific visualizations: molecular investigations show a 3D Live Lab (proteins load, ligands dock, candidates glow by score); training investigations show timeline charts and body diagrams; all domains render forest plots and evidence matrices
+7. View ranked candidates with domain-specific score columns in the results table
+8. Click any candidate row to expand the detail panel with domain-specific views (molecular: 3D conformer, properties, Lipinski; training/nutrition: scores, attributes)
 9. Browse the hypothesis board showing formulated, tested, supported, and refuted hypotheses
 10. Explore the auto-generated investigation diagram: SVG hypothesis map with status-colored nodes and evidence-chain arrows
 11. After completion, view the structured investigation report: research question, executive summary, hypotheses, methodology, findings, candidates, model validation, and cost breakdown
