@@ -26,8 +26,10 @@ class Settings(BaseSettings):
     director_thinking_budget: int = 10000
     log_level: str = "INFO"
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
-    db_path: str = "data/ehrlich.db"
+    database_url: str = "postgresql://postgres:postgres@localhost:5432/ehrlich"
     comptox_api_key: str = ""
+    workos_client_id: str = ""
+    workos_api_key: str = ""
 
     @property
     def has_api_key(self) -> bool:

@@ -250,7 +250,7 @@ Orchestrator wiring:
   - Includes in HypothesisEvaluated event
   - Includes in InvestigationCompleted hypothesis dicts
   - Logs evidence_convergence for audit trail
-  - Serialized/deserialized in SQLite repository
+  - Serialized/deserialized in PostgreSQL repository
 ```
 
 **Key design decisions:**

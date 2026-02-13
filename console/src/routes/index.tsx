@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { PromptInput, InvestigationList, TemplateCards } from "@/features/investigation/components";
+import { LogIn } from "lucide-react";
+import { PromptInput, InvestigationList, TemplateCards, BYOKSettings } from "@/features/investigation/components";
 import { useInvestigations } from "@/features/investigation/hooks/use-investigations";
 import { useStats } from "@/features/investigation/hooks/use-stats";
+import { useAuth } from "@/shared/hooks/use-auth";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -11,6 +13,7 @@ export const Route = createFileRoute("/")({
 function HomePage() {
   const { data: investigations } = useInvestigations();
   const { data: stats } = useStats();
+  const { user, isLoading, signIn } = useAuth();
   const [prompt, setPrompt] = useState("");
 
   return (
@@ -33,7 +36,27 @@ function HomePage() {
           )}
         </p>
       </div>
-      <PromptInput value={prompt} onChange={setPrompt} />
+
+      {!isLoading && !user ? (
+        <div className="rounded-lg border border-border bg-surface p-8 text-center">
+          <p className="text-sm text-muted-foreground">
+            Sign in to start an investigation
+          </p>
+          <button
+            onClick={() => signIn()}
+            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition-all hover:brightness-110 hover:shadow-[0_0_12px_oklch(0.72_0.19_155_/_0.3)]"
+          >
+            <LogIn className="h-4 w-4" />
+            Sign in
+          </button>
+        </div>
+      ) : (
+        <>
+          <PromptInput value={prompt} onChange={setPrompt} />
+          <BYOKSettings />
+        </>
+      )}
+
       <div className="space-y-3">
         <h2 className="font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
           Research Templates

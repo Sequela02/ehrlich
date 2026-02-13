@@ -20,7 +20,7 @@ DDD monorepo: `server/` (Python 3.12) + `console/` (React 19 / TypeScript / Bun)
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, designs experiments, evaluates evidence, synthesizes (NO tools)
-Sonnet 4.5 (Researcher) -- Executes experiments with 67 tools (parallel: 2 experiments per batch)
+Sonnet 4.5 (Researcher) -- Executes experiments with 70 tools (parallel: 2 experiments per batch)
 Haiku 4.5 (Summarizer)  -- Compresses large tool outputs (>2000 chars), PICO decomposition, evidence grading
 ```
 
@@ -136,7 +136,7 @@ Types: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`
 
 Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation, training, nutrition, investigation, api, console, mol, data, ci, docs, infra
 
-## Tools (67 Total)
+## Tools (70 Total)
 
 ### Chemistry (6) -- RDKit cheminformatics, domain-agnostic
 - `validate_smiles` -- Validate SMILES string
@@ -159,10 +159,13 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - `analyze_substructures` -- Chi-squared enrichment of SMARTS patterns
 - `compute_properties` -- Property distributions (active vs inactive)
 
-### Prediction (3) -- XGBoost, Chemprop
-- `train_model` -- Train ML model on any SMILES+activity dataset (scaffold-split + random-split metrics, permutation p-value)
+### Prediction (6) -- XGBoost, domain-agnostic ML
+- `train_model` -- Train ML model on SMILES+activity dataset (scaffold-split + random-split metrics, permutation p-value)
 - `predict_candidates` -- Score compounds with trained model
 - `cluster_compounds` -- Butina structural clustering
+- `train_classifier` -- Train binary classifier on tabular feature data (any domain)
+- `predict_scores` -- Score samples with trained classifier (any domain)
+- `cluster_data` -- Hierarchical clustering on tabular feature data (any domain)
 
 ### Simulation (7) -- Docking, ADMET, targets, toxicity, annotations
 - `search_protein_targets` -- RCSB PDB search by organism/function/keyword
@@ -323,6 +326,18 @@ All paths relative to `server/src/ehrlich/`.
 | `infrastructure/pubchem_client.py` | PubChem PUG REST compound search |
 | `infrastructure/gtopdb_client.py` | GtoPdb REST client for curated pharmacology |
 
+### prediction/
+
+| File | Purpose |
+|------|---------|
+| `domain/ports.py` | `FeatureExtractor`, `DataSplitter`, `Clusterer` ABCs (domain-agnostic ML ports) |
+| `domain/prediction_result.py` | `PredictionResult` frozen dataclass (generic `identifier: str`) |
+| `application/prediction_service.py` | Generic ML service: train, predict, cluster via injected ports |
+| `infrastructure/molecular_adapters.py` | `MolecularFeatureExtractor`, `ScaffoldSplitter`, `MolecularClusterer` (RDKit) |
+| `infrastructure/generic_adapters.py` | `RandomSplitter`, `DistanceClusterer` (scipy hierarchical) |
+| `infrastructure/xgboost_adapter.py` | XGBoost training, prediction, permutation test |
+| `tools.py` | 6 prediction tools (3 molecular + 3 generic) |
+
 ### simulation/
 
 | File | Purpose |
@@ -396,7 +411,7 @@ All paths relative to `server/src/ehrlich/api/`.
 | File | Purpose |
 |------|---------|
 | `auth.py` | WorkOS JWT middleware (JWKS verification, header + query param auth for SSE) |
-| `routes/investigation.py` | REST + SSE endpoints, 67-tool registry, domain registry, MCP bridge, credit system, BYOK |
+| `routes/investigation.py` | REST + SSE endpoints, 70-tool registry, domain registry, MCP bridge, credit system, BYOK |
 | `routes/methodology.py` | GET /methodology: phases, domains, tools, data sources, models |
 | `routes/molecule.py` | Molecule depiction, conformer, descriptors, targets endpoints |
 | `routes/stats.py` | GET /stats: aggregate counts |

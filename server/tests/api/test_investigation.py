@@ -1,53 +1,83 @@
+import os
+
+import httpx
 import pytest
-from fastapi.testclient import TestClient
 
 from ehrlich.api.app import create_app
+from ehrlich.api.auth import get_current_user, get_current_user_sse
 from ehrlich.api.routes import investigation as inv_module
+from ehrlich.investigation.domain.investigation import InvestigationStatus
+
+_TEST_DATABASE_URL = os.environ.get(
+    "EHRLICH_TEST_DATABASE_URL",
+    "postgresql://postgres:postgres@localhost:5432/ehrlich_test",
+)
+
+_TEST_USER = {"workos_id": "workos_inv_test", "email": "inv@test.com"}
+
+
+async def _mock_user() -> dict[str, str]:
+    return _TEST_USER
 
 
 @pytest.fixture
-def client(tmp_path) -> TestClient:
+async def client() -> httpx.AsyncClient:
     app = create_app()
+    app.dependency_overrides[get_current_user] = _mock_user
+    app.dependency_overrides[get_current_user_sse] = _mock_user
 
-    # Override the repository with a temp path for tests
-    import asyncio
+    await inv_module.init_repository(_TEST_DATABASE_URL)
+    repo = inv_module._get_repository()
+    pool = repo._get_pool()
+    async with pool.acquire() as c:
+        await c.execute("DELETE FROM events")
+        await c.execute("DELETE FROM credit_transactions")
+        await c.execute("DELETE FROM investigations")
+        await c.execute("DELETE FROM users")
+    await repo.get_or_create_user(_TEST_USER["workos_id"], _TEST_USER["email"])
 
-    async def _init() -> None:
-        db_path = str(tmp_path / "test.db")
-        await inv_module.init_repository(db_path)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac  # type: ignore[misc]
 
-    asyncio.get_event_loop().run_until_complete(_init())
-
-    return TestClient(app)
+    await inv_module.close_repository()
 
 
 class TestStartInvestigation:
-    def test_creates_investigation(self, client: TestClient) -> None:
-        response = client.post(
+    async def test_creates_investigation(self, client: httpx.AsyncClient) -> None:
+        response = await client.post(
             "/api/v1/investigate",
-            json={"prompt": "Find antimicrobials for MRSA"},
+            json={"prompt": "Find antimicrobials for MRSA", "director_tier": "haiku"},
         )
         assert response.status_code == 200
         data = response.json()
         assert "id" in data
         assert data["status"] == "pending"
 
-    def test_missing_prompt(self, client: TestClient) -> None:
-        response = client.post("/api/v1/investigate", json={})
+    async def test_missing_prompt(self, client: httpx.AsyncClient) -> None:
+        response = await client.post("/api/v1/investigate", json={})
         assert response.status_code == 422
 
 
 class TestListInvestigations:
-    def test_empty_list(self, client: TestClient) -> None:
-        response = client.get("/api/v1/investigate")
+    async def test_empty_list(self, client: httpx.AsyncClient) -> None:
+        response = await client.get("/api/v1/investigate")
         assert response.status_code == 200
         assert response.json() == []
 
-    def test_returns_created_investigations(self, client: TestClient) -> None:
-        client.post("/api/v1/investigate", json={"prompt": "Test 1"})
-        client.post("/api/v1/investigate", json={"prompt": "Test 2"})
+    async def test_returns_created_investigations(
+        self, client: httpx.AsyncClient
+    ) -> None:
+        await client.post(
+            "/api/v1/investigate",
+            json={"prompt": "Test 1", "director_tier": "haiku"},
+        )
+        await client.post(
+            "/api/v1/investigate",
+            json={"prompt": "Test 2", "director_tier": "haiku"},
+        )
 
-        response = client.get("/api/v1/investigate")
+        response = await client.get("/api/v1/investigate")
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 2
@@ -57,45 +87,43 @@ class TestListInvestigations:
 
 
 class TestGetInvestigation:
-    def test_returns_investigation(self, client: TestClient) -> None:
-        resp = client.post("/api/v1/investigate", json={"prompt": "Test"})
+    async def test_returns_investigation(self, client: httpx.AsyncClient) -> None:
+        resp = await client.post(
+            "/api/v1/investigate",
+            json={"prompt": "Test", "director_tier": "haiku"},
+        )
         inv_id = resp.json()["id"]
 
-        response = client.get(f"/api/v1/investigate/{inv_id}")
+        response = await client.get(f"/api/v1/investigate/{inv_id}")
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == inv_id
         assert data["prompt"] == "Test"
         assert data["status"] == "pending"
 
-    def test_not_found(self, client: TestClient) -> None:
-        response = client.get("/api/v1/investigate/nonexistent")
+    async def test_not_found(self, client: httpx.AsyncClient) -> None:
+        response = await client.get("/api/v1/investigate/nonexistent")
         assert response.status_code == 404
 
 
 class TestStreamInvestigation:
-    def test_not_found(self, client: TestClient) -> None:
-        response = client.get("/api/v1/investigate/nonexistent/stream")
+    async def test_not_found(self, client: httpx.AsyncClient) -> None:
+        response = await client.get("/api/v1/investigate/nonexistent/stream")
         assert response.status_code == 404
 
-    def test_completed_replays_final(self, client: TestClient) -> None:
-        import asyncio
-
-        from ehrlich.investigation.domain.investigation import InvestigationStatus
-
-        resp = client.post("/api/v1/investigate", json={"prompt": "Test"})
+    async def test_completed_replays_final(self, client: httpx.AsyncClient) -> None:
+        resp = await client.post(
+            "/api/v1/investigate",
+            json={"prompt": "Test", "director_tier": "haiku"},
+        )
         inv_id = resp.json()["id"]
 
         repo = inv_module._get_repository()
+        inv = await repo.get_by_id(inv_id)
+        assert inv is not None
+        inv.status = InvestigationStatus.COMPLETED
+        inv.summary = "Found 2 candidates"
+        await repo.update(inv)
 
-        async def _update() -> None:
-            inv = await repo.get_by_id(inv_id)
-            assert inv is not None
-            inv.status = InvestigationStatus.COMPLETED
-            inv.summary = "Found 2 candidates"
-            await repo.update(inv)
-
-        asyncio.get_event_loop().run_until_complete(_update())
-
-        response = client.get(f"/api/v1/investigate/{inv_id}/stream")
+        response = await client.get(f"/api/v1/investigate/{inv_id}/stream")
         assert response.status_code == 200

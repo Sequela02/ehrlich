@@ -10,7 +10,7 @@ NUTRITION_SCIENCE = DomainConfig(
     identifier_type="intervention",
     identifier_label="Intervention",
     candidate_label="Nutritional Interventions",
-    tool_tags=frozenset({"nutrition", "safety", "literature", "visualization"}),
+    tool_tags=frozenset({"nutrition", "safety", "literature", "visualization", "ml"}),
     score_definitions=(
         ScoreDefinition(
             key="evidence_score",
@@ -146,6 +146,25 @@ Example: Dietary inflammatory index scoring
 2. compute_inflammatory_index(food_query="bacon")
 3. record_finding(title="Anti-inflammatory profile of salmon vs bacon", \
 detail="...", hypothesis_id="...", evidence_type="supporting")
+
+Example: Training a classifier on nutrient intake data
+1. train_classifier(feature_names=["protein_g", "fiber_g", "omega3_mg", \
+"vitamin_d_iu", "calcium_mg"], feature_values=[...flattened row-major...], \
+labels=[1.0, 0.0, ...], target_name="supplement responders")
+2. predict_scores(feature_names=["protein_g", "fiber_g", "omega3_mg", \
+"vitamin_d_iu", "calcium_mg"], feature_values=[...], \
+model_id="xgboost_supplement_abc123")
+3. record_finding(title="ML model predicts supplement responders", \
+detail="AUROC 0.78, top features: vitamin_d_iu, omega3_mg...", \
+hypothesis_id="h1", evidence_type="supporting")
+
+Example: Clustering dietary patterns
+1. cluster_data(feature_names=["calories", "protein_pct", "fat_pct", \
+"carb_pct", "fiber_g"], feature_values=[...], n_clusters=3, \
+identifiers="diet_A,diet_B,diet_C,...")
+2. record_finding(title="3 distinct dietary pattern clusters", \
+detail="Cluster 0: high-protein, Cluster 1: Mediterranean...", \
+hypothesis_id="h1", evidence_type="neutral")
 </tool_examples>""",
     synthesis_scoring_instructions="""\
 For each nutritional intervention candidate, provide:

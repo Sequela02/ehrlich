@@ -29,7 +29,7 @@ type ViewTab = "timeline" | "diagram";
 
 function InvestigationPage() {
   const { id } = Route.useParams();
-  const streamUrl = `/api/v1/investigate/${id}/stream`;
+  const streamUrl = `/investigate/${id}/stream`;
   const {
     events,
     connected,

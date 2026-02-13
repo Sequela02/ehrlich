@@ -48,7 +48,7 @@ Ehrlich uses a three-tier Claude model architecture for cost-efficient investiga
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesizes (3-5 calls)
-Sonnet 4.5 (Researcher) -- Executes experiments with 67 tools (10-20 calls)
+Sonnet 4.5 (Researcher) -- Executes experiments with 70 tools (10-20 calls)
 Haiku 4.5 (Summarizer)  -- Compresses large outputs, classifies domains (5-10 calls)
 ```
 
@@ -76,7 +76,7 @@ Cost: ~$3-4 per investigation (vs ~$11 with all-Opus).
 
 All data sources are free and open-access.
 
-## 65 Tools
+## 70 Tools
 
 | Context | Tool | Description |
 |---------|------|-------------|
@@ -95,9 +95,12 @@ All data sources are free and open-access.
 | Analysis | `analyze_substructures` | Chi-squared enrichment analysis |
 | Analysis | `compute_properties` | Property distributions (active vs inactive) |
 | Analysis | `search_pharmacology` | GtoPdb curated receptor/ligand interactions |
-| Prediction | `train_model` | Train XGBoost/Chemprop on any SMILES+activity data |
+| Prediction | `train_model` | Train XGBoost on SMILES+activity data |
 | Prediction | `predict_candidates` | Score compounds with trained model |
 | Prediction | `cluster_compounds` | Butina structural clustering |
+| ML | `train_classifier` | Train binary classifier on tabular feature data (any domain) |
+| ML | `predict_scores` | Score samples with trained classifier (any domain) |
+| ML | `cluster_data` | Hierarchical clustering on tabular features (any domain) |
 | Simulation | `search_protein_targets` | RCSB PDB target discovery by organism/function |
 | Simulation | `dock_against_target` | Descriptor-based binding energy estimation |
 | Simulation | `predict_admet` | Drug-likeness profiling |
@@ -138,18 +141,20 @@ All data sources are free and open-access.
 | Visualization | `render_nutrient_comparison` | Grouped bar chart comparing nutrient profiles |
 | Visualization | `render_nutrient_adequacy` | Horizontal bar chart with DRI adequacy + MAR score |
 | Visualization | `render_therapeutic_window` | Therapeutic window chart (EAR/RDA/AI/UL zones) |
+| Statistics | `run_statistical_test` | Compare two numeric groups (auto-selects t-test/Welch/Mann-Whitney) |
+| Statistics | `run_categorical_test` | Test contingency tables (auto-selects Fisher's exact/chi-squared) |
 | Investigation | `propose_hypothesis` | Register testable hypothesis |
 | Investigation | `design_experiment` | Plan experiment with tool sequence |
 | Investigation | `evaluate_hypothesis` | Assess outcome with confidence score |
 | Investigation | `record_finding` | Record finding linked to hypothesis |
 | Investigation | `record_negative_control` | Validate model with known-inactive compounds |
-| Investigation | `search_prior_research` | Search past investigation findings via FTS5 |
+| Investigation | `search_prior_research` | Search past investigation findings via full-text search |
 | Investigation | `conclude_investigation` | Final summary with ranked candidates |
 
 ## Tech Stack
 
-- **Server:** Python 3.12, FastAPI, uv, SQLite (aiosqlite), httpx
-- **Console:** React 19, TypeScript 5.6+, Bun, Vite 7+, TanStack Router, 3Dmol.js
+- **Server:** Python 3.12, FastAPI, uv, PostgreSQL (asyncpg), httpx
+- **Console:** React 19, TypeScript 5.6+, Bun, Vite 7+, TanStack Router, 3Dmol.js, WorkOS AuthKit
 - **AI:** Claude Opus 4.6 + Sonnet 4.5 + Haiku 4.5 (Anthropic API) with tool use
 - **Science:** RDKit, Chemprop, XGBoost, PyArrow
 - **Visualization:** 3Dmol.js (live 3D molecular scene), React Flow (investigation diagrams)
@@ -162,6 +167,7 @@ All data sources are free and open-access.
 - [uv](https://docs.astral.sh/uv/) (Python package manager)
 - [Bun](https://bun.sh/) (JavaScript runtime)
 - Python 3.12
+- PostgreSQL 16+
 - An Anthropic API key
 
 ### Environment Variables
@@ -170,6 +176,9 @@ All data sources are free and open-access.
 |----------|----------|-------------|
 | `EHRLICH_ANTHROPIC_API_KEY` | Yes | Anthropic API key for Claude |
 | `ANTHROPIC_API_KEY` | Alt | Falls back to this if EHRLICH_ not set |
+| `EHRLICH_DATABASE_URL` | Yes | PostgreSQL connection URL (default: `postgresql://postgres:postgres@localhost:5432/ehrlich`) |
+| `EHRLICH_WORKOS_CLIENT_ID` | Yes | WorkOS AuthKit client ID (authentication) |
+| `EHRLICH_WORKOS_API_KEY` | Yes | WorkOS API key (authentication) |
 | `EHRLICH_DIRECTOR_MODEL` | No | Director model (default: `claude-opus-4-6`) |
 | `EHRLICH_RESEARCHER_MODEL` | No | Researcher model (default: `claude-sonnet-4-5-20250929`) |
 | `EHRLICH_SUMMARIZER_MODEL` | No | Summarizer model (default: `claude-haiku-4-5-20251001`) |
@@ -177,9 +186,17 @@ All data sources are free and open-access.
 | `EHRLICH_ANTHROPIC_MODEL` | No | Single-model fallback (overrides all three) |
 | `EHRLICH_MAX_ITERATIONS` | No | Max agent loop iterations (default: 50) |
 | `EHRLICH_MAX_ITERATIONS_PER_PHASE` | No | Max iterations per experiment in multi-model mode (default: 10) |
-| `EHRLICH_DB_PATH` | No | SQLite database path (default: `data/ehrlich.db`) |
 | `EHRLICH_LOG_LEVEL` | No | Logging level (default: INFO) |
 | `EHRLICH_COMPTOX_API_KEY` | No | EPA CompTox API key (free, for toxicity data) |
+
+### Database
+
+```bash
+# Create the PostgreSQL database
+createdb ehrlich
+# Or via psql:
+# psql -c "CREATE DATABASE ehrlich;"
+```
 
 ### Server
 
@@ -188,6 +205,9 @@ cd server
 uv sync --extra dev                    # Core + dev dependencies
 # uv sync --extra all --extra dev      # All deps including deep learning
 export EHRLICH_ANTHROPIC_API_KEY=sk-ant-...
+export EHRLICH_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/ehrlich
+export EHRLICH_WORKOS_CLIENT_ID=client_...
+export EHRLICH_WORKOS_API_KEY=sk_...
 uv run uvicorn ehrlich.api.app:create_app --factory --reload --port 8000
 ```
 
@@ -232,20 +252,28 @@ Server at :8000, Console at :3000.
 
 ## API Endpoints
 
+### Public (no auth required)
+
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/v1/health` | Health check |
 | GET | `/api/v1/methodology` | Methodology: phases, domains, tools, data sources, models |
 | GET | `/api/v1/stats` | Aggregate counts (tools, domains, phases, data sources, events) |
-| GET | `/api/v1/investigate` | List all investigations (most recent first) |
 | GET | `/api/v1/investigate/{id}` | Full investigation detail |
-| POST | `/api/v1/investigate` | Create new investigation |
-| GET | `/api/v1/investigate/{id}/stream` | SSE stream of investigation events |
-| POST | `/api/v1/investigate/{id}/approve` | Approve/reject formulated hypotheses |
 | GET | `/api/v1/molecule/depict?smiles=&w=&h=` | 2D SVG depiction (`image/svg+xml`, cached 24h) |
 | GET | `/api/v1/molecule/conformer?smiles=` | 3D conformer (JSON: mol_block, energy, num_atoms) |
 | GET | `/api/v1/molecule/descriptors?smiles=` | Molecular descriptors + Lipinski pass/fail |
 | GET | `/api/v1/targets` | List protein targets (pdb_id, name, organism) |
+
+### Protected (WorkOS JWT required)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/investigate` | List user's investigations (most recent first) |
+| POST | `/api/v1/investigate` | Create new investigation (`director_tier`: haiku/sonnet/opus) |
+| GET | `/api/v1/investigate/{id}/stream` | SSE stream of investigation events (supports `?token=` for EventSource) |
+| POST | `/api/v1/investigate/{id}/approve` | Approve/reject formulated hypotheses |
+| GET | `/api/v1/credits/balance` | Current credit balance + BYOK status |
 
 ### SSE Event Types
 

@@ -88,7 +88,7 @@ DDD monorepo with 10 bounded contexts. Each context follows `domain/` -> `applic
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence (NO tools)
-Sonnet 4.5 (Researcher) -- Executes experiments with 67 tools (parallel: 2 per batch)
+Sonnet 4.5 (Researcher) -- Executes experiments with 70 tools (parallel: 2 per batch)
 Haiku 4.5 (Summarizer)  -- Compresses large outputs, classifies domains
 ```
 

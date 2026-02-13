@@ -44,7 +44,7 @@ Ehrlich uses a three-tier Claude model architecture for cost-efficient investiga
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesizes (3-5 calls)
     │                       NO tool access, structured JSON responses only
     │
-    ├── Sonnet 4.5 (Researcher) -- Executes experiments with 67 domain-filtered tools (10-20 calls, parallel x2)
+    ├── Sonnet 4.5 (Researcher) -- Executes experiments with 70 domain-filtered tools (10-20 calls, parallel x2)
     │                               Tool-calling loop with max_iterations_per_experiment guard
     │
     └── Haiku 4.5 (Summarizer)  -- Compresses large tool outputs >2000 chars, PICO+classification, evidence grading
@@ -66,9 +66,39 @@ Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesize
 
 ## Persistence
 
-Investigations are persisted to SQLite (WAL mode) via `aiosqlite`. The `SqliteInvestigationRepository` implements the `InvestigationRepository` ABC defined in the domain layer. Hypotheses, experiments, findings, candidates, negative controls, citations, domain, and cost data are JSON-serialized into a single `investigations` table. All SSE events are persisted to a separate `events` table for full timeline replay on page reload.
+Investigations are persisted to PostgreSQL via `asyncpg` connection pooling. The `InvestigationRepository` implements the `InvestigationRepository` ABC defined in the domain layer. Hypotheses, experiments, findings, candidates, negative controls, citations, domain, and cost data are stored in `JSONB` columns in the `investigations` table. All SSE events are persisted to a separate `events` table for full timeline replay on page reload.
 
-The API keeps `_active_investigations` and `_active_orchestrators` dicts for in-flight SSE streaming and user-guided steering (hypothesis approval). Persists to SQLite on completion (or error).
+Additional tables: `users` (WorkOS identity, credit balance, encrypted API key), `credit_transactions` (audit trail for credit purchases/spending/refunds). Full-text search uses PostgreSQL `tsvector` + GIN index.
+
+The API keeps `_active_investigations` and `_active_orchestrators` dicts for in-flight SSE streaming and user-guided steering (hypothesis approval). Persists to PostgreSQL on completion (or error).
+
+## Authentication & Credits
+
+### WorkOS JWT Authentication
+
+User identity is managed via WorkOS AuthKit (1M MAU free tier). The backend verifies JWTs against WorkOS JWKS endpoints (`api/auth.py`). Three dependency functions support different auth patterns:
+
+- `get_current_user` -- extracts JWT from `Authorization: Bearer <token>` header (standard REST endpoints)
+- `get_current_user_sse` -- supports both header auth and `?token=<jwt>` query parameter (EventSource API does not support custom headers)
+- `get_optional_user` -- returns user dict or `None` for public endpoints
+
+The frontend wraps the app in `<AuthKitProvider>` from `@workos-inc/authkit-react`. Authenticated fetch is handled via `shared/lib/api.ts`.
+
+### Credit System
+
+Investigations consume credits based on the director model tier:
+
+| Tier | Director Model | Credits |
+|------|---------------|---------|
+| haiku | Haiku 4.5 | 1 |
+| sonnet | Sonnet 4.5 | 3 |
+| opus | Opus 4.6 | 5 |
+
+Researcher is always Sonnet 4.5 and Summarizer is always Haiku 4.5, regardless of tier. Credits are deducted on investigation start (not completion) to prevent abuse. Credits are refunded on investigation failure. The `credit_transactions` table provides a full audit trail.
+
+### BYOK (Bring Your Own Key)
+
+Users can provide their own Anthropic API key via the `X-Anthropic-Key` HTTP header. BYOK users bypass the credit system entirely -- they pay Anthropic directly. The API key is forwarded to `AnthropicClientAdapter` for that investigation's API calls.
 
 ## Multi-Domain Investigations
 
@@ -80,9 +110,9 @@ The Haiku classifier outputs a JSON array of domain categories. Tool filtering u
 
 ## Self-Referential Research
 
-Ehrlich queries its own past investigation findings during new research. The `search_prior_research` tool (available during Phase 2 Literature Survey) queries a SQLite FTS5 virtual table (`findings_fts`) indexing finding titles, details, evidence types, hypothesis statements/statuses, and source provenance. The FTS5 index is rebuilt on investigation completion via `_rebuild_fts()`.
+Ehrlich queries its own past investigation findings during new research. The `search_prior_research` tool (available during Phase 2 Literature Survey) queries a PostgreSQL `tsvector` column with GIN index on the `investigations` table, indexing finding titles, details, evidence types, hypothesis statements/statuses, and source provenance.
 
-The tool is intercepted in the orchestrator's `_dispatch_tool()` and routed to `SqliteInvestigationRepository.search_findings()`, which performs BM25-ranked full-text search with a JOIN to the investigations table for prompt context. Query tokens are quoted to handle FTS5 special characters (hyphens, boolean operators).
+The tool is intercepted in the orchestrator's `_dispatch_tool()` and routed to `InvestigationRepository.search_findings()`, which performs ranked full-text search with prompt context.
 
 Findings from past investigations carry provenance `source_type: "ehrlich"`, `source_id: "{investigation_id}"`. Frontend renders Ehrlich-branded source badges linking to past investigations (internal navigation, no external tab).
 
@@ -196,7 +226,7 @@ api/ -> investigation/application/ only
 ### Multi-Model (Default)
 
 1. User submits research prompt via Console (or selects a template)
-2. API creates Investigation, persists to SQLite, starts MultiModelOrchestrator
+2. API creates Investigation, persists to PostgreSQL, starts MultiModelOrchestrator
 3. **Haiku** decomposes prompt via PICO framework (Population, Intervention, Comparison, Outcome) and classifies domain in a single call; queries past completed investigations in same domain
 4. **Domain detection** -- `DomainRegistry.detect()` returns `list[DomainConfig]` (one or more); `merge_domain_configs()` creates merged config for cross-domain; emits `DomainDetected` SSE event with display config (includes `domains` sub-list for multi-domain); researcher tool list filtered to merged domain-relevant tools
 5. **Researcher** (Sonnet) conducts structured literature survey with domain-filtered tools, citation chasing, evidence-level grading; **Haiku** grades body-of-evidence (GRADE-adapted) and self-assesses quality (AMSTAR-2); emits `LiteratureSurveyCompleted` event
@@ -219,5 +249,5 @@ api/ -> investigation/application/ only
     - `HypothesisApprovalRequested` pauses for user steering
     - `ValidationMetricsComputed` carries Z'-factor, quality, control separation stats
     - `InvestigationCompleted` includes candidates, hypotheses, findings, negative controls, validation metrics
-12. Investigation persisted to SQLite with full state + events for timeline replay
+12. Investigation persisted to PostgreSQL with full state + events for timeline replay
 13. Console displays: phase indicator, hypothesis board, lab view (3Dmol.js, molecular domain only), investigation diagram (React Flow), domain-specific visualizations (charts, diagrams), findings with source badges, dynamic candidate table with domain-specific score columns, structured 8-section report with markdown export

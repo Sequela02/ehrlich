@@ -234,8 +234,11 @@ export interface ValidationMetricsData {
   investigation_id: string;
 }
 
+export type DirectorTier = "haiku" | "sonnet" | "opus";
+
 export interface InvestigationRequest {
   prompt: string;
+  director_tier?: DirectorTier;
 }
 
 export interface InvestigationResponse {

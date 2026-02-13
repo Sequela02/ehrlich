@@ -5,7 +5,7 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
@@ -19,6 +19,7 @@ from ehrlich.analysis.tools import (
     search_compounds,
     search_pharmacology,
 )
+from ehrlich.api.auth import get_current_user, get_current_user_sse
 from ehrlich.api.sse import SSEEventType, domain_event_to_sse
 from ehrlich.chemistry.tools import (
     compute_descriptors,
@@ -39,7 +40,7 @@ from ehrlich.investigation.domain.investigation import Investigation, Investigat
 from ehrlich.investigation.domain.mcp_config import MCPServerConfig
 from ehrlich.investigation.infrastructure.anthropic_client import AnthropicClientAdapter
 from ehrlich.investigation.infrastructure.mcp_bridge import MCPBridge
-from ehrlich.investigation.infrastructure.sqlite_repository import SqliteInvestigationRepository
+from ehrlich.investigation.infrastructure.repository import InvestigationRepository
 from ehrlich.investigation.tools import (
     conclude_investigation,
     design_experiment,
@@ -76,7 +77,14 @@ from ehrlich.nutrition.tools import (
     search_supplement_labels,
     search_supplement_safety,
 )
-from ehrlich.prediction.tools import cluster_compounds, predict_candidates, train_model
+from ehrlich.prediction.tools import (
+    cluster_compounds,
+    cluster_data,
+    predict_candidates,
+    predict_scores,
+    train_classifier,
+    train_model,
+)
 from ehrlich.simulation.tools import (
     assess_resistance,
     dock_against_target,
@@ -107,14 +115,37 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["investigation"])
 
-_repository: SqliteInvestigationRepository | None = None
+_require_user = Depends(get_current_user)
+_require_user_sse = Depends(get_current_user_sse)
+
+TIER_MODELS: dict[str, str] = {
+    "haiku": "claude-haiku-4-5-20251001",
+    "sonnet": "claude-sonnet-4-5-20250929",
+    "opus": "claude-opus-4-6",
+}
+
+TIER_CREDITS: dict[str, int] = {
+    "haiku": 1,
+    "sonnet": 3,
+    "opus": 5,
+}
+
+_repository: InvestigationRepository | None = None
 _active_investigations: dict[str, Investigation] = {}
 _active_orchestrators: dict[str, MultiModelOrchestrator] = {}
 _subscribers: dict[str, list[asyncio.Queue[dict[str, str] | None]]] = {}
+# Transient per-investigation metadata (tier, credit cost, refund info)
+_investigation_meta: dict[str, dict[str, Any]] = {}
 
 
 class InvestigateRequest(BaseModel):
     prompt: str
+    director_tier: str = "opus"
+
+
+class CreditBalanceResponse(BaseModel):
+    credits: int
+    is_byok: bool
 
 
 class InvestigateResponse(BaseModel):
@@ -147,13 +178,19 @@ class InvestigationSummary(BaseModel):
     candidate_count: int
 
 
-async def init_repository(db_path: str) -> None:
+async def init_repository(database_url: str) -> None:
     global _repository  # noqa: PLW0603
-    _repository = SqliteInvestigationRepository(db_path)
-    await _repository.initialize()
+    repo = InvestigationRepository(database_url)
+    await repo.initialize()
+    _repository = repo
 
 
-def _get_repository() -> SqliteInvestigationRepository:
+async def close_repository() -> None:
+    if _repository is not None:
+        await _repository.close()
+
+
+def _get_repository() -> InvestigationRepository:
     if _repository is None:
         msg = "Repository not initialized"
         raise RuntimeError(msg)
@@ -172,6 +209,7 @@ def _build_registry() -> ToolRegistry:
     _training_exercise = frozenset({"training", "exercise"})
     _nutrition = frozenset({"nutrition"})
     _nutrition_safety = frozenset({"nutrition", "safety"})
+    _ml = frozenset({"ml"})
     _viz = frozenset({"visualization"})
     _chem_viz = frozenset({"chemistry", "visualization"})
     _sim_viz = frozenset({"simulation", "visualization"})
@@ -197,10 +235,14 @@ def _build_registry() -> ToolRegistry:
         ("analyze_substructures", analyze_substructures, _analysis),
         ("compute_properties", compute_properties, _analysis),
         ("search_pharmacology", search_pharmacology, _analysis),
-        # Prediction (3)
+        # Prediction (3) -- molecular-specific
         ("train_model", train_model, _pred),
         ("predict_candidates", predict_candidates, _pred),
         ("cluster_compounds", cluster_compounds, _pred),
+        # ML (3) -- domain-agnostic
+        ("train_classifier", train_classifier, _ml),
+        ("predict_scores", predict_scores, _ml),
+        ("cluster_data", cluster_data, _ml),
         # Simulation (7)
         ("search_protein_targets", search_protein_targets, _sim),
         ("dock_against_target", dock_against_target, _sim),
@@ -300,9 +342,12 @@ def _end_broadcast(investigation_id: str) -> None:
 
 
 @router.get("/investigate")
-async def list_investigations() -> list[InvestigationSummary]:
+async def list_investigations(
+    user: dict[str, Any] = _require_user,
+) -> list[InvestigationSummary]:
     repo = _get_repository()
-    investigations = await repo.list_all()
+    db_user = await repo.get_or_create_user(user["workos_id"], user["email"])
+    investigations = await repo.list_by_user(str(db_user["id"]))
     return [
         InvestigationSummary(
             id=inv.id,
@@ -313,6 +358,17 @@ async def list_investigations() -> list[InvestigationSummary]:
         )
         for inv in investigations
     ]
+
+
+@router.get("/credits/balance")
+async def get_credit_balance(
+    request: Request,
+    user: dict[str, Any] = _require_user,
+) -> CreditBalanceResponse:
+    repo = _get_repository()
+    credits = await repo.get_user_credits(user["workos_id"])
+    is_byok = bool(request.headers.get("X-Anthropic-Key"))
+    return CreditBalanceResponse(credits=credits, is_byok=is_byok)
 
 
 @router.get("/investigate/{investigation_id}")
@@ -328,10 +384,37 @@ async def get_investigation(investigation_id: str) -> InvestigationDetail:
 
 
 @router.post("/investigate")
-async def start_investigation(request: InvestigateRequest) -> InvestigateResponse:
+async def start_investigation(
+    request: InvestigateRequest,
+    http_request: Request,
+    user: dict[str, Any] = _require_user,
+) -> InvestigateResponse:
+    tier = request.director_tier
+    if tier not in TIER_CREDITS:
+        raise HTTPException(status_code=400, detail=f"Invalid director tier: {tier}")
+
+    is_byok = bool(http_request.headers.get("X-Anthropic-Key"))
+    credit_cost = TIER_CREDITS[tier]
+
     investigation = Investigation(prompt=request.prompt)
     repo = _get_repository()
-    await repo.save(investigation)
+    db_user = await repo.get_or_create_user(user["workos_id"], user["email"])
+
+    # Save investigation first (credit_transactions FK references investigations)
+    await repo.save(investigation, user_id=str(db_user["id"]))
+
+    if not is_byok:
+        deducted = await repo.deduct_credits(user["workos_id"], credit_cost, investigation.id)
+        if not deducted:
+            raise HTTPException(status_code=402, detail="Insufficient credits")
+
+    _investigation_meta[investigation.id] = {
+        "tier": tier,
+        "credit_cost": credit_cost if not is_byok else 0,
+        "workos_id": user["workos_id"],
+        "is_byok": is_byok,
+    }
+
     return InvestigateResponse(id=investigation.id, status=investigation.status.value)
 
 
@@ -344,6 +427,7 @@ class ApproveRequest(BaseModel):
 async def approve_hypotheses(
     investigation_id: str,
     request: ApproveRequest,
+    user: dict[str, Any] = _require_user,
 ) -> dict[str, str]:
     orchestrator = _active_orchestrators.get(investigation_id)
     if orchestrator is None:
@@ -353,7 +437,11 @@ async def approve_hypotheses(
 
 
 @router.get("/investigate/{investigation_id}/stream")
-async def stream_investigation(investigation_id: str) -> EventSourceResponse:
+async def stream_investigation(
+    investigation_id: str,
+    request: Request,
+    user: dict[str, Any] = _require_user_sse,
+) -> EventSourceResponse:
     repo = _get_repository()
     investigation = _active_investigations.get(investigation_id)
     if investigation is None:
@@ -383,6 +471,14 @@ async def stream_investigation(investigation_id: str) -> EventSourceResponse:
     mcp_configs = _build_mcp_configs()
     mcp_bridge = MCPBridge() if mcp_configs else None
 
+    # BYOK: check for user-provided API key
+    api_key_override = request.headers.get("X-Anthropic-Key") or None
+
+    # Read tier from investigation meta (set during POST /investigate)
+    meta = _investigation_meta.get(investigation.id, {})
+    tier = meta.get("tier", "opus")
+    director_model_override = TIER_MODELS.get(tier)
+
     _active_investigations[investigation.id] = investigation
     _subscribers[investigation.id] = []
 
@@ -393,10 +489,13 @@ async def stream_investigation(investigation_id: str) -> EventSourceResponse:
         domain_registry,
         mcp_bridge,
         mcp_configs,
+        api_key_override=api_key_override,
+        director_model_override=director_model_override,
     )
     _active_orchestrators[investigation.id] = orchestrator
 
     async def event_generator() -> AsyncGenerator[dict[str, str], None]:
+        failed = False
         try:
             async for domain_event in orchestrator.run(investigation):
                 sse_event = domain_event_to_sse(domain_event)
@@ -419,11 +518,23 @@ async def stream_investigation(investigation_id: str) -> EventSourceResponse:
                         )
                     _broadcast_event(investigation.id, event)
                     yield event
+        except Exception:
+            failed = True
+            raise
         finally:
             _end_broadcast(investigation.id)
             await repo.update(investigation)
             _active_investigations.pop(investigation.id, None)
             _active_orchestrators.pop(investigation.id, None)
+
+            # Refund credits on failure (not for BYOK)
+            if failed or investigation.status == InvestigationStatus.FAILED:
+                credit_cost = meta.get("credit_cost", 0)
+                workos_id = meta.get("workos_id")
+                if credit_cost > 0 and workos_id:
+                    await repo.refund_credits(workos_id, credit_cost, investigation.id)
+
+            _investigation_meta.pop(investigation.id, None)
 
     return EventSourceResponse(event_generator())
 
@@ -431,12 +542,16 @@ async def stream_investigation(investigation_id: str) -> EventSourceResponse:
 def _create_orchestrator(
     settings: Any,
     registry: ToolRegistry,
-    repository: SqliteInvestigationRepository,
+    repository: InvestigationRepository,
     domain_registry: DomainRegistry | None = None,
     mcp_bridge: MCPBridge | None = None,
     mcp_configs: list[MCPServerConfig] | None = None,
+    api_key_override: str | None = None,
+    director_model_override: str | None = None,
 ) -> MultiModelOrchestrator:
-    api_key = settings.anthropic_api_key or None
+    api_key = api_key_override or settings.anthropic_api_key or None
+
+    director_model = director_model_override or settings.director_model
 
     thinking = None
     if settings.director_thinking == "enabled":
@@ -446,7 +561,7 @@ def _create_orchestrator(
         }
 
     director = AnthropicClientAdapter(
-        model=settings.director_model,
+        model=director_model,
         api_key=api_key,
         max_tokens=32768,
         effort=settings.director_effort,

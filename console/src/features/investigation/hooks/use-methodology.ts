@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { apiFetch } from "@/shared/lib/api";
 
 interface ScoreDefinition {
   key: string;
@@ -56,18 +57,10 @@ export interface Methodology {
   models: ModelInfo[];
 }
 
-async function fetchMethodology(): Promise<Methodology> {
-  const response = await fetch("/api/v1/methodology");
-  if (!response.ok) {
-    throw new Error("Failed to fetch methodology");
-  }
-  return response.json() as Promise<Methodology>;
-}
-
 export function useMethodology() {
   return useQuery({
     queryKey: ["methodology"],
-    queryFn: fetchMethodology,
+    queryFn: () => apiFetch<Methodology>("/methodology"),
     staleTime: 5 * 60_000,
   });
 }

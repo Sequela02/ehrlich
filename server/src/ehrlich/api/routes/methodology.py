@@ -90,7 +90,7 @@ MODELS: list[dict[str, str]] = [
         "role": "Researcher",
         "model_id": "claude-sonnet-4-5-20250929",
         "purpose": (
-            "Executes experiments with 67 tools in parallel batches. "
+            "Executes experiments with 70 tools in parallel batches. "
             "Records findings with evidence provenance and citations."
         ),
     },
@@ -233,6 +233,7 @@ _TAG_TO_CONTEXT: dict[str, str] = {
     "nutrition": "Nutrition Science",
     "safety": "Nutrition Science",
     "interaction": "Nutrition Science",
+    "ml": "ML",
 }
 
 
@@ -318,6 +319,7 @@ async def get_methodology() -> MethodologyResponse:
         "Literature",
         "Analysis",
         "Prediction",
+        "ML",
         "Simulation",
         "Training Science",
         "Nutrition Science",

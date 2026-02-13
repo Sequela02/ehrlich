@@ -43,7 +43,7 @@ export function CTA() {
           Same product at every tier.
         </h2>
         <p className="text-base text-muted-foreground leading-relaxed">
-          No feature gates. All 67 tools, all 16 data sources, full 6-phase methodology
+          No feature gates. All 70 tools, all 16 data sources, full 6-phase methodology
           at every level. The only variable is the Director model quality: Haiku reasons
           adequately, Sonnet reasons well, Opus reasons deeply.
         </p>

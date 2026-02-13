@@ -10,7 +10,7 @@ TRAINING_SCIENCE = DomainConfig(
     identifier_type="protocol",
     identifier_label="Protocol",
     candidate_label="Training Protocols",
-    tool_tags=frozenset({"training", "literature", "clinical", "exercise"}),
+    tool_tags=frozenset({"training", "literature", "clinical", "exercise", "ml"}),
     score_definitions=(
         ScoreDefinition(
             key="evidence_score",
@@ -228,6 +228,24 @@ training_days_per_week=4)
 2. record_finding(title="12-week undulating periodization plan for strength", \
 detail="3 mesocycles with progressive overload...", hypothesis_id="h1", \
 evidence_type="neutral")
+
+Example: Training a classifier on study-level features
+1. train_classifier(feature_names=["volume", "intensity", "frequency", \
+"duration_weeks", "baseline_vo2max"], feature_values=[...flattened row-major...], \
+labels=[1.0, 0.0, ...], target_name="VO2max responders")
+2. predict_scores(feature_names=["volume", "intensity", "frequency", \
+"duration_weeks", "baseline_vo2max"], feature_values=[...], \
+model_id="xgboost_vo2max_abc123")
+3. record_finding(title="ML model predicts VO2max responders", \
+detail="AUROC 0.82, top features: intensity, baseline_vo2max...", \
+hypothesis_id="h1", evidence_type="supporting")
+
+Example: Clustering training protocols by features
+1. cluster_data(feature_names=["sets", "reps", "intensity_pct", "rest_sec"], \
+feature_values=[...], n_clusters=4, identifiers="protocol_A,protocol_B,...")
+2. record_finding(title="4 distinct protocol clusters identified", \
+detail="Cluster 0: high-volume, Cluster 1: high-intensity...", \
+hypothesis_id="h1", evidence_type="neutral")
 </tool_examples>""",
     synthesis_scoring_instructions="""\
 For each training protocol candidate, provide:

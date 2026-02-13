@@ -17,6 +17,7 @@ MOLECULAR_SCIENCE = DomainConfig(
             "prediction",
             "simulation",
             "literature",
+            "ml",
         }
     ),
     score_definitions=(

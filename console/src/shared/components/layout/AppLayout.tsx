@@ -1,5 +1,7 @@
 import { useState, type ReactNode } from "react";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Coins, Key, LogIn, LogOut } from "lucide-react";
+import { useAuth } from "@/shared/hooks/use-auth";
+import { useCredits } from "@/features/investigation/hooks/use-credits";
 import { Toaster } from "@/shared/components/ui/Toaster";
 import { MethodologyDrawer } from "./MethodologyDrawer";
 
@@ -9,6 +11,8 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { user, isLoading, signIn, signOut } = useAuth();
+  const { data: creditData } = useCredits();
 
   return (
     <div className="min-h-screen bg-background">
@@ -34,6 +38,48 @@ export function AppLayout({ children }: AppLayoutProps) {
             >
               <BookOpen className="h-4 w-4" />
             </button>
+
+            {!isLoading && (
+              <>
+                {user ? (
+                  <div className="flex items-center gap-2">
+                    {creditData && (
+                      <span className="inline-flex items-center gap-1 rounded border border-border px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                        {creditData.is_byok ? (
+                          <>
+                            <Key className="h-3 w-3 text-primary" />
+                            BYOK
+                          </>
+                        ) : (
+                          <>
+                            <Coins className="h-3 w-3 text-primary" />
+                            {creditData.credits} cr
+                          </>
+                        )}
+                      </span>
+                    )}
+                    <span className="hidden font-mono text-[11px] text-muted-foreground sm:block">
+                      {user.email}
+                    </span>
+                    <button
+                      onClick={() => signOut()}
+                      className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      title="Sign out"
+                    >
+                      <LogOut className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => signIn()}
+                    className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 font-mono text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  >
+                    <LogIn className="h-3.5 w-3.5" />
+                    Sign in
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </div>
       </header>

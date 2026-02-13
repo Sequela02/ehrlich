@@ -22,6 +22,7 @@ class XGBoostAdapter:
         y_train: np.ndarray[Any, np.dtype[np.float64]],
         x_test: np.ndarray[Any, np.dtype[np.float64]],
         y_test: np.ndarray[Any, np.dtype[np.float64]],
+        feature_names: list[str] | None = None,
     ) -> tuple[XGBClassifier, dict[str, float], dict[str, float]]:
         n_pos = int(y_train.sum())
         n_neg = len(y_train) - n_pos
@@ -40,7 +41,7 @@ class XGBoostAdapter:
         model.fit(x_train, y_train)
 
         metrics = self._compute_metrics(model, x_test, y_test)
-        feature_importance = self._extract_feature_importance(model)
+        feature_importance = self._extract_feature_importance(model, feature_names)
 
         return model, metrics, feature_importance
 
@@ -127,7 +128,16 @@ class XGBoostAdapter:
         return (count_ge + 1) / (n_permutations + 1)
 
     @staticmethod
-    def _extract_feature_importance(model: XGBClassifier) -> dict[str, float]:
+    def _extract_feature_importance(
+        model: XGBClassifier,
+        feature_names: list[str] | None = None,
+    ) -> dict[str, float]:
         importances: np.ndarray[Any, np.dtype[np.float64]] = model.feature_importances_
         top_indices = np.argsort(importances)[-20:][::-1]
-        return {f"bit_{i}": float(importances[i]) for i in top_indices if importances[i] > 0}
+        if feature_names:
+            return {
+                feature_names[i]: float(importances[i])
+                for i in top_indices
+                if importances[i] > 0 and i < len(feature_names)
+            }
+        return {f"feature_{i}": float(importances[i]) for i in top_indices if importances[i] > 0}

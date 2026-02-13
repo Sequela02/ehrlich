@@ -16,6 +16,7 @@
         "@visx/scale": "^3.12.0",
         "@visx/shape": "^3.12.0",
         "@visx/tooltip": "^3.12.0",
+        "@workos-inc/authkit-react": "^0.4.0",
         "@xyflow/react": "^12.10.0",
         "clsx": "^2.1.0",
         "lucide-react": "^0.474.0",
@@ -396,6 +397,10 @@
     "@vitest/spy": ["@vitest/spy@3.2.4", "", { "dependencies": { "tinyspy": "^4.0.3" } }, "sha512-vAfasCOe6AIK70iP5UD11Ac4siNUNJ9i/9PZ3NKx07sG6sUxeag1LWdNrMWeKKYBLlzuK+Gn65Yd5nyL6ds+nw=="],
 
     "@vitest/utils": ["@vitest/utils@3.2.4", "", { "dependencies": { "@vitest/pretty-format": "3.2.4", "loupe": "^3.1.4", "tinyrainbow": "^2.0.0" } }, "sha512-fB2V0JFrQSMsCo9HiSq3Ezpdv4iYaXRG1Sx8edX3MwxfyNn83mKiGzOcH+Fkxt4MHxr3y42fQi1oeAInqgX2QA=="],
+
+    "@workos-inc/authkit-js": ["@workos-inc/authkit-js@0.4.1", "", {}, "sha512-wjUnhhiBB2c7cXZPYHhHSV0MjHIZBdLFElLPoBl4+1xMsgR8MCBB6T4z+P5+FJkfzeoU0yztUzXtUq8ItKWBVQ=="],
+
+    "@workos-inc/authkit-react": ["@workos-inc/authkit-react@0.4.1", "", { "dependencies": { "@workos-inc/authkit-js": "0.4.1" }, "peerDependencies": { "react": "18.3.1" } }, "sha512-f29E7XSfAfoCBjiuxjWy+37hVo2qnVuJF8Gvs/4qX4foSkgVfNLHrUU84TYpAnBul5lch1jzB1i6Lf06YMzvPw=="],
 
     "@xyflow/react": ["@xyflow/react@12.10.0", "", { "dependencies": { "@xyflow/system": "0.0.74", "classcat": "^5.0.3", "zustand": "^4.4.0" }, "peerDependencies": { "react": ">=17", "react-dom": ">=17" } }, "sha512-eOtz3whDMWrB4KWVatIBrKuxECHqip6PfA8fTpaS2RUGVpiEAe+nqDKsLqkViVWxDGreq0lWX71Xth/SPAzXiw=="],
 

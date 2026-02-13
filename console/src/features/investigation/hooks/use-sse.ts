@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { buildSSEUrl } from "@/shared/lib/api";
 import type {
   CandidateRow,
   CompletedData,
@@ -364,8 +365,9 @@ export function useSSE(url: string | null): SSEState {
   useEffect(() => {
     if (!url) return;
 
-    function connect() {
-      const source = new EventSource(url!);
+    async function connect() {
+      const resolvedUrl = await buildSSEUrl(url!);
+      const source = new EventSource(resolvedUrl);
       sourceRef.current = source;
 
       source.onopen = () => {

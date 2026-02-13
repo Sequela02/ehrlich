@@ -15,3 +15,4 @@ export { InvestigationDiagram } from "./InvestigationDiagram";
 export { TemplateCards } from "./TemplateCards";
 export { CandidateComparison } from "./CandidateComparison";
 export { InvestigationComparison } from "./InvestigationComparison";
+export { BYOKSettings } from "./BYOKSettings";

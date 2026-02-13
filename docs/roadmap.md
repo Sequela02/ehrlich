@@ -197,7 +197,7 @@ The core: Claude as an autonomous scientist.
 - [x] Tests: mock API, verify request/response handling
 
 ### 5B. Tool Registry
-- [x] Register all tools from all contexts (6 chemistry, 3 literature, 6 analysis, 3 prediction, 7 simulation, 11 training, 10 nutrition, 7 investigation control -- 38 at time of Phase 5; now 67 with API tools + visualization tools + statistics tools)
+- [x] Register all tools from all contexts (6 chemistry, 3 literature, 6 analysis, 3 prediction, 7 simulation, 11 training, 10 nutrition, 7 investigation control -- 38 at time of Phase 5; now 70 with API tools + visualization tools + statistics tools + generic ML tools)
 - [x] Auto-generate JSON Schema from Python type hints + docstrings
 - [x] `get(name)` -> callable, `list_tools()` -> all registered tools, `list_schemas()` -> Anthropic-compatible schemas
 - [x] Schema format matches Anthropic tool_use specification
@@ -330,7 +330,7 @@ Cost-efficient multi-model orchestration, persistence, and UI polish.
 ### 8C. Multi-Model Orchestrator
 - [x] `MultiModelOrchestrator` with hypothesis-driven Director-Worker-Summarizer pattern
 - [x] Director (Opus) formulates hypotheses, designs experiments, evaluates evidence, synthesizes -- NO tool access
-- [x] Researcher (Sonnet) executes experiments with 67 domain-filtered tools (max 10 iterations per experiment)
+- [x] Researcher (Sonnet) executes experiments with 70 domain-filtered tools (max 10 iterations per experiment)
 - [x] Summarizer (Haiku) compresses large outputs exceeding threshold
 - [x] 7 prompts: director formulation/experiment/evaluation/synthesis, researcher experiment, scientist, summarizer
 - [x] Auto-fallback to single-model Orchestrator when researcher == director
@@ -700,7 +700,7 @@ Fixed incorrect hardcoded pricing and added cache hit/miss token tracking for ac
 
 ### SDK-2: Prompt Caching on Tools Array -- DONE
 
-Cache the 67-tool schema array that repeats on every researcher API call.
+Cache the 70-tool schema array that repeats on every researcher API call.
 
 - [x] Add `cache_control: {"type": "ephemeral"}` to the last tool in the tools array before passing to `messages.create`
 - [x] Only apply when tools list is non-empty
@@ -985,7 +985,7 @@ Deepened the nutrition bounded context with 1 new data source, 6 new tools, and 
 - [x] `NutritionService` expanded with 6 new methods + interaction repository injection
 - [x] Frontend: 3 lazy-loaded chart components registered in `VizRegistry`
 
-**Counts:** 56 -> 67 tools, 15 -> 16 data sources, 9 -> 12 viz tools. 643 server tests, 107 console tests.
+**Counts:** 56 -> 67 -> 70 tools (3 generic ML), 15 -> 16 data sources, 9 -> 12 viz tools. 692 server tests, 120 console tests.
 
 ---
 
@@ -1083,7 +1083,7 @@ Side-by-side comparison of investigation runs for reproducibility and consensus 
 
 ## ~~MCP Server~~ -- REJECTED
 
-Exposing Ehrlich's 67 tools as an MCP server was considered and rejected. The tools alone (ChEMBL queries, RDKit computations, etc.) are commodity API wrappers -- the value is the multi-model orchestration (Director-Worker-Summarizer), hypothesis-driven methodology, and parallel experiment execution. An MCP client consuming Ehrlich's tools would lose the scientific rigor that the orchestration guarantees.
+Exposing Ehrlich's 70 tools as an MCP server was considered and rejected. The tools alone (ChEMBL queries, RDKit computations, etc.) are commodity API wrappers -- the value is the multi-model orchestration (Director-Worker-Summarizer), hypothesis-driven methodology, and parallel experiment execution. An MCP client consuming Ehrlich's tools would lose the scientific rigor that the orchestration guarantees.
 
 Ehrlich remains an MCP **consumer** via `MCPBridge` (connecting to external servers like Excalidraw), which adds value by extending the Researcher's toolkit.
 

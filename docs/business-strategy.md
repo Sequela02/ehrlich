@@ -58,7 +58,7 @@ An investigation is a complete scientific workflow: literature survey, hypothesi
 ### Free Tier (Accessible to Everyone)
 - 3 Haiku investigations per month
 - Full 6-phase scientific methodology
-- All 67 tools, all 15 data sources
+- All 70 tools, all 15 data sources
 - Full audit trail and report
 - No feature gates -- same product, different model quality
 
@@ -89,7 +89,7 @@ Buy credits when needed. No commitment. Best for students, occasional users.
 
 ### Enterprise
 - BYOK (Bring Your Own Key) -- use your own Anthropic API key
-- Platform fee for 67 tools, 15 data sources, methodology engine
+- Platform fee for 70 tools, 15 data sources, methodology engine
 - Commercial license (AGPL exemption) for private modifications
 - Future: BYOP (Bring Your Own Provider) -- multi-provider support
 

@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from ehrlich.api.routes.health import router as health_router
-from ehrlich.api.routes.investigation import init_repository
+from ehrlich.api.routes.investigation import close_repository, init_repository
 from ehrlich.api.routes.investigation import router as investigation_router
 from ehrlich.api.routes.methodology import router as methodology_router
 from ehrlich.api.routes.molecule import router as molecule_router
@@ -55,10 +55,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         status = "available" if _check_optional(mod) else "not installed"
         logger.info("  %s: %s", desc, status)
 
-    await init_repository(settings.db_path)
-    logger.info("SQLite repository initialized (path=%s)", settings.db_path)
+    await init_repository(settings.database_url)
+    logger.info("PostgreSQL repository initialized")
 
     yield
+
+    await close_repository()
+    logger.info("PostgreSQL connection pool closed")
 
 
 def create_app() -> FastAPI:

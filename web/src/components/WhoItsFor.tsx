@@ -43,7 +43,7 @@ export function WhoItsFor() {
           Same product at every level.
         </h2>
         <p className="text-base text-muted-foreground leading-relaxed">
-          All 67 tools, all 16 data sources, and the full 6-phase methodology at every tier.
+          All 70 tools, all 16 data sources, and the full 6-phase methodology at every tier.
           The only variable is the Director model quality.
         </p>
       </div>

@@ -127,11 +127,15 @@ We considered: separate registries per domain, tool namespacing, dynamic tool lo
 
 Chemistry tools are impressive. Training and nutrition science tools prove a point. But the real value is the hypothesis-driven loop: formulate with predictions and criteria, test against pre-defined thresholds, evaluate objectively, revise or reject. That loop works for any domain where evidence can be gathered and weighed.
 
-### 5. Frontend abstractions pay for themselves immediately
+### 5. ML capabilities should be domain-agnostic too
+
+The prediction pipeline was originally hardwired to molecular science (SMILES fingerprints, scaffold splits, Butina clustering). But model training, prediction, and clustering are generic operations on feature matrices. The refactor introduced domain ports (`FeatureExtractor`, `DataSplitter`, `Clusterer` ABCs) with molecular adapters preserving exact behavior and generic adapters (random split, Ward hierarchical clustering) enabling any domain. Three new generic tools (`train_classifier`, `predict_scores`, `cluster_data`) accept flat feature matrices -- training and nutrition science can now train XGBoost models on their own data without molecular dependencies.
+
+### 6. Frontend abstractions pay for themselves immediately
 
 Converting the CandidateTable from 4 hardcoded columns to dynamic `score_columns` took effort. But the training science domain rendered correctly on the first try -- zero frontend work needed for new domains.
 
-### 6. Tests as refactoring insurance
+### 7. Tests as refactoring insurance
 
 274 server tests caught every breaking change during the entity generalization. The refactor touched 30+ files across backend and frontend. Not a single silent regression.
 

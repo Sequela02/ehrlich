@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { apiFetch } from "@/shared/lib/api";
 
 interface Stats {
   tool_count: number;
@@ -8,18 +9,10 @@ interface Stats {
   event_type_count: number;
 }
 
-async function fetchStats(): Promise<Stats> {
-  const response = await fetch("/api/v1/stats");
-  if (!response.ok) {
-    throw new Error("Failed to fetch stats");
-  }
-  return response.json() as Promise<Stats>;
-}
-
 export function useStats() {
   return useQuery({
     queryKey: ["stats"],
-    queryFn: fetchStats,
+    queryFn: () => apiFetch<Stats>("/stats"),
     staleTime: 60_000,
   });
 }

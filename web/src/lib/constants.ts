@@ -46,7 +46,7 @@ export const EXAMPLE_PROMPTS = [
 export const DIFFERENTIATORS = [
   {
     label: "Real Computation",
-    tagline: "67 tools that compute, not summarize.",
+    tagline: "70 tools that compute, not summarize.",
     description:
       "Ehrlich trains ML models, runs molecular docking, executes statistical tests, and validates with negative controls. Every tool returns structured data from real computation or real APIs.",
     capabilities: [
@@ -61,7 +61,7 @@ export const DIFFERENTIATORS = [
     label: "Accessible Pricing",
     tagline: "$2-10 per investigation. Free tier included.",
     description:
-      "Full 6-phase methodology, all 67 tools, all 16 data sources at every tier. No feature gates. A student in Mexico and a pharma lab in Boston use the same product. The only variable is model quality.",
+      "Full 6-phase methodology, all 70 tools, all 16 data sources at every tier. No feature gates. A student in Mexico and a pharma lab in Boston use the same product. The only variable is model quality.",
     capabilities: [
       "3 domains, extensible to any",
       "Free: 3 Haiku investigations/month",
@@ -181,7 +181,7 @@ export const METHODOLOGY_PHASES = [
     number: "04",
     label: "Experiment Execution",
     foundation: "Fisher (1935)",
-    description: "Experiments with independent/dependent variables, controls, confounders, and analysis plans. 2 experiments run in parallel. 67 tools across all domains.",
+    description: "Experiments with independent/dependent variables, controls, confounders, and analysis plans. 2 experiments run in parallel. 70 tools across all domains.",
   },
   {
     number: "05",
@@ -288,10 +288,10 @@ export const PRICING_TIERS = [
     price: "$0",
     period: "forever",
     credits: "3 Haiku investigations/month",
-    description: "Full methodology. All 67 tools. All 16 data sources. Findings indexed for future research.",
+    description: "Full methodology. All 70 tools. All 16 data sources. Findings indexed for future research.",
     features: [
       "Full 6-phase scientific methodology",
-      "All 67 tools, all 16 data sources",
+      "All 70 tools, all 16 data sources",
       "Full audit trail and report",
       "Self-referential search (FTS5)",
       "No feature gates",
