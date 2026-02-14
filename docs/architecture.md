@@ -62,8 +62,8 @@ Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesize
 2. **Literature Survey** -- Sonnet researcher conducts structured search with domain-filtered tools, citation chasing (snowballing), evidence-level grading; Haiku grades body-of-evidence (GRADE-adapted) and self-assesses quality (AMSTAR-2-adapted)
 3. **Hypothesis Formulation** -- Opus Director formulates 2-4 hypotheses with predictions, criteria, scope, Bayesian priors (grounded in Popper, Platt, Feynman, Bayesian frameworks -- see `docs/scientific-methodology.md`); receives structured XML literature context (PICO + graded findings)
 4. **User Approval Gate** -- User approves/rejects hypotheses before testing begins (5-min auto-approve timeout)
-5. **Experiment Design + Execution** -- Director designs structured experiment protocols (variables, controls, confounders, analysis plan, criteria), 2 Sonnet researchers execute in parallel per batch (max 10 tool calls each) with methodology guidance (sensitivity, applicability domain, uncertainty, verification, negative results)
-6. **Hypothesis Evaluation** -- Director compares findings against both hypothesis-level and experiment-level criteria with methodology checks (control validation, confounders, analysis plan adherence)
+5. **Experiment Design + Execution** -- `TreeManager.select_next()` picks up to 2 most promising PROPOSED hypotheses (scored by `branch_score`). Director designs structured experiment protocols (variables, controls, confounders, analysis plan, criteria), 2 Sonnet researchers execute in parallel per batch (max 10 tool calls each) with methodology guidance (sensitivity, applicability domain, uncertainty, verification, negative results)
+6. **Hypothesis Evaluation + Tree Action** -- Director compares findings against both hypothesis-level and experiment-level criteria with methodology checks (control validation, confounders, analysis plan adherence). Director decides tree action: **deepen** (spawn narrower sub-hypothesis at depth+1), **branch** (revise into alternative at same depth), or **prune** (mark branch dead). `TreeManager.apply_evaluation()` creates new hypotheses for deepen/branch, marks REJECTED for prune. Loop continues until no explorable hypotheses remain or `max_depth` (default: 3) is reached
 7. **Controls Validation** -- Score positive/negative controls through trained models; compute Z'-factor assay quality, permutation significance, scaffold-split vs random-split comparison
 8. **Synthesis** -- Director synthesizes final report with ranked candidates, citations, validation metrics, cost breakdown
 
@@ -244,8 +244,8 @@ api/ -> investigation/application/ only
    a. **Director** designs experiment protocol (description, tool plan, variables, controls, confounders, analysis plan, criteria, optional statistical test plan)
    b. **2 Researchers** (Sonnet) execute in parallel via asyncio.Queue
    c. **Summarizer** (Haiku) compresses outputs exceeding threshold
-   d. **Director** evaluates hypothesis against pre-defined success/failure criteria
-   e. If revised: new hypothesis spawned with parent link
+   d. **Director** evaluates hypothesis against pre-defined success/failure criteria and decides tree action (deepen/branch/prune)
+   e. `TreeManager.apply_evaluation()` processes action: deepen creates child at depth+1, branch creates sibling at same depth, prune marks REJECTED. Loop repeats with `select_next()` until no explorable hypotheses remain below `max_depth`
 9. **Negative controls** recorded from formulation suggestions
 10. **Director** synthesizes final report with candidates, citations, cost
 11. All events stream via SSE (20 event types) to Console in real-time

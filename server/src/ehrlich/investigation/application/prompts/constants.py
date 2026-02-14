@@ -444,6 +444,26 @@ experiment ran?
 execution? If so, note their impact on confidence.
 </methodology_checks>
 
+<tree_exploration>
+After evaluating the hypothesis, decide how to proceed in the \
+exploration tree:
+- "deepen": Evidence is promising but insufficient. The hypothesis \
+has partial support that warrants narrower, more specific \
+sub-hypotheses. Provide a refined hypothesis in "revision".
+- "prune": Evidence clearly refutes the hypothesis OR confidence \
+is very low. Mark branch as dead, do not explore further.
+- "branch": Partial evidence warrants an alternative direction. \
+Revise into a different approach at the same depth level. \
+Provide the alternative hypothesis in "revision".
+
+Guidelines:
+- If status is "supported" with high confidence: use "prune" \
+(no further exploration needed on this branch).
+- If status is "refuted": use "prune".
+- If status is "revised" and confidence > 0.4: use "deepen".
+- If status is "revised" and confidence <= 0.4: use "branch".
+</tree_exploration>
+
 <output_format>
 Respond with ONLY valid JSON (no markdown fences):
 {
@@ -456,6 +476,7 @@ evidence from findings, referencing evidence hierarchy tiers \
 and effect size thresholds",
   "key_evidence": ["list of key evidence points with numbers \
 and their reliability tier"],
+  "action": "deepen|prune|branch",
   "revision": "If revised, the new refined hypothesis (omit \
 if not revised)"
 }

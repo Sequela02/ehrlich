@@ -61,18 +61,25 @@ Upgraded 4 composite tools from thin pass-throughs to real domain-specific logic
 
 Result: 15 new tests added (6 for search_training_literature, 3 for search_supplement_evidence, 3 for compare_nutrients, 6 for _compute_i_squared). All 61 tests passing (40 training + 21 nutrition). Zero ruff violations, zero mypy errors.
 
-## 14E: Agentic Hypothesis Tree Search -- TODO
+## 14E: Agentic Hypothesis Tree Search -- DONE
 
-Replace linear hypothesis testing with tree-based exploration inspired by AI Scientist v2's agentic tree search. The current parallel batch system (2 experiments per hypothesis) becomes a tree where hypotheses can branch, deepen, or be pruned based on evidence.
+Replace linear hypothesis testing with tree-based exploration inspired by AI Scientist v2's agentic tree search and Ai2 AutoDiscovery's Bayesian surprise-guided exploration. The hypothesis testing loop now uses a `TreeManager` that scores, selects, deepens, branches, and prunes hypotheses as a tree.
 
-- [ ] `HypothesisNode` dataclass -- extends Hypothesis with `depth`, `branch_score`, `children: list[str]`
-- [ ] `TreeManager` in `application/tree_manager.py` -- decides which branches to explore based on confidence scores, prunes low-confidence branches (<0.4 threshold), tracks exploration budget
-- [ ] Director formulation prompt update -- "given current evidence tree, propose sub-hypotheses for the most promising branch OR prune low-confidence branches"
-- [ ] Director evaluation prompt update -- after evaluating, decide: (a) deepen (spawn sub-hypotheses), (b) prune (mark branch as dead), (c) branch (revise into alternative direction)
-- [ ] `max_depth` parameter (default: 3) to prevent infinite recursion
-- [ ] Budget-aware exploration -- track API cost per branch, prefer deepening high-confidence/low-cost branches
-- [ ] `HypothesisTreeEvent` SSE event for frontend tree rendering
-- [ ] Console: `InvestigationDiagram.tsx` already renders React Flow graph -- tree structure renders naturally as growing/pruning graph
+- [x] Tree fields on `Hypothesis` dataclass -- `depth: int`, `branch_score: float`, `children: list[str]` (YAGNI: no separate `HypothesisNode` class needed)
+- [x] `TreeManager` in `application/tree_manager.py` (~120 lines) -- pure application service with 4 methods:
+  - `select_next()` -- picks up to 2 most promising PROPOSED hypotheses (highest `branch_score`, shallowest depth tiebreak, respects `max_depth`)
+  - `compute_branch_score()` -- `prior_confidence * depth_discount * evidence_bonus` (depth penalty: `1/(1+depth*0.2)`, parent evidence bonus: high=1.3x, moderate=1.1x, low=0.9x, very_low=0.7x)
+  - `apply_evaluation()` -- processes Director's `action` field: deepen (child at depth+1), branch (sibling at same depth), prune (mark REJECTED)
+  - `should_continue()` -- True if any PROPOSED hypotheses exist below `max_depth`
+- [x] `EVALUATION_SCHEMA` updated -- `action` field (enum: deepen/prune/branch) added to required fields
+- [x] `DIRECTOR_EVALUATION_PROMPT` updated -- `<tree_exploration>` section with guidelines: supported+high confidence -> prune, refuted -> prune, revised+confidence>0.4 -> deepen, revised+confidence<=0.4 -> branch
+- [x] `max_depth` parameter (default: 3) on `TreeManager` constructor, injectable via `MultiModelOrchestrator`
+- [x] `HypothesisTreeUpdated` domain event + `hypothesis_tree_updated` SSE event type (21st event type)
+- [x] `REJECTED` status added to `HypothesisStatus` enum (for pruned hypotheses)
+- [x] Phase 4 integration -- `run_hypothesis_testing_phase` uses `TreeManager` for selection and evaluation processing; computes initial branch scores for root hypotheses
+- [x] Console: `diagram-builder.ts` -- `rejected` status colors (gray/dimmed), `depth` and `parentId` fields on `HypothesisNode`, parent->child revision edges
+
+Result: `tree_manager.py` (120 lines). 25 unit tests (`test_tree_manager.py`), 4 integration tests in `test_multi_orchestrator.py`. 387 server tests passing, 138 console tests passing. Zero ruff/mypy violations.
 
 ## 14F: Scientific Paper Generator -- DONE
 

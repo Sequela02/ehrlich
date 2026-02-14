@@ -3,9 +3,10 @@ import type { Node, Edge } from "@xyflow/react";
 export interface HypothesisNode {
   id: string;
   statement: string;
-  status: "proposed" | "testing" | "supported" | "refuted" | "revised";
+  status: "proposed" | "testing" | "supported" | "refuted" | "revised" | "rejected";
   parentId?: string;
   confidence?: number;
+  depth?: number;
 }
 
 export interface ExperimentNode {
@@ -41,24 +42,25 @@ export interface DiagramData {
 // -- Dark-friendly palette ------------------------------------------------
 
 const STATUS_COLORS: Record<HypothesisNode["status"], { stroke: string; fill: string; text: string }> = {
-  proposed:  { stroke: "#6b7280", fill: "#1f2937", text: "#d1d5db" },
-  testing:   { stroke: "#3b82f6", fill: "#1e3a5f", text: "#93c5fd" },
+  proposed: { stroke: "#6b7280", fill: "#1f2937", text: "#d1d5db" },
+  testing: { stroke: "#3b82f6", fill: "#1e3a5f", text: "#93c5fd" },
   supported: { stroke: "#22c55e", fill: "#14532d", text: "#86efac" },
-  refuted:   { stroke: "#ef4444", fill: "#450a0a", text: "#fca5a5" },
-  revised:   { stroke: "#f59e0b", fill: "#451a03", text: "#fcd34d" },
+  refuted: { stroke: "#ef4444", fill: "#450a0a", text: "#fca5a5" },
+  revised: { stroke: "#f59e0b", fill: "#451a03", text: "#fcd34d" },
+  rejected: { stroke: "#374151", fill: "#111827", text: "#6b7280" },
 };
 
 const EXPERIMENT_COLORS: Record<ExperimentNode["status"], { stroke: string; fill: string; text: string }> = {
-  planned:   { stroke: "#6b7280", fill: "#1f2937", text: "#d1d5db" },
-  running:   { stroke: "#3b82f6", fill: "#1e3a5f", text: "#93c5fd" },
+  planned: { stroke: "#6b7280", fill: "#1f2937", text: "#d1d5db" },
+  running: { stroke: "#3b82f6", fill: "#1e3a5f", text: "#93c5fd" },
   completed: { stroke: "#22c55e", fill: "#14532d", text: "#86efac" },
-  failed:    { stroke: "#ef4444", fill: "#450a0a", text: "#fca5a5" },
+  failed: { stroke: "#ef4444", fill: "#450a0a", text: "#fca5a5" },
 };
 
 const EVIDENCE_COLORS: Record<FindingNode["evidenceType"], { stroke: string; fill: string; text: string }> = {
-  supporting:    { stroke: "#22c55e", fill: "#14532d", text: "#86efac" },
+  supporting: { stroke: "#22c55e", fill: "#14532d", text: "#86efac" },
   contradicting: { stroke: "#ef4444", fill: "#450a0a", text: "#fca5a5" },
-  neutral:       { stroke: "#6b7280", fill: "#1f2937", text: "#d1d5db" },
+  neutral: { stroke: "#6b7280", fill: "#1f2937", text: "#d1d5db" },
 };
 
 const ARROW_LABELS: Record<string, string> = {

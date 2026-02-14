@@ -193,6 +193,10 @@ EVALUATION_SCHEMA: dict[str, Any] = {
             "items": {"type": "string"},
         },
         "revision": {"type": "string"},
+        "action": {
+            "type": "string",
+            "enum": ["deepen", "prune", "branch"],
+        },
     },
     "required": [
         "status",
@@ -201,6 +205,7 @@ EVALUATION_SCHEMA: dict[str, Any] = {
         "evidence_convergence",
         "reasoning",
         "key_evidence",
+        "action",
     ],
     "additionalProperties": False,
 }

@@ -43,6 +43,10 @@ class Hypothesis:
     certainty_of_evidence: str = ""
     supporting_evidence: list[str] = field(default_factory=list)
     contradicting_evidence: list[str] = field(default_factory=list)
+    # Tree search fields
+    depth: int = 0
+    children: list[str] = field(default_factory=list)
+    branch_score: float = 0.0
 
     def __post_init__(self) -> None:
         if not self.statement:

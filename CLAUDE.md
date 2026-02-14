@@ -104,7 +104,8 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 
 ### Scientific Methodology
 
-- **Hypothesis-driven investigation loop**: formulate -> design experiment -> execute tools -> evaluate -> revise/reject -> synthesize. See `docs/scientific-methodology.md`
+- **Hypothesis-driven investigation loop**: formulate -> design experiment -> execute tools -> evaluate -> tree action (deepen/branch/prune) -> synthesize. See `docs/scientific-methodology.md`
+- **Tree search**: `TreeManager` scores hypotheses (`prior_confidence * depth_discount * evidence_bonus`), selects top 2 for testing, processes Director's tree action (deepen=child at depth+1, branch=sibling at same depth, prune=REJECTED). `max_depth=3` prevents infinite recursion
 - **Hypothesis model**: Popper + Platt + Feynman + Bayesian updating. Fields: prediction, null_prediction, success/failure_criteria, scope, hypothesis_type, prior_confidence, certainty_of_evidence. Evaluation: 8-tier evidence hierarchy, effect sizes, Bayesian updating, convergence checks
 - **Experiment protocols**: Fisher/Platt/Cohen/Saltelli/OECD/Tropsha. Fields: independent/dependent_variable, controls, confounders, analysis_plan, success/failure_criteria. Director designs with 5 principles (VARIABLES, CONTROLS, CONFOUNDERS, ANALYSIS PLAN, SENSITIVITY)
 - **Statistical testing**: Director plans tests in `statistical_test_plan`; Researcher executes `run_statistical_test`/`run_categorical_test`; findings recorded with evidence_type based on significance
@@ -119,7 +120,8 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - Each bounded context: `domain/`, `application/`, `infrastructure/`, `tools.py`
 - Domain entities: `@dataclass` with `__post_init__` validation; repositories: ABCs in `domain/repository.py`
 - `tools.py` is the boundary between Claude and application services
-- **Parallel researchers**: `_run_experiment_batch()` uses `asyncio.Queue` for 2 concurrent experiments; three-layer differentiation prevents duplicates
+- **Parallel researchers**: `run_experiment_batch()` uses `asyncio.Queue` for 2 concurrent experiments; three-layer differentiation prevents duplicates
+- **Tree manager**: `TreeManager` in `application/tree_manager.py`; `select_next()` picks batch, `apply_evaluation()` processes Director action, `compute_branch_score()` scores hypotheses
 - **Context compaction**: `_build_prior_context()` compresses completed hypotheses for Director
 - **Prompt engineering**: XML-tagged instructions, multishot examples (2 per Director prompt), tool usage examples for Researcher
 - **ToolCache**: in-memory TTL cache (deterministic: forever, API: 24h-7d)
@@ -139,7 +141,7 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - **Tool tagging**: frozenset domain tags; investigation tools are universal; researcher sees only domain-relevant tools
 - **Self-referential**: `search_prior_research` queries PostgreSQL tsvector + GIN index
 - **MCP bridge**: Optional external MCP servers; dynamic tool registration; `EHRLICH_MCP_EXCALIDRAW=true`
-- **SSE**: 20 event types; reconnection with exponential backoff (1s, 2s, 4s, max 3 retries)
+- **SSE**: 21 event types; reconnection with exponential backoff (1s, 2s, 4s, max 3 retries)
 - **Phase progress**: 6 phases (Classification & PICO -> Literature Survey -> Formulation -> Hypothesis Testing -> Negative Controls -> Synthesis)
 - **Citation provenance**: `source_type` + `source_id` on findings (ChEMBL, PDB, DOI, PubChem, UniProt, Open Targets)
 
@@ -147,7 +149,7 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 
 - **Viz pipeline**: 17 viz tools -> `VisualizationPayload` -> `VisualizationRendered` SSE -> `VizRegistry` lazy-loads React component
 - **LiveLabViewer**: 3Dmol.js SSE-driven scene (protein load, ligand dock, candidate score coloring)
-- **React Flow**: `@xyflow/react` with custom node types; status-colored (proposed=gray, testing=blue, supported=green, refuted=red)
+- **React Flow**: `@xyflow/react` with custom node types; status-colored (proposed=gray, testing=blue, supported=green, refuted=red, revised=amber, rejected=dimmed gray); tree depth + parent-child revision edges
 - **Design system**: OKLCH hue 155 (green); `rounded-sm` buttons, `rounded-md` cards; Space Grotesk + JetBrains Mono
 - **Layout**: conditional `hideHeader` for investigation/compare pages; `max-w-[1200px]`
 - TanStack Router file-based routing; `ErrorBoundary` wraps LiveLabViewer and InvestigationDiagram
@@ -171,6 +173,7 @@ All paths relative to `server/src/ehrlich/`.
 | `impact/application/impact_service.py` | Economic indicators, benchmarks, program comparison |
 | `investigation/application/multi_orchestrator.py` | Director-Worker-Summarizer orchestrator (main 6-phase loop) |
 | `investigation/application/tool_dispatcher.py` | Tool execution with caching, `search_prior_research` and `query_uploaded_data` interception |
+| `investigation/application/tree_manager.py` | Hypothesis tree exploration: scoring, selection, deepen/branch/prune actions |
 | `investigation/application/researcher_executor.py` | Single researcher experiment executor |
 | `investigation/application/batch_executor.py` | Parallel batch executor (2 concurrent) |
 | `investigation/application/paper_generator.py` | Scientific paper generation from investigation data + events |

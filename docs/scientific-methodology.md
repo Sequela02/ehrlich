@@ -263,12 +263,29 @@ Orchestrator wiring:
   - Serialized/deserialized in PostgreSQL repository
 ```
 
+**Tree Search (Phase 14E):**
+
+After evaluation, the Director decides a tree exploration action:
+- **Deepen** -- evidence is promising but insufficient; spawn a narrower sub-hypothesis at depth+1 (e.g., "compound X inhibits target Y" -> "compound X with C2-sulfonamide inhibits Y via covalent binding")
+- **Branch** -- partial evidence warrants an alternative direction; create a revised hypothesis at the same depth (e.g., shift from structural to pharmacological approach)
+- **Prune** -- evidence clearly refutes or hypothesis is supported with high confidence; mark branch as dead (REJECTED status), no further exploration
+
+`TreeManager` (application service) coordinates exploration:
+- `select_next()` picks up to 2 most promising PROPOSED hypotheses: highest `branch_score` first, shallowest depth as tiebreak
+- `compute_branch_score()` = `prior_confidence * depth_discount * evidence_bonus` where depth_discount = 1/(1+depth*0.2), evidence_bonus from parent's certainty_of_evidence (high=1.3x, moderate=1.1x, low=0.9x, very_low=0.7x)
+- `max_depth` (default: 3) prevents infinite recursion
+- Loop terminates when no PROPOSED hypotheses remain below max_depth
+
+This replaces the prior linear "test all proposed, then test revised" flow with an intelligent tree exploration inspired by AI Scientist v2 (agentic tree search) and Ai2 AutoDiscovery (Bayesian surprise-guided exploration).
+
 **Key design decisions:**
 - Certainty of evidence is a string field on Hypothesis (not an enum) -- Director-assigned, keeps domain layer simple
 - Evidence hierarchy is prompt guidance (8 tiers), not infrastructure code -- Director reasons over tiers rather than computing them algorithmically
 - Bayesian updating is formalized as multiplier rules in the prompt rather than coded computation -- keeps the LLM as the reasoning engine while providing structured methodology
 - Contradiction resolution follows a resolution hierarchy (identity → assay → temporal → severity) rather than averaging -- prevents masking genuine disagreements
 - Convergence check is a separate explicit field rather than folded into confidence -- allows the frontend to distinguish "high confidence from one method" vs "moderate confidence from converging methods"
+- Tree search fields live on the existing `Hypothesis` dataclass (depth, children, branch_score) rather than a separate `HypothesisNode` class -- YAGNI, the tree is an exploration strategy, not core domain knowledge
+- Tree action is a required field in `EVALUATION_SCHEMA` (structured output) -- Anthropic's constrained decoding guarantees the Director always produces it
 
 ---
 

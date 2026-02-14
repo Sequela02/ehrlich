@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
 
     from ehrlich.investigation.application.tool_registry import ToolRegistry
+    from ehrlich.investigation.application.tree_manager import TreeManager
     from ehrlich.investigation.domain.domain_config import DomainConfig
     from ehrlich.investigation.domain.domain_registry import DomainRegistry
     from ehrlich.investigation.domain.mcp_config import MCPServerConfig
@@ -67,6 +68,7 @@ class MultiModelOrchestrator:
         domain_registry: DomainRegistry | None = None,
         mcp_bridge: MCPBridge | None = None,
         mcp_configs: list[MCPServerConfig] | None = None,
+        tree_manager: TreeManager | None = None,
     ) -> None:
         self._director = director
         self._researcher = researcher
@@ -80,6 +82,7 @@ class MultiModelOrchestrator:
         self._domain_registry = domain_registry
         self._mcp_bridge = mcp_bridge
         self._mcp_configs = mcp_configs or []
+        self._tree_manager = tree_manager
         self._active_config: DomainConfig | None = None
         self._researcher_prompt = RESEARCHER_EXPERIMENT_PROMPT
         self._cache = ToolCache()
@@ -266,6 +269,7 @@ class MultiModelOrchestrator:
                 self._state_lock,
                 self._director_call,
                 self._cost_event,
+                tree_manager=self._tree_manager,
             ):
                 yield event
 

@@ -42,6 +42,7 @@ from ehrlich.investigation.domain.events import (
     HypothesisApprovalRequested,
     HypothesisEvaluated,
     HypothesisFormulated,
+    HypothesisTreeUpdated,
     InvestigationCompleted,
     NegativeControlRecorded,
     PhaseChanged,
@@ -68,6 +69,7 @@ if TYPE_CHECKING:
     from ehrlich.investigation.application.cost_tracker import CostTracker
     from ehrlich.investigation.application.tool_dispatcher import ToolDispatcher
     from ehrlich.investigation.application.tool_registry import ToolRegistry
+    from ehrlich.investigation.application.tree_manager import TreeManager
     from ehrlich.investigation.domain.domain_config import DomainConfig
     from ehrlich.investigation.domain.domain_registry import DomainRegistry
     from ehrlich.investigation.domain.repository import InvestigationRepository
@@ -328,6 +330,7 @@ async def run_hypothesis_testing_phase(
     state_lock: asyncio.Lock,
     director_call: Callable[..., AsyncGenerator[Any, None]],
     cost_event_fn: Callable[..., CostUpdate],
+    tree_manager: TreeManager | None = None,
 ) -> AsyncGenerator[DomainEvent, None]:
     """Phase 4: Batched parallel hypothesis testing + Director evaluation loop."""
 
@@ -338,15 +341,24 @@ async def run_hypothesis_testing_phase(
         investigation_id=investigation.id,
     )
     tested = 0
-    while tested < max_hypotheses:
-        proposed = [h for h in investigation.hypotheses if h.status == HypothesisStatus.PROPOSED]
-        if not proposed:
-            break
 
-        # Take up to 2 hypotheses per batch
-        batch_hypotheses = proposed[:2]
-        batch: list[tuple[Hypothesis, Experiment, dict[str, Any]]] = []
+    # Use tree manager if provided, otherwise import and create one
+    if tree_manager is None:
+        from ehrlich.investigation.application.tree_manager import TreeManager
+
+        tree_manager = TreeManager()
+
+    # Compute initial branch scores for root hypotheses
+    for h in investigation.hypotheses:
+        if h.branch_score == 0.0 and h.status == HypothesisStatus.PROPOSED:
+            h.branch_score = tree_manager.compute_branch_score(h, investigation)
+
+    while tested < max_hypotheses:
+        batch_hypotheses = tree_manager.select_next(investigation.hypotheses)
+        if not batch_hypotheses:
+            break
         prior_designs: list[str] = []
+        batch: list[tuple[Hypothesis, Experiment, dict[str, Any]]] = []
 
         for hypothesis in batch_hypotheses:
             hypothesis.status = HypothesisStatus.TESTING
@@ -528,36 +540,31 @@ async def run_hypothesis_testing_phase(
                 investigation_id=investigation.id,
             )
 
-            # If revised, add new hypothesis to queue
-            if eval_status == "revised" and evaluation.get("revision"):
-                revised = Hypothesis(
-                    statement=evaluation["revision"],
-                    rationale=evaluation.get(
-                        "reasoning",
-                        "Revised from prior evidence",
-                    ),
-                    prediction=evaluation.get("prediction", hypothesis.prediction),
-                    success_criteria=evaluation.get(
-                        "success_criteria", hypothesis.success_criteria
-                    ),
-                    failure_criteria=evaluation.get(
-                        "failure_criteria", hypothesis.failure_criteria
-                    ),
-                    scope=hypothesis.scope,
-                    hypothesis_type=hypothesis.hypothesis_type,
-                    parent_id=hypothesis.id,
-                )
-                investigation.add_hypothesis(revised)
+            # Tree manager processes evaluation action
+            new_hypotheses = tree_manager.apply_evaluation(hypothesis, evaluation, investigation)
+            action = evaluation.get("action", "prune")
+
+            yield HypothesisTreeUpdated(
+                hypothesis_id=hypothesis.id,
+                action=action,
+                parent_id=hypothesis.parent_id,
+                depth=hypothesis.depth,
+                children_count=len(hypothesis.children),
+                investigation_id=investigation.id,
+            )
+
+            for new_hyp in new_hypotheses:
+                investigation.add_hypothesis(new_hyp)
                 yield HypothesisFormulated(
-                    hypothesis_id=revised.id,
-                    statement=revised.statement,
-                    rationale=revised.rationale,
-                    prediction=revised.prediction,
-                    success_criteria=revised.success_criteria,
-                    failure_criteria=revised.failure_criteria,
-                    scope=revised.scope,
-                    hypothesis_type=revised.hypothesis_type,
-                    parent_id=hypothesis.id,
+                    hypothesis_id=new_hyp.id,
+                    statement=new_hyp.statement,
+                    rationale=new_hyp.rationale,
+                    prediction=new_hyp.prediction,
+                    success_criteria=new_hyp.success_criteria,
+                    failure_criteria=new_hyp.failure_criteria,
+                    scope=new_hyp.scope,
+                    hypothesis_type=new_hyp.hypothesis_type,
+                    parent_id=new_hyp.parent_id,
                     investigation_id=investigation.id,
                 )
 
