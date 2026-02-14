@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight, GitCompareArrows, Square, CheckSquare } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
-import { MolViewer2D } from "@/features/molecule/components/MolViewer2D";
+import { MolViewer2D } from "@/features/molecule";
 import type { CandidateRow, DomainDisplayConfig } from "../types";
 import { CandidateDetail } from "./CandidateDetail";
 import { CandidateComparison } from "./CandidateComparison";

@@ -1,7 +1,7 @@
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
 import { cn } from "@/shared/lib/utils";
-import { MolViewer2D } from "@/features/molecule/components/MolViewer2D";
+import { MolViewer2D } from "@/features/molecule";
 import type { Hypothesis } from "../types";
 import { parseHypothesisStatement } from "../lib/parse-hypothesis";
 

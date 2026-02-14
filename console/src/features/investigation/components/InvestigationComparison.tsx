@@ -10,7 +10,7 @@ import {
   Legend,
 } from "recharts";
 import { cn } from "@/shared/lib/utils";
-import { MolViewer2D } from "@/features/molecule/components/MolViewer2D";
+import { MolViewer2D } from "@/features/molecule";
 import { VIZ_COLORS } from "@/features/visualization/theme";
 import type { InvestigationDetail, CandidateRow, Finding } from "../types";
 
@@ -479,8 +479,8 @@ function HypothesisSummary({
         {Object.entries(counts).map(([status, count]) => (
           <span key={status} className={cn(
             status === "supported" ? "text-secondary" :
-            status === "refuted" ? "text-destructive" :
-            status === "revised" ? "text-primary" : "text-muted-foreground",
+              status === "refuted" ? "text-destructive" :
+                status === "revised" ? "text-primary" : "text-muted-foreground",
           )}>
             {count} {status}
           </span>
