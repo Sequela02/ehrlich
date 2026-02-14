@@ -6,7 +6,14 @@ from typing import TYPE_CHECKING
 from ehrlich.analysis.application.statistics_service import StatisticsService
 
 if TYPE_CHECKING:
-    from ehrlich.impact.domain.entities import Benchmark, EconomicSeries, HealthIndicator
+    from ehrlich.impact.domain.entities import (
+        Benchmark,
+        CausalEstimate,
+        EconomicSeries,
+        HealthIndicator,
+        ThreatToValidity,
+    )
+    from ehrlich.impact.domain.ports import CausalEstimator
     from ehrlich.impact.domain.repository import (
         DevelopmentDataRepository,
         EconomicDataRepository,
@@ -20,10 +27,12 @@ class ImpactService:
         economic: EconomicDataRepository | None = None,
         health: HealthDataRepository | None = None,
         development: DevelopmentDataRepository | None = None,
+        causal_estimator: CausalEstimator | None = None,
     ) -> None:
         self._economic = economic
         self._health = health
         self._development = development
+        self._causal = causal_estimator
         self._stats = StatisticsService()
 
     async def search_economic_data(self, query: str, limit: int = 10) -> list[EconomicSeries]:
@@ -101,6 +110,88 @@ class ImpactService:
             return [asdict(r) for r in dev_results]
 
         return []
+
+    def estimate_did(
+        self,
+        treatment_pre: list[float],
+        treatment_post: list[float],
+        control_pre: list[float],
+        control_post: list[float],
+    ) -> CausalEstimate:
+        """Estimate causal effect using difference-in-differences."""
+        if not self._causal:
+            msg = "No causal estimator configured"
+            raise RuntimeError(msg)
+        return self._causal.estimate_did(
+            treatment_pre, treatment_post, control_pre, control_post,
+        )
+
+    def assess_threats(
+        self,
+        method: str,
+        sample_sizes: dict[str, int],
+        parallel_trends_p: float | None = None,
+        effect_size: float | None = None,
+    ) -> list[ThreatToValidity]:
+        """Knowledge-based threat assessment for any causal method."""
+        from ehrlich.impact.domain.entities import ThreatToValidity
+
+        threats: list[ThreatToValidity] = []
+        method_lower = method.lower().replace("-", "_").replace(" ", "_")
+
+        # Small sample threats
+        min_n = min(sample_sizes.values()) if sample_sizes else 0
+        if min_n < 5:
+            threats.append(ThreatToValidity(
+                type="small_sample",
+                severity="high",
+                description=f"Minimum group size is {min_n}. Insufficient for reliable inference.",
+                mitigation="Increase sample size or use exact/permutation tests.",
+            ))
+        elif min_n < 30:
+            threats.append(ThreatToValidity(
+                type="small_sample",
+                severity="medium",
+                description=f"Minimum group size is {min_n}. May limit statistical power.",
+                mitigation="Report power analysis and consider non-parametric tests.",
+            ))
+
+        # Method-specific threats
+        is_did = method_lower in ("did", "difference_in_differences")
+        if is_did and parallel_trends_p is not None and parallel_trends_p < 0.05:
+                threats.append(ThreatToValidity(
+                    type="parallel_trends_violation",
+                    severity="high",
+                    description=f"Parallel trends assumption violated (p={parallel_trends_p:.4f}).",
+                    mitigation="Use event study or synthetic control method.",
+                ))
+
+        if method_lower in ("psm", "propensity_score_matching"):
+            threats.append(ThreatToValidity(
+                type="unobserved_confounders",
+                severity="medium",
+                description="PSM cannot account for unobserved confounders.",
+                mitigation="Combine with sensitivity analysis (Rosenbaum bounds).",
+            ))
+
+        if method_lower in ("rdd", "regression_discontinuity"):
+            threats.append(ThreatToValidity(
+                type="manipulation",
+                severity="medium",
+                description="Running variable may be subject to manipulation near cutoff.",
+                mitigation="Test for bunching at the cutoff (McCrary density test).",
+            ))
+
+        # Effect size plausibility
+        if effect_size is not None and abs(effect_size) > 2.0:
+            threats.append(ThreatToValidity(
+                type="implausible_effect",
+                severity="medium",
+                description=f"Effect size ({effect_size:.2f}) is unusually large.",
+                mitigation="Verify data quality and check for measurement errors.",
+            ))
+
+        return threats
 
     def compare_programs(
         self,

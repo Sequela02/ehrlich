@@ -189,6 +189,17 @@ group_b="78.1,78.5,79.0,78.8,79.2", test="auto")
 3. record_finding(title="Significant enrollment difference", \
 detail="...", hypothesis_id="h1", evidence_type="supporting")
 
+Example: Running difference-in-differences estimation
+1. estimate_did(treatment_pre="[78.5, 79.2, 80.1]", \
+treatment_post="[88.3, 89.1, 90.5]", \
+control_pre="[77.8, 78.5, 79.0]", \
+control_post="[79.1, 79.8, 80.2]")
+2. assess_threats(method="did", \
+sample_sizes='{{"treatment": 6, "control": 6}}', \
+parallel_trends_p=0.45, effect_size=0.8)
+3. record_finding(title="DiD shows significant enrollment effect", \
+detail="...", hypothesis_id="h1", evidence_type="supporting")
+
 Example: Training a classifier on program outcome data
 1. train_classifier(feature_names=["budget_per_capita", \
 "duration_years", "coverage_pct", "gdp_per_capita"], \

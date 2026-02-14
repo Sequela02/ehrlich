@@ -31,7 +31,9 @@ from ehrlich.chemistry.tools import (
 )
 from ehrlich.config import get_settings
 from ehrlich.impact.tools import (
+    assess_threats,
     compare_programs,
+    estimate_did,
     fetch_benchmark,
     search_economic_indicators,
 )
@@ -63,10 +65,13 @@ from ehrlich.investigation.tools_viz import (
     render_evidence_matrix,
     render_forest_plot,
     render_funnel_plot,
+    render_geographic_comparison,
     render_muscle_heatmap,
     render_nutrient_adequacy,
     render_nutrient_comparison,
+    render_parallel_trends,
     render_performance_chart,
+    render_program_dashboard,
     render_therapeutic_window,
     render_training_timeline,
 )
@@ -222,6 +227,7 @@ def _build_registry() -> ToolRegistry:
     _sim_viz = frozenset({"simulation", "visualization"})
     _training_viz = frozenset({"training", "visualization"})
     _nutrition_viz = frozenset({"nutrition", "visualization"})
+    _impact_viz = frozenset({"impact", "visualization"})
 
     tagged_tools: list[tuple[str, Any, frozenset[str] | None]] = [
         # Chemistry (6)
@@ -281,11 +287,13 @@ def _build_registry() -> ToolRegistry:
         ("check_interactions", check_interactions, _nutrition_safety),
         ("analyze_nutrient_ratios", analyze_nutrient_ratios, _nutrition),
         ("compute_inflammatory_index", compute_inflammatory_index, _nutrition),
-        # Impact Evaluation (3)
+        # Impact Evaluation (5)
         ("search_economic_indicators", search_economic_indicators, _impact),
         ("fetch_benchmark", fetch_benchmark, _impact),
         ("compare_programs", compare_programs, _impact),
-        # Visualization (12)
+        ("estimate_did", estimate_did, _impact),
+        ("assess_threats", assess_threats, _impact),
+        # Visualization (15)
         ("render_binding_scatter", render_binding_scatter, _chem_viz),
         ("render_admet_radar", render_admet_radar, _sim_viz),
         ("render_training_timeline", render_training_timeline, _training_viz),
@@ -298,6 +306,9 @@ def _build_registry() -> ToolRegistry:
         ("render_nutrient_comparison", render_nutrient_comparison, _nutrition_viz),
         ("render_nutrient_adequacy", render_nutrient_adequacy, _nutrition_viz),
         ("render_therapeutic_window", render_therapeutic_window, _nutrition_viz),
+        ("render_program_dashboard", render_program_dashboard, _impact_viz),
+        ("render_geographic_comparison", render_geographic_comparison, _impact_viz),
+        ("render_parallel_trends", render_parallel_trends, _impact_viz),
         # Statistics (2) -- universal, no tags
         ("run_statistical_test", run_statistical_test, None),
         ("run_categorical_test", run_categorical_test, None),

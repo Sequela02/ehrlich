@@ -1,8 +1,8 @@
 """Impact Evaluation tools for the investigation engine.
 
-3 tools for causal analysis of social programs: economic indicator
-search, benchmark fetching, and cross-program comparison with
-statistical testing.
+5 tools for causal analysis of social programs: economic indicator
+search, benchmark fetching, cross-program comparison, difference-in-
+differences estimation, and validity threat assessment.
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ import json
 from dataclasses import asdict
 
 from ehrlich.impact.application.impact_service import ImpactService
+from ehrlich.impact.infrastructure.did_estimator import DiDEstimator
 from ehrlich.impact.infrastructure.fred_client import FREDClient
 from ehrlich.impact.infrastructure.who_client import WHOClient
 from ehrlich.impact.infrastructure.worldbank_client import WorldBankClient
@@ -18,10 +19,12 @@ from ehrlich.impact.infrastructure.worldbank_client import WorldBankClient
 _worldbank = WorldBankClient()
 _who = WHOClient()
 _fred = FREDClient()
+_did = DiDEstimator()
 _service = ImpactService(
     economic=_fred,
     health=_who,
     development=_worldbank,
+    causal_estimator=_did,
 )
 
 
@@ -147,3 +150,82 @@ async def compare_programs(
 
     result = _service.compare_programs(parsed, metric, alternative)
     return json.dumps(result)
+
+
+async def estimate_did(
+    treatment_pre: str,
+    treatment_post: str,
+    control_pre: str,
+    control_post: str,
+) -> str:
+    """Estimate causal effect using difference-in-differences (DiD).
+
+    Computes the DiD estimator with standard error, p-value, Cohen's d,
+    95% confidence interval, parallel trends test, and automated threat
+    assessment. Returns evidence tier classification (WWC standards).
+
+    Args:
+        treatment_pre: JSON array of pre-intervention treatment values
+            (e.g. '[85.2, 87.1, 86.5]')
+        treatment_post: JSON array of post-intervention treatment values
+            (e.g. '[92.3, 94.1, 93.5]')
+        control_pre: JSON array of pre-intervention control values
+            (e.g. '[84.0, 85.2, 84.8]')
+        control_post: JSON array of post-intervention control values
+            (e.g. '[85.1, 85.8, 85.3]')
+    """
+    try:
+        t_pre = [float(x) for x in json.loads(treatment_pre)]
+        t_post = [float(x) for x in json.loads(treatment_post)]
+        c_pre = [float(x) for x in json.loads(control_pre)]
+        c_post = [float(x) for x in json.loads(control_post)]
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return json.dumps({"error": "Invalid JSON arrays. Provide numeric arrays."})
+
+    if not all([t_pre, t_post, c_pre, c_post]):
+        return json.dumps({"error": "All four groups must have at least one value."})
+
+    estimate = _service.estimate_did(t_pre, t_post, c_pre, c_post)
+    result = asdict(estimate)
+    # Convert tuple fields to lists for JSON
+    result["confidence_interval"] = list(result["confidence_interval"])
+    result["covariates"] = list(result["covariates"])
+    result["assumptions"] = list(result["assumptions"])
+    result["threats"] = [asdict(t) for t in estimate.threats]
+    return json.dumps(result)
+
+
+async def assess_threats(
+    method: str,
+    sample_sizes: str,
+    parallel_trends_p: float | None = None,
+    effect_size: float | None = None,
+) -> str:
+    """Assess validity threats for a causal inference method.
+
+    Knowledge-based threat assessment that identifies potential biases
+    and suggests mitigations for different causal methods (DiD, PSM,
+    RDD, RCT, IV).
+
+    Args:
+        method: Causal method name ('did', 'psm', 'rdd', 'rct', 'iv')
+        sample_sizes: JSON object mapping group names to sizes
+            (e.g. '{{"treatment": 50, "control": 45}}')
+        parallel_trends_p: p-value from parallel trends test (DiD only)
+        effect_size: Cohen's d or standardized effect size
+    """
+    try:
+        sizes = json.loads(sample_sizes)
+    except json.JSONDecodeError:
+        return json.dumps({"error": "Invalid JSON in sample_sizes parameter"})
+
+    if not isinstance(sizes, dict):
+        return json.dumps({"error": "sample_sizes must be a JSON object"})
+
+    parsed_sizes = {str(k): int(v) for k, v in sizes.items()}
+    threats = _service.assess_threats(method, parsed_sizes, parallel_trends_p, effect_size)
+    return json.dumps({
+        "method": method,
+        "threat_count": len(threats),
+        "threats": [asdict(t) for t in threats],
+    })

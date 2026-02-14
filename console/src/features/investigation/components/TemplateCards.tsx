@@ -1,4 +1,4 @@
-import { FlaskConical, Brain, Leaf, Target, Activity, Shield, Apple } from "lucide-react";
+import { FlaskConical, Brain, Leaf, Target, Activity, Shield, Apple, Scale, HeartPulse } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 interface Template {
@@ -65,6 +65,22 @@ const TEMPLATES: Template[] = [
     prompt:
       "What is the evidence for creatine monohydrate supplementation on strength and power performance? Analyze dosing protocols, loading phases, and safety profile from meta-analyses.",
     Icon: Apple,
+  },
+  {
+    title: "CCT School Enrollment",
+    domain: "Education Policy",
+    domainTag: "Impact Evaluation",
+    prompt:
+      "What is the causal effect of conditional cash transfer programs on school enrollment and attendance in Latin America? Compare Prospera (Mexico), Bolsa Familia (Brazil), and Familias en Accion (Colombia) using available outcome data.",
+    Icon: Scale,
+  },
+  {
+    title: "Health Worker Programs",
+    domain: "Health Policy",
+    domainTag: "Impact Evaluation",
+    prompt:
+      "Evaluate the impact of community health worker programs on maternal mortality and childhood vaccination rates in sub-Saharan Africa. Use WHO and World Bank indicators.",
+    Icon: HeartPulse,
   },
 ];
 
