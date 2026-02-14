@@ -6,14 +6,15 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from ehrlich.investigation.application.batch_executor import run_experiment_batch
 from ehrlich.investigation.application.cost_tracker import CostTracker
+from ehrlich.investigation.application.diagram_builder import generate_diagram
 from ehrlich.investigation.application.prompts import (
     DIRECTOR_EVALUATION_PROMPT,
     DIRECTOR_EXPERIMENT_PROMPT,
     DIRECTOR_FORMULATION_PROMPT,
     DIRECTOR_SYNTHESIS_PROMPT,
     RESEARCHER_EXPERIMENT_PROMPT,
-    SUMMARIZER_PROMPT,
     build_experiment_prompt,
     build_formulation_prompt,
     build_literature_assessment_prompt,
@@ -22,8 +23,14 @@ from ehrlich.investigation.application.prompts import (
     build_pico_and_classification_prompt,
     build_researcher_prompt,
     build_synthesis_prompt,
+    build_uploaded_data_context,
+)
+from ehrlich.investigation.application.researcher_executor import (
+    maybe_viz_event,
+    summarize_output,
 )
 from ehrlich.investigation.application.tool_cache import ToolCache
+from ehrlich.investigation.application.tool_dispatcher import ToolDispatcher
 from ehrlich.investigation.domain.candidate import Candidate
 from ehrlich.investigation.domain.domain_config import merge_domain_configs
 from ehrlich.investigation.domain.events import (
@@ -40,14 +47,12 @@ from ehrlich.investigation.domain.events import (
     InvestigationError,
     LiteratureSurveyCompleted,
     NegativeControlRecorded,
-    OutputSummarized,
     PhaseChanged,
     PositiveControlRecorded,
     Thinking,
     ToolCalled,
     ToolResultEvent,
     ValidationMetricsComputed,
-    VisualizationRendered,
 )
 from ehrlich.investigation.domain.experiment import Experiment, ExperimentStatus
 from ehrlich.investigation.domain.finding import Finding
@@ -73,6 +78,7 @@ if TYPE_CHECKING:
     from ehrlich.investigation.domain.domain_registry import DomainRegistry
     from ehrlich.investigation.domain.mcp_config import MCPServerConfig
     from ehrlich.investigation.domain.repository import InvestigationRepository
+    from ehrlich.investigation.domain.uploaded_file import UploadedFile
     from ehrlich.investigation.infrastructure.anthropic_client import AnthropicClientAdapter
     from ehrlich.investigation.infrastructure.mcp_bridge import MCPBridge
 
@@ -160,9 +166,12 @@ class MultiModelOrchestrator:
         self._active_config: DomainConfig | None = None
         self._researcher_prompt = RESEARCHER_EXPERIMENT_PROMPT
         self._cache = ToolCache()
+        self._dispatcher = ToolDispatcher(registry, self._cache, repository, {})
         self._state_lock = asyncio.Lock()
         self._approval_event = asyncio.Event()
         self._investigation: Investigation | None = None
+        self._uploaded_files: dict[str, UploadedFile] = {}
+        self._uploaded_data_context = ""
 
     def approve_hypotheses(
         self,
@@ -193,6 +202,15 @@ class MultiModelOrchestrator:
         cost = CostTracker()
         pico: dict[str, Any] = {}
 
+        # Build uploaded data context for prompt injection
+        if investigation.uploaded_files:
+            self._uploaded_files = {f.file_id: f for f in investigation.uploaded_files}
+            self._uploaded_data_context = build_uploaded_data_context(investigation.uploaded_files)
+        else:
+            self._uploaded_files = {}
+            self._uploaded_data_context = ""
+        self._dispatcher.update_uploaded_files(self._uploaded_files)
+
         # Connect MCP servers if configured
         if self._mcp_bridge and self._mcp_configs:
             try:
@@ -219,7 +237,9 @@ class MultiModelOrchestrator:
                 valid_categories: frozenset[str] = frozenset()
                 if self._domain_registry:
                     valid_categories = self._domain_registry.all_categories()
-                pico_prompt = build_pico_and_classification_prompt(valid_categories)
+                pico_prompt = build_pico_and_classification_prompt(
+                    valid_categories, self._uploaded_data_context
+                )
                 pico_response = await self._summarizer.create_message(
                     system=pico_prompt,
                     messages=[{"role": "user", "content": investigation.prompt}],
@@ -257,7 +277,9 @@ class MultiModelOrchestrator:
                 if self._domain_registry:
                     detected_configs, is_fallback = self._domain_registry.detect(domain_categories)
                     self._active_config = merge_domain_configs(detected_configs)
-                    self._researcher_prompt = build_researcher_prompt(self._active_config)
+                    self._researcher_prompt = build_researcher_prompt(
+                        self._active_config, self._uploaded_data_context
+                    )
                     yield DomainDetected(
                         domain=self._active_config.name,
                         display_config=self._active_config.to_display_dict(),
@@ -299,7 +321,7 @@ class MultiModelOrchestrator:
             )
             prior_section = f"\n\n{prior_context}" if prior_context else ""
             formulation_prompt = (
-                build_formulation_prompt(self._active_config)
+                build_formulation_prompt(self._active_config, self._uploaded_data_context)
                 if self._active_config
                 else DIRECTOR_FORMULATION_PROMPT
             )
@@ -415,7 +437,7 @@ class MultiModelOrchestrator:
                     else:
                         tools_csv = ", ".join(self._registry.list_tools())
                     experiment_prompt = (
-                        build_experiment_prompt(self._active_config)
+                        build_experiment_prompt(self._active_config, self._uploaded_data_context)
                         if self._active_config
                         else DIRECTOR_EXPERIMENT_PROMPT
                     )
@@ -493,7 +515,20 @@ class MultiModelOrchestrator:
                 # Run batch (parallel if 2, sequential if 1)
                 exp_tool_count = cost.tool_calls
                 exp_finding_count = len(investigation.findings)
-                async for event in self._run_experiment_batch(investigation, batch, cost):
+                async for event in run_experiment_batch(
+                    self._researcher,
+                    self._summarizer,
+                    self._dispatcher,
+                    self._registry,
+                    self._active_config,
+                    self._researcher_prompt,
+                    self._summarizer_threshold,
+                    self._max_iterations_per_experiment,
+                    investigation,
+                    batch,
+                    cost,
+                    self._state_lock,
+                ):
                     yield event
 
                 # Mark completed + Director evaluates each
@@ -634,7 +669,7 @@ class MultiModelOrchestrator:
                 ]
                 if all_identifiers:
                     try:
-                        pred_result = await self._dispatch_tool(
+                        pred_result = await self._dispatcher.dispatch(
                             "predict_candidates",
                             {"smiles_list": all_identifiers, "model_id": model_id},
                             investigation,
@@ -824,7 +859,7 @@ class MultiModelOrchestrator:
             # Post-synthesis: generate Excalidraw diagram if MCP available
             diagram_url = ""
             if self._mcp_bridge and self._mcp_bridge.has_tool("excalidraw:create_view"):
-                diagram_url = await self._generate_diagram(investigation)
+                diagram_url = await generate_diagram(self._mcp_bridge, investigation)
 
             investigation.status = InvestigationStatus.COMPLETED
             investigation.cost_data = cost.to_dict()
@@ -917,29 +952,6 @@ class MultiModelOrchestrator:
                 except Exception:
                     logger.warning("MCP bridge disconnect failed", exc_info=True)
 
-    async def _generate_diagram(self, investigation: Investigation) -> str:
-        """Generate an Excalidraw evidence synthesis diagram and return its URL."""
-        if not self._mcp_bridge:
-            return ""
-
-        elements = _build_excalidraw_elements(investigation)
-        elements_json = json.dumps(elements)
-        try:
-            await self._mcp_bridge.call_tool("excalidraw:read_me", {})
-            await self._mcp_bridge.call_tool("excalidraw:create_view", {"elements": elements_json})
-            export_result = await self._mcp_bridge.call_tool(
-                "excalidraw:export_to_excalidraw",
-                {"json": json.dumps({"elements": elements, "appState": {}})},
-            )
-            data = json.loads(export_result)
-            url: str = data.get("url", "")
-            if url:
-                logger.info("Diagram exported: %s", url)
-            return url
-        except Exception:
-            logger.warning("Diagram generation failed", exc_info=True)
-            return ""
-
     @staticmethod
     def _build_literature_context(
         investigation: Investigation,
@@ -1001,43 +1013,6 @@ class MultiModelOrchestrator:
             )
 
         yield _DirectorResult(data=json.loads(text), thinking=thinking_text)
-
-    async def _summarize_output(
-        self,
-        cost: CostTracker,
-        tool_name: str,
-        output: str,
-        investigation_id: str,
-    ) -> tuple[str, OutputSummarized | None]:
-        if len(output) <= self._summarizer_threshold:
-            return output, None
-
-        response = await self._summarizer.create_message(
-            system=SUMMARIZER_PROMPT,
-            messages=[
-                {"role": "user", "content": f"Tool: {tool_name}\nOutput:\n{output}"},
-            ],
-            tools=[],
-        )
-        cost.add_usage(
-            response.input_tokens,
-            response.output_tokens,
-            self._summarizer.model,
-            cache_read_tokens=response.cache_read_input_tokens,
-            cache_write_tokens=response.cache_write_input_tokens,
-        )
-        summarized = ""
-        for block in response.content:
-            if block["type"] == "text":
-                summarized += block["text"]
-
-        event = OutputSummarized(
-            tool_name=tool_name,
-            original_length=len(output),
-            summarized_length=len(summarized),
-            investigation_id=investigation_id,
-        )
-        return summarized, event
 
     async def _run_literature_survey(
         self,
@@ -1134,7 +1109,7 @@ class MultiModelOrchestrator:
                     investigation_id=investigation.id,
                 )
 
-                result_str = await self._dispatch_tool(tool_name, tool_input, investigation)
+                result_str = await self._dispatcher.dispatch(tool_name, tool_input, investigation)
                 result_str = _compact_result(tool_name, result_str)
 
                 # Track result counts
@@ -1145,8 +1120,9 @@ class MultiModelOrchestrator:
                 except (json.JSONDecodeError, TypeError, ValueError):
                     pass
 
-                summarized_str, summarize_event = await self._summarize_output(
-                    cost, tool_name, result_str, investigation.id
+                summarized_str, summarize_event = await summarize_output(
+                    self._summarizer, cost, tool_name, result_str, investigation.id,
+                    self._summarizer_threshold,
                 )
                 if summarize_event is not None:
                     yield summarize_event
@@ -1160,7 +1136,7 @@ class MultiModelOrchestrator:
                 )
 
                 # Emit visualization event if tool returned viz payload
-                viz_event = self._maybe_viz_event(result_str, "", investigation.id)
+                viz_event = maybe_viz_event(result_str, "", investigation.id)
                 if viz_event is not None:
                     yield viz_event
 
@@ -1238,437 +1214,3 @@ class MultiModelOrchestrator:
             investigation_id=investigation.id,
         )
 
-    async def _run_researcher_experiment(
-        self,
-        investigation: Investigation,
-        hypothesis: Hypothesis,
-        experiment: Experiment,
-        cost: CostTracker,
-        design: dict[str, Any],
-        sibling_context: str = "",
-    ) -> AsyncGenerator[DomainEvent, None]:
-        planned = set(experiment.tool_plan) if experiment.tool_plan else set()
-        control_tools = {"record_finding", "record_negative_control"}
-        if planned:
-            allowed = planned | control_tools
-            tool_schemas = [t for t in self._registry.list_schemas() if t["name"] in allowed]
-        elif self._active_config:
-            excluded = {
-                "conclude_investigation",
-                "propose_hypothesis",
-                "design_experiment",
-                "evaluate_hypothesis",
-            }
-            domain_schemas = self._registry.list_schemas_for_domain(self._active_config.tool_tags)
-            tool_schemas = [t for t in domain_schemas if t["name"] not in excluded]
-        else:
-            excluded = {
-                "conclude_investigation",
-                "propose_hypothesis",
-                "design_experiment",
-                "evaluate_hypothesis",
-            }
-            tool_schemas = [t for t in self._registry.list_schemas() if t["name"] not in excluded]
-
-        exp_controls = ", ".join(experiment.controls) or "None specified"
-        sibling_section = ""
-        if sibling_context:
-            sibling_section = (
-                f"\n\n<parallel_experiment>\n"
-                f"A parallel researcher is simultaneously testing a different hypothesis:\n"
-                f"{sibling_context}\n\n"
-                f"Avoid duplicating their queries. Use different search terms, "
-                f"data sources, or analytical approaches where your experiment "
-                f"design allows flexibility.\n"
-                f"</parallel_experiment>"
-            )
-        messages: list[dict[str, Any]] = [
-            {
-                "role": "user",
-                "content": (
-                    f"Research prompt: {investigation.prompt}\n\n"
-                    f"Hypothesis: {hypothesis.statement}\n"
-                    f"Mechanism: {hypothesis.rationale}\n"
-                    f"Prediction: {hypothesis.prediction or 'N/A'}\n"
-                    f"Hypothesis success criteria: {hypothesis.success_criteria or 'N/A'}\n"
-                    f"Hypothesis failure criteria: {hypothesis.failure_criteria or 'N/A'}\n"
-                    f"Scope: {hypothesis.scope or 'N/A'}\n\n"
-                    f"Experiment: {experiment.description}\n"
-                    f"Planned tools: {', '.join(experiment.tool_plan)}\n"
-                    f"Controls: {exp_controls}\n"
-                    f"Analysis plan: {experiment.analysis_plan or 'N/A'}\n"
-                    f"Experiment success criteria: {experiment.success_criteria or 'N/A'}\n"
-                    f"Experiment failure criteria: {experiment.failure_criteria or 'N/A'}\n\n"
-                    f"Execute this experiment. Compare results against the "
-                    f"pre-defined success/failure criteria. Link all findings to "
-                    f"hypothesis_id='{hypothesis.id}'." + sibling_section
-                ),
-            },
-        ]
-
-        for _iteration in range(self._max_iterations_per_experiment):
-            investigation.iteration += 1
-            tool_choice = {"type": "any"} if _iteration == 0 else None
-            response = await self._researcher.create_message(
-                system=self._researcher_prompt,
-                messages=messages,
-                tools=tool_schemas,
-                tool_choice=tool_choice,
-            )
-            async with self._state_lock:
-                cost.add_usage(
-                    response.input_tokens,
-                    response.output_tokens,
-                    self._researcher.model,
-                    cache_read_tokens=response.cache_read_input_tokens,
-                    cache_write_tokens=response.cache_write_input_tokens,
-                )
-
-            assistant_content: list[dict[str, Any]] = []
-            tool_use_blocks: list[dict[str, Any]] = []
-
-            for block in response.content:
-                assistant_content.append(block)
-                if block["type"] == "text":
-                    yield Thinking(
-                        text=block["text"],
-                        investigation_id=investigation.id,
-                    )
-                elif block["type"] == "tool_use":
-                    tool_use_blocks.append(block)
-
-            messages.append({"role": "assistant", "content": assistant_content})
-
-            if response.stop_reason == "end_turn" or not tool_use_blocks:
-                break
-
-            tool_results: list[dict[str, Any]] = []
-            for tool_block in tool_use_blocks:
-                tool_name = tool_block["name"]
-                tool_input = tool_block["input"]
-                tool_use_id = tool_block["id"]
-                async with self._state_lock:
-                    cost.add_tool_call()
-
-                yield ToolCalled(
-                    tool_name=tool_name,
-                    tool_input=tool_input,
-                    experiment_id=experiment.id,
-                    investigation_id=investigation.id,
-                )
-
-                result_str = await self._dispatch_tool(tool_name, tool_input, investigation)
-                result_str = _compact_result(tool_name, result_str)
-
-                summarized_str, summarize_event = await self._summarize_output(
-                    cost, tool_name, result_str, investigation.id
-                )
-                if summarize_event is not None:
-                    yield summarize_event
-
-                content_for_model = summarized_str if summarize_event else result_str
-                preview = result_str[:1500] if len(result_str) > 1500 else result_str
-                yield ToolResultEvent(
-                    tool_name=tool_name,
-                    result_preview=preview,
-                    experiment_id=experiment.id,
-                    investigation_id=investigation.id,
-                )
-
-                # Emit visualization event if tool returned viz payload
-                viz_event = self._maybe_viz_event(result_str, experiment.id, investigation.id)
-                if viz_event is not None:
-                    yield viz_event
-
-                if tool_name == "record_finding":
-                    h_id = tool_input.get("hypothesis_id", hypothesis.id)
-                    e_type = tool_input.get("evidence_type", "neutral")
-                    finding = Finding(
-                        title=tool_input.get("title", ""),
-                        detail=tool_input.get("detail", ""),
-                        evidence=tool_input.get("evidence", ""),
-                        hypothesis_id=h_id,
-                        evidence_type=e_type,
-                        source_type=tool_input.get("source_type", ""),
-                        source_id=tool_input.get("source_id", ""),
-                        evidence_level=int(tool_input.get("evidence_level", 0)),
-                    )
-                    async with self._state_lock:
-                        investigation.record_finding(finding)
-                        h = investigation.get_hypothesis(h_id)
-                        if h:
-                            if e_type == "supporting":
-                                h.supporting_evidence.append(finding.title)
-                            elif e_type == "contradicting":
-                                h.contradicting_evidence.append(finding.title)
-                    yield FindingRecorded(
-                        title=finding.title,
-                        detail=finding.detail,
-                        hypothesis_id=h_id,
-                        evidence_type=e_type,
-                        evidence=finding.evidence,
-                        source_type=finding.source_type,
-                        source_id=finding.source_id,
-                        evidence_level=finding.evidence_level,
-                        investigation_id=investigation.id,
-                    )
-
-                if tool_name == "train_model":
-                    try:
-                        train_result = json.loads(result_str)
-                        if isinstance(train_result, dict) and "model_id" in train_result:
-                            async with self._state_lock:
-                                investigation.trained_model_ids.append(train_result["model_id"])
-                    except (json.JSONDecodeError, TypeError):
-                        pass
-
-                if tool_name == "record_negative_control":
-                    control = NegativeControl(
-                        identifier=tool_input.get("identifier", tool_input.get("smiles", "")),
-                        identifier_type=tool_input.get("identifier_type", ""),
-                        name=tool_input.get("name", ""),
-                        score=float(
-                            tool_input.get("score", tool_input.get("prediction_score", 0.0))
-                        ),
-                        threshold=float(tool_input.get("threshold", 0.5)),
-                        source=tool_input.get("source", ""),
-                    )
-                    async with self._state_lock:
-                        investigation.add_negative_control(control)
-                    yield NegativeControlRecorded(
-                        identifier=control.identifier,
-                        identifier_type=control.identifier_type,
-                        name=control.name,
-                        score=control.score,
-                        threshold=control.threshold,
-                        correctly_classified=(control.correctly_classified),
-                        investigation_id=investigation.id,
-                    )
-
-                tool_results.append(
-                    {
-                        "type": "tool_result",
-                        "tool_use_id": tool_use_id,
-                        "content": content_for_model,
-                    }
-                )
-
-            messages.append({"role": "user", "content": tool_results})
-
-    async def _run_experiment_batch(
-        self,
-        investigation: Investigation,
-        batch: list[tuple[Hypothesis, Experiment, dict[str, Any]]],
-        cost: CostTracker,
-    ) -> AsyncGenerator[DomainEvent, None]:
-        """Run up to 2 experiments concurrently with sibling awareness."""
-        if len(batch) == 1:
-            h, exp, design = batch[0]
-            async for event in self._run_researcher_experiment(investigation, h, exp, cost, design):
-                yield event
-            return
-
-        # Build sibling context strings so each researcher knows what the other is doing
-        sibling_contexts: list[str] = []
-        for i, (_hyp, _exp, _design) in enumerate(batch):
-            other_idx = 1 - i
-            other_hyp, other_exp, other_design = batch[other_idx]
-            sibling_contexts.append(
-                f"Hypothesis: {other_hyp.statement}\n"
-                f"Experiment: {other_exp.description}\n"
-                f"Tools: {', '.join(other_design.get('tool_plan', []))}"
-            )
-
-        queue: asyncio.Queue[DomainEvent | None] = asyncio.Queue()
-
-        async def _run_one(
-            hyp: Hypothesis,
-            exp: Experiment,
-            design: dict[str, Any],
-            sib_ctx: str,
-        ) -> None:
-            try:
-                async for ev in self._run_researcher_experiment(
-                    investigation, hyp, exp, cost, design, sibling_context=sib_ctx
-                ):
-                    await queue.put(ev)
-            except Exception as e:
-                logger.warning("Experiment %s failed: %s", exp.id, e)
-            finally:
-                await queue.put(None)
-
-        tasks = [
-            asyncio.create_task(_run_one(h, e, d, sc))
-            for (h, e, d), sc in zip(batch, sibling_contexts, strict=True)
-        ]
-
-        done_count = 0
-        while done_count < len(tasks):
-            item: DomainEvent | None = await queue.get()
-            if item is None:
-                done_count += 1
-                continue
-            yield item
-
-        await asyncio.gather(*tasks, return_exceptions=True)
-
-    @staticmethod
-    def _maybe_viz_event(
-        result_str: str,
-        experiment_id: str,
-        investigation_id: str,
-    ) -> VisualizationRendered | None:
-        """If a tool result contains viz_type, build a VisualizationRendered event."""
-        try:
-            data = json.loads(result_str)
-        except (json.JSONDecodeError, TypeError):
-            return None
-        if not isinstance(data, dict) or "viz_type" not in data:
-            return None
-        return VisualizationRendered(
-            investigation_id=investigation_id,
-            experiment_id=experiment_id,
-            viz_type=data["viz_type"],
-            title=data.get("title", ""),
-            data=data.get("data", {}),
-            config=data.get("config", {}),
-            domain=data.get("config", {}).get("domain", ""),
-        )
-
-    async def _dispatch_tool(
-        self,
-        tool_name: str,
-        tool_input: dict[str, Any],
-        investigation: Investigation,
-    ) -> str:
-        # Intercept search_prior_research -- query FTS5 via repository
-        if tool_name == "search_prior_research" and self._repository:
-            query = tool_input.get("query", "")
-            limit = int(tool_input.get("limit", 10))
-            results = await self._repository.search_findings(query, limit)
-            return json.dumps({"results": results, "count": len(results), "query": query})
-
-        args_hash = ToolCache.hash_args(tool_input)
-        cached = self._cache.get(tool_name, args_hash)
-        if cached is not None:
-            return cached
-
-        func = self._registry.get(tool_name)
-        if func is None:
-            return json.dumps({"error": f"Unknown tool: {tool_name}"})
-
-        try:
-            result = await func(**tool_input)
-            result_str = str(result)
-            self._cache.put(tool_name, args_hash, result_str)
-            return result_str
-        except Exception as e:
-            logger.warning("Tool %s failed: %s", tool_name, e)
-            return json.dumps({"error": f"Tool {tool_name} failed: {e}"})
-
-
-def _build_excalidraw_elements(investigation: Investigation) -> list[dict[str, Any]]:
-    """Build Excalidraw elements representing the investigation evidence map."""
-    elements: list[dict[str, Any]] = []
-    y_offset = 0
-
-    # Title
-    elements.append(
-        {
-            "type": "text",
-            "x": 300,
-            "y": y_offset,
-            "width": 600,
-            "height": 40,
-            "text": f"Evidence Synthesis: {investigation.prompt[:80]}",
-            "fontSize": 24,
-            "fontFamily": 1,
-            "textAlign": "center",
-            "strokeColor": "#e2e8f0",
-            "id": "title",
-        }
-    )
-    y_offset += 80
-
-    # Hypotheses
-    status_colors = {
-        "supported": "#166534",
-        "refuted": "#991b1b",
-        "revised": "#9a3412",
-        "proposed": "#374151",
-        "testing": "#1e40af",
-        "rejected": "#7f1d1d",
-    }
-    hyp_positions: dict[str, tuple[int, int]] = {}
-    for i, h in enumerate(investigation.hypotheses):
-        x = 50 + (i % 3) * 350
-        y = y_offset + (i // 3) * 160
-        color = status_colors.get(h.status.value, "#374151")
-        elements.append(
-            {
-                "type": "rectangle",
-                "x": x,
-                "y": y,
-                "width": 300,
-                "height": 120,
-                "backgroundColor": color,
-                "strokeColor": "#94a3b8",
-                "roundness": {"type": 3},
-                "id": f"hyp-{h.id}",
-            }
-        )
-        label = f"{h.status.value.upper()}\n{h.statement[:60]}"
-        if h.confidence > 0:
-            label += f"\nConf: {h.confidence:.0%}"
-        elements.append(
-            {
-                "type": "text",
-                "x": x + 10,
-                "y": y + 10,
-                "width": 280,
-                "height": 100,
-                "text": label,
-                "fontSize": 14,
-                "fontFamily": 1,
-                "strokeColor": "#e2e8f0",
-                "id": f"hyp-label-{h.id}",
-            }
-        )
-        hyp_positions[h.id] = (x + 150, y + 120)
-
-    y_offset += ((len(investigation.hypotheses) + 2) // 3) * 160 + 40
-
-    # Findings summary
-    if investigation.findings:
-        elements.append(
-            {
-                "type": "text",
-                "x": 50,
-                "y": y_offset,
-                "width": 400,
-                "height": 30,
-                "text": f"Findings: {len(investigation.findings)} recorded",
-                "fontSize": 18,
-                "fontFamily": 1,
-                "strokeColor": "#94a3b8",
-                "id": "findings-header",
-            }
-        )
-        y_offset += 50
-        for j, f in enumerate(investigation.findings[:12]):
-            elements.append(
-                {
-                    "type": "text",
-                    "x": 60,
-                    "y": y_offset + j * 25,
-                    "width": 900,
-                    "height": 20,
-                    "text": f"[{f.evidence_type}] {f.title[:90]}",
-                    "fontSize": 12,
-                    "fontFamily": 3,
-                    "strokeColor": "#94a3b8",
-                    "id": f"finding-{j}",
-                }
-            )
-
-    return elements

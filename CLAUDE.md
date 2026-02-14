@@ -423,7 +423,11 @@ All paths relative to `server/src/ehrlich/`.
 
 | File | Purpose |
 |------|---------|
-| `application/multi_orchestrator.py` | Director-Worker-Summarizer orchestrator |
+| `application/multi_orchestrator.py` | Director-Worker-Summarizer orchestrator (main 6-phase loop) |
+| `application/diagram_builder.py` | Excalidraw evidence synthesis diagram generation |
+| `application/tool_dispatcher.py` | Tool execution dispatcher with caching and special handlers |
+| `application/researcher_executor.py` | Single researcher experiment executor with tool loop |
+| `application/batch_executor.py` | Parallel batch experiment executor (2 concurrent researchers) |
 | `application/cost_tracker.py` | Per-model cost tracking with tiered pricing |
 | `application/tool_cache.py` | In-memory TTL cache for tool results |
 | `application/tool_registry.py` | `ToolRegistry` with domain tag filtering |
