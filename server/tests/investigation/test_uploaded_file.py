@@ -209,14 +209,14 @@ class TestQueryUploadedDataHandler:
 
 class TestPromptInjection:
     def test_empty_files(self) -> None:
-        from ehrlich.investigation.application.prompts import (
+        from ehrlich.investigation.application.prompts.builders import (
             build_uploaded_data_context,
         )
 
         assert build_uploaded_data_context([]) == ""
 
     def test_tabular_context(self) -> None:
-        from ehrlich.investigation.application.prompts import (
+        from ehrlich.investigation.application.prompts.builders import (
             build_uploaded_data_context,
         )
 
@@ -236,7 +236,7 @@ class TestPromptInjection:
         assert "</uploaded_data>" in ctx
 
     def test_document_context(self) -> None:
-        from ehrlich.investigation.application.prompts import (
+        from ehrlich.investigation.application.prompts.builders import (
             build_uploaded_data_context,
         )
 

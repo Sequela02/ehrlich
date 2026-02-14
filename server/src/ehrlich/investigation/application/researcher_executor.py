@@ -4,7 +4,7 @@ import json
 import logging
 from typing import TYPE_CHECKING, Any
 
-from ehrlich.investigation.application.prompts import SUMMARIZER_PROMPT
+from ehrlich.investigation.application.prompts.constants import SUMMARIZER_PROMPT
 from ehrlich.investigation.domain.events import (
     DomainEvent,
     FindingRecorded,

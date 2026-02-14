@@ -1,14 +1,18 @@
 from ehrlich.investigation.application.multi_orchestrator import SEARCH_TOOLS
-from ehrlich.investigation.application.prompts import (
-    DIRECTOR_EVALUATION_PROMPT,
-    DIRECTOR_EXPERIMENT_PROMPT,
-    DIRECTOR_SYNTHESIS_PROMPT,
-    RESEARCHER_EXPERIMENT_PROMPT,
-    build_experiment_prompt,
+from ehrlich.investigation.application.prompts.builders import (
     build_literature_assessment_prompt,
     build_literature_survey_prompt,
     build_pico_and_classification_prompt,
     build_researcher_prompt,
+)
+from ehrlich.investigation.application.prompts.constants import (
+    DIRECTOR_EVALUATION_PROMPT,
+    DIRECTOR_EXPERIMENT_PROMPT,
+    DIRECTOR_SYNTHESIS_PROMPT,
+    RESEARCHER_EXPERIMENT_PROMPT,
+)
+from ehrlich.investigation.application.prompts.director import (
+    build_experiment_prompt,
     build_synthesis_prompt,
 )
 from ehrlich.investigation.domain.domains.molecular import MOLECULAR_SCIENCE

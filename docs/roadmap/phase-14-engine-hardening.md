@@ -39,14 +39,14 @@ Moved infrastructure concerns out of `api/routes/investigation.py` (829 lines) i
 
 Result: `api/routes/investigation.py` from 829 to 366 lines (56% reduction). Three new modules: `registry_factory.py` (237 lines), `orchestrator_factory.py` (71 lines), `api/schemas/investigation.py` (140 lines).
 
-## 14C: Prompt Module Split -- TODO
+## 14C: Prompt Module Split -- DONE
 
-Split `prompts.py` (1,512 lines) into focused modules.
+Split `prompts.py` (1,505 lines) into `prompts/` package with 3 focused modules. Removed dead code (`SCIENTIST_SYSTEM_PROMPT`, `_build_prior_context` -- zero external imports).
 
-- [ ] `prompts/__init__.py` -- re-exports for backward compatibility
-- [ ] `prompts/constants.py` -- `SCIENTIST_SYSTEM_PROMPT`, `SUMMARIZER_PROMPT`, `RESEARCHER_EXPERIMENT_PROMPT`
-- [ ] `prompts/director.py` -- `DIRECTOR_FORMULATION_PROMPT`, `DIRECTOR_EXPERIMENT_PROMPT`, `DIRECTOR_EVALUATION_PROMPT`, `DIRECTOR_SYNTHESIS_PROMPT`
-- [ ] `prompts/builders.py` -- `build_pico_and_classification_prompt`, `build_literature_survey_prompt`, `build_literature_assessment_prompt`, `build_formulation_prompt`, `build_experiment_prompt`, `build_synthesis_prompt`, `build_researcher_prompt`, `build_multi_investigation_context`, `build_uploaded_data_context`, `_build_prior_context`
+- [x] `prompts/__init__.py` -- package docstring only (no re-exports; consumers import from submodules directly)
+- [x] `prompts/constants.py` -- 6 static prompt strings (`DIRECTOR_FORMULATION_PROMPT`, `DIRECTOR_EXPERIMENT_PROMPT`, `DIRECTOR_EVALUATION_PROMPT`, `DIRECTOR_SYNTHESIS_PROMPT`, `RESEARCHER_EXPERIMENT_PROMPT`, `SUMMARIZER_PROMPT`)
+- [x] `prompts/director.py` -- 4 Director-phase builder functions (`build_formulation_prompt`, `build_experiment_prompt`, `build_synthesis_prompt`, `build_multi_investigation_context`)
+- [x] `prompts/builders.py` -- 6 non-Director builders (`build_pico_and_classification_prompt`, `build_literature_survey_prompt`, `build_literature_assessment_prompt`, `build_researcher_prompt`, `build_uploaded_data_context`, `_DEFAULT_CATEGORIES`)
 
 ## 14D: Domain Tool Enrichment -- TODO
 

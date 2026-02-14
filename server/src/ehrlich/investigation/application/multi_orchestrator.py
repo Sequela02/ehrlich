@@ -9,21 +9,25 @@ from typing import TYPE_CHECKING, Any
 from ehrlich.investigation.application.batch_executor import run_experiment_batch
 from ehrlich.investigation.application.cost_tracker import CostTracker
 from ehrlich.investigation.application.diagram_builder import generate_diagram
-from ehrlich.investigation.application.prompts import (
+from ehrlich.investigation.application.prompts.builders import (
+    build_literature_assessment_prompt,
+    build_literature_survey_prompt,
+    build_pico_and_classification_prompt,
+    build_researcher_prompt,
+    build_uploaded_data_context,
+)
+from ehrlich.investigation.application.prompts.constants import (
     DIRECTOR_EVALUATION_PROMPT,
     DIRECTOR_EXPERIMENT_PROMPT,
     DIRECTOR_FORMULATION_PROMPT,
     DIRECTOR_SYNTHESIS_PROMPT,
     RESEARCHER_EXPERIMENT_PROMPT,
+)
+from ehrlich.investigation.application.prompts.director import (
     build_experiment_prompt,
     build_formulation_prompt,
-    build_literature_assessment_prompt,
-    build_literature_survey_prompt,
     build_multi_investigation_context,
-    build_pico_and_classification_prompt,
-    build_researcher_prompt,
     build_synthesis_prompt,
-    build_uploaded_data_context,
 )
 from ehrlich.investigation.application.researcher_executor import (
     maybe_viz_event,
