@@ -75,7 +75,7 @@ export function DataSources() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 rounded-lg bg-surface/20 border border-border/50">
-                <div className="text-3xl font-mono font-bold text-primary mb-1">15</div>
+                <div className="text-3xl font-mono font-bold text-primary mb-1">18</div>
                 <div className="text-xs text-muted-foreground uppercase tracking-wider">External APIs</div>
               </div>
               <div className="p-4 rounded-lg bg-surface/20 border border-border/50">

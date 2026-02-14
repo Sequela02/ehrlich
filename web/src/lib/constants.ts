@@ -1,12 +1,12 @@
 export const STATS = {
-  tools: 67,
-  dataSources: 16,
-  domains: 3,
+  tools: 78,
+  dataSources: 19,
+  domains: 4,
   models: 3,
   phases: 6,
-  vizTools: 12,
-  externalAPIs: 15,
-  boundedContexts: 10,
+  vizTools: 15,
+  externalAPIs: 18,
+  boundedContexts: 11,
   sseEvents: 20,
 } as const;
 
@@ -46,7 +46,7 @@ export const EXAMPLE_PROMPTS = [
 export const DIFFERENTIATORS = [
   {
     label: "Real Computation",
-    tagline: "70 tools that compute, not summarize.",
+    tagline: "78 tools that compute, not summarize.",
     description:
       "Ehrlich trains ML models, runs molecular docking, executes statistical tests, and validates with negative controls. Every tool returns structured data from real computation or real APIs.",
     capabilities: [
@@ -61,9 +61,9 @@ export const DIFFERENTIATORS = [
     label: "Accessible Pricing",
     tagline: "$2-10 per investigation. Free tier included.",
     description:
-      "Full 6-phase methodology, all 70 tools, all 16 data sources at every tier. No feature gates. A student in Mexico and a pharma lab in Boston use the same product. The only variable is model quality.",
+      "Full 6-phase methodology, all 78 tools, all 19 data sources at every tier. No feature gates. A student in Mexico and a pharma lab in Boston use the same product. The only variable is model quality.",
     capabilities: [
-      "3 domains, extensible to any",
+      "4 domains, extensible to any",
       "Free: 3 Haiku investigations/month",
       "Credits: Haiku (1), Sonnet (3), Opus (5)",
       "Enterprise: bring your own Anthropic key",
@@ -137,6 +137,23 @@ export const DOMAINS = [
     prompt: "Assess safety and efficacy of vitamin D3 + K2 supplementation at high doses",
     vizTools: ["Nutrient comparison", "Nutrient adequacy", "Therapeutic window", "Funnel plot"],
   },
+  {
+    label: "IMPACT EVALUATION",
+    toolCount: 5,
+    description:
+      "Causal analysis of social programs: education, health, employment, housing, sports. Difference-in-differences estimation, automated threat assessment, economic indicators.",
+    capabilities: [
+      "Difference-in-differences causal estimation (DiD)",
+      "Automated validity threat assessment (WWC/CONEVAL)",
+      "World Bank development indicators (GDP, poverty, education)",
+      "WHO Global Health Observatory (mortality, disease burden)",
+      "FRED economic time series (800K+ US series)",
+      "Cross-program statistical comparison",
+    ],
+    sources: "World Bank, WHO GHO, FRED",
+    prompt: "What is the causal effect of conditional cash transfers on school enrollment in Latin America?",
+    vizTools: ["Program dashboard", "Geographic comparison", "Parallel trends"],
+  },
 ] as const;
 
 export const DATA_SOURCES = [
@@ -155,7 +172,10 @@ export const DATA_SOURCES = [
   { name: "USDA FoodData", domain: "api.nal.usda.gov", access: "API Key" as const, records: "300K+ foods", purpose: "Nutrient profiles (macro + micro)" },
   { name: "OpenFDA CAERS", domain: "api.fda.gov", access: "Free" as const, records: "Ongoing", purpose: "Supplement adverse event reports" },
   { name: "RxNav", domain: "rxnav.nlm.nih.gov", access: "Free" as const, records: "RxNorm DB", purpose: "Drug-nutrient interaction screening" },
-  { name: "Ehrlich FTS5", domain: "internal", access: "Internal" as const, records: "Growing", purpose: "Past findings (institutional memory)" },
+  { name: "World Bank", domain: "api.worldbank.org", access: "Free" as const, records: "16K+ indicators", purpose: "Development indicators by country (GDP, poverty, education)" },
+  { name: "WHO GHO", domain: "ghoapi.azureedge.net", access: "Free" as const, records: "2K+ indicators", purpose: "Global health statistics (mortality, disease, life expectancy)" },
+  { name: "FRED", domain: "api.stlouisfed.org", access: "API Key" as const, records: "800K+ series", purpose: "US economic time series (GDP, unemployment, CPI)" },
+  { name: "Ehrlich tsvector", domain: "internal", access: "Internal" as const, records: "Growing", purpose: "Past findings (institutional memory)" },
 ] as const;
 
 export const METHODOLOGY_PHASES = [
@@ -181,7 +201,7 @@ export const METHODOLOGY_PHASES = [
     number: "04",
     label: "Experiment Execution",
     foundation: "Fisher (1935)",
-    description: "Experiments with independent/dependent variables, controls, confounders, and analysis plans. 2 experiments run in parallel. 70 tools across all domains.",
+    description: "Experiments with independent/dependent variables, controls, confounders, and analysis plans. Two experiments run in parallel. 78 tools across 4 domains.",
   },
   {
     number: "05",
@@ -229,6 +249,9 @@ export const VISUALIZATION_CATEGORIES = [
       "Nutrient Comparison -- Grouped bar chart comparing foods",
       "Nutrient Adequacy -- Horizontal bars showing % RDA with MAR score",
       "Therapeutic Window -- EAR/RDA/UL safety zones per nutrient",
+      "Program Dashboard -- Multi-indicator KPI view with target tracking",
+      "Geographic Comparison -- Region bar chart with benchmark line",
+      "Parallel Trends -- DiD treatment vs control over time",
     ],
   },
   {
@@ -288,10 +311,10 @@ export const PRICING_TIERS = [
     price: "$0",
     period: "forever",
     credits: "3 Haiku investigations/month",
-    description: "Full methodology. All 70 tools. All 16 data sources. Findings indexed for future research.",
+    description: "Full methodology. All 78 tools. All 19 data sources. Findings indexed for future research.",
     features: [
       "Full 6-phase scientific methodology",
-      "All 70 tools, all 16 data sources",
+      "All 78 tools, all 19 data sources, 4 domains",
       "Full audit trail and report",
       "Self-referential search (FTS5)",
       "No feature gates",
