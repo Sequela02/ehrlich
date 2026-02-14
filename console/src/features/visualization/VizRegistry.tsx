@@ -43,6 +43,8 @@ const LazyTherapeuticWindow = lazy(() => import('./charts/TherapeuticWindow'));
 const LazyProgramDashboard = lazy(() => import('./charts/ProgramDashboard'));
 const LazyGeographicComparison = lazy(() => import('./charts/GeographicComparison'));
 const LazyParallelTrends = lazy(() => import('./charts/ParallelTrends'));
+const LazyRDDPlot = lazy(() => import('./charts/RDDPlot'));
+const LazyCausalDiagram = lazy(() => import('./charts/CausalDiagram'));
 
 registry.set('binding_scatter', LazyBindingScatter as unknown as ChartComponent);
 registry.set('admet_radar', LazyADMETRadar as unknown as ChartComponent);
@@ -59,6 +61,8 @@ registry.set('therapeutic_window', LazyTherapeuticWindow as unknown as ChartComp
 registry.set('program_dashboard', LazyProgramDashboard as unknown as ChartComponent);
 registry.set('geographic_comparison', LazyGeographicComparison as unknown as ChartComponent);
 registry.set('parallel_trends', LazyParallelTrends as unknown as ChartComponent);
+registry.set('rdd_plot', LazyRDDPlot as unknown as ChartComponent);
+registry.set('causal_diagram', LazyCausalDiagram as unknown as ChartComponent);
 
 /**
  * Look up a chart component by viz_type string.

@@ -19,7 +19,7 @@ Searches and manages scientific references. Integrates with Semantic Scholar API
 Cheminformatics operations: molecular descriptors, fingerprints, 3D conformer generation, substructure matching, and 2D SVG depiction. All RDKit usage is isolated in the infrastructure adapter (`rdkit_adapter.py`).
 
 ### Analysis
-Dataset exploration and statistical analysis. Loads bioactivity data from ChEMBL, compound search via PubChem, curated pharmacology via GtoPdb, substructure enrichment analysis, property distributions.
+Dataset exploration, statistical analysis, and domain-agnostic causal inference. Loads bioactivity data from ChEMBL, compound search via PubChem, curated pharmacology via GtoPdb, substructure enrichment analysis, property distributions. Causal inference methods (DiD, PSM, RDD, Synthetic Control) with threat assessment and cost-effectiveness analysis -- usable by any domain, not just impact evaluation.
 
 ### Prediction
 Machine learning for activity/outcome prediction. Supports XGBoost models with Morgan fingerprints (all domains) and Chemprop D-MPNN (molecular only). Ensemble predictions combine multiple models.
@@ -34,7 +34,7 @@ Exercise physiology and sports medicine research: evidence-based training analys
 Nutrition science research: supplement evidence analysis, supplement label lookup (NIH DSLD), nutrient data (USDA FoodData), supplement safety monitoring (OpenFDA CAERS), drug interaction screening (RxNav), DRI-based nutrient adequacy assessment, nutrient ratio analysis, and inflammatory index scoring. Uses Semantic Scholar for literature search.
 
 ### Impact
-Social program evaluation and causal analysis. Foundation layer provides economic indicator search (World Bank, WHO GHO, FRED), international benchmarking, and cross-program comparison using existing statistical tests. Hypothesis-driven analysis of any program type (education, health, sports, employment, housing) in any country. Full DDD structure with domain entities (`EconomicIndicator`, `BenchmarkValue`, `ProgramComparison`, `ProgramMetric`), repository ABCs (`EconomicDataRepository`, `BenchmarkRepository`), and infrastructure clients for three external APIs. Future phases will add causal inference methods (DiD, PSM, RDD, Synthetic Control), Mexico/US-specific data sources, and document upload. See `docs/impact-evaluation-domain.md` for full design.
+Social program evaluation. Provides economic indicator search (World Bank, WHO GHO, FRED), international benchmarking, and cross-program comparison using existing statistical tests. Hypothesis-driven analysis of any program type (education, health, sports, employment, housing) in any country. Full DDD structure with domain entities, repository ABCs, and infrastructure clients for three external APIs. Causal inference methods (DiD, PSM, RDD, Synthetic Control) live in `analysis/` as domain-agnostic tools. Future phases will add Mexico/US-specific data sources and document upload. See `docs/impact-evaluation-domain.md` for full design.
 
 ### Investigation
 Hypothesis-driven agent orchestration. Manages the Claude-driven research loop: literature survey, hypothesis formulation (with predictions, criteria, scope), parallel experiment execution, criteria-based evaluation, negative controls, and synthesis. Uses multi-model architecture (Director/Researcher/Summarizer) with user-guided steering, domain classification, and multi-investigation memory. Includes domain configuration system (`DomainConfig` + `DomainRegistry`) for pluggable scientific domains with tool tagging, score definitions, prompt adaptation, and visualization control. Each domain config includes `tool_examples` in `experiment_examples` with realistic tool chaining patterns for complete tool coverage. Optional MCP bridge (`MCPBridge`) connects to external MCP servers for extensibility (e.g. Excalidraw for visual summaries).
@@ -47,7 +47,7 @@ Ehrlich uses a three-tier Claude model architecture for cost-efficient investiga
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesizes (3-5 calls)
     │                       NO tool access, structured JSON responses only
     │
-    ├── Sonnet 4.5 (Researcher) -- Executes experiments with 78 domain-filtered tools (10-20 calls, parallel x2)
+    ├── Sonnet 4.5 (Researcher) -- Executes experiments with 84 domain-filtered tools (10-20 calls, parallel x2)
     │                               Tool-calling loop with max_iterations_per_experiment guard
     │
     └── Haiku 4.5 (Summarizer)  -- Compresses large tool outputs >2000 chars, PICO+classification, evidence grading
@@ -140,7 +140,7 @@ Invalid SMILES on `/depict` returns a dark error SVG (200 status). Invalid SMILE
 
 ## Domain-Specific Visualization
 
-12 visualization tools produce structured `VisualizationPayload` JSON (viz_type, title, data, config, domain). The orchestrator intercepts viz tool results via `_maybe_viz_event()` and emits a `VisualizationRendered` SSE event. On the frontend, `VizRegistry` maps each `viz_type` to a lazy-loaded React component rendered in the `VisualizationPanel` grid.
+17 visualization tools produce structured `VisualizationPayload` JSON (viz_type, title, data, config, domain). The orchestrator intercepts viz tool results via `_maybe_viz_event()` and emits a `VisualizationRendered` SSE event. On the frontend, `VizRegistry` maps each `viz_type` to a lazy-loaded React component rendered in the `VisualizationPanel` grid.
 
 | Tool | Chart Library | Purpose |
 |------|--------------|---------|
@@ -156,6 +156,11 @@ Invalid SMILES on `/depict` returns a dark error SVG (200 status). Invalid SMILE
 | `render_nutrient_comparison` | Recharts BarChart | Grouped nutrient profile comparison |
 | `render_nutrient_adequacy` | Recharts BarChart | DRI adequacy assessment with MAR score |
 | `render_therapeutic_window` | Visx | Therapeutic window with EAR/RDA/AI/UL zones |
+| `render_program_dashboard` | Recharts BarChart | Multi-indicator KPI dashboard with target tracking |
+| `render_geographic_comparison` | Recharts BarChart | Region comparison with benchmark reference line |
+| `render_parallel_trends` | Recharts ComposedChart | DiD parallel trends (treatment vs control) |
+| `render_rdd_plot` | Visx | Regression discontinuity scatter with cutoff |
+| `render_causal_diagram` | Visx | DAG showing treatment, outcome, confounders |
 
 Chart theming uses OKLCH color tokens consistent with the application's visual identity.
 

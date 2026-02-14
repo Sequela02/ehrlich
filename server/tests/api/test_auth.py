@@ -93,9 +93,7 @@ class TestGetCurrentUser:
         assert response.status_code == 401
         assert "Missing or invalid Authorization header" in response.json()["detail"]
 
-    def test_malformed_header_no_bearer_returns_401(
-        self, client: TestClient
-    ) -> None:
+    def test_malformed_header_no_bearer_returns_401(self, client: TestClient) -> None:
         response = client.get("/protected", headers={"Authorization": "Token abc"})
         assert response.status_code == 401
 
@@ -120,9 +118,7 @@ class TestGetCurrentUser:
         token = _make_token(sub="user_abc", email="abc@test.com")
         settings_patch, jwks_patch = _patch_workos()
         with settings_patch, jwks_patch:
-            response = client.get(
-                "/protected", headers={"Authorization": f"Bearer {token}"}
-            )
+            response = client.get("/protected", headers={"Authorization": f"Bearer {token}"})
         assert response.status_code == 200
         data = response.json()
         assert data["workos_id"] == "user_abc"
@@ -133,9 +129,7 @@ class TestGetCurrentUser:
             "ehrlich.api.auth.get_settings",
             return_value=MagicMock(workos_client_id=""),
         ):
-            response = client.get(
-                "/protected", headers={"Authorization": "Bearer some.token.here"}
-            )
+            response = client.get("/protected", headers={"Authorization": "Bearer some.token.here"})
         assert response.status_code == 500
         assert "WorkOS not configured" in response.json()["detail"]
 
@@ -152,9 +146,7 @@ class TestGetOptionalUser:
             mock_jwks_fn.return_value.get_signing_key_from_jwt.side_effect = (
                 pyjwt.exceptions.PyJWTError("bad")
             )
-            response = client.get(
-                "/optional", headers={"Authorization": "Bearer bad.token"}
-            )
+            response = client.get("/optional", headers={"Authorization": "Bearer bad.token"})
         assert response.status_code == 200
         assert response.json() == {"user": None}
 
@@ -162,9 +154,7 @@ class TestGetOptionalUser:
         token = _make_token(sub="user_opt", email="opt@test.com")
         settings_patch, jwks_patch = _patch_workos()
         with settings_patch, jwks_patch:
-            response = client.get(
-                "/optional", headers={"Authorization": f"Bearer {token}"}
-            )
+            response = client.get("/optional", headers={"Authorization": f"Bearer {token}"})
         assert response.status_code == 200
         data = response.json()
         assert data["user"]["workos_id"] == "user_opt"
@@ -175,9 +165,7 @@ class TestGetCurrentUserSSE:
         token = _make_token(sub="user_sse", email="sse@test.com")
         settings_patch, jwks_patch = _patch_workos()
         with settings_patch, jwks_patch:
-            response = client.get(
-                "/sse", headers={"Authorization": f"Bearer {token}"}
-            )
+            response = client.get("/sse", headers={"Authorization": f"Bearer {token}"})
         assert response.status_code == 200
         assert response.json()["workos_id"] == "user_sse"
 
@@ -194,9 +182,7 @@ class TestGetCurrentUserSSE:
         assert response.status_code == 401
         assert "Missing authentication" in response.json()["detail"]
 
-    def test_header_takes_precedence_over_query(
-        self, client: TestClient
-    ) -> None:
+    def test_header_takes_precedence_over_query(self, client: TestClient) -> None:
         header_token = _make_token(sub="from_header", email="h@test.com")
         query_token = _make_token(sub="from_query", email="q@test.com")
         settings_patch, jwks_patch = _patch_workos()

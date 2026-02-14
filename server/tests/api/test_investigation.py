@@ -65,9 +65,7 @@ class TestListInvestigations:
         assert response.status_code == 200
         assert response.json() == []
 
-    async def test_returns_created_investigations(
-        self, client: httpx.AsyncClient
-    ) -> None:
+    async def test_returns_created_investigations(self, client: httpx.AsyncClient) -> None:
         await client.post(
             "/api/v1/investigate",
             json={"prompt": "Test 1", "director_tier": "haiku"},

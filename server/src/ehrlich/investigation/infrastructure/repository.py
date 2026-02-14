@@ -84,9 +84,7 @@ class InvestigationRepository(_Base):
 
     async def initialize(self) -> None:
         await self._ensure_database()
-        self._pool = await asyncpg.create_pool(
-            self._database_url, min_size=2, max_size=10
-        )
+        self._pool = await asyncpg.create_pool(self._database_url, min_size=2, max_size=10)
         async with self._pool.acquire() as conn:
             await conn.execute(_SCHEMA)
         logger.info("PostgreSQL repository initialized")
@@ -122,9 +120,7 @@ class InvestigationRepository(_Base):
             raise RuntimeError(msg)
         return self._pool
 
-    async def save(
-        self, investigation: Investigation, *, user_id: str | None = None
-    ) -> None:
+    async def save(self, investigation: Investigation, *, user_id: str | None = None) -> None:
         pool = self._get_pool()
         async with pool.acquire() as conn:
             await conn.execute(
@@ -170,9 +166,7 @@ class InvestigationRepository(_Base):
     async def list_all(self) -> list[Investigation]:
         pool = self._get_pool()
         async with pool.acquire() as conn:
-            rows = await conn.fetch(
-                "SELECT * FROM investigations ORDER BY created_at DESC"
-            )
+            rows = await conn.fetch("SELECT * FROM investigations ORDER BY created_at DESC")
             return [_from_row(row) for row in rows]
 
     async def list_by_user(self, user_id: str) -> list[Investigation]:
@@ -216,14 +210,11 @@ class InvestigationRepository(_Base):
             if investigation.status == InvestigationStatus.COMPLETED:
                 await self._rebuild_fts(conn, investigation)
 
-    async def save_event(
-        self, investigation_id: str, event_type: str, event_data: str
-    ) -> None:
+    async def save_event(self, investigation_id: str, event_type: str, event_data: str) -> None:
         pool = self._get_pool()
         async with pool.acquire() as conn:
             await conn.execute(
-                "INSERT INTO events (investigation_id, event_type, event_data) "
-                "VALUES ($1, $2, $3)",
+                "INSERT INTO events (investigation_id, event_type, event_data) VALUES ($1, $2, $3)",
                 investigation_id,
                 event_type,
                 event_data,
@@ -249,9 +240,7 @@ class InvestigationRepository(_Base):
                 for row in rows
             ]
 
-    async def search_findings(
-        self, query: str, limit: int = 20
-    ) -> list[dict[str, Any]]:
+    async def search_findings(self, query: str, limit: int = 20) -> list[dict[str, Any]]:
         pool = self._get_pool()
         async with pool.acquire() as conn:
             rows = await conn.fetch(
@@ -297,8 +286,7 @@ class InvestigationRepository(_Base):
         pool = self._get_pool()
         async with pool.acquire() as conn:
             row = await conn.fetchrow(
-                "SELECT id, workos_id, email, credits, created_at "
-                "FROM users WHERE workos_id = $1",
+                "SELECT id, workos_id, email, credits, created_at FROM users WHERE workos_id = $1",
                 workos_id,
             )
             if row is not None:
@@ -315,16 +303,12 @@ class InvestigationRepository(_Base):
     async def get_user_credits(self, workos_id: str) -> int:
         pool = self._get_pool()
         async with pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT credits FROM users WHERE workos_id = $1", workos_id
-            )
+            row = await conn.fetchrow("SELECT credits FROM users WHERE workos_id = $1", workos_id)
             if row is None:
                 return 0
             return int(row["credits"])
 
-    async def deduct_credits(
-        self, workos_id: str, amount: int, investigation_id: str
-    ) -> bool:
+    async def deduct_credits(self, workos_id: str, amount: int, investigation_id: str) -> bool:
         pool = self._get_pool()
         async with pool.acquire() as conn, conn.transaction():
             row = await conn.fetchrow(
@@ -347,14 +331,11 @@ class InvestigationRepository(_Base):
             )
             return True
 
-    async def refund_credits(
-        self, workos_id: str, amount: int, investigation_id: str
-    ) -> None:
+    async def refund_credits(self, workos_id: str, amount: int, investigation_id: str) -> None:
         pool = self._get_pool()
         async with pool.acquire() as conn, conn.transaction():
             row = await conn.fetchrow(
-                "UPDATE users SET credits = credits + $1 "
-                "WHERE workos_id = $2 RETURNING id",
+                "UPDATE users SET credits = credits + $1 WHERE workos_id = $2 RETURNING id",
                 amount,
                 workos_id,
             )
@@ -391,8 +372,7 @@ class InvestigationRepository(_Base):
             )
         text = " ".join(parts)
         await conn.execute(
-            "UPDATE investigations SET findings_search = to_tsvector('english', $1) "
-            "WHERE id = $2",
+            "UPDATE investigations SET findings_search = to_tsvector('english', $1) WHERE id = $2",
             text,
             investigation.id,
         )

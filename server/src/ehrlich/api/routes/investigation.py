@@ -11,7 +11,13 @@ from sse_starlette.sse import EventSourceResponse
 
 from ehrlich.analysis.tools import (
     analyze_substructures,
+    assess_threats,
+    compute_cost_effectiveness,
     compute_properties,
+    estimate_did,
+    estimate_psm,
+    estimate_rdd,
+    estimate_synthetic_control,
     explore_dataset,
     run_categorical_test,
     run_statistical_test,
@@ -31,9 +37,7 @@ from ehrlich.chemistry.tools import (
 )
 from ehrlich.config import get_settings
 from ehrlich.impact.tools import (
-    assess_threats,
     compare_programs,
-    estimate_did,
     fetch_benchmark,
     search_economic_indicators,
 )
@@ -61,6 +65,7 @@ from ehrlich.investigation.tools import (
 from ehrlich.investigation.tools_viz import (
     render_admet_radar,
     render_binding_scatter,
+    render_causal_diagram,
     render_dose_response,
     render_evidence_matrix,
     render_forest_plot,
@@ -72,6 +77,7 @@ from ehrlich.investigation.tools_viz import (
     render_parallel_trends,
     render_performance_chart,
     render_program_dashboard,
+    render_rdd_plot,
     render_therapeutic_window,
     render_training_timeline,
 )
@@ -221,6 +227,7 @@ def _build_registry() -> ToolRegistry:
     _nutrition = frozenset({"nutrition"})
     _nutrition_safety = frozenset({"nutrition", "safety"})
     _impact = frozenset({"impact"})
+    _causal = frozenset({"causal"})
     _ml = frozenset({"ml"})
     _viz = frozenset({"visualization"})
     _chem_viz = frozenset({"chemistry", "visualization"})
@@ -228,6 +235,7 @@ def _build_registry() -> ToolRegistry:
     _training_viz = frozenset({"training", "visualization"})
     _nutrition_viz = frozenset({"nutrition", "visualization"})
     _impact_viz = frozenset({"impact", "visualization"})
+    _causal_viz = frozenset({"causal", "visualization"})
 
     tagged_tools: list[tuple[str, Any, frozenset[str] | None]] = [
         # Chemistry (6)
@@ -287,13 +295,18 @@ def _build_registry() -> ToolRegistry:
         ("check_interactions", check_interactions, _nutrition_safety),
         ("analyze_nutrient_ratios", analyze_nutrient_ratios, _nutrition),
         ("compute_inflammatory_index", compute_inflammatory_index, _nutrition),
-        # Impact Evaluation (5)
+        # Impact Evaluation (3)
         ("search_economic_indicators", search_economic_indicators, _impact),
         ("fetch_benchmark", fetch_benchmark, _impact),
         ("compare_programs", compare_programs, _impact),
-        ("estimate_did", estimate_did, _impact),
-        ("assess_threats", assess_threats, _impact),
-        # Visualization (15)
+        # Causal Inference (6) -- domain-agnostic
+        ("estimate_did", estimate_did, _causal),
+        ("estimate_psm", estimate_psm, _causal),
+        ("estimate_rdd", estimate_rdd, _causal),
+        ("estimate_synthetic_control", estimate_synthetic_control, _causal),
+        ("assess_threats", assess_threats, _causal),
+        ("compute_cost_effectiveness", compute_cost_effectiveness, _causal),
+        # Visualization (17)
         ("render_binding_scatter", render_binding_scatter, _chem_viz),
         ("render_admet_radar", render_admet_radar, _sim_viz),
         ("render_training_timeline", render_training_timeline, _training_viz),
@@ -309,6 +322,8 @@ def _build_registry() -> ToolRegistry:
         ("render_program_dashboard", render_program_dashboard, _impact_viz),
         ("render_geographic_comparison", render_geographic_comparison, _impact_viz),
         ("render_parallel_trends", render_parallel_trends, _impact_viz),
+        ("render_rdd_plot", render_rdd_plot, _causal_viz),
+        ("render_causal_diagram", render_causal_diagram, _causal_viz),
         # Statistics (2) -- universal, no tags
         ("run_statistical_test", run_statistical_test, None),
         ("run_categorical_test", run_categorical_test, None),

@@ -197,7 +197,7 @@ The core: Claude as an autonomous scientist.
 - [x] Tests: mock API, verify request/response handling
 
 ### 5B. Tool Registry
-- [x] Register all tools from all contexts (6 chemistry, 3 literature, 6 analysis, 3 prediction, 7 simulation, 11 training, 10 nutrition, 7 investigation control -- 38 at time of Phase 5; now 73 with API tools + visualization tools + statistics tools + generic ML tools + impact tools)
+- [x] Register all tools from all contexts (6 chemistry, 3 literature, 12 analysis, 3 prediction, 7 simulation, 11 training, 10 nutrition, 7 investigation control -- 38 at time of Phase 5; now 79 with API tools + visualization tools + statistics tools + generic ML tools + impact tools + causal tools)
 - [x] Auto-generate JSON Schema from Python type hints + docstrings
 - [x] `get(name)` -> callable, `list_tools()` -> all registered tools, `list_schemas()` -> Anthropic-compatible schemas
 - [x] Schema format matches Anthropic tool_use specification
@@ -471,7 +471,7 @@ Enhancement Enhancement  Sports
            |
      Phase 13: Impact Evaluation Domain -- IN PROGRESS
      (Causal inference + Document upload + MX/US APIs)
-     13A (Foundation) DONE -> 13B partial (DiD+Viz) DONE -> 13A-2 (Upload) -> 13B remaining (PSM/RDD) -> 13C (Mexico) -> 13D (US) -> 13E (MCP)
+     13A (Foundation) DONE -> 13B (Causal Inference) DONE -> 13A-2 (Upload) -> 13C (Mexico) -> 13D (US) -> 13E (MCP)
            |
      Demo + Video -- TODO
            |
@@ -993,7 +993,7 @@ Deepened the nutrition bounded context with 1 new data source, 6 new tools, and 
 
 ## Phase 13: Impact Evaluation Domain -- IN PROGRESS
 
-New bounded context for hypothesis-driven causal analysis of social programs. Domain-agnostic methodology works for any program type (sports, health, education, employment, housing) in any country. Initial focus: Mexico and US. No existing platform combines autonomous hypothesis formulation, automated causal inference, public API integration, and evidence-graded reporting. See `docs/impact-evaluation-domain.md` for full design.
+New bounded context for hypothesis-driven causal analysis of social programs. Domain-agnostic methodology works for any program type (sports, health, education, employment, housing) in any country. Initial focus: Mexico and US. Causal inference methods (DiD, PSM, RDD, Synthetic Control) live in `analysis/` as domain-agnostic tools usable by any domain. No existing platform combines autonomous hypothesis formulation, automated causal inference, public API integration, and evidence-graded reporting. See `docs/impact-evaluation-domain.md` for full design.
 
 ### Market Gap
 
@@ -1015,7 +1015,7 @@ Of 2,800 evaluations commissioned by CONEVAL in Mexico, only 11 are impact evalu
 
 ### Phase 13B (partial): Causal Inference + Impact Viz -- DONE
 
-- [x] `CausalEstimator` port ABC in `domain/ports.py`
+- [x] `CausalEstimator` port ABC in `impact/domain/ports.py` (initial placement)
 - [x] `DiDEstimator` infrastructure with parallel trends test and automated threat assessment
 - [x] `estimate_did` tool -- difference-in-differences with effect size, SE, p-value, threats, evidence tier
 - [x] `assess_threats` tool -- knowledge-based validity threat assessment (DiD, PSM, RDD, RCT, IV)
@@ -1028,6 +1028,32 @@ Of 2,800 evaluations commissioned by CONEVAL in Mexico, only 11 are impact evalu
 
 **Counts:** 73 -> 78 tools, 12 -> 15 viz tools, 3 -> 5 impact tools.
 
+### Phase 13B: Domain-Agnostic Causal Inference -- DONE
+
+Refactored causal inference from impact-specific to domain-agnostic. All causal estimation methods now live in `analysis/` (alongside statistics), usable by any domain.
+
+- [x] Moved `ThreatToValidity`, `CausalEstimate` entities from `impact/domain/` to `analysis/domain/causal.py`
+- [x] Moved `evaluation_standards.py` (WWC tiers, CONEVAL, CREMAA) from `impact/domain/` to `analysis/domain/evidence_standards.py`
+- [x] Created `analysis/domain/causal_ports.py` -- 4 estimator port ABCs: `DiDEstimatorPort`, `PSMEstimatorPort`, `RDDEstimatorPort`, `SyntheticControlPort`
+- [x] Moved `DiDEstimator` from `impact/infrastructure/` to `analysis/infrastructure/did_estimator.py`
+- [x] New `analysis/infrastructure/psm_estimator.py` -- propensity score matching with balance diagnostics
+- [x] New `analysis/infrastructure/rdd_estimator.py` -- regression discontinuity (sharp/fuzzy)
+- [x] New `analysis/infrastructure/synthetic_control_estimator.py` -- synthetic control method
+- [x] New `analysis/application/causal_service.py` -- orchestrates all 4 estimators + threat assessment + cost-effectiveness
+- [x] New `compute_cost_effectiveness` tool -- cost per unit outcome, ICER
+- [x] Deleted `impact/domain/ports.py` -- causal estimator port moved to analysis/
+- [x] Trimmed `ImpactService` -- removed DiD/threat methods (delegated to CausalService)
+- [x] Impact tools reduced from 5 to 3 (estimate_did + assess_threats moved to analysis/)
+- [x] 6 causal tools tagged `"causal"` in analysis/tools.py
+- [x] New `render_rdd_plot` viz tool -- regression discontinuity scatter with cutoff (Visx)
+- [x] New `render_causal_diagram` viz tool -- DAG showing treatment/outcome/confounders (Visx)
+- [x] Console: `RDDPlot.tsx`, `CausalDiagram.tsx` chart components
+- [x] Console: `ThreatAssessment.tsx` panel with severity badges
+- [x] Console: 2 new template cards (Education Policy, Health Policy) -- 9 total
+- [x] VizRegistry updated with 2 new viz types
+
+**Counts:** 78 -> 84 tools (6 causal + 1 cost-effectiveness - 2 moved + 2 viz), 15 -> 17 viz tools, 5 -> 3 impact tools, 0 -> 6 causal tools (analysis/), 7 -> 9 templates.
+
 ### Phase 13A-2: Document Upload (TODO -- deferred post-hackathon)
 
 - [ ] File upload API (CSV, PDF, Excel) via multipart/form-data on `POST /investigate`
@@ -1037,16 +1063,6 @@ Of 2,800 evaluations commissioned by CONEVAL in Mexico, only 11 are impact evalu
 - [ ] `extract_program_data` tool -- parse uploaded files into structured program data
 - [ ] Frontend: `FileUpload.tsx` drag-and-drop component in `PromptInput`
 - [ ] Frontend: `DataPreview.tsx` for uploaded dataset preview
-
-### Phase 13B (remaining): Additional Causal Methods (TODO -- deferred post-hackathon)
-
-- [ ] `estimate_psm` tool -- propensity score matching with balance diagnostics
-- [ ] `estimate_rdd` tool -- regression discontinuity (sharp/fuzzy)
-- [ ] `estimate_synthetic_control` tool -- synthetic control method
-- [ ] `compute_cost_effectiveness` tool -- cost per unit outcome, ICER
-- [ ] `render_rdd_plot` viz tool -- regression discontinuity scatter
-- [ ] `render_causal_diagram` viz tool -- DAG showing treatment/outcome/confounders
-- [ ] Frontend: `ThreatAssessment.tsx` panel with severity badges
 
 ### Phase 13C: Mexico Integration
 
@@ -1202,7 +1218,7 @@ Side-by-side comparison of investigation runs for reproducibility and consensus 
 
 ## ~~MCP Server~~ -- REJECTED
 
-Exposing Ehrlich's 73 tools as an MCP server was considered and rejected. The tools alone (ChEMBL queries, RDKit computations, etc.) are commodity API wrappers -- the value is the multi-model orchestration (Director-Worker-Summarizer), hypothesis-driven methodology, and parallel experiment execution. An MCP client consuming Ehrlich's tools would lose the scientific rigor that the orchestration guarantees.
+Exposing Ehrlich's 84 tools as an MCP server was considered and rejected. The tools alone (ChEMBL queries, RDKit computations, etc.) are commodity API wrappers -- the value is the multi-model orchestration (Director-Worker-Summarizer), hypothesis-driven methodology, and parallel experiment execution. An MCP client consuming Ehrlich's tools would lose the scientific rigor that the orchestration guarantees.
 
 Ehrlich remains an MCP **consumer** via `MCPBridge` (connecting to external servers like Excalidraw), which adds value by extending the Researcher's toolkit.
 

@@ -21,7 +21,7 @@ DDD monorepo: `server/` (Python 3.12) + `console/` (React 19 / TypeScript / Bun)
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, designs experiments, evaluates evidence, synthesizes (NO tools)
-Sonnet 4.5 (Researcher) -- Executes experiments with 73 tools (parallel: 2 experiments per batch)
+Sonnet 4.5 (Researcher) -- Executes experiments with 79 tools (parallel: 2 experiments per batch)
 Haiku 4.5 (Summarizer)  -- Compresses large tool outputs (>2000 chars), PICO decomposition, evidence grading
 ```
 
@@ -35,12 +35,12 @@ Always uses `MultiModelOrchestrator`. Hypotheses tested in parallel batches of 2
 | shared | `server/src/ehrlich/shared/` | Cross-cutting ports and value objects (ChemistryPort, Fingerprint, Conformer3D, MolecularDescriptors) |
 | literature | `server/src/ehrlich/literature/` | Paper search (Semantic Scholar), references |
 | chemistry | `server/src/ehrlich/chemistry/` | RDKit cheminformatics |
-| analysis | `server/src/ehrlich/analysis/` | Dataset exploration (ChEMBL, PubChem, GtoPdb), enrichment |
+| analysis | `server/src/ehrlich/analysis/` | Dataset exploration (ChEMBL, PubChem, GtoPdb), enrichment, domain-agnostic causal inference (DiD, PSM, RDD, Synthetic Control) |
 | prediction | `server/src/ehrlich/prediction/` | ML models (Chemprop, XGBoost) |
 | simulation | `server/src/ehrlich/simulation/` | Docking, ADMET, resistance, target discovery (RCSB PDB, UniProt, Open Targets), toxicity (EPA CompTox) |
 | training | `server/src/ehrlich/training/` | Evidence analysis, protocol comparison, injury risk, training metrics, clinical trials (ClinicalTrials.gov), PubMed literature (E-utilities), exercise database (wger) |
 | nutrition | `server/src/ehrlich/nutrition/` | Supplement evidence, supplement labels (NIH DSLD), nutrient data (USDA FoodData), supplement safety (OpenFDA CAERS), drug-nutrient interactions (RxNav), DRI adequacy, nutrient ratios, inflammatory index |
-| impact | `server/src/ehrlich/impact/` | Social program evaluation: causal inference (DiD), threat assessment, economic indicators (World Bank, WHO GHO, FRED), cross-program comparison |
+| impact | `server/src/ehrlich/impact/` | Social program evaluation: economic indicators (World Bank, WHO GHO, FRED), cross-program comparison, benchmarking |
 | investigation | `server/src/ehrlich/investigation/` | Multi-model orchestration + PostgreSQL persistence + domain registry + MCP bridge |
 
 ### External Data Sources (18 external + 1 internal)
@@ -141,7 +141,7 @@ Types: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`
 
 Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation, training, nutrition, impact, investigation, api, console, mol, data, ci, docs, infra
 
-## Tools (78 Total)
+## Tools (84 Total)
 
 ### Chemistry (6) -- RDKit cheminformatics, domain-agnostic
 - `validate_smiles` -- Validate SMILES string
@@ -156,13 +156,19 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - `search_citations` -- Citation chasing (snowballing) via references/citing papers
 - `get_reference` -- Curated reference lookup by key or DOI
 
-### Analysis (6) -- ChEMBL + PubChem + GtoPdb
+### Analysis (12) -- ChEMBL + PubChem + GtoPdb + Domain-Agnostic Causal Inference
 - `explore_dataset` -- Load ChEMBL bioactivity data for any organism/target
 - `search_bioactivity` -- Flexible ChEMBL query (any assay type: MIC, Ki, EC50, IC50, Kd)
 - `search_compounds` -- PubChem compound search by target/activity/similarity
 - `search_pharmacology` -- GtoPdb curated receptor/ligand interactions with affinities
 - `analyze_substructures` -- Chi-squared enrichment of SMARTS patterns
 - `compute_properties` -- Property distributions (active vs inactive)
+- `estimate_did` -- Difference-in-differences causal estimation with parallel trends test and threat assessment
+- `estimate_psm` -- Propensity score matching with balance diagnostics
+- `estimate_rdd` -- Regression discontinuity design (sharp/fuzzy)
+- `estimate_synthetic_control` -- Synthetic control method for single treated unit
+- `assess_threats` -- Knowledge-based validity threat assessment for causal methods (DiD, PSM, RDD, RCT, IV)
+- `compute_cost_effectiveness` -- Cost per unit outcome, ICER calculation
 
 ### Prediction (6) -- XGBoost, domain-agnostic ML
 - `train_model` -- Train ML model on SMILES+activity dataset (scaffold-split + random-split metrics, permutation p-value)
@@ -206,14 +212,12 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - `analyze_nutrient_ratios` -- Clinically relevant nutrient ratios (omega-6:3, Ca:Mg, Na:K, Zn:Cu, Ca:P, Fe:Cu)
 - `compute_inflammatory_index` -- Simplified Dietary Inflammatory Index (DII) scoring
 
-### Impact Evaluation (5) -- Social program analysis, causal inference, economic indicators
+### Impact Evaluation (3) -- Social program analysis, economic indicators
 - `search_economic_indicators` -- Query economic time series from FRED, World Bank, or WHO GHO
 - `fetch_benchmark` -- Get comparison values from international sources (World Bank, WHO GHO)
 - `compare_programs` -- Cross-program comparison using existing statistical tests
-- `estimate_did` -- Difference-in-differences causal estimation with parallel trends test and threat assessment
-- `assess_threats` -- Knowledge-based validity threat assessment for causal methods (DiD, PSM, RDD, RCT, IV)
 
-### Visualization (15) -- Domain-specific interactive charts
+### Visualization (17) -- Domain-specific interactive charts
 - `render_binding_scatter` -- Scatter plot of compound binding affinities (Recharts)
 - `render_admet_radar` -- Radar chart of ADMET/drug-likeness properties (Recharts)
 - `render_training_timeline` -- Training load timeline with ACWR danger zones (Recharts)
@@ -229,6 +233,8 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - `render_program_dashboard` -- Multi-indicator KPI dashboard with target tracking (Recharts)
 - `render_geographic_comparison` -- Region bar chart with benchmark reference line (Recharts)
 - `render_parallel_trends` -- DiD parallel trends chart, treatment vs control over time (Recharts)
+- `render_rdd_plot` -- Regression discontinuity scatter with cutoff line and fitted curves (Visx)
+- `render_causal_diagram` -- DAG showing treatment, outcome, confounders, and mediators (Visx)
 
 ### Statistics (2) -- Domain-agnostic hypothesis testing (scipy.stats)
 - `run_statistical_test` -- Compare two numeric groups (auto-selects t-test/Welch/Mann-Whitney, returns p-value, Cohen's d, 95% CI)
@@ -281,7 +287,7 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - **Domain configuration**: `DomainConfig` defines per-domain tool tags, score definitions, prompt examples; `DomainRegistry` auto-detects domain; `DomainDetected` SSE event sends display config to frontend
 - **Domain tool examples**: each `DomainConfig` includes `tool_examples` in `experiment_examples` showing realistic tool chaining patterns; ensures Researcher (Sonnet 4.5) has usage guidance for all domain-specific tools
 - **Multi-domain investigations**: `DomainRegistry.detect()` returns `list[DomainConfig]`; `merge_domain_configs()` creates synthetic merged config with union of tool_tags, concatenated score_definitions, joined prompt examples
-- **Tool tagging**: Tools tagged with frozenset domain tags (chemistry, analysis, prediction, simulation, training, clinical, nutrition, safety, impact, literature, visualization); investigation control tools are universal (no tags); researcher sees only domain-relevant tools
+- **Tool tagging**: Tools tagged with frozenset domain tags (chemistry, analysis, prediction, simulation, training, clinical, nutrition, safety, impact, causal, literature, visualization); investigation control tools are universal (no tags); researcher sees only domain-relevant tools
 - **Self-referential research**: `search_prior_research` queries PostgreSQL `tsvector` + GIN index of past findings; indexed on completion; intercepted in orchestrator `_dispatch_tool()` and routed to repository; "ehrlich" source type links to past investigations
 - **MCP bridge**: Optional `MCPBridge` connects to external MCP servers (e.g. Excalidraw); tools registered dynamically via `ToolRegistry.register_mcp_tools()`; lifecycle managed by orchestrator; enabled via `EHRLICH_MCP_EXCALIDRAW=true`
 - **SSE streaming**: 20 event types for real-time updates; reconnection with exponential backoff (1s, 2s, 4s, max 3 retries)
@@ -292,13 +298,13 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 
 ### UI Patterns
 
-- **Visualization pipeline**: 12 viz tools return `VisualizationPayload` JSON; orchestrator intercepts via `_maybe_viz_event()` and emits `VisualizationRendered` SSE event; `VizRegistry` maps `viz_type` to lazy-loaded React component; `VisualizationPanel` renders all charts
+- **Visualization pipeline**: 17 viz tools return `VisualizationPayload` JSON; orchestrator intercepts via `_maybe_viz_event()` and emits `VisualizationRendered` SSE event; `VizRegistry` maps `viz_type` to lazy-loaded React component; `VisualizationPanel` renders all charts
 - **LiveLabViewer**: 3Dmol.js scene driven by SSE events -- protein targets load, ligands dock, candidates color by score. SSE event mapping: `dock_against_target` -> ligand in binding pocket, `predict_candidates` -> color by probability, `completed` -> top candidates glow. Interactive rotate/zoom/click, split-pane with Timeline
 - **React Flow diagrams**: `@xyflow/react` node graph with custom `InvestigationNode` and `AnnotationNode` types; status-colored nodes (proposed=gray, testing=blue, supported=green, refuted=red, revised=orange); dashed edges for revisions, solid smoothstep for links; read-only with zoom/pan/minimap; lazy-loaded (~188KB chunk)
 - **Investigation report**: 8 sections (Research Question, Executive Summary, Hypotheses & Outcomes, Methodology, Key Findings, Candidate Molecules, Model Validation, Cost & Performance); shown post-completion with full audit trail; markdown export via client-side generation
 - **Molecule visualization**: server-side 2D SVG (RDKit `rdMolDraw2D`), 3Dmol.js for 3D/docking; `CandidateTable` shows thumbnails with expandable detail (3D viewer + properties + Lipinski badge)
 - **Molecule API**: `/molecule/depict` (SVG, cached 24h), `/molecule/conformer`, `/molecule/descriptors`, `/molecule/targets`
-- **Investigation templates**: 7 cross-domain prompts (4 molecular + 2 training + 1 nutrition) on home page via `TemplateCards` with domain badges
+- **Investigation templates**: 9 cross-domain prompts (4 molecular + 2 training + 1 nutrition + 2 impact) on home page via `TemplateCards` with domain badges
 - **Candidate comparison**: side-by-side scoring view for 2-4 candidates with best-in-group highlighting
 - **HypothesisBoard**: kanban-style card grid showing hypothesis status with expandable confidence bars
 - **Hypothesis approval**: `HypothesisApprovalCard` renders in main content area (not status bar) for maximum prominence during approval gate
@@ -340,10 +346,18 @@ All paths relative to `server/src/ehrlich/`.
 | File | Purpose |
 |------|---------|
 | `domain/statistics.py` | `StatisticalResult` frozen dataclass |
+| `domain/causal.py` | `ThreatToValidity`, `CausalEstimate`, `CostEffectivenessResult` frozen dataclasses |
+| `domain/causal_ports.py` | `DiDEstimatorPort`, `PSMEstimatorPort`, `RDDEstimatorPort`, `SyntheticControlPort` ABCs |
+| `domain/evidence_standards.py` | WWC evidence tiers, CONEVAL MIR levels, CREMAA criteria, `classify_evidence_tier()` |
 | `application/statistics_service.py` | `StatisticsService` -- scipy.stats hypothesis testing (t-test, Welch, Mann-Whitney, chi-squared, Fisher) |
+| `application/causal_service.py` | `CausalService` -- DiD, PSM, RDD, Synthetic Control estimation, threat assessment, cost-effectiveness |
 | `infrastructure/chembl_loader.py` | ChEMBL bioactivity loader (flexible assay types) |
 | `infrastructure/pubchem_client.py` | PubChem PUG REST compound search |
 | `infrastructure/gtopdb_client.py` | GtoPdb REST client for curated pharmacology |
+| `infrastructure/did_estimator.py` | DiD estimator: effect size, SE, p-value, parallel trends, automated threat assessment |
+| `infrastructure/psm_estimator.py` | Propensity score matching with balance diagnostics |
+| `infrastructure/rdd_estimator.py` | Regression discontinuity design (sharp/fuzzy) estimator |
+| `infrastructure/synthetic_control_estimator.py` | Synthetic control method for single treated unit |
 
 ### prediction/
 
@@ -397,16 +411,13 @@ All paths relative to `server/src/ehrlich/`.
 
 | File | Purpose |
 |------|---------|
-| `tools.py` | 5 impact evaluation tools |
-| `domain/entities.py` | DataPoint, Program, Indicator, ThreatToValidity, CausalEstimate, Benchmark, EconomicSeries, HealthIndicator |
+| `tools.py` | 3 impact evaluation tools (economic indicators, benchmarks, program comparison) |
+| `domain/entities.py` | DataPoint, Program, Indicator, Benchmark, EconomicSeries, HealthIndicator |
 | `domain/repository.py` | EconomicDataRepository, HealthDataRepository, DevelopmentDataRepository ABCs |
-| `domain/ports.py` | `CausalEstimator` ABC for causal inference methods |
-| `domain/evaluation_standards.py` | WWC evidence tiers, CONEVAL MIR levels, CREMAA criteria, `classify_evidence_tier()` |
-| `application/impact_service.py` | ImpactService (economic indicators, benchmarks, program comparison, DiD estimation, threat assessment) |
+| `application/impact_service.py` | ImpactService (economic indicators, benchmarks, program comparison) |
 | `infrastructure/worldbank_client.py` | World Bank API v2 client for development indicators |
 | `infrastructure/who_client.py` | WHO GHO API client for health statistics |
 | `infrastructure/fred_client.py` | FRED API client for US economic time series |
-| `infrastructure/did_estimator.py` | DiD estimator: effect size, SE, p-value, parallel trends, automated threat assessment |
 
 ### investigation/
 
@@ -434,7 +445,7 @@ All paths relative to `server/src/ehrlich/`.
 | `domain/domains/nutrition.py` | `NUTRITION_SCIENCE` config |
 | `domain/domains/impact.py` | `IMPACT_EVALUATION` config |
 | `domain/mcp_config.py` | `MCPServerConfig` frozen dataclass |
-| `tools_viz.py` | 15 visualization tools |
+| `tools_viz.py` | 17 visualization tools |
 | `infrastructure/repository.py` | PostgreSQL persistence (asyncpg) + tsvector findings search + user/credit management |
 | `infrastructure/anthropic_client.py` | Anthropic API adapter with retry, streaming, and structured outputs |
 | `infrastructure/mcp_bridge.py` | MCP client bridge (stdio/SSE/streamable_http) |
@@ -446,7 +457,7 @@ All paths relative to `server/src/ehrlich/api/`.
 | File | Purpose |
 |------|---------|
 | `auth.py` | WorkOS JWT middleware (JWKS verification, header + query param auth for SSE) |
-| `routes/investigation.py` | REST + SSE endpoints, 78-tool registry, domain registry, MCP bridge, credit system, BYOK |
+| `routes/investigation.py` | REST + SSE endpoints, 84-tool registry, domain registry, MCP bridge, credit system, BYOK |
 | `routes/methodology.py` | GET /methodology: phases, domains, tools, data sources, models |
 | `routes/molecule.py` | Molecule depiction, conformer, descriptors, targets endpoints |
 | `routes/stats.py` | GET /stats: aggregate counts |
@@ -473,7 +484,8 @@ All paths relative to `console/src/`.
 | `features/investigation/components/ActiveExperimentCard.tsx` | Live experiment activity card |
 | `features/investigation/components/CompletionSummaryCard.tsx` | Post-completion summary card with expandable cost breakdown |
 | `features/investigation/components/NegativeControlPanel.tsx` | Negative control validation table |
-| `features/investigation/components/TemplateCards.tsx` | 7 cross-domain research prompt templates |
+| `features/investigation/components/TemplateCards.tsx` | 9 cross-domain research prompt templates |
+| `features/investigation/components/ThreatAssessment.tsx` | Validity threat assessment panel with severity badges |
 | `features/investigation/components/PromptInput.tsx` | Controlled prompt input with director tier selector pills |
 | `features/investigation/components/BYOKSettings.tsx` | API key management for BYOK users |
 
@@ -516,6 +528,8 @@ All paths relative to `console/src/`.
 | `features/visualization/charts/ProgramDashboard.tsx` | Recharts horizontal BarChart with target tracking |
 | `features/visualization/charts/GeographicComparison.tsx` | Recharts BarChart with benchmark ReferenceLine |
 | `features/visualization/charts/ParallelTrends.tsx` | Recharts ComposedChart for DiD treatment vs control |
+| `features/visualization/charts/RDDPlot.tsx` | Visx regression discontinuity scatter with cutoff and fitted curves |
+| `features/visualization/charts/CausalDiagram.tsx` | Visx DAG showing treatment, outcome, confounders, mediators |
 | `features/visualization/anatomy/BodyDiagram.tsx` | Custom SVG anatomical body diagram |
 | `features/visualization/anatomy/body-paths.ts` | SVG path data for front/back views |
 | `features/visualization/anatomy/color-scale.ts` | OKLCH intensity color interpolation |

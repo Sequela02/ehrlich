@@ -24,6 +24,7 @@ import { CandidateTable } from "./CandidateTable";
 import { FindingsPanel } from "./FindingsPanel";
 import { HypothesisBoard } from "./HypothesisBoard";
 import { NegativeControlPanel } from "./NegativeControlPanel";
+import { ThreatAssessment } from "./ThreatAssessment";
 
 interface InvestigationReportProps {
   prompt: string;
@@ -190,7 +191,26 @@ export function InvestigationReport({
         <CandidateTable candidates={candidates} domainConfig={domainConfig} />
       </section>
 
-      {/* 7. Model Validation -- reuse NegativeControlPanel with pass/fail icons */}
+      {/* 7. Validity Threats -- causal findings */}
+      {(() => {
+        const threats = findings
+          .filter((f) => f.evidence && typeof f.evidence === "object")
+          .flatMap((f) => {
+            const ev = f.evidence as unknown as Record<string, unknown>;
+            return Array.isArray(ev.threats) ? ev.threats : [];
+          })
+          .filter(
+            (t): t is { type: string; severity: string; description: string; mitigation: string } =>
+              typeof t === "object" && t !== null && "type" in t && "severity" in t,
+          );
+        return threats.length > 0 ? (
+          <section>
+            <ThreatAssessment threats={threats} />
+          </section>
+        ) : null;
+      })()}
+
+      {/* 8. Model Validation -- reuse NegativeControlPanel with pass/fail icons */}
       {negativeControls.length > 0 && (
         <section className="space-y-3">
           <NegativeControlPanel controls={negativeControls} />

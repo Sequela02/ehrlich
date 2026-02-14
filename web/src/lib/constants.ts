@@ -1,10 +1,10 @@
 export const STATS = {
-  tools: 78,
+  tools: 84,
   dataSources: 19,
   domains: 4,
   models: 3,
   phases: 6,
-  vizTools: 15,
+  vizTools: 17,
   externalAPIs: 18,
   boundedContexts: 11,
   sseEvents: 20,
@@ -46,7 +46,7 @@ export const EXAMPLE_PROMPTS = [
 export const DIFFERENTIATORS = [
   {
     label: "Real Computation",
-    tagline: "78 tools that compute, not summarize.",
+    tagline: "84 tools that compute, not summarize.",
     description:
       "Ehrlich trains ML models, runs molecular docking, executes statistical tests, and validates with negative controls. Every tool returns structured data from real computation or real APIs.",
     capabilities: [
@@ -61,7 +61,7 @@ export const DIFFERENTIATORS = [
     label: "Accessible Pricing",
     tagline: "$2-10 per investigation. Free tier included.",
     description:
-      "Full 6-phase methodology, all 78 tools, all 19 data sources at every tier. No feature gates. A student in Mexico and a pharma lab in Boston use the same product. The only variable is model quality.",
+      "Full 6-phase methodology, all 84 tools, all 19 data sources at every tier. No feature gates. A student in Mexico and a pharma lab in Boston use the same product. The only variable is model quality.",
     capabilities: [
       "4 domains, extensible to any",
       "Free: 3 Haiku investigations/month",
@@ -201,7 +201,7 @@ export const METHODOLOGY_PHASES = [
     number: "04",
     label: "Experiment Execution",
     foundation: "Fisher (1935)",
-    description: "Experiments with independent/dependent variables, controls, confounders, and analysis plans. Two experiments run in parallel. 78 tools across 4 domains.",
+    description: "Experiments with independent/dependent variables, controls, confounders, and analysis plans. Two experiments run in parallel. 84 tools across 4 domains.",
   },
   {
     number: "05",
@@ -311,10 +311,10 @@ export const PRICING_TIERS = [
     price: "$0",
     period: "forever",
     credits: "3 Haiku investigations/month",
-    description: "Full methodology. All 78 tools. All 19 data sources. Findings indexed for future research.",
+    description: "Full methodology. All 84 tools. All 19 data sources. Findings indexed for future research.",
     features: [
       "Full 6-phase scientific methodology",
-      "All 78 tools, all 19 data sources, 4 domains",
+      "All 84 tools, all 19 data sources, 4 domains",
       "Full audit trail and report",
       "Self-referential search (FTS5)",
       "No feature gates",

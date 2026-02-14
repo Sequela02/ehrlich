@@ -10,7 +10,7 @@ IMPACT_EVALUATION = DomainConfig(
     identifier_type="program",
     identifier_label="Program",
     candidate_label="Program Interventions",
-    tool_tags=frozenset({"impact", "statistics", "literature", "visualization", "ml"}),
+    tool_tags=frozenset({"impact", "causal", "statistics", "literature", "visualization", "ml"}),
     score_definitions=(
         ScoreDefinition(
             key="effect_size",
@@ -198,6 +198,35 @@ control_post="[79.1, 79.8, 80.2]")
 sample_sizes='{{"treatment": 6, "control": 6}}', \
 parallel_trends_p=0.45, effect_size=0.8)
 3. record_finding(title="DiD shows significant enrollment effect", \
+detail="...", hypothesis_id="h1", evidence_type="supporting")
+
+Example: Propensity score matching
+1. estimate_psm(treated_outcomes="[92.3, 94.1, 93.5, 91.0]", \
+control_outcomes="[85.1, 85.8, 85.3, 86.0]", \
+treated_covariates="[[1.2, 3.4], [2.1, 4.5], [1.8, 3.9], [2.0, 4.2]]", \
+control_covariates="[[1.0, 3.2], [2.3, 4.1], [1.5, 3.6], [1.9, 4.0]]")
+2. record_finding(title="PSM estimate of program effect", \
+detail="...", hypothesis_id="h1", evidence_type="supporting")
+
+Example: Regression discontinuity design
+1. estimate_rdd(running_variable="[45, 48, 49, 50, 51, 52, 55]", \
+outcome="[70, 72, 73, 80, 82, 83, 85]", cutoff=50.0, design="sharp")
+2. record_finding(title="RDD shows enrollment discontinuity at cutoff", \
+detail="...", hypothesis_id="h1", evidence_type="supporting")
+
+Example: Synthetic control method
+1. estimate_synthetic_control(\
+treated_series="[10, 11, 12, 20, 22, 25]", \
+donor_matrix="[[10, 11, 12, 13, 14, 15], [9, 10, 11, 12, 13, 14]]", \
+treatment_period=3)
+2. record_finding(title="Synthetic control shows treatment effect", \
+detail="...", hypothesis_id="h1", evidence_type="supporting")
+
+Example: Cost-effectiveness analysis
+1. compute_cost_effectiveness(program_name="CCT Program", \
+total_cost=5000000.0, total_effect=1500.0, \
+currency="USD", effect_unit="additional enrollees")
+2. record_finding(title="Cost per additional enrollee", \
 detail="...", hypothesis_id="h1", evidence_type="supporting")
 
 Example: Training a classifier on program outcome data

@@ -91,7 +91,9 @@ Ehrlich's **Impact Evaluation** domain enables hypothesis-driven causal analysis
 - WWC Standards v5.0: 4-tier evidence hierarchy (Strong, Moderate, Promising, Rationale)
 - GAO evaluation standards: transparent documentation and public reporting
 
-### Causal Inference Methods (Tools to Build)
+### Causal Inference Methods (Implemented in `analysis/` -- Domain-Agnostic)
+
+> **Note:** All causal inference estimators live in `analysis/` (not `impact/`) as domain-agnostic tools. This means DiD, PSM, RDD, and Synthetic Control can be used by any domain, not just Impact Evaluation. The impact domain configures `"causal"` in its `tool_tags` to make them available during impact investigations.
 
 | Method | When Used | Key Assumptions | Evidence Strength |
 |--------|-----------|-----------------|-------------------|
@@ -114,33 +116,50 @@ Extend existing GRADE implementation to social program context:
 
 ## 4. Server Architecture
 
-### New Bounded Context: `impact/`
+### Bounded Context: `impact/` (economic data + benchmarking)
 
 ```
 server/src/ehrlich/impact/
   domain/
-    entities.py          # Program, Indicator, Beneficiary, CausalEstimate, ThreatToValidity
-    repository.py        # ProgramDataRepository, IndicatorRepository ABCs
-    ports.py             # CausalEstimator, DataHarmonizer, CostAnalyzer ABCs
-    dri.py               # (n/a -- equivalent would be evaluation_standards.py)
-    evaluation_standards.py  # CONEVAL ECR template, WWC tiers, GRADE criteria
+    entities.py          # Program, Indicator, Benchmark, EconomicSeries, HealthIndicator
+    repository.py        # EconomicDataRepository, HealthDataRepository, DevelopmentDataRepository ABCs
   application/
-    impact_service.py    # Core service: causal estimation, evidence grading, benchmarking
+    impact_service.py    # Economic indicators, benchmarks, program comparison
   infrastructure/
-    inegi_client.py      # INEGI Indicadores + DENUE APIs
-    datos_gob_client.py  # datos.gob.mx CKAN API
-    transparencia_client.py  # Transparencia Presupuestaria API
-    banxico_client.py    # Banxico SIE API
-    census_client.py     # US Census Bureau API
-    bls_client.py        # Bureau of Labor Statistics API
-    usaspending_client.py  # USAspending.gov API
     worldbank_client.py  # World Bank API
     who_client.py        # WHO GHO API
-    fred_client.py       # FRED API (already used in other contexts? no -- new)
-    data_harmonizer.py   # Merge datasets by geography/time period
-    csv_parser.py        # Parse user-uploaded CSV/Excel files
-    pdf_extractor.py     # Extract text from uploaded PDFs
-  tools.py               # Impact evaluation tools
+    fred_client.py       # FRED API
+  tools.py               # 3 impact evaluation tools
+```
+
+### Causal Inference in `analysis/` (domain-agnostic)
+
+```
+server/src/ehrlich/analysis/
+  domain/
+    causal.py            # ThreatToValidity, CausalEstimate, CostEffectivenessResult
+    causal_ports.py      # DiDEstimatorPort, PSMEstimatorPort, RDDEstimatorPort, SyntheticControlPort
+    evidence_standards.py  # WWC tiers, CONEVAL MIR levels, CREMAA criteria
+  application/
+    causal_service.py    # DiD, PSM, RDD, SC estimation + threat assessment + cost-effectiveness
+  infrastructure/
+    did_estimator.py     # Difference-in-differences estimator
+    psm_estimator.py     # Propensity score matching estimator
+    rdd_estimator.py     # Regression discontinuity estimator
+    synthetic_control_estimator.py  # Synthetic control estimator
+```
+
+### Planned additions (future phases)
+
+```
+server/src/ehrlich/impact/infrastructure/
+    inegi_client.py      # INEGI Indicadores + DENUE APIs (Phase 13C)
+    datos_gob_client.py  # datos.gob.mx CKAN API (Phase 13C)
+    transparencia_client.py  # Transparencia Presupuestaria API (Phase 13C)
+    banxico_client.py    # Banxico SIE API (Phase 13C)
+    census_client.py     # US Census Bureau API (Phase 13D)
+    bls_client.py        # Bureau of Labor Statistics API (Phase 13D)
+    usaspending_client.py  # USAspending.gov API (Phase 13D)
 ```
 
 ### Domain Entities
@@ -462,11 +481,13 @@ File upload
 - Basic `compare_programs` tool using existing `run_statistical_test`
 - 2 new viz tools: `render_program_dashboard`, `render_geographic_comparison`
 
-### Phase 2: Causal Inference Engine
-- `estimate_did`, `estimate_psm`, `estimate_rdd` tools
-- `assess_threats` automated validity assessment
-- `compute_cost_effectiveness` tool
-- 3 new viz tools: `render_parallel_trends`, `render_rdd_plot`, `render_causal_diagram`
+### Phase 2: Causal Inference Engine -- DONE (lives in `analysis/`)
+- `estimate_did`, `estimate_psm`, `estimate_rdd`, `estimate_synthetic_control` tools (in `analysis/tools.py`)
+- `assess_threats` automated validity assessment (in `analysis/tools.py`)
+- `compute_cost_effectiveness` tool (in `analysis/tools.py`)
+- 5 viz tools: `render_parallel_trends`, `render_program_dashboard`, `render_geographic_comparison` (13B partial), `render_rdd_plot`, `render_causal_diagram` (13B full)
+- `ThreatAssessment.tsx` console component with severity badges
+- Domain entities in `analysis/domain/causal.py`, ports in `analysis/domain/causal_ports.py`, standards in `analysis/domain/evidence_standards.py`
 
 ### Phase 3: Mexico Integration
 - INEGI Indicadores + DENUE clients

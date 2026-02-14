@@ -35,29 +35,6 @@ class Indicator:
 
 
 @dataclass(frozen=True)
-class ThreatToValidity:
-    type: str
-    severity: str
-    description: str
-    mitigation: str
-
-
-@dataclass(frozen=True)
-class CausalEstimate:
-    method: str
-    effect_size: float
-    standard_error: float
-    confidence_interval: tuple[float, float]
-    p_value: float
-    n_treatment: int
-    n_control: int
-    covariates: tuple[str, ...]
-    assumptions: tuple[str, ...]
-    threats: tuple[ThreatToValidity, ...]
-    evidence_tier: str
-
-
-@dataclass(frozen=True)
 class Benchmark:
     source: str
     indicator: str

@@ -1,11 +1,11 @@
 """Visualization tools for the investigation engine.
 
-15 tools that generate structured chart payloads for the frontend:
+17 tools that generate structured chart payloads for the frontend:
 binding scatter, ADMET radar, training timeline, muscle heatmap,
 forest plot, evidence matrix, performance chart, funnel plot,
 dose-response curve, nutrient comparison, nutrient adequacy,
 therapeutic window, program dashboard, geographic comparison,
-and parallel trends.
+parallel trends, RDD plot, and causal diagram.
 """
 
 from __future__ import annotations
@@ -645,25 +645,29 @@ async def render_program_dashboard(
         else:
             status = "off_track"
 
-        processed.append({
-            "name": ind.get("name", ""),
-            "baseline": round(baseline, 2),
-            "target": round(target, 2),
-            "actual": round(actual, 2),
-            "unit": ind.get("unit", ""),
-            "pct_target": round(pct_target, 4),
-            "status": status,
-        })
+        processed.append(
+            {
+                "name": ind.get("name", ""),
+                "baseline": round(baseline, 2),
+                "target": round(target, 2),
+                "actual": round(actual, 2),
+                "unit": ind.get("unit", ""),
+                "pct_target": round(pct_target, 4),
+                "status": status,
+            }
+        )
 
-    return json.dumps({
-        "viz_type": "program_dashboard",
-        "title": title or f"{program_name} Dashboard",
-        "data": {
-            "program_name": program_name,
-            "indicators": processed,
-        },
-        "config": {"domain": "impact"},
-    })
+    return json.dumps(
+        {
+            "viz_type": "program_dashboard",
+            "title": title or f"{program_name} Dashboard",
+            "data": {
+                "program_name": program_name,
+                "indicators": processed,
+            },
+            "config": {"domain": "impact"},
+        }
+    )
 
 
 async def render_geographic_comparison(
@@ -682,21 +686,25 @@ async def render_geographic_comparison(
     """
     processed: list[dict[str, Any]] = []
     for r in regions:
-        processed.append({
-            "name": r.get("name", ""),
-            "value": round(float(r.get("value", 0.0)), 2),
-        })
+        processed.append(
+            {
+                "name": r.get("name", ""),
+                "value": round(float(r.get("value", 0.0)), 2),
+            }
+        )
 
-    return json.dumps({
-        "viz_type": "geographic_comparison",
-        "title": title,
-        "data": {
-            "regions": processed,
-            "metric_name": metric_name,
-            "benchmark": round(benchmark, 2) if benchmark is not None else None,
-        },
-        "config": {"domain": "impact"},
-    })
+    return json.dumps(
+        {
+            "viz_type": "geographic_comparison",
+            "title": title,
+            "data": {
+                "regions": processed,
+                "metric_name": metric_name,
+                "benchmark": round(benchmark, 2) if benchmark is not None else None,
+            },
+            "config": {"domain": "impact"},
+        }
+    )
 
 
 async def render_parallel_trends(
@@ -725,13 +733,124 @@ async def render_parallel_trends(
         for c in control_series
     ]
 
-    return json.dumps({
-        "viz_type": "parallel_trends",
-        "title": title,
-        "data": {
-            "treatment": treatment,
-            "control": control,
-            "treatment_start": treatment_start,
-        },
-        "config": {"domain": "impact"},
-    })
+    return json.dumps(
+        {
+            "viz_type": "parallel_trends",
+            "title": title,
+            "data": {
+                "treatment": treatment,
+                "control": control,
+                "treatment_start": treatment_start,
+            },
+            "config": {"domain": "impact"},
+        }
+    )
+
+
+async def render_rdd_plot(
+    observations: list[dict[str, Any]],
+    cutoff: float,
+    fitted_left: list[dict[str, float]] | None = None,
+    fitted_right: list[dict[str, float]] | None = None,
+    title: str = "Regression Discontinuity",
+) -> str:
+    """Render an RDD scatter plot with fitted lines and cutoff reference.
+
+    Shows observations colored by side of cutoff, vertical dashed cutoff
+    line, and optional fitted regression lines on each side.
+
+    Args:
+        observations: List of dicts with 'x' (running variable) and 'y' (outcome)
+        cutoff: Cutoff threshold value (vertical reference line)
+        fitted_left: Optional fitted points for left side [{x, y}, ...]
+        fitted_right: Optional fitted points for right side [{x, y}, ...]
+        title: Chart title
+    """
+    points: list[dict[str, Any]] = []
+    for obs in observations:
+        x_val = float(obs.get("x", 0.0))
+        points.append(
+            {
+                "x": x_val,
+                "y": float(obs.get("y", 0.0)),
+                "side": "right" if x_val >= cutoff else "left",
+            }
+        )
+
+    left_fit = [
+        {"x": float(p.get("x", 0.0)), "y": float(p.get("y", 0.0))} for p in (fitted_left or [])
+    ]
+    right_fit = [
+        {"x": float(p.get("x", 0.0)), "y": float(p.get("y", 0.0))} for p in (fitted_right or [])
+    ]
+
+    return json.dumps(
+        {
+            "viz_type": "rdd_plot",
+            "title": title,
+            "data": {
+                "observations": points,
+                "cutoff": cutoff,
+                "fitted_left": left_fit,
+                "fitted_right": right_fit,
+            },
+            "config": {"domain": "causal"},
+        }
+    )
+
+
+async def render_causal_diagram(
+    nodes: list[dict[str, str]],
+    edges: list[dict[str, str]],
+    title: str = "Causal Diagram",
+) -> str:
+    """Render a directed acyclic graph (DAG) for causal analysis.
+
+    Shows treatment, outcome, and confounder nodes with directed edges
+    representing causal relationships and associations.
+
+    Args:
+        nodes: List of dicts with 'id', 'label', and 'type'
+               (type: 'treatment', 'outcome', 'confounder', 'mediator', 'instrument')
+        edges: List of dicts with 'source', 'target', and 'type'
+               (type: 'causal', 'association', 'instrument')
+        title: Chart title
+    """
+    valid_node_types = {"treatment", "outcome", "confounder", "mediator", "instrument"}
+    processed_nodes: list[dict[str, str]] = []
+    for node in nodes:
+        node_type = node.get("type", "confounder")
+        if node_type not in valid_node_types:
+            node_type = "confounder"
+        processed_nodes.append(
+            {
+                "id": node.get("id", ""),
+                "label": node.get("label", ""),
+                "type": node_type,
+            }
+        )
+
+    processed_edges: list[dict[str, str]] = []
+    for edge in edges:
+        edge_type = edge.get("type", "causal")
+        if edge_type not in ("causal", "association", "instrument"):
+            edge_type = "causal"
+        processed_edges.append(
+            {
+                "source": edge.get("source", ""),
+                "target": edge.get("target", ""),
+                "type": edge_type,
+            }
+        )
+
+    return json.dumps(
+        {
+            "viz_type": "causal_diagram",
+            "title": title,
+            "data": {
+                "nodes": processed_nodes,
+                "edges": processed_edges,
+            },
+            "config": {"domain": "causal"},
+        }
+    )

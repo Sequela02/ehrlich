@@ -27,10 +27,11 @@ Ehrlich is **domain-agnostic**. The hypothesis-driven engine works for any scien
 
 ### Impact Evaluation
 - **Social program analysis** -- "Evaluate the effectiveness of Sonora's sports scholarship program"
-- **Causal inference** -- "Does the conditional cash transfer reduce school dropout rates?"
+- **Causal inference** -- "Does the conditional cash transfer reduce school dropout rates?" (4 methods: DiD, PSM, RDD, Synthetic Control)
 - **Cross-country benchmarking** -- "Compare cost-effectiveness of state sports programs in Mexico"
 - Economic indicators from World Bank, WHO GHO, and FRED (800K+ time series)
 - Cross-program comparison and international benchmarking
+- Domain-agnostic causal inference tools (in analysis/ context) usable by any domain
 
 ## Architecture
 
@@ -42,13 +43,13 @@ Ehrlich follows Domain-Driven Design with eleven bounded contexts:
 | **shared** | Cross-cutting ports and value objects (ChemistryPort, Fingerprint, Conformer3D) |
 | **literature** | Scientific paper search (Semantic Scholar) and reference management |
 | **chemistry** | Cheminformatics: molecular descriptors, fingerprints, 3D conformers |
-| **analysis** | Dataset exploration (ChEMBL, PubChem), substructure enrichment |
+| **analysis** | Dataset exploration (ChEMBL, PubChem), substructure enrichment, domain-agnostic causal inference (DiD, PSM, RDD, Synthetic Control) |
 | **prediction** | ML modeling: train, predict, ensemble, cluster |
 | **simulation** | Molecular docking, ADMET, resistance, target discovery (RCSB PDB), toxicity (EPA CompTox) |
 | **training** | Exercise physiology: evidence analysis, protocol comparison, injury risk, training metrics, clinical trials |
 | **nutrition** | Nutrition science: supplement evidence, labels, nutrients, safety, interactions, adequacy, inflammatory index |
 | **investigation** | Multi-model agent orchestration with Director-Worker-Summarizer pattern + domain registry + MCP bridge |
-| **impact** | Social program evaluation: economic indicators (World Bank, WHO GHO, FRED), cross-program comparison, benchmarking |
+| **impact** | Social program evaluation: economic indicators (World Bank, WHO GHO, FRED), cross-program comparison, benchmarking. Causal estimators live in analysis/ (domain-agnostic) |
 
 ### Multi-Model Architecture
 
@@ -56,7 +57,7 @@ Ehrlich uses a three-tier Claude model architecture for cost-efficient investiga
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesizes (3-5 calls)
-Sonnet 4.5 (Researcher) -- Executes experiments with 78 tools (10-20 calls)
+Sonnet 4.5 (Researcher) -- Executes experiments with 84 tools (10-20 calls)
 Haiku 4.5 (Summarizer)  -- Compresses large outputs, classifies domains (5-10 calls)
 ```
 
@@ -87,7 +88,7 @@ Cost: ~$3-4 per investigation (vs ~$11 with all-Opus).
 
 All data sources are free and open-access.
 
-## 78 Tools
+## 84 Tools
 
 | Context | Tool | Description |
 |---------|------|-------------|
@@ -106,6 +107,12 @@ All data sources are free and open-access.
 | Analysis | `analyze_substructures` | Chi-squared enrichment analysis |
 | Analysis | `compute_properties` | Property distributions (active vs inactive) |
 | Analysis | `search_pharmacology` | GtoPdb curated receptor/ligand interactions |
+| Causal | `estimate_did` | Difference-in-differences causal estimation |
+| Causal | `estimate_psm` | Propensity score matching with balance diagnostics |
+| Causal | `estimate_rdd` | Regression discontinuity design (sharp/fuzzy) |
+| Causal | `estimate_synthetic_control` | Synthetic control method |
+| Causal | `assess_threats` | Validity threat assessment for causal methods |
+| Causal | `compute_cost_effectiveness` | Cost per unit outcome, ICER |
 | Prediction | `train_model` | Train XGBoost on SMILES+activity data |
 | Prediction | `predict_candidates` | Score compounds with trained model |
 | Prediction | `cluster_compounds` | Butina structural clustering |
@@ -143,8 +150,6 @@ All data sources are free and open-access.
 | Impact | `search_economic_indicators` | Query economic time series from FRED, World Bank, or WHO GHO |
 | Impact | `fetch_benchmark` | Get comparison values from international sources |
 | Impact | `compare_programs` | Cross-program comparison using statistical tests |
-| Impact | `estimate_did` | Difference-in-differences causal estimation |
-| Impact | `assess_threats` | Validity threat assessment for causal methods |
 | Visualization | `render_binding_scatter` | Scatter plot of compound binding affinities |
 | Visualization | `render_admet_radar` | Radar chart of ADMET/drug-likeness properties |
 | Visualization | `render_training_timeline` | Training load timeline with ACWR danger zones |
@@ -160,6 +165,8 @@ All data sources are free and open-access.
 | Visualization | `render_program_dashboard` | Multi-indicator KPI dashboard with target tracking |
 | Visualization | `render_geographic_comparison` | Region bar chart with benchmark reference line |
 | Visualization | `render_parallel_trends` | DiD parallel trends chart (treatment vs control) |
+| Visualization | `render_rdd_plot` | Regression discontinuity scatter with cutoff line |
+| Visualization | `render_causal_diagram` | DAG showing treatment, outcome, confounders |
 | Statistics | `run_statistical_test` | Compare two numeric groups (auto-selects t-test/Welch/Mann-Whitney) |
 | Statistics | `run_categorical_test` | Test contingency tables (auto-selects Fisher's exact/chi-squared) |
 | Investigation | `propose_hypothesis` | Register testable hypothesis |

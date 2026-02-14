@@ -64,9 +64,7 @@ class TestCreditBalance:
 
 
 class TestStartInvestigationCredits:
-    async def test_deducts_credits_on_start(
-        self, client: httpx.AsyncClient
-    ) -> None:
+    async def test_deducts_credits_on_start(self, client: httpx.AsyncClient) -> None:
         response = await client.post(
             "/api/v1/investigate",
             json={"prompt": "Test deduction", "director_tier": "haiku"},
@@ -77,9 +75,7 @@ class TestStartInvestigationCredits:
         balance = await client.get("/api/v1/credits/balance")
         assert balance.json()["credits"] == 4
 
-    async def test_insufficient_credits_returns_402(
-        self, client: httpx.AsyncClient
-    ) -> None:
+    async def test_insufficient_credits_returns_402(self, client: httpx.AsyncClient) -> None:
         resp1 = await client.post(
             "/api/v1/investigate",
             json={"prompt": "First opus", "director_tier": "opus"},
@@ -93,9 +89,7 @@ class TestStartInvestigationCredits:
         assert resp2.status_code == 402
         assert "Insufficient credits" in resp2.json()["detail"]
 
-    async def test_byok_skips_credit_check(
-        self, client: httpx.AsyncClient
-    ) -> None:
+    async def test_byok_skips_credit_check(self, client: httpx.AsyncClient) -> None:
         response = await client.post(
             "/api/v1/investigate",
             json={"prompt": "BYOK test", "director_tier": "opus"},
@@ -106,9 +100,7 @@ class TestStartInvestigationCredits:
         balance = await client.get("/api/v1/credits/balance")
         assert balance.json()["credits"] == 5
 
-    async def test_invalid_tier_returns_400(
-        self, client: httpx.AsyncClient
-    ) -> None:
+    async def test_invalid_tier_returns_400(self, client: httpx.AsyncClient) -> None:
         response = await client.post(
             "/api/v1/investigate",
             json={"prompt": "Bad tier", "director_tier": "gpt4"},
