@@ -50,14 +50,16 @@ Split `prompts.py` (1,505 lines) into `prompts/` package with 3 focused modules.
 - [x] `prompts/director.py` -- 4 Director-phase builder functions (`build_formulation_prompt`, `build_experiment_prompt`, `build_synthesis_prompt`, `build_multi_investigation_context`)
 - [x] `prompts/builders.py` -- 6 non-Director builders (`build_pico_and_classification_prompt`, `build_literature_survey_prompt`, `build_literature_assessment_prompt`, `build_researcher_prompt`, `build_uploaded_data_context`, `_DEFAULT_CATEGORIES`)
 
-## 14D: Domain Tool Enrichment -- TODO
+## 14D: Domain Tool Enrichment -- DONE
 
-Upgrade 4 composite tools from thin pass-throughs to real domain-specific logic.
+Upgraded 4 composite tools from thin pass-throughs to real domain-specific logic with post-fetch filtering, ranking, and enrichment.
 
-- [ ] `search_training_literature` -- MeSH term expansion, study type ranking (SR > RCT > cohort), date recency weighting, non-human study filtering
-- [ ] `search_supplement_evidence` -- GRADE-style quality filtering, RCT/meta-analysis prioritization, retracted paper exclusion
-- [ ] `compare_nutrients` -- per-nutrient delta computation, winner highlighting per category, overall MAR score comparison
-- [ ] Fix `TrainingService` I-squared reimplementation -- delegate to `StatisticsService` (training_service.py:79-85)
+- [x] `search_training_literature` -- MeSH term expansion (6 common abbreviations), study type ranking (meta-analysis > SR > RCT > cohort), date recency weighting, non-human study filtering (mice, rats, in vitro, etc.)
+- [x] `search_supplement_evidence` -- GRADE-style quality filtering (meta-analysis > SR > RCT > observational), retracted paper exclusion ([retracted], retracted:, retraction), date recency weighting
+- [x] `compare_nutrients` -- per-nutrient delta computation with winner highlighting, MAR (Mean Adequacy Ratio) score via `assess_nutrient_adequacy()`, comparison + mar_scores sections added to JSON output
+- [x] Fixed `TrainingService` I-squared reimplementation -- extracted `_compute_i_squared()` module-level function with proper inverse-variance weighting (w_i = sample_size_i), replaced inline calculation in `analyze_training_evidence`
+
+Result: 15 new tests added (6 for search_training_literature, 3 for search_supplement_evidence, 3 for compare_nutrients, 6 for _compute_i_squared). All 61 tests passing (40 training + 21 nutrition). Zero ruff violations, zero mypy errors.
 
 ## 14E: Agentic Hypothesis Tree Search -- TODO
 
@@ -99,6 +101,16 @@ Run real investigations to validate the engine produces meaningful scientific re
 - [ ] Impact evaluation validation: real program evaluation data (CODESON) compared against professional auditors and raw Claude
 - [ ] Document comparison results: where Ehrlich agrees/disagrees with baseline, where tree search found non-obvious paths
 - [ ] Capture investigation traces for demo video
+
+## 14H: Upload Validation Hardening -- DONE
+
+Added consistent validation on both backend and frontend for file count and size limits, with clear UI feedback. Removed redundancy.
+
+- [x] Defined `upload_limits.py` domain constants (MAX_FILE_SIZE=50MB, MAX_FILES=10, ALLOWED_EXTENSIONS)
+- [x] Enforced max-files limit in Pydantic schema (`InvestigateRequest.file_ids`)
+- [x] Removed redundant size check in `upload.py` (delegated to `FileProcessor`)
+- [x] Added client-side size validation in `FileUpload.tsx` with per-file error feedback
+- [x] Added file count indicator "N / 10 files" in console UI
 
 ## Dependency Graph
 

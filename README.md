@@ -141,7 +141,7 @@ All data sources are free and open-access.
 | Simulation | `assess_resistance` | Resistance mutation scoring |
 | Simulation | `get_protein_annotation` | UniProt protein function and disease links |
 | Simulation | `search_disease_targets` | Open Targets disease-target associations |
-| Training | `search_training_literature` | Training science literature via Semantic Scholar |
+| Training | `search_training_literature` | Training science literature with MeSH expansion, study type ranking, non-human filtering |
 | Training | `analyze_training_evidence` | Pooled effect sizes, heterogeneity, evidence grading |
 | Training | `compare_protocols` | Evidence-weighted protocol comparison |
 | Training | `assess_injury_risk` | Knowledge-based injury risk scoring |
@@ -152,11 +152,11 @@ All data sources are free and open-access.
 | Training | `compute_performance_model` | Banister fitness-fatigue model (CTL/ATL/TSB) |
 | Training | `compute_dose_response` | Dose-response curve from dose-effect data |
 | Training | `plan_periodization` | Evidence-based periodization planning (linear/undulating/block) |
-| Nutrition | `search_supplement_evidence` | Supplement efficacy literature search |
+| Nutrition | `search_supplement_evidence` | Supplement evidence with GRADE-style ranking, retracted paper exclusion |
 | Nutrition | `search_supplement_labels` | NIH DSLD supplement product ingredient lookup |
 | Nutrition | `search_nutrient_data` | USDA FoodData Central nutrient profiles |
 | Nutrition | `search_supplement_safety` | OpenFDA CAERS adverse event reports |
-| Nutrition | `compare_nutrients` | Side-by-side nutrient comparison between foods/supplements |
+| Nutrition | `compare_nutrients` | Side-by-side nutrient comparison with per-nutrient deltas, winner, MAR score |
 | Nutrition | `assess_nutrient_adequacy` | DRI-based nutrient adequacy assessment |
 | Nutrition | `check_intake_safety` | Tolerable Upper Intake Level safety screening |
 | Nutrition | `check_interactions` | Drug-supplement interaction screening via RxNav |

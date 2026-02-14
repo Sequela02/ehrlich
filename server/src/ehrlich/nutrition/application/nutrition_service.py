@@ -137,7 +137,30 @@ class NutritionService:
         self, supplement: str, outcome: str = "performance", limit: int = 8
     ) -> list[Paper]:
         query = f"{supplement} {outcome} meta-analysis systematic review"
-        return await self._papers.search(query, limit=limit)
+
+        # Fetch extra papers to compensate for filtering
+        papers = await self._papers.search(query, limit=limit * 2)
+
+        # Filter out retracted papers
+        retracted_keywords = {"[retracted]", "retracted:", "retraction"}
+        non_retracted = [
+            p for p in papers if not any(kw in p.title.lower() for kw in retracted_keywords)
+        ]
+
+        # Sort by study type rank, then year descending
+        def get_study_type_rank(paper: Paper) -> int:
+            text = (paper.title + " " + paper.abstract).lower()
+            if "meta-analysis" in text:
+                return 0
+            if "systematic review" in text:
+                return 1
+            if "rct" in text or "randomized" in text:
+                return 2
+            return 3
+
+        non_retracted.sort(key=lambda p: (get_study_type_rank(p), -p.year))
+
+        return non_retracted[:limit]
 
     async def search_supplement_labels(
         self, ingredient: str, max_results: int = 10
