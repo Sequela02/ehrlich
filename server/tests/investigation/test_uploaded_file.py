@@ -106,11 +106,12 @@ class TestQueryUploadedDataHandler:
         )
 
         orch._uploaded_files = {"tab-123": tabular_file, "doc-456": doc_file}
+        orch._dispatcher.update_uploaded_files(orch._uploaded_files)
         return orch
 
     def test_query_all_columns(self) -> None:
         orch = self._make_orchestrator()
-        result = json.loads(orch._handle_query_uploaded_data({"file_id": "tab-123"}))  # type: ignore[attr-defined]
+        result = json.loads(orch._dispatcher._handle_query_uploaded_data({"file_id": "tab-123"}))
         assert result["type"] == "tabular"
         assert result["returned_rows"] == 3
         assert result["columns"] == ["name", "age", "score"]
@@ -118,8 +119,8 @@ class TestQueryUploadedDataHandler:
     def test_query_specific_columns(self) -> None:
         orch = self._make_orchestrator()
         result = json.loads(
-            orch._handle_query_uploaded_data(
-                {  # type: ignore[attr-defined]
+            orch._dispatcher._handle_query_uploaded_data(
+                {
                     "file_id": "tab-123",
                     "columns": "name,score",
                 }
@@ -130,8 +131,8 @@ class TestQueryUploadedDataHandler:
     def test_query_filter_eq(self) -> None:
         orch = self._make_orchestrator()
         result = json.loads(
-            orch._handle_query_uploaded_data(
-                {  # type: ignore[attr-defined]
+            orch._dispatcher._handle_query_uploaded_data(
+                {
                     "file_id": "tab-123",
                     "filter_column": "name",
                     "filter_op": "eq",
@@ -144,8 +145,8 @@ class TestQueryUploadedDataHandler:
     def test_query_filter_gt(self) -> None:
         orch = self._make_orchestrator()
         result = json.loads(
-            orch._handle_query_uploaded_data(
-                {  # type: ignore[attr-defined]
+            orch._dispatcher._handle_query_uploaded_data(
+                {
                     "file_id": "tab-123",
                     "filter_column": "age",
                     "filter_op": "gt",
@@ -158,8 +159,8 @@ class TestQueryUploadedDataHandler:
     def test_query_head_limit(self) -> None:
         orch = self._make_orchestrator()
         result = json.loads(
-            orch._handle_query_uploaded_data(
-                {  # type: ignore[attr-defined]
+            orch._dispatcher._handle_query_uploaded_data(
+                {
                     "file_id": "tab-123",
                     "head": 2,
                 }
@@ -169,12 +170,12 @@ class TestQueryUploadedDataHandler:
 
     def test_query_not_found(self) -> None:
         orch = self._make_orchestrator()
-        result = json.loads(orch._handle_query_uploaded_data({"file_id": "missing"}))  # type: ignore[attr-defined]
+        result = json.loads(orch._dispatcher._handle_query_uploaded_data({"file_id": "missing"}))
         assert "error" in result
 
     def test_query_document(self) -> None:
         orch = self._make_orchestrator()
-        result = json.loads(orch._handle_query_uploaded_data({"file_id": "doc-456"}))  # type: ignore[attr-defined]
+        result = json.loads(orch._dispatcher._handle_query_uploaded_data({"file_id": "doc-456"}))
         assert result["type"] == "document"
         assert "education policy" in result["text"]
         assert result["page_count"] == 2
@@ -182,8 +183,8 @@ class TestQueryUploadedDataHandler:
     def test_query_document_keyword_filter(self) -> None:
         orch = self._make_orchestrator()
         result = json.loads(
-            orch._handle_query_uploaded_data(
-                {  # type: ignore[attr-defined]
+            orch._dispatcher._handle_query_uploaded_data(
+                {
                     "file_id": "doc-456",
                     "filter_value": "education",
                 }
@@ -194,8 +195,8 @@ class TestQueryUploadedDataHandler:
     def test_query_filter_contains(self) -> None:
         orch = self._make_orchestrator()
         result = json.loads(
-            orch._handle_query_uploaded_data(
-                {  # type: ignore[attr-defined]
+            orch._dispatcher._handle_query_uploaded_data(
+                {
                     "file_id": "tab-123",
                     "filter_column": "name",
                     "filter_op": "contains",

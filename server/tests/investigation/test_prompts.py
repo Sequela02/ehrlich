@@ -1,4 +1,4 @@
-from ehrlich.investigation.application.multi_orchestrator import SEARCH_TOOLS
+from ehrlich.investigation.application.literature_survey import SEARCH_TOOLS
 from ehrlich.investigation.application.prompts.builders import (
     build_literature_assessment_prompt,
     build_literature_survey_prompt,

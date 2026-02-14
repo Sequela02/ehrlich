@@ -14,7 +14,7 @@ Ehrlich sits alongside three contemporary AI scientific discovery systems:
 
 Ehrlich differentiates by: domain-agnostic architecture (4 domains vs single-domain competitors), multi-model orchestration (Director/Researcher/Summarizer), real-time streaming UI, 18 external data sources, and computational laboratory (ML pipelines + causal inference as experimentation).
 
-## 14A: Orchestrator Decomposition -- TODO
+## 14A: Orchestrator Decomposition -- DONE
 
 Split `MultiModelOrchestrator` (1,788 lines, 11 concerns) into focused modules following Clean Architecture. No behavior changes -- pure structural refactoring.
 
@@ -24,9 +24,11 @@ Split `MultiModelOrchestrator` (1,788 lines, 11 concerns) into focused modules f
 - [x] Extract `batch_executor.py` -- parallel experiment execution via asyncio.Queue (56 lines)
 - [x] Merged uploaded_data_query into tool_dispatcher.py
 - [x] Kept run() in multi_orchestrator.py as main coordination point
-- [ ] Orchestrator reduced to ~400 lines: init, run (delegates to phase_manager), approve
+- [x] Extract `phase_runner.py` -- 5 investigation phases as standalone async generators
+- [x] Extract `literature_survey.py` -- literature survey runner + PICO context builder + SEARCH_TOOLS
+- [x] Orchestrator reduced to ~240 lines: init, run (delegates to phase runners), approve, director_call
 
-Result: `multi_orchestrator.py` from 1,788 to 1,216 lines (4 modules extracted: 718 lines total)
+Result: `multi_orchestrator.py` from 1,788 to ~240 lines (6 modules extracted). 87/87 tests passing.
 
 ## 14B: Route File Cleanup -- DONE
 
