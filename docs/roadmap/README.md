@@ -25,6 +25,7 @@ Hackathon: Feb 10-16, 2026. Each phase ends with something testable.
 | Phase 12: Platform Infrastructure | DONE | [phase-12-platform-infrastructure.md](phase-12-platform-infrastructure.md) |
 | Phase 13: Impact Evaluation Domain | IN PROGRESS | [phase-13-impact-evaluation.md](phase-13-impact-evaluation.md) |
 | Phase 14: Scientific Engine Hardening | IN PROGRESS | [phase-14-engine-hardening.md](phase-14-engine-hardening.md) |
+| Phase 11: Investigation Comparison | DONE | [backlog.md](backlog.md) |
 | Backlog | TODO | [backlog.md](backlog.md) |
 
 ## Dependency Graph

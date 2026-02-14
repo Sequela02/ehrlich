@@ -96,6 +96,10 @@ def serialize_findings(investigation: Investigation) -> list[dict[str, Any]]:
             "hypothesis_id": f.hypothesis_id,
             "evidence_type": f.evidence_type,
             "evidence": f.evidence,
+            "source_type": f.source_type,
+            "source_id": f.source_id,
+            "evidence_level": f.evidence_level,
+            "confidence": f.confidence,
         }
         for f in investigation.findings
     ]

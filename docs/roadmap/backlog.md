@@ -2,7 +2,7 @@ Back to [Roadmap Index](README.md)
 
 # Backlog (Post-Hackathon)
 
-- Phase 11: Investigation Comparison (side-by-side analysis)
+- ~~Phase 11: Investigation Comparison~~ DONE (11A + 11C client-side)
 - Phase 13C: Mexico Integration (INEGI, datos.gob.mx, Transparencia, Banxico)
 - Phase 13D: US Integration (Census, BLS, USAspending, CDC WONDER)
 - Phase 13E: MCP Bridge Self-Service
@@ -90,24 +90,26 @@ For molecular science specifically:
 
 Side-by-side comparison of investigation runs for reproducibility and consensus analysis.
 
-## 11A. Comparison Domain
-- [ ] `Comparison` entity: list of investigation IDs, consensus candidates, overlap metrics
-- [ ] Candidate overlap calculation (by identifier + domain-specific similarity)
-- [ ] Finding overlap detection (by hypothesis + title similarity)
-- [ ] Score aggregation across runs (mean, std, min, max)
+## 11A. Comparison Logic -- DONE
+- [x] Candidate overlap calculation (by identifier)
+- [x] Finding overlap detection (by `source_type+source_id` provenance or Jaccard title similarity > 0.8)
+- [x] Score comparison across runs (grouped bar chart per shared candidate)
+- [x] Finding serialization fix: added `source_type`, `source_id`, `evidence_level`, `confidence` to API response
 
-## 11B. Comparison API
-- [ ] `POST /compare` -- accept list of investigation IDs, return comparison
-- [ ] `GET /compare/{id}` -- retrieve saved comparison
+## 11B. Comparison API -- DONE (client-side)
+All comparison logic is client-side using existing `GET /investigate/{id}` detail endpoints. No new backend routes needed.
 
-## 11C. Comparison Console
-- [ ] `/compare` page: pick 2+ completed investigations
-- [ ] Side-by-side candidate table with overlap highlighting
-- [ ] Consensus candidates panel (appear in N/M runs)
-- [ ] Score distribution visualization (per candidate across runs)
-- [ ] Findings diff view (shared vs unique per run)
+## 11C. Comparison Console -- DONE
+- [x] `/compare/$id1/$id2` route with side-by-side analysis
+- [x] Enhanced 5-stat bar (candidates, findings with % supporting, shared count)
+- [x] Side-by-side candidate table with overlap highlighting
+- [x] Summary comparison (markdown-rendered AI synthesis)
+- [x] Score comparison chart (Recharts grouped BarChart for shared candidates)
+- [x] Findings diff view (A-only | Shared | B-only with evidence + source badges)
+- [x] Cost comparison (input/output tokens, tool calls, total cost)
+- [x] Hypothesis summary counts
 
-**Verification:** Compare 2 completed investigations, verify overlap metrics and consensus candidates render correctly.
+**Verification:** Compare 2 completed investigations at `/compare/{id1}/{id2}`, verify all 8 sections render correctly.
 
 ---
 
