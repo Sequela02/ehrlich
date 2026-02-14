@@ -4,16 +4,15 @@ import io
 
 import pandas as pd
 
+from ehrlich.investigation.domain.upload_limits import ALLOWED_EXTENSIONS, MAX_FILE_SIZE
 from ehrlich.investigation.domain.uploaded_file import (
     DocumentData,
     TabularData,
     UploadedFile,
 )
 
-_MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
 _MAX_SAMPLE_ROWS = 10
 _MAX_PDF_TEXT_LENGTH = 8000
-_ALLOWED_EXTENSIONS = frozenset({"csv", "xlsx", "pdf"})
 
 
 class FileProcessor:
@@ -23,14 +22,14 @@ class FileProcessor:
         if not content:
             msg = "File is empty"
             raise ValueError(msg)
-        if len(content) > _MAX_FILE_SIZE:
-            msg = f"File exceeds {_MAX_FILE_SIZE // (1024 * 1024)}MB limit"
+        if len(content) > MAX_FILE_SIZE:
+            msg = f"File exceeds {MAX_FILE_SIZE // (1024 * 1024)}MB limit"
             raise ValueError(msg)
 
         ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-        if ext not in _ALLOWED_EXTENSIONS:
+        if ext not in ALLOWED_EXTENSIONS:
             msg = (
-                f"Unsupported file type: .{ext}. Allowed: {', '.join(sorted(_ALLOWED_EXTENSIONS))}"
+                f"Unsupported file type: .{ext}. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
             )
             raise ValueError(msg)
 

@@ -19,8 +19,6 @@ router = APIRouter(tags=["upload"])
 _require_user = Depends(get_current_user)
 _processor = FileProcessor()
 
-_MAX_TOTAL_SIZE = 50 * 1024 * 1024  # 50 MB
-
 # Pending uploads waiting to be linked to an investigation.
 # Keyed by file_id, removed when claimed by POST /investigate.
 _pending_uploads: dict[str, UploadedFileEntity] = {}
@@ -43,8 +41,6 @@ async def upload_file(
         raise HTTPException(status_code=400, detail="Filename is required")
 
     content = await file.read()
-    if len(content) > _MAX_TOTAL_SIZE:
-        raise HTTPException(status_code=413, detail="File exceeds 50MB limit")
 
     try:
         uploaded = _processor.process(file.filename, content)

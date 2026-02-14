@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+
+from ehrlich.investigation.domain.upload_limits import MAX_FILES_PER_INVESTIGATION
 
 if TYPE_CHECKING:
     from ehrlich.investigation.domain.investigation import Investigation
@@ -17,6 +19,14 @@ class InvestigateRequest(BaseModel):
     prompt: str
     director_tier: str = "opus"
     file_ids: list[str] = []
+
+    @field_validator("file_ids")
+    @classmethod
+    def validate_file_count(cls, v: list[str]) -> list[str]:
+        if len(v) > MAX_FILES_PER_INVESTIGATION:
+            msg = f"Too many files: {len(v)}. Maximum is {MAX_FILES_PER_INVESTIGATION}."
+            raise ValueError(msg)
+        return v
 
 
 class InvestigateResponse(BaseModel):

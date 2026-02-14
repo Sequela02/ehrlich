@@ -112,9 +112,51 @@ describe("FileUpload", () => {
     expect(onFilesChanged).toHaveBeenLastCalledWith([]);
   });
 
-  it("shows error message when upload fails", () => {
-    mockUploadState.isError = true;
+  it("shows per-file error when upload fails", async () => {
+    mockMutateAsync.mockRejectedValueOnce({ message: "Unsupported file type" });
+
     const { container } = renderWithProvider({ onFilesChanged: vi.fn() });
-    expect(container.textContent).toContain("Upload failed");
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(["data"], "bad.json", { type: "application/json" });
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("bad.json");
+      expect(container.textContent).toContain("Unsupported file type");
+    });
+  });
+
+  it("rejects oversized file without calling upload", () => {
+    const onFilesChanged = vi.fn();
+    const { container } = renderWithProvider({ onFilesChanged });
+
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    // Create a file that reports > 50 MB
+    const bigFile = new File(["x"], "huge.csv", { type: "text/csv" });
+    Object.defineProperty(bigFile, "size", { value: 51 * 1024 * 1024 });
+
+    fireEvent.change(input, { target: { files: [bigFile] } });
+
+    expect(container.textContent).toContain("huge.csv");
+    expect(container.textContent).toContain("File too large");
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("shows file count indicator after upload", async () => {
+    const uploadResult: UploadResponse = {
+      file_id: "f-1",
+      filename: "a.csv",
+      content_type: "text/csv",
+      preview: { columns: ["x"], dtypes: ["int"], row_count: 1, sample_rows: [["1"]] },
+    };
+    mockMutateAsync.mockResolvedValueOnce(uploadResult);
+
+    const { container } = renderWithProvider({ onFilesChanged: vi.fn() });
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [new File(["d"], "a.csv")] } });
+
+    await vi.waitFor(() => {
+      expect(container.textContent).toContain("1 / 10 files");
+    });
   });
 });
