@@ -13,9 +13,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from ehrlich.api.routes.investigation import _build_registry
 from ehrlich.api.sse import SSEEventType, domain_event_to_sse
 from ehrlich.investigation.application.multi_orchestrator import MultiModelOrchestrator
+from ehrlich.investigation.application.registry_factory import build_tool_registry
 from ehrlich.investigation.domain.events import ToolResultEvent
 from ehrlich.investigation.domain.investigation import Investigation, InvestigationStatus
 
@@ -138,9 +138,9 @@ def _make_clients() -> tuple[AsyncMock, AsyncMock, AsyncMock]:
 
 class TestToolRegistry:
     def test_build_registry_has_expected_tools(self) -> None:
-        registry = _build_registry()
+        registry = build_tool_registry()
         tools = registry.list_tools()
-        assert len(tools) == 78
+        assert len(tools) == 85
         assert "validate_smiles" in tools
         assert "search_literature" in tools
         assert "search_citations" in tools
@@ -189,9 +189,9 @@ class TestToolRegistry:
         assert "render_parallel_trends" in tools
 
     def test_all_tools_have_schemas(self) -> None:
-        registry = _build_registry()
+        registry = build_tool_registry()
         schemas = registry.list_schemas()
-        assert len(schemas) == 78
+        assert len(schemas) == 85
         for schema in schemas:
             assert "name" in schema
             assert "description" in schema
@@ -226,7 +226,7 @@ class TestE2EPipeline:
             ]
         )
 
-        registry = _build_registry()
+        registry = build_tool_registry()
         orchestrator = MultiModelOrchestrator(
             director=director,
             researcher=researcher,
@@ -261,7 +261,7 @@ class TestE2EPipeline:
         )
         researcher.create_message = AsyncMock(return_value=_make_response([_text("Done.")]))
 
-        registry = _build_registry()
+        registry = build_tool_registry()
         orchestrator = MultiModelOrchestrator(
             director=director,
             researcher=researcher,
@@ -308,7 +308,7 @@ class TestE2EPipeline:
             ]
         )
 
-        registry = _build_registry()
+        registry = build_tool_registry()
         orchestrator = MultiModelOrchestrator(
             director=director,
             researcher=researcher,

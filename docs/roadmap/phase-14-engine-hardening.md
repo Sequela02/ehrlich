@@ -28,16 +28,16 @@ Split `MultiModelOrchestrator` (1,788 lines, 11 concerns) into focused modules f
 
 Result: `multi_orchestrator.py` from 1,788 to 1,216 lines (4 modules extracted: 718 lines total)
 
-## 14B: Route File Cleanup -- TODO
+## 14B: Route File Cleanup -- DONE
 
-Move infrastructure concerns out of `api/routes/investigation.py` (828 lines) into application layer.
+Moved infrastructure concerns out of `api/routes/investigation.py` (829 lines) into the application layer.
 
-- [ ] Extract `application/registry_factory.py` -- `build_tool_registry()` + `build_domain_registry()` (128 lines of tool registration)
-- [ ] Extract `application/orchestrator_factory.py` -- `create_orchestrator()` with all adapter wiring
-- [ ] Move Pydantic DTOs to `api/schemas/investigation.py` (6 models)
-- [ ] Lazy-initialize tool registry (singleton, built once instead of per-investigation)
+- [x] Extract `application/registry_factory.py` -- `build_tool_registry()` + `build_domain_registry()` + `build_mcp_configs()` with `lru_cache` singletons
+- [x] Extract `application/orchestrator_factory.py` -- `create_orchestrator()` with Anthropic adapter wiring
+- [x] Move Pydantic DTOs + serialization helpers to `api/schemas/investigation.py` (6 models, 5 serializers)
+- [x] Eliminated ~70 lines of duplicated entity-to-dict serialization between `_to_detail()` and `_replay_final()`
 
-Target: route file from 828 to ~400 lines.
+Result: `api/routes/investigation.py` from 829 to 366 lines (56% reduction). Three new modules: `registry_factory.py` (237 lines), `orchestrator_factory.py` (71 lines), `api/schemas/investigation.py` (140 lines).
 
 ## 14C: Prompt Module Split -- TODO
 

@@ -14,6 +14,7 @@ from ehrlich.api.routes.molecule import router as molecule_router
 from ehrlich.api.routes.stats import router as stats_router
 from ehrlich.api.routes.upload import router as upload_router
 from ehrlich.config import get_settings
+from ehrlich.investigation.application.registry_factory import build_tool_registry
 
 logger = logging.getLogger(__name__)
 
@@ -47,9 +48,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             settings.researcher_model,
         )
 
-    from ehrlich.api.routes.investigation import _build_registry
-
-    registry = _build_registry()
+    registry = build_tool_registry()
     logger.info("Tool registry: %d tools available", len(registry.list_tools()))
 
     for mod, desc in _OPTIONAL_DEPS.items():
