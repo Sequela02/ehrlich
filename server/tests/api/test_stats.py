@@ -24,12 +24,12 @@ class TestStats:
     def test_tool_count(self, client: TestClient) -> None:
         resp = client.get("/api/v1/stats")
         data = resp.json()
-        assert data["tool_count"] == 70
+        assert data["tool_count"] == 73
 
     def test_domain_count(self, client: TestClient) -> None:
         resp = client.get("/api/v1/stats")
         data = resp.json()
-        assert data["domain_count"] == 3
+        assert data["domain_count"] == 4
 
     def test_phase_count(self, client: TestClient) -> None:
         resp = client.get("/api/v1/stats")
@@ -39,7 +39,7 @@ class TestStats:
     def test_data_source_count(self, client: TestClient) -> None:
         resp = client.get("/api/v1/stats")
         data = resp.json()
-        assert data["data_source_count"] == 16
+        assert data["data_source_count"] == 19
 
     def test_event_type_count(self, client: TestClient) -> None:
         resp = client.get("/api/v1/stats")

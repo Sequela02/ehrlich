@@ -25,9 +25,16 @@ Ehrlich is **domain-agnostic**. The hypothesis-driven engine works for any scien
 - **Supplement evidence** -- "What is the evidence for creatine on strength performance?"
 - **Nutrient profiling** -- "Compare protein content and amino acid profiles of whey vs plant-based supplements"
 
+### Impact Evaluation
+- **Social program analysis** -- "Evaluate the effectiveness of Sonora's sports scholarship program"
+- **Causal inference** -- "Does the conditional cash transfer reduce school dropout rates?"
+- **Cross-country benchmarking** -- "Compare cost-effectiveness of state sports programs in Mexico"
+- Economic indicators from World Bank, WHO GHO, and FRED (800K+ time series)
+- Cross-program comparison and international benchmarking
+
 ## Architecture
 
-Ehrlich follows Domain-Driven Design with ten bounded contexts:
+Ehrlich follows Domain-Driven Design with eleven bounded contexts:
 
 | Context | Purpose |
 |---------|---------|
@@ -41,6 +48,7 @@ Ehrlich follows Domain-Driven Design with ten bounded contexts:
 | **training** | Exercise physiology: evidence analysis, protocol comparison, injury risk, training metrics, clinical trials |
 | **nutrition** | Nutrition science: supplement evidence, labels, nutrients, safety, interactions, adequacy, inflammatory index |
 | **investigation** | Multi-model agent orchestration with Director-Worker-Summarizer pattern + domain registry + MCP bridge |
+| **impact** | Social program evaluation: economic indicators (World Bank, WHO GHO, FRED), cross-program comparison, benchmarking |
 
 ### Multi-Model Architecture
 
@@ -48,7 +56,7 @@ Ehrlich uses a three-tier Claude model architecture for cost-efficient investiga
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesizes (3-5 calls)
-Sonnet 4.5 (Researcher) -- Executes experiments with 70 tools (10-20 calls)
+Sonnet 4.5 (Researcher) -- Executes experiments with 73 tools (10-20 calls)
 Haiku 4.5 (Summarizer)  -- Compresses large outputs, classifies domains (5-10 calls)
 ```
 
@@ -73,10 +81,13 @@ Cost: ~$3-4 per investigation (vs ~$11 with all-Opus).
 | [USDA FoodData](https://fdc.nal.usda.gov/) | Nutrient profiles for foods and supplements | 1.1M+ foods |
 | [OpenFDA CAERS](https://open.fda.gov/) | Supplement adverse event reports | 200K+ reports |
 | [RxNav](https://rxnav.nlm.nih.gov/) | Drug interaction screening (RxCUI resolution) | 100K+ drugs |
+| [World Bank](https://data.worldbank.org/) | Development indicators by country (GDP, poverty, education) | 190+ countries |
+| [WHO GHO](https://www.who.int/data/gho) | Global health statistics (life expectancy, mortality, disease) | 190+ countries |
+| [FRED](https://fred.stlouisfed.org/) | US economic time series (GDP, unemployment, CPI) | 800K+ series |
 
 All data sources are free and open-access.
 
-## 70 Tools
+## 73 Tools
 
 | Context | Tool | Description |
 |---------|------|-------------|
@@ -129,6 +140,9 @@ All data sources are free and open-access.
 | Nutrition | `check_interactions` | Drug-supplement interaction screening via RxNav |
 | Nutrition | `analyze_nutrient_ratios` | Key nutrient ratio analysis (omega-6:3, Ca:Mg, etc.) |
 | Nutrition | `compute_inflammatory_index` | Simplified Dietary Inflammatory Index scoring |
+| Impact | `search_economic_indicators` | Query economic time series from FRED, World Bank, or WHO GHO |
+| Impact | `fetch_benchmark` | Get comparison values from international sources |
+| Impact | `compare_programs` | Cross-program comparison using statistical tests |
 | Visualization | `render_binding_scatter` | Scatter plot of compound binding affinities |
 | Visualization | `render_admet_radar` | Radar chart of ADMET/drug-likeness properties |
 | Visualization | `render_training_timeline` | Training load timeline with ACWR danger zones |

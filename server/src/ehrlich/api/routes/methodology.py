@@ -90,7 +90,7 @@ MODELS: list[dict[str, str]] = [
         "role": "Researcher",
         "model_id": "claude-sonnet-4-5-20250929",
         "purpose": (
-            "Executes experiments with 70 tools in parallel batches. "
+            "Executes experiments with 73 tools in parallel batches. "
             "Records findings with evidence provenance and citations."
         ),
     },
@@ -217,6 +217,27 @@ DATA_SOURCES: list[dict[str, str]] = [
         "auth": "none",
         "context": "investigation",
     },
+    {
+        "name": "World Bank",
+        "url": "https://api.worldbank.org/v2",
+        "purpose": "Development indicators (enrollment, poverty, GDP)",
+        "auth": "none",
+        "context": "impact",
+    },
+    {
+        "name": "WHO GHO",
+        "url": "https://ghoapi.azureedge.net/api",
+        "purpose": "Health indicators (life expectancy, mortality, coverage)",
+        "auth": "none",
+        "context": "impact",
+    },
+    {
+        "name": "FRED",
+        "url": "https://api.stlouisfed.org/fred",
+        "purpose": "Economic time series (GDP, employment, inflation)",
+        "auth": "api_key",
+        "context": "impact",
+    },
 ]
 
 # ── Tool context mapping (tag -> display name) ─────────────────────────
@@ -233,6 +254,7 @@ _TAG_TO_CONTEXT: dict[str, str] = {
     "nutrition": "Nutrition Science",
     "safety": "Nutrition Science",
     "interaction": "Nutrition Science",
+    "impact": "Impact Evaluation",
     "ml": "ML",
 }
 
@@ -323,6 +345,7 @@ async def get_methodology() -> MethodologyResponse:
         "Simulation",
         "Training Science",
         "Nutrition Science",
+        "Impact Evaluation",
         "Investigation",
     ]
     tool_groups: list[ToolGroup] = []

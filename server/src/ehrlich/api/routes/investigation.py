@@ -30,9 +30,15 @@ from ehrlich.chemistry.tools import (
     validate_smiles,
 )
 from ehrlich.config import get_settings
+from ehrlich.impact.tools import (
+    compare_programs,
+    fetch_benchmark,
+    search_economic_indicators,
+)
 from ehrlich.investigation.application.multi_orchestrator import MultiModelOrchestrator
 from ehrlich.investigation.application.tool_registry import ToolRegistry
 from ehrlich.investigation.domain.domain_registry import DomainRegistry
+from ehrlich.investigation.domain.domains.impact import IMPACT_EVALUATION
 from ehrlich.investigation.domain.domains.molecular import MOLECULAR_SCIENCE
 from ehrlich.investigation.domain.domains.nutrition import NUTRITION_SCIENCE
 from ehrlich.investigation.domain.domains.training import TRAINING_SCIENCE
@@ -209,6 +215,7 @@ def _build_registry() -> ToolRegistry:
     _training_exercise = frozenset({"training", "exercise"})
     _nutrition = frozenset({"nutrition"})
     _nutrition_safety = frozenset({"nutrition", "safety"})
+    _impact = frozenset({"impact"})
     _ml = frozenset({"ml"})
     _viz = frozenset({"visualization"})
     _chem_viz = frozenset({"chemistry", "visualization"})
@@ -274,6 +281,10 @@ def _build_registry() -> ToolRegistry:
         ("check_interactions", check_interactions, _nutrition_safety),
         ("analyze_nutrient_ratios", analyze_nutrient_ratios, _nutrition),
         ("compute_inflammatory_index", compute_inflammatory_index, _nutrition),
+        # Impact Evaluation (3)
+        ("search_economic_indicators", search_economic_indicators, _impact),
+        ("fetch_benchmark", fetch_benchmark, _impact),
+        ("compare_programs", compare_programs, _impact),
         # Visualization (12)
         ("render_binding_scatter", render_binding_scatter, _chem_viz),
         ("render_admet_radar", render_admet_radar, _sim_viz),
@@ -309,6 +320,7 @@ def _build_domain_registry() -> DomainRegistry:
     domain_registry.register(MOLECULAR_SCIENCE)
     domain_registry.register(TRAINING_SCIENCE)
     domain_registry.register(NUTRITION_SCIENCE)
+    domain_registry.register(IMPACT_EVALUATION)
     return domain_registry
 
 

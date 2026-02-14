@@ -197,7 +197,7 @@ The core: Claude as an autonomous scientist.
 - [x] Tests: mock API, verify request/response handling
 
 ### 5B. Tool Registry
-- [x] Register all tools from all contexts (6 chemistry, 3 literature, 6 analysis, 3 prediction, 7 simulation, 11 training, 10 nutrition, 7 investigation control -- 38 at time of Phase 5; now 70 with API tools + visualization tools + statistics tools + generic ML tools)
+- [x] Register all tools from all contexts (6 chemistry, 3 literature, 6 analysis, 3 prediction, 7 simulation, 11 training, 10 nutrition, 7 investigation control -- 38 at time of Phase 5; now 73 with API tools + visualization tools + statistics tools + generic ML tools + impact tools)
 - [x] Auto-generate JSON Schema from Python type hints + docstrings
 - [x] `get(name)` -> callable, `list_tools()` -> all registered tools, `list_schemas()` -> Anthropic-compatible schemas
 - [x] Schema format matches Anthropic tool_use specification
@@ -330,7 +330,7 @@ Cost-efficient multi-model orchestration, persistence, and UI polish.
 ### 8C. Multi-Model Orchestrator
 - [x] `MultiModelOrchestrator` with hypothesis-driven Director-Worker-Summarizer pattern
 - [x] Director (Opus) formulates hypotheses, designs experiments, evaluates evidence, synthesizes -- NO tool access
-- [x] Researcher (Sonnet) executes experiments with 70 domain-filtered tools (max 10 iterations per experiment)
+- [x] Researcher (Sonnet) executes experiments with 73 domain-filtered tools (max 10 iterations per experiment)
 - [x] Summarizer (Haiku) compresses large outputs exceeding threshold
 - [x] 7 prompts: director formulation/experiment/evaluation/synthesis, researcher experiment, scientist, summarizer
 - [x] Auto-fallback to single-model Orchestrator when researcher == director
@@ -468,6 +468,10 @@ Enhancement Enhancement  Sports
            |
      Phase 12: SaaS Infrastructure -- DONE
      (PostgreSQL + WorkOS Auth + BYOK + Credits)
+           |
+     Phase 13: Impact Evaluation Domain -- IN PROGRESS
+     (Causal inference + Document upload + MX/US APIs)
+     13A (Foundation) DONE -> 13A-2 (Upload+Viz) -> 13B (Causal) -> 13C (Mexico) -> 13D (US) -> 13E (MCP Self-Service)
            |
      Demo + Video -- TODO
            |
@@ -700,7 +704,7 @@ Fixed incorrect hardcoded pricing and added cache hit/miss token tracking for ac
 
 ### SDK-2: Prompt Caching on Tools Array -- DONE
 
-Cache the 70-tool schema array that repeats on every researcher API call.
+Cache the 73-tool schema array that repeats on every researcher API call.
 
 - [x] Add `cache_control: {"type": "ephemeral"}` to the last tool in the tools array before passing to `messages.create`
 - [x] Only apply when tools list is non-empty
@@ -987,6 +991,115 @@ Deepened the nutrition bounded context with 1 new data source, 6 new tools, and 
 
 ---
 
+## Phase 13: Impact Evaluation Domain -- IN PROGRESS
+
+New bounded context for hypothesis-driven causal analysis of social programs. Domain-agnostic methodology works for any program type (sports, health, education, employment, housing) in any country. Initial focus: Mexico and US. No existing platform combines autonomous hypothesis formulation, automated causal inference, public API integration, and evidence-graded reporting. See `docs/impact-evaluation-domain.md` for full design.
+
+### Market Gap
+
+Of 2,800 evaluations commissioned by CONEVAL in Mexico, only 11 are impact evaluations (0.4%). No competitor combines: autonomous hypothesis formulation + causal inference + public API connectors + evidence grading + multi-model orchestration.
+
+### Phase 13A: Foundation (Universal APIs + Domain Config) -- DONE
+
+- [x] World Bank API client (`https://api.worldbank.org/v2/`) -- development indicators by country
+- [x] WHO GHO API client (`https://ghoapi.azureedge.net/api/`) -- health statistics
+- [x] FRED API client (`https://api.stlouisfed.org/fred/`) -- 800K+ economic time series
+- [x] `search_economic_indicators` tool -- query FRED/World Bank/WHO GHO time series
+- [x] `fetch_benchmark` tool -- get comparison values from international sources
+- [x] `compare_programs` tool -- cross-program comparison using existing statistical tests
+- [x] `IMPACT_EVALUATION` domain config with detection keywords and experiment examples
+- [x] Full DDD: domain entities + repository ABCs + infrastructure clients
+- [x] Tests: impact bounded context (unit + integration)
+
+**Counts:** 70 -> 73 tools, 16 -> 19 data sources (18 external + 1 internal), 10 -> 11 bounded contexts, 3 -> 4 domains.
+
+### Phase 13A-2: Document Upload + Visualization (TODO)
+
+- [ ] File upload API (CSV, PDF, Excel) via multipart/form-data on `POST /investigate`
+- [ ] PDF text extraction (`pymupdf`) + Haiku summarization for long documents
+- [ ] CSV/Excel parsing (`pandas` + `openpyxl`) with schema detection and summary statistics
+- [ ] Inject uploaded data into Director prompt as `<uploaded_data>` XML block
+- [ ] `extract_program_data` tool -- parse uploaded files into structured program data
+- [ ] `render_program_dashboard` viz tool -- multi-indicator KPI dashboard
+- [ ] `render_geographic_comparison` viz tool -- state/region comparison bar chart
+- [ ] Frontend: `FileUpload.tsx` drag-and-drop component in `PromptInput`
+- [ ] Frontend: `DataPreview.tsx` for uploaded dataset preview
+
+### Phase 13B: Causal Inference Engine
+
+- [ ] `estimate_did` tool -- difference-in-differences with parallel trends test
+- [ ] `estimate_psm` tool -- propensity score matching with balance diagnostics
+- [ ] `estimate_rdd` tool -- regression discontinuity (sharp/fuzzy)
+- [ ] `estimate_synthetic_control` tool -- synthetic control method
+- [ ] `assess_threats` tool -- automated threat-to-validity assessment
+- [ ] `compute_cost_effectiveness` tool -- cost per unit outcome, ICER
+- [ ] `CausalEstimate` domain entity with effect size, CI, p-value, threats
+- [ ] `ThreatToValidity` domain entity (selection bias, attrition, spillover)
+- [ ] `render_parallel_trends` viz tool -- DiD pre/post trends visual
+- [ ] `render_rdd_plot` viz tool -- regression discontinuity scatter
+- [ ] `render_causal_diagram` viz tool -- DAG showing treatment/outcome/confounders
+- [ ] Frontend: `ThreatAssessment.tsx` panel with severity badges
+
+### Phase 13C: Mexico Integration
+
+- [ ] INEGI Indicadores API client (`https://www.inegi.org.mx/app/api/indicadores/`) -- census, demographics
+- [ ] INEGI DENUE API client (`https://www.inegi.org.mx/app/api/denue/v1/`) -- 5M+ businesses
+- [ ] datos.gob.mx CKAN client (`https://datos.gob.mx/api/3/action/`) -- 1000+ federal datasets
+- [ ] Transparencia Presupuestaria client (`https://nptp.hacienda.gob.mx/`) -- budget execution
+- [ ] Banxico SIE client (`https://www.banxico.org.mx/SieAPIRest/service/v1/`) -- economic indicators
+- [ ] `search_census_data` tool -- query INEGI/Census by indicator/geography/period
+- [ ] `search_budget_data` tool -- query budget execution and social program spending
+- [ ] `extract_mir` tool -- extract MIR (Matriz de Indicadores) from evaluation documents
+- [ ] `analyze_program_indicators` tool -- MIR/logical framework indicator analysis with CREMAA validation
+- [ ] Frontend: `MIRTable.tsx` logical framework matrix
+- [ ] CONEVAL ECR report template for `generate_evaluation_report`
+
+### Phase 13D: US Integration
+
+- [ ] Census Bureau API client (`https://api.census.gov/data/`) -- ACS, demographics
+- [ ] BLS API client (`https://api.bls.gov/publicAPI/v2/`) -- employment, wages, CPI
+- [ ] USAspending API client (`https://api.usaspending.gov/api/v2/`) -- federal grants/contracts
+- [ ] College Scorecard API client (`https://api.data.gov/ed/collegescorecard/v1/`) -- education outcomes
+- [ ] HUD API client (`https://www.huduser.gov/hudapi/public/`) -- housing data
+- [ ] CDC WONDER client (`https://wonder.cdc.gov/`) -- public health data
+- [ ] `search_health_indicators` tool -- query WHO GHO or CDC WONDER
+- [ ] `search_open_data` tool -- query datos.gob.mx or data.gov CKAN portals
+- [ ] WWC evidence tier classification in evaluation reports
+- [ ] US-formatted evaluation report template
+
+### Phase 13E: MCP Bridge Self-Service
+
+- [ ] User MCP server registration UI (`/settings/data-sources`)
+- [ ] Connection testing and tool auto-discovery
+- [ ] Per-organization data source management
+- [ ] Tool auto-tagging with domain tags for discovery
+
+### Data Sources (Planned: 8+ new, 3 implemented in 13A)
+
+| Source | API | Purpose | Auth | Phase |
+|--------|-----|---------|------|-------|
+| World Bank | `https://api.worldbank.org/v2/` | Development indicators by country | None | 13A |
+| WHO GHO | `https://ghoapi.azureedge.net/api/` | Health statistics by country | None | 13A |
+| FRED | `https://api.stlouisfed.org/fred/` | 800K+ economic time series | API key | 13A |
+| INEGI Indicadores | `https://www.inegi.org.mx/app/api/indicadores/` | Mexico census, demographics | Token | 13C |
+| INEGI DENUE | `https://www.inegi.org.mx/app/api/denue/v1/` | Mexico business directory (5M+) | Token | 13C |
+| datos.gob.mx | `https://datos.gob.mx/api/3/action/` | Mexico open data (CKAN, 1000+ datasets) | Token (optional) | 13C |
+| Transparencia Presupuestaria | `https://nptp.hacienda.gob.mx/` | Mexico budget execution | None | 13C |
+| Banxico SIE | `https://www.banxico.org.mx/SieAPIRest/service/v1/` | Mexico economic indicators | Token | 13C |
+| US Census Bureau | `https://api.census.gov/data/` | ACS, demographics | API key (optional) | 13D |
+| BLS | `https://api.bls.gov/publicAPI/v2/` | Employment, wages, CPI | API key | 13D |
+| USAspending | `https://api.usaspending.gov/api/v2/` | Federal grants, contracts | None | 13D |
+
+### Tools (Planned: ~18 new tools + ~6 viz tools)
+
+**Data Access:** `search_census_data`, `search_economic_indicators`, `search_budget_data`, `search_health_indicators`, `search_open_data`, `fetch_benchmark`
+**Causal Inference:** `estimate_did`, `estimate_psm`, `estimate_rdd`, `estimate_synthetic_control`, `assess_threats`
+**Program Analysis:** `analyze_program_indicators`, `compute_cost_effectiveness`, `compare_programs`, `analyze_beneficiary_data`
+**Document Processing:** `extract_program_data`, `extract_mir`, `generate_evaluation_report`
+**Visualization:** `render_causal_diagram`, `render_parallel_trends`, `render_rdd_plot`, `render_program_dashboard`, `render_cost_effectiveness`, `render_geographic_comparison`
+
+---
+
 ## Competitive Sports Domain -- TODO
 
 New bounded context for actual competitive sports analytics: game statistics, player performance, team analysis, and sports-specific strategy research.
@@ -1081,7 +1194,7 @@ Side-by-side comparison of investigation runs for reproducibility and consensus 
 
 ## ~~MCP Server~~ -- REJECTED
 
-Exposing Ehrlich's 70 tools as an MCP server was considered and rejected. The tools alone (ChEMBL queries, RDKit computations, etc.) are commodity API wrappers -- the value is the multi-model orchestration (Director-Worker-Summarizer), hypothesis-driven methodology, and parallel experiment execution. An MCP client consuming Ehrlich's tools would lose the scientific rigor that the orchestration guarantees.
+Exposing Ehrlich's 73 tools as an MCP server was considered and rejected. The tools alone (ChEMBL queries, RDKit computations, etc.) are commodity API wrappers -- the value is the multi-model orchestration (Director-Worker-Summarizer), hypothesis-driven methodology, and parallel experiment execution. An MCP client consuming Ehrlich's tools would lose the scientific rigor that the orchestration guarantees.
 
 Ehrlich remains an MCP **consumer** via `MCPBridge` (connecting to external servers like Excalidraw), which adds value by extending the Researcher's toolkit.
 

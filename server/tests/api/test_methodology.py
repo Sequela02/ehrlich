@@ -42,11 +42,12 @@ class TestMethodology:
 
     def test_domains_from_registry(self, client: TestClient) -> None:
         data = client.get("/api/v1/methodology").json()
-        assert len(data["domains"]) == 3
+        assert len(data["domains"]) == 4
         names = {d["name"] for d in data["domains"]}
         assert "molecular_science" in names
         assert "training_science" in names
         assert "nutrition_science" in names
+        assert "impact_evaluation" in names
 
     def test_domain_has_tool_count(self, client: TestClient) -> None:
         data = client.get("/api/v1/methodology").json()
@@ -71,7 +72,7 @@ class TestMethodology:
     def test_total_tool_count(self, client: TestClient) -> None:
         data = client.get("/api/v1/methodology").json()
         total = sum(len(g["tools"]) for g in data["tools"])
-        assert total == 70
+        assert total == 73
 
     def test_tool_has_name_and_description(self, client: TestClient) -> None:
         data = client.get("/api/v1/methodology").json()
@@ -83,7 +84,7 @@ class TestMethodology:
 
     def test_data_sources_count(self, client: TestClient) -> None:
         data = client.get("/api/v1/methodology").json()
-        assert len(data["data_sources"]) == 16
+        assert len(data["data_sources"]) == 19
 
     def test_data_source_fields(self, client: TestClient) -> None:
         data = client.get("/api/v1/methodology").json()

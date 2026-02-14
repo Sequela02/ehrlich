@@ -141,23 +141,37 @@ Converting the CandidateTable from 4 hardcoded columns to dynamic `score_columns
 
 ## The Horizon
 
-### Near-Term Domains (Weeks)
+### Next Domain: Impact Evaluation (In Planning)
 
-Domains that could be added with just tools + config, no engine changes:
+The fourth domain proves the architecture handles non-scientific domains too. **Impact Evaluation** applies the same hypothesis-driven loop to social program analysis:
 
-- **Genomics** -- Gene expression analysis, pathway enrichment, variant interpretation. Tools: search gene databases (NCBI Gene, Ensembl), compute expression metrics, compare pathways.
-- **Materials Science** -- Property prediction, crystal structure search, phase diagram analysis. Tools: search materials databases (Materials Project), compute material properties, compare compositions.
-- **Environmental Science** -- Ecosystem assessment, biodiversity metrics, climate impact analysis. Tools: search ecological databases, compute impact scores, compare interventions.
+- "Does the Sonora sports scholarship improve athlete competition performance?" → DiD + PSM
+- "Is the conditional cash transfer reducing school dropout rates?" → RDD
+- "Compare cost-effectiveness of state sports programs" → Synthetic Control + benchmarking
+
+**Why it matters:** Of 2,800 evaluations commissioned by CONEVAL in Mexico, only 11 are impact evaluations (0.4%). No existing platform combines autonomous hypothesis formulation, automated causal inference, public API integration, and evidence-graded reporting. Ehrlich fills this gap.
+
+**What's new:** Document/CSV upload (user-provided program data), causal inference tools (DiD, PSM, RDD, synthetic control), Mexico + US public data API clients (INEGI, Census, World Bank, FRED), evaluation report templates (CONEVAL ECR, WWC-compliant). See `docs/impact-evaluation-domain.md` for full design.
+
+**What stays the same:** The DomainConfig, tool tagging, multi-model orchestration, hypothesis framework, evidence grading, and visualization pipeline are all reused. Zero changes to existing code paths.
+
+### Other Planned Domains
+
+- **Competitive Sports** -- game statistics, player performance, team analysis
+- **Genomics** -- gene expression, pathway enrichment, variant interpretation
+- **Materials Science** -- property prediction, crystal structure search
+- **Environmental Science** -- ecosystem assessment, biodiversity metrics
 
 ### Medium-Term Evolution (Months)
 
-- **Cross-domain investigations** -- "Find compounds that improve both athletic recovery AND reduce inflammation" would use tools from molecular + training + nutrition domains simultaneously.
-- **Domain-specific validation** -- Each domain could define its own validation methodology in the DomainConfig (the scientific methodology research is already done for molecular; same treatment for other domains).
+- **Cross-domain investigations** -- "Find compounds that improve both athletic recovery AND reduce inflammation" would use tools from molecular + training + nutrition domains simultaneously. Already works via `merge_domain_configs()`.
+- **Impact + Training + Nutrition** -- "Evaluate the Sonora sports program: athlete performance, nutrition support, and cost-effectiveness" triggers all three domains.
 - **Custom domain builder** -- A UI where researchers define their own DomainConfig: name their scores, pick their tools, write their prompt examples. No code required.
+- **MCP bridge self-service** -- Users register their own data sources (e.g., CODESON internal database, Colombian education ministry) as MCP servers.
 
 ### Long-Term Vision
 
-The engine becomes a general-purpose scientific reasoning framework. The domains are plugins. Ehrlich is a scientific discovery engine that currently ships with three domains (Molecular Science, Training Science, Nutrition Science). The architecture supports any number.
+The engine becomes a general-purpose scientific reasoning framework. The domains are plugins. Ehrlich is a scientific discovery engine that currently ships with three domains (Molecular Science, Training Science, Nutrition Science) with a fourth (Impact Evaluation) in planning. The architecture supports any number.
 
 ## Architecture Summary
 

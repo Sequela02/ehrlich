@@ -4,6 +4,26 @@ Ehrlich is an AI-powered scientific discovery engine that uses Claude as a hypot
 
 See [docs/domain-agnostic.md](docs/domain-agnostic.md) for the full story of how and why the engine was generalized.
 
+## Contributor License Agreement
+
+By submitting a pull request to this repository, you agree to the following terms:
+
+1. **You grant Ehrlich's maintainers a perpetual, worldwide, non-exclusive, royalty-free license** to use, reproduce, modify, distribute, sublicense, and relicense your contributions as part of this project.
+
+2. **You retain copyright** to your contributions. This agreement does not transfer ownership.
+
+3. **You have the right to submit** the contribution. If your contribution includes code from your employer or third parties, you have obtained the necessary permissions.
+
+4. **Your contribution is provided "as is"** without warranty of any kind.
+
+### Why This Matters
+
+Ehrlich is currently licensed under AGPL-3.0. This CLA preserves the option to change the license in the future (e.g., to MIT) without requiring permission from every past contributor. This is standard practice for open source projects with dual-licensing strategies.
+
+If you have questions about this CLA, open an issue before contributing.
+
+---
+
 ## Prerequisites
 
 - **Python 3.12+** with [uv](https://docs.astral.sh/uv/) package manager

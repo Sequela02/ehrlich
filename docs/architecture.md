@@ -33,6 +33,9 @@ Exercise physiology and sports medicine research: evidence-based training analys
 ### Nutrition
 Nutrition science research: supplement evidence analysis, supplement label lookup (NIH DSLD), nutrient data (USDA FoodData), supplement safety monitoring (OpenFDA CAERS), drug interaction screening (RxNav), DRI-based nutrient adequacy assessment, nutrient ratio analysis, and inflammatory index scoring. Uses Semantic Scholar for literature search.
 
+### Impact
+Social program evaluation and causal analysis. Foundation layer provides economic indicator search (World Bank, WHO GHO, FRED), international benchmarking, and cross-program comparison using existing statistical tests. Hypothesis-driven analysis of any program type (education, health, sports, employment, housing) in any country. Full DDD structure with domain entities (`EconomicIndicator`, `BenchmarkValue`, `ProgramComparison`, `ProgramMetric`), repository ABCs (`EconomicDataRepository`, `BenchmarkRepository`), and infrastructure clients for three external APIs. Future phases will add causal inference methods (DiD, PSM, RDD, Synthetic Control), Mexico/US-specific data sources, and document upload. See `docs/impact-evaluation-domain.md` for full design.
+
 ### Investigation
 Hypothesis-driven agent orchestration. Manages the Claude-driven research loop: literature survey, hypothesis formulation (with predictions, criteria, scope), parallel experiment execution, criteria-based evaluation, negative controls, and synthesis. Uses multi-model architecture (Director/Researcher/Summarizer) with user-guided steering, domain classification, and multi-investigation memory. Includes domain configuration system (`DomainConfig` + `DomainRegistry`) for pluggable scientific domains with tool tagging, score definitions, prompt adaptation, and visualization control. Each domain config includes `tool_examples` in `experiment_examples` with realistic tool chaining patterns for complete tool coverage. Optional MCP bridge (`MCPBridge`) connects to external MCP servers for extensibility (e.g. Excalidraw for visual summaries).
 
@@ -44,7 +47,7 @@ Ehrlich uses a three-tier Claude model architecture for cost-efficient investiga
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesizes (3-5 calls)
     │                       NO tool access, structured JSON responses only
     │
-    ├── Sonnet 4.5 (Researcher) -- Executes experiments with 70 domain-filtered tools (10-20 calls, parallel x2)
+    ├── Sonnet 4.5 (Researcher) -- Executes experiments with 73 domain-filtered tools (10-20 calls, parallel x2)
     │                               Tool-calling loop with max_iterations_per_experiment guard
     │
     └── Haiku 4.5 (Summarizer)  -- Compresses large tool outputs >2000 chars, PICO+classification, evidence grading
@@ -206,7 +209,7 @@ Separate TanStack Start project for the public-facing landing page. SSR/SSG for 
 - **Console** (`console/`): authenticated SPA for running investigations (TanStack Router, client-side only)
 - **Web** (`web/`): public landing page with SSR/SSG for SEO (TanStack Start + Nitro, server-rendered)
 
-16 component files: Nav (scroll progress, eager), Hero (MolecularNetwork 3D canvas, eager), HowItWorks (6-phase timeline, lazy), ConsolePreview (browser-frame mockups, lazy), Architecture (model cards + dot grid bg + amber glow, lazy), Domains (3 domain cards, lazy), Visualizations (4 category cards, lazy), DataSources (16 source cards + teal glow, lazy), WhoItsFor (3 persona cards, lazy), Differentiators (3 cards, lazy), OpenSource (code snippet + licensing, lazy), Roadmap (planned domains/features, lazy), CTA (pricing tiers + terminal quickstart + primary glow, lazy), SectionHeader, Footer (lazy), MolecularNetwork. All use OKLCH tokens, Motion scroll animations, and staggered children reveals. Section zoning via alternating `bg-surface/30` backgrounds and strategic radial accent glows (amber on Architecture, teal on DataSources, primary on CTA).
+16 component files: Nav (scroll progress, eager), Hero (MolecularNetwork 3D canvas, eager), HowItWorks (6-phase timeline, lazy), ConsolePreview (browser-frame mockups, lazy), Architecture (model cards + dot grid bg + amber glow, lazy), Domains (4 domain cards, lazy), Visualizations (4 category cards, lazy), DataSources (19 source cards + teal glow, lazy), WhoItsFor (3 persona cards, lazy), Differentiators (3 cards, lazy), OpenSource (code snippet + licensing, lazy), Roadmap (planned domains/features, lazy), CTA (pricing tiers + terminal quickstart + primary glow, lazy), SectionHeader, Footer (lazy), MolecularNetwork. All use OKLCH tokens, Motion scroll animations, and staggered children reveals. Section zoning via alternating `bg-surface/30` backgrounds and strategic radial accent glows (amber on Architecture, teal on DataSources, primary on CTA).
 
 Both deploy independently: console to app server, web to CDN/static hosting.
 

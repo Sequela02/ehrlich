@@ -9,7 +9,7 @@ from ehrlich.api.sse import SSEEventType
 router = APIRouter(tags=["stats"])
 
 PHASE_COUNT = 6
-DATA_SOURCE_COUNT = 16
+DATA_SOURCE_COUNT = 19
 
 
 class StatsResponse(BaseModel):

@@ -6,11 +6,12 @@ AGPL-3.0 | Claude Code Hackathon (Feb 10-16, 2026)
 
 Ehrlich is a domain-agnostic scientific discovery platform that uses Claude as a hypothesis-driven scientific reasoning engine. Named after Paul Ehrlich, the father of the "magic bullet" concept.
 
-The engine is domain-agnostic: a pluggable `DomainConfig` + `DomainRegistry` system lets any scientific domain plug in with its own tools, score definitions, and prompt examples. Currently supports three domains:
+The engine is domain-agnostic: a pluggable `DomainConfig` + `DomainRegistry` system lets any scientific domain plug in with its own tools, score definitions, and prompt examples. Currently supports four domains:
 
 - **Molecular Science** -- antimicrobial resistance, drug discovery, toxicology, agricultural biocontrol
 - **Training Science** -- exercise physiology, protocol optimization, injury risk assessment, clinical trials
 - **Nutrition Science** -- supplement evidence analysis, dietary supplement safety, nutrient profiling, DRI adequacy assessment, drug-nutrient interactions, inflammatory index scoring
+- **Impact Evaluation** -- causal analysis of social programs (education, health, sports, employment, housing). Economic indicators (World Bank, WHO GHO, FRED), cross-program comparison, benchmark fetching. See `docs/impact-evaluation-domain.md`
 
 ## Architecture
 
@@ -20,13 +21,13 @@ DDD monorepo: `server/` (Python 3.12) + `console/` (React 19 / TypeScript / Bun)
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, designs experiments, evaluates evidence, synthesizes (NO tools)
-Sonnet 4.5 (Researcher) -- Executes experiments with 70 tools (parallel: 2 experiments per batch)
+Sonnet 4.5 (Researcher) -- Executes experiments with 73 tools (parallel: 2 experiments per batch)
 Haiku 4.5 (Summarizer)  -- Compresses large tool outputs (>2000 chars), PICO decomposition, evidence grading
 ```
 
 Always uses `MultiModelOrchestrator`. Hypotheses tested in parallel batches of 2.
 
-### Bounded Contexts (10)
+### Bounded Contexts (11)
 
 | Context | Location | Purpose |
 |---------|----------|---------|
@@ -39,9 +40,10 @@ Always uses `MultiModelOrchestrator`. Hypotheses tested in parallel batches of 2
 | simulation | `server/src/ehrlich/simulation/` | Docking, ADMET, resistance, target discovery (RCSB PDB, UniProt, Open Targets), toxicity (EPA CompTox) |
 | training | `server/src/ehrlich/training/` | Evidence analysis, protocol comparison, injury risk, training metrics, clinical trials (ClinicalTrials.gov), PubMed literature (E-utilities), exercise database (wger) |
 | nutrition | `server/src/ehrlich/nutrition/` | Supplement evidence, supplement labels (NIH DSLD), nutrient data (USDA FoodData), supplement safety (OpenFDA CAERS), drug-nutrient interactions (RxNav), DRI adequacy, nutrient ratios, inflammatory index |
+| impact | `server/src/ehrlich/impact/` | Social program evaluation: economic indicators (World Bank, WHO GHO, FRED), cross-program comparison, benchmark fetching |
 | investigation | `server/src/ehrlich/investigation/` | Multi-model orchestration + PostgreSQL persistence + domain registry + MCP bridge |
 
-### External Data Sources (15 external + 1 internal)
+### External Data Sources (18 external + 1 internal)
 
 | Source | API | Purpose | Auth |
 |--------|-----|---------|------|
@@ -60,6 +62,9 @@ Always uses `MultiModelOrchestrator`. Hypotheses tested in parallel batches of 2
 | USDA FoodData | `https://api.nal.usda.gov/fdc/v1` | Nutrient profiles for foods and supplements | API key |
 | OpenFDA CAERS | `https://api.fda.gov/food/event.json` | Supplement adverse event reports (safety monitoring) | None |
 | RxNav | `https://rxnav.nlm.nih.gov/REST` | Drug-supplement and drug-nutrient interactions (RxNorm) | None |
+| World Bank | `https://api.worldbank.org/v2/` | Development indicators by country (GDP, poverty, education, health) | None |
+| WHO GHO | `https://ghoapi.azureedge.net/api/` | Global health statistics by country (life expectancy, mortality, disease burden) | None |
+| FRED | `https://api.stlouisfed.org/fred/` | 800K+ US economic time series (GDP, unemployment, CPI, interest rates) | API key |
 | Ehrlich tsvector | internal | Full-text search of past investigation findings (PostgreSQL GIN index) | None |
 
 ### Dependency Rules (STRICT)
@@ -134,9 +139,9 @@ type(scope): description
 
 Types: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`
 
-Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation, training, nutrition, investigation, api, console, mol, data, ci, docs, infra
+Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation, training, nutrition, impact, investigation, api, console, mol, data, ci, docs, infra
 
-## Tools (70 Total)
+## Tools (73 Total)
 
 ### Chemistry (6) -- RDKit cheminformatics, domain-agnostic
 - `validate_smiles` -- Validate SMILES string
@@ -200,6 +205,11 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - `check_interactions` -- Drug-supplement and drug-nutrient interaction screening (RxNav)
 - `analyze_nutrient_ratios` -- Clinically relevant nutrient ratios (omega-6:3, Ca:Mg, Na:K, Zn:Cu, Ca:P, Fe:Cu)
 - `compute_inflammatory_index` -- Simplified Dietary Inflammatory Index (DII) scoring
+
+### Impact Evaluation (3) -- Social program analysis and economic indicators
+- `search_economic_indicators` -- Query economic time series from FRED, World Bank, or WHO GHO
+- `fetch_benchmark` -- Get comparison values from international sources (World Bank, WHO GHO)
+- `compare_programs` -- Cross-program comparison using existing statistical tests
 
 ### Visualization (12) -- Domain-specific interactive charts
 - `render_binding_scatter` -- Scatter plot of compound binding affinities (Recharts)
@@ -266,7 +276,7 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - **Domain configuration**: `DomainConfig` defines per-domain tool tags, score definitions, prompt examples; `DomainRegistry` auto-detects domain; `DomainDetected` SSE event sends display config to frontend
 - **Domain tool examples**: each `DomainConfig` includes `tool_examples` in `experiment_examples` showing realistic tool chaining patterns; ensures Researcher (Sonnet 4.5) has usage guidance for all domain-specific tools
 - **Multi-domain investigations**: `DomainRegistry.detect()` returns `list[DomainConfig]`; `merge_domain_configs()` creates synthetic merged config with union of tool_tags, concatenated score_definitions, joined prompt examples
-- **Tool tagging**: Tools tagged with frozenset domain tags (chemistry, analysis, prediction, simulation, training, clinical, nutrition, safety, literature, visualization); investigation control tools are universal (no tags); researcher sees only domain-relevant tools
+- **Tool tagging**: Tools tagged with frozenset domain tags (chemistry, analysis, prediction, simulation, training, clinical, nutrition, safety, impact, literature, visualization); investigation control tools are universal (no tags); researcher sees only domain-relevant tools
 - **Self-referential research**: `search_prior_research` queries PostgreSQL `tsvector` + GIN index of past findings; indexed on completion; intercepted in orchestrator `_dispatch_tool()` and routed to repository; "ehrlich" source type links to past investigations
 - **MCP bridge**: Optional `MCPBridge` connects to external MCP servers (e.g. Excalidraw); tools registered dynamically via `ToolRegistry.register_mcp_tools()`; lifecycle managed by orchestrator; enabled via `EHRLICH_MCP_EXCALIDRAW=true`
 - **SSE streaming**: 20 event types for real-time updates; reconnection with exponential backoff (1s, 2s, 4s, max 3 retries)
@@ -378,6 +388,18 @@ All paths relative to `server/src/ehrlich/`.
 | `infrastructure/openfda_client.py` | OpenFDA CAERS adverse event reporting |
 | `infrastructure/rxnav_client.py` | RxNav drug-nutrient interaction API |
 
+### impact/
+
+| File | Purpose |
+|------|---------|
+| `tools.py` | 3 impact evaluation tools |
+| `domain/entities.py` | EconomicIndicator, BenchmarkValue, ProgramComparison, ProgramMetric |
+| `domain/repository.py` | EconomicDataRepository, BenchmarkRepository ABCs |
+| `application/impact_service.py` | ImpactService (economic indicators, benchmarks, program comparison) |
+| `infrastructure/worldbank_client.py` | World Bank API v2 client for development indicators |
+| `infrastructure/who_client.py` | WHO GHO API client for health statistics |
+| `infrastructure/fred_client.py` | FRED API client for US economic time series |
+
 ### investigation/
 
 | File | Purpose |
@@ -402,6 +424,7 @@ All paths relative to `server/src/ehrlich/`.
 | `domain/domains/molecular.py` | `MOLECULAR_SCIENCE` config |
 | `domain/domains/training.py` | `TRAINING_SCIENCE` config |
 | `domain/domains/nutrition.py` | `NUTRITION_SCIENCE` config |
+| `domain/domains/impact.py` | `IMPACT_EVALUATION` config |
 | `domain/mcp_config.py` | `MCPServerConfig` frozen dataclass |
 | `tools_viz.py` | 12 visualization tools |
 | `infrastructure/repository.py` | PostgreSQL persistence (asyncpg) + tsvector findings search + user/credit management |
@@ -415,7 +438,7 @@ All paths relative to `server/src/ehrlich/api/`.
 | File | Purpose |
 |------|---------|
 | `auth.py` | WorkOS JWT middleware (JWKS verification, header + query param auth for SSE) |
-| `routes/investigation.py` | REST + SSE endpoints, 70-tool registry, domain registry, MCP bridge, credit system, BYOK |
+| `routes/investigation.py` | REST + SSE endpoints, 73-tool registry, domain registry, MCP bridge, credit system, BYOK |
 | `routes/methodology.py` | GET /methodology: phases, domains, tools, data sources, models |
 | `routes/molecule.py` | Molecule depiction, conformer, descriptors, targets endpoints |
 | `routes/stats.py` | GET /stats: aggregate counts |
@@ -514,9 +537,9 @@ All paths relative to `web/src/`.
 | `components/HowItWorks.tsx` | 6-phase methodology timeline with vertical connecting line |
 | `components/ConsolePreview.tsx` | Browser-frame mockups (timeline, hypothesis board, candidates, radar) |
 | `components/Architecture.tsx` | Director-Worker-Summarizer model cards, dot grid bg, amber glow |
-| `components/Domains.tsx` | 3 domain cards with tool counts, multi-domain callout |
+| `components/Domains.tsx` | 4 domain cards with tool counts, multi-domain callout |
 | `components/Visualizations.tsx` | 4 visualization category cards with tech labels |
-| `components/DataSources.tsx` | 16 source cards, surface bg with teal glow |
+| `components/DataSources.tsx` | 19 source cards, surface bg with teal glow |
 | `components/WhoItsFor.tsx` | 3 persona cards (Student, Academic, Industry) |
 | `components/Differentiators.tsx` | 3 differentiator cards with capabilities lists |
 | `components/OpenSource.tsx` | Typography-driven section with code snippet + licensing |
