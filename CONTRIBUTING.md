@@ -2,7 +2,8 @@
 
 Ehrlich is an AI-powered scientific discovery engine that uses Claude as a hypothesis-driven reasoning engine. The core engine is domain-agnostic -- any scientific domain can plug in with its own tools, scoring, and visualization.
 
-See [docs/adr/domain-agnostic.md](docs/adr/domain-agnostic.md) for the full story of how and why the engine was generalized.
+See [README.md](README.md) for setup, architecture overview, and development commands.
+See [CLAUDE.md](CLAUDE.md) for dependency rules, key patterns, and key files.
 
 ## Contributor License Agreement
 
@@ -24,114 +25,15 @@ If you have questions about this CLA, open an issue before contributing.
 
 ---
 
-## Prerequisites
+## Code Standards (Non-Negotiable)
 
-- **Python 3.12+** with [uv](https://docs.astral.sh/uv/) package manager
-- **Bun** (or Node 20+) for the console
-- **ANTHROPIC_API_KEY** environment variable set
-
-## Setup
-
-### Server
-
-```bash
-cd server
-uv sync --extra dev
-uv run uvicorn ehrlich.api.app:create_app --factory --reload --port 8000
-```
-
-### Console
-
-```bash
-cd console
-bun install
-bun dev    # Dev server at :5173
-```
-
-## Development Workflow
-
-### Quality Gates (all must pass before commit)
-
-**Server:**
-```bash
-uv run ruff check src/ tests/              # Lint (zero violations)
-uv run ruff format src/ tests/ --check     # Format check
-uv run mypy src/ehrlich/                    # Type check (strict)
-uv run pytest --cov=ehrlich                 # Tests (80%+ coverage)
-```
-
-**Console:**
-```bash
-bun run build       # Vite build (generates route tree)
-bun run typecheck   # tsc --noEmit (run after build)
-bunx vitest run     # Tests
-```
-
-### Commit Format
-
-```
-type(scope): description
-```
-
-**Types:** `feat`, `fix`, `refactor`, `chore`, `docs`, `test`
-
-**Scopes:** `kernel`, `shared`, `literature`, `chemistry`, `analysis`, `prediction`, `simulation`, `training`, `nutrition`, `investigation`, `api`, `console`, `mol`, `data`
-
-### Code Standards (Non-Negotiable)
-
-Every contribution must respect:
-
-- **DDD + Clean Architecture** -- Respect bounded contexts. `domain/` is pure Python with zero external deps. `application/` depends on domain interfaces, never infrastructure. `infrastructure/` implements domain ABCs. No cross-context domain imports.
-- **No redundancy** -- DRY across layers. If a pattern exists, reuse it. If a utility exists, find it before writing a new one. Three similar lines of code is better than a premature abstraction, but true duplication is never acceptable.
-- **No dead code** -- No commented-out blocks, no unused imports, no orphaned functions. Delete what you don't need.
-- **No boilerplate** -- If it can be derived (schemas from type hints, routes from file conventions), derive it. Don't write what the framework gives you.
-- **No backward-compatibility hacks** -- No renamed `_unused` vars, no re-exports for removed code, no `# removed` comments. If something is unused, delete it. Exception: production hotfixes with a follow-up cleanup ticket.
-- **Clean Code** -- Readability over cleverness. Explicit imports only (no wildcards). Fail fast at boundaries. Meaningful names. Small focused functions.
-- **Documentation as code** -- Every code change updates relevant docs in the same commit. Tool counts, event counts, file tables, component lists. This is the #1 recurring failure -- never skip it.
+- **DDD + Clean Architecture** -- Respect bounded contexts. See CLAUDE.md for the 8 strict dependency rules.
+- **No redundancy** -- DRY across layers. Three similar lines is better than a premature abstraction, but true duplication is never acceptable.
+- **No dead code** -- No commented-out blocks, no unused imports, no orphaned functions.
+- **No backward-compatibility hacks** -- If something is unused, delete it.
+- **Clean Code** -- Readability over cleverness. Explicit imports only (no wildcards). Fail fast at boundaries.
+- **Documentation as code** -- Every code change updates relevant docs in the same commit. Tool counts, event counts, file tables, component lists.
 - **Test before claiming complete** -- All quality gates must pass. Never say "done" without running the full suite.
-
-## Architecture
-
-DDD monorepo with 10 bounded contexts. Each context follows `domain/` -> `application/` -> `infrastructure/` layering.
-
-### Layer Rules (Strict)
-
-1. `domain/` has ZERO external dependencies -- pure Python only
-2. `application/` depends on `domain/` interfaces, never on `infrastructure/`
-3. `infrastructure/` implements `domain/` repository interfaces
-4. `tools.py` calls `application/` services, returns JSON for Claude
-5. No cross-context domain imports -- communicate via `kernel/` primitives or `shared/` ports
-6. `shared/` contains cross-cutting ports (ABCs) and value objects -- no infrastructure deps
-7. RDKit imports ONLY in `chemistry/infrastructure/rdkit_adapter.py`
-
-### Multi-Model Orchestrator
-
-```
-Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence (NO tools)
-Sonnet 4.5 (Researcher) -- Executes experiments with 70 tools (parallel: 2 per batch)
-Haiku 4.5 (Summarizer)  -- Compresses large outputs, classifies domains
-```
-
-### Bounded Contexts
-
-| Context | Domain | Purpose |
-|---------|--------|---------|
-| kernel | All | Shared primitives (SMILES, Molecule, exceptions) |
-| shared | All | Cross-cutting ports and value objects (ChemistryPort, Fingerprint, Conformer3D) |
-| literature | All | Paper search (Semantic Scholar) |
-| chemistry | Molecular | RDKit cheminformatics |
-| analysis | Molecular | Dataset exploration (ChEMBL, PubChem, GtoPdb) |
-| prediction | Molecular | ML models (XGBoost, Chemprop) |
-| simulation | Molecular | Docking, ADMET, targets (RCSB PDB, UniProt, Open Targets, EPA CompTox) |
-| training | Training | Exercise physiology (evidence analysis, protocol comparison, injury risk, training metrics, clinical trials) |
-| nutrition | Nutrition | Nutrition science (supplement evidence, labels, nutrients, safety, interactions, adequacy, inflammatory index) |
-| investigation | All | Multi-model orchestration + domain registry + SQLite persistence |
-
-## Testing
-
-- Server: `uv run pytest` -- unit + integration tests
-- Console: `bunx vitest run` -- component + utility tests
-- Coverage minimum: 80% (server), enforced by pytest-cov
 
 ---
 
@@ -145,9 +47,9 @@ Before writing any code, research the domain deeply. This upfront work determine
 
 **What to research:**
 
-1. **Problem definition** -- What scientific questions should this domain answer? What does "discovery" mean here? (e.g., molecular: find candidate drugs; training: find optimal training protocols)
+1. **Problem definition** -- What scientific questions should this domain answer? What does "discovery" mean here?
 2. **Data sources** -- Where does real experimental data come from? Identify free APIs, databases, or datasets. For each source: base URL, auth requirements, rate limits, response format, coverage
-3. **Candidate criteria** -- What makes a good candidate in this domain? What scores matter? What thresholds separate good from bad? (e.g., molecular: prediction_score > 0.7, docking < -7.0 kcal/mol; training: effect_size > 0.5, evidence_grade A-B)
+3. **Candidate criteria** -- What makes a good candidate in this domain? What scores matter? What thresholds separate good from bad?
 4. **Hypothesis types** -- What kinds of hypotheses does this domain test? (mechanistic, structural, correlational, physiological, etc.)
 5. **Visualization needs** -- How should results be displayed? Charts, 3D models, diagrams, maps, tables?
 6. **Domain vocabulary** -- Key terms, units, standard notations that Claude needs in its prompts
@@ -161,7 +63,7 @@ docs/research/yourdomain/
     prior-work.md         # Existing tools and approaches in this field
 ```
 
-See `docs/research/molecular/`, `docs/research/methodology/`, and the `training/` and `nutrition/` bounded contexts for examples of thorough domain research and implementation.
+See `docs/research/molecular/`, `docs/research/methodology/`, and the `training/` and `nutrition/` bounded contexts for examples.
 
 ### Step 1: Create the Bounded Context
 
@@ -241,7 +143,6 @@ YOUR_DOMAIN = DomainConfig(
     ),
     attribute_keys=("category", "source"), # Non-numeric candidate attributes
     negative_control_threshold=0.5,        # Score below = correctly classified
-    # visualization is reactive: LiveLabViewer auto-appears for molecular tools,
     hypothesis_types=(
         "mechanistic",                     # Valid hypothesis_type values for this domain
         "correlational",
@@ -249,7 +150,7 @@ YOUR_DOMAIN = DomainConfig(
     ),
     valid_domain_categories=(
         "your_domain",                     # Categories the classifier might output
-        "related_field",                   # Map these to your domain
+        "related_field",
     ),
     template_prompts=(
         {
@@ -265,9 +166,9 @@ YOUR_DOMAIN = DomainConfig(
 ```
 
 Key decisions:
-- **Visualization**: Visualization is reactive -- LiveLabViewer auto-appears when molecular tool events (docking, descriptors, etc.) are detected in the SSE stream. Chart visualizations render inline from `VisualizationRendered` events. No configuration needed.
+- **Visualization**: Visualization is reactive -- LiveLabViewer auto-appears when molecular tool events are detected in the SSE stream. Chart visualizations render inline from `VisualizationRendered` events. No configuration needed.
 - **`tool_tags`**: This frozenset determines which tools the Researcher can see. Include `"literature"` if you want paper search.
-- **`director_examples`**: These are the most impactful part. Good multishot examples make the Director formulate domain-appropriate hypotheses. Use `{{` and `}}` for literal braces in f-string-like contexts.
+- **`director_examples`**: These are the most impactful part. Good multishot examples make the Director formulate domain-appropriate hypotheses.
 - **`score_definitions`**: These become the columns in the CandidateTable. The frontend auto-generates color-coded cells based on thresholds.
 
 ### Step 4: Register Tools and Domain
@@ -403,12 +304,9 @@ Update these files (in the same commit as the code):
 
 | File | What to update |
 |------|---------------|
-| `CLAUDE.md` | Tool count, bounded contexts table, tools section, scopes list |
+| `CLAUDE.md` | Bounded contexts table, key files |
 | `README.md` | Tool count, bounded contexts table, tools table, "What Can Ehrlich Investigate" |
-| `docs/architecture.md` | Bounded contexts, tool count, data flow |
-| `docs/roadmap/` | Add completion entry to appropriate phase file |
-| `web/src/lib/constants.ts` | STATS counts, DOMAINS array (toolCount, capabilities, sources, vizTools), DATA_SOURCES array |
-| `console/` | Template prompts, domain badges, tool references where applicable |
+| `web/src/lib/constants.ts` | STATS counts, DOMAINS array, DATA_SOURCES array |
 
 ### Step 9: Verify
 
@@ -436,8 +334,8 @@ That's it. Your domain is live. The orchestrator will auto-detect it from the us
 2. Register it in `_build_registry()` with the domain's tag
 3. Write tests
 4. Update the integration test tool count in `tests/integration/test_e2e.py`
-5. Update docs (tool counts in CLAUDE.md, README.md, docs/architecture.md)
-6. Update tool counts and references in `web/src/lib/constants.ts` (STATS, DOMAINS toolCount) and `console/` where applicable
+5. Update docs (tool counts in CLAUDE.md, README.md)
+6. Update tool counts and references in `web/src/lib/constants.ts` (STATS, DOMAINS toolCount)
 
 ### Improving Score Definitions
 
