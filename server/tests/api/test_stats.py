@@ -24,7 +24,7 @@ class TestStats:
     def test_tool_count(self, client: TestClient) -> None:
         resp = client.get("/api/v1/stats")
         data = resp.json()
-        assert data["tool_count"] == 73
+        assert data["tool_count"] == 85
 
     def test_domain_count(self, client: TestClient) -> None:
         resp = client.get("/api/v1/stats")

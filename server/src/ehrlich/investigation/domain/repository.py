@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from ehrlich.investigation.domain.investigation import Investigation
+    from ehrlich.investigation.domain.uploaded_file import UploadedFile
 
 
 class InvestigationRepository(ABC):
@@ -28,3 +29,9 @@ class InvestigationRepository(ABC):
 
     @abstractmethod
     async def search_findings(self, query: str, limit: int = 20) -> list[dict[str, Any]]: ...
+
+    @abstractmethod
+    async def save_uploaded_file(self, investigation_id: str, file: UploadedFile) -> None: ...
+
+    @abstractmethod
+    async def get_uploaded_files(self, investigation_id: str) -> list[UploadedFile]: ...

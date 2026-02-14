@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from ehrlich.investigation.domain.hypothesis import Hypothesis
     from ehrlich.investigation.domain.negative_control import NegativeControl
     from ehrlich.investigation.domain.positive_control import PositiveControl
+    from ehrlich.investigation.domain.uploaded_file import UploadedFile
 
 
 class InvestigationStatus(StrEnum):
@@ -43,6 +44,7 @@ class Investigation:
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     trained_model_ids: list[str] = field(default_factory=list)
     cost_data: dict[str, object] = field(default_factory=dict)
+    uploaded_files: list[UploadedFile] = field(default_factory=list)
 
     def record_finding(self, finding: Finding) -> None:
         self.findings.append(finding)

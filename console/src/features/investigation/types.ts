@@ -236,9 +236,29 @@ export interface ValidationMetricsData {
 
 export type DirectorTier = "haiku" | "sonnet" | "opus";
 
+export interface TabularPreview {
+  columns: string[];
+  dtypes: string[];
+  row_count: number;
+  sample_rows: string[][];
+}
+
+export interface DocumentPreview {
+  text: string;
+  page_count: number;
+}
+
+export interface UploadResponse {
+  file_id: string;
+  filename: string;
+  content_type: string;
+  preview: TabularPreview | DocumentPreview;
+}
+
 export interface InvestigationRequest {
   prompt: string;
   director_tier?: DirectorTier;
+  file_ids?: string[];
 }
 
 export interface InvestigationResponse {

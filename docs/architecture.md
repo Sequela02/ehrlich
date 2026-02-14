@@ -34,10 +34,10 @@ Exercise physiology and sports medicine research: evidence-based training analys
 Nutrition science research: supplement evidence analysis, supplement label lookup (NIH DSLD), nutrient data (USDA FoodData), supplement safety monitoring (OpenFDA CAERS), drug interaction screening (RxNav), DRI-based nutrient adequacy assessment, nutrient ratio analysis, and inflammatory index scoring. Uses Semantic Scholar for literature search.
 
 ### Impact
-Social program evaluation. Provides economic indicator search (World Bank, WHO GHO, FRED), international benchmarking, and cross-program comparison using existing statistical tests. Hypothesis-driven analysis of any program type (education, health, sports, employment, housing) in any country. Full DDD structure with domain entities, repository ABCs, and infrastructure clients for three external APIs. Causal inference methods (DiD, PSM, RDD, Synthetic Control) live in `analysis/` as domain-agnostic tools. Future phases will add Mexico/US-specific data sources and document upload. See `docs/impact-evaluation-domain.md` for full design.
+Social program evaluation. Provides economic indicator search (World Bank, WHO GHO, FRED), international benchmarking, and cross-program comparison using existing statistical tests. Hypothesis-driven analysis of any program type (education, health, sports, employment, housing) in any country. Full DDD structure with domain entities, repository ABCs, and infrastructure clients for three external APIs. Causal inference methods (DiD, PSM, RDD, Synthetic Control) live in `analysis/` as domain-agnostic tools. Future phases will add Mexico/US-specific data sources. See `docs/impact-evaluation-domain.md` for full design.
 
 ### Investigation
-Hypothesis-driven agent orchestration. Manages the Claude-driven research loop: literature survey, hypothesis formulation (with predictions, criteria, scope), parallel experiment execution, criteria-based evaluation, negative controls, and synthesis. Uses multi-model architecture (Director/Researcher/Summarizer) with user-guided steering, domain classification, and multi-investigation memory. Includes domain configuration system (`DomainConfig` + `DomainRegistry`) for pluggable scientific domains with tool tagging, score definitions, prompt adaptation, and visualization control. Each domain config includes `tool_examples` in `experiment_examples` with realistic tool chaining patterns for complete tool coverage. Optional MCP bridge (`MCPBridge`) connects to external MCP servers for extensibility (e.g. Excalidraw for visual summaries).
+Hypothesis-driven agent orchestration. Manages the Claude-driven research loop: literature survey, hypothesis formulation (with predictions, criteria, scope), parallel experiment execution, criteria-based evaluation, negative controls, and synthesis. Uses multi-model architecture (Director/Researcher/Summarizer) with user-guided steering, domain classification, and multi-investigation memory. Supports document upload (CSV/XLSX/PDF) with prompt injection and queryable data via `query_uploaded_data` tool. Includes domain configuration system (`DomainConfig` + `DomainRegistry`) for pluggable scientific domains with tool tagging, score definitions, prompt adaptation, and visualization control. Each domain config includes `tool_examples` in `experiment_examples` with realistic tool chaining patterns for complete tool coverage. Optional MCP bridge (`MCPBridge`) connects to external MCP servers for extensibility (e.g. Excalidraw for visual summaries).
 
 ## Multi-Model Architecture
 
@@ -47,7 +47,7 @@ Ehrlich uses a three-tier Claude model architecture for cost-efficient investiga
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesizes (3-5 calls)
     │                       NO tool access, structured JSON responses only
     │
-    ├── Sonnet 4.5 (Researcher) -- Executes experiments with 84 domain-filtered tools (10-20 calls, parallel x2)
+    ├── Sonnet 4.5 (Researcher) -- Executes experiments with 85 domain-filtered tools (10-20 calls, parallel x2)
     │                               Tool-calling loop with max_iterations_per_experiment guard
     │
     └── Haiku 4.5 (Summarizer)  -- Compresses large tool outputs >2000 chars, PICO+classification, evidence grading
@@ -233,8 +233,8 @@ api/ -> investigation/application/ only
 
 ### Multi-Model (Default)
 
-1. User submits research prompt via Console (or selects a template)
-2. API creates Investigation, persists to PostgreSQL, starts MultiModelOrchestrator
+1. User submits research prompt via Console (or selects a template), optionally with uploaded files (CSV/XLSX/PDF via `POST /upload`)
+2. API creates Investigation, links any uploaded files, persists to PostgreSQL, starts MultiModelOrchestrator (with uploaded data context injected into prompts)
 3. **Haiku** decomposes prompt via PICO framework (Population, Intervention, Comparison, Outcome) and classifies domain in a single call; queries past completed investigations in same domain
 4. **Domain detection** -- `DomainRegistry.detect()` returns `list[DomainConfig]` (one or more); `merge_domain_configs()` creates merged config for cross-domain; emits `DomainDetected` SSE event with display config (includes `domains` sub-list for multi-domain); researcher tool list filtered to merged domain-relevant tools
 5. **Researcher** (Sonnet) conducts structured literature survey with domain-filtered tools, citation chasing, evidence-level grading; **Haiku** grades body-of-evidence (GRADE-adapted) and self-assesses quality (AMSTAR-2); emits `LiteratureSurveyCompleted` event

@@ -12,6 +12,7 @@ from ehrlich.api.routes.investigation import router as investigation_router
 from ehrlich.api.routes.methodology import router as methodology_router
 from ehrlich.api.routes.molecule import router as molecule_router
 from ehrlich.api.routes.stats import router as stats_router
+from ehrlich.api.routes.upload import router as upload_router
 from ehrlich.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -87,5 +88,6 @@ def create_app() -> FastAPI:
     app.include_router(methodology_router, prefix="/api/v1")
     app.include_router(molecule_router, prefix="/api/v1")
     app.include_router(stats_router, prefix="/api/v1")
+    app.include_router(upload_router, prefix="/api/v1")
 
     return app

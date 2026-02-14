@@ -21,6 +21,13 @@ vi.mock("../hooks/use-credits", () => ({
   }),
 }));
 
+vi.mock("../hooks/use-upload", () => ({
+  useUpload: () => ({
+    mutateAsync: vi.fn(),
+    isError: false,
+  }),
+}));
+
 import { PromptInput } from "./PromptInput";
 
 function renderWithProvider(props: { value: string; onChange: (v: string) => void }) {
@@ -79,5 +86,10 @@ describe("PromptInput", () => {
   it("renders director label", () => {
     const { container } = renderWithProvider({ value: "", onChange: vi.fn() });
     expect(container.textContent).toContain("Director");
+  });
+
+  it("renders FileUpload drop zone", () => {
+    const { container } = renderWithProvider({ value: "", onChange: vi.fn() });
+    expect(container.textContent).toContain("Drop CSV, Excel, or PDF");
   });
 });

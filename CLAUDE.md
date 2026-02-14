@@ -21,7 +21,7 @@ DDD monorepo: `server/` (Python 3.12) + `console/` (React 19 / TypeScript / Bun)
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, designs experiments, evaluates evidence, synthesizes (NO tools)
-Sonnet 4.5 (Researcher) -- Executes experiments with 79 tools (parallel: 2 experiments per batch)
+Sonnet 4.5 (Researcher) -- Executes experiments with 80 tools (parallel: 2 experiments per batch)
 Haiku 4.5 (Summarizer)  -- Compresses large tool outputs (>2000 chars), PICO decomposition, evidence grading
 ```
 
@@ -141,7 +141,7 @@ Types: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`
 
 Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation, training, nutrition, impact, investigation, api, console, mol, data, ci, docs, infra
 
-## Tools (84 Total)
+## Tools (85 Total)
 
 ### Chemistry (6) -- RDKit cheminformatics, domain-agnostic
 - `validate_smiles` -- Validate SMILES string
@@ -240,13 +240,14 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - `run_statistical_test` -- Compare two numeric groups (auto-selects t-test/Welch/Mann-Whitney, returns p-value, Cohen's d, 95% CI)
 - `run_categorical_test` -- Test contingency tables (auto-selects Fisher's exact/chi-squared, returns p-value, odds ratio/Cramer's V)
 
-### Investigation (7) -- Hypothesis lifecycle + self-referential
+### Investigation (8) -- Hypothesis lifecycle + self-referential + data upload
 - `propose_hypothesis` -- Register testable hypothesis
 - `design_experiment` -- Plan experiment with tool sequence
 - `evaluate_hypothesis` -- Assess outcome (supported/refuted/revised)
 - `record_finding` -- Record finding linked to hypothesis + evidence_type
 - `record_negative_control` -- Validate model with known-inactive compounds
 - `search_prior_research` -- Search Ehrlich's own past findings via full-text search
+- `query_uploaded_data` -- Query user-uploaded files (CSV/Excel filtering, PDF text retrieval)
 - `conclude_investigation` -- Final summary with ranked candidates
 
 ## Key Patterns
@@ -281,6 +282,7 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - **Authentication**: WorkOS JWT middleware (`api/auth.py`); JWKS verification via `PyJWKClient`; `get_current_user` (header) and `get_current_user_sse` (header or `?token=` query param for EventSource); `get_optional_user` for public routes
 - **Credit system**: director tier selection (haiku=1cr, sonnet=3cr, opus=5cr); credits deducted on investigation start; refunded on failure; `credit_transactions` table for audit trail; `GET /credits/balance` endpoint
 - **BYOK (Bring Your Own Key)**: `X-Anthropic-Key` header pass-through; bypasses credit system; API key forwarded to `AnthropicClientAdapter`; checked on both `POST /investigate` and `GET /investigate/{id}/stream`
+- **Document upload**: CSV/XLSX/PDF upload via `POST /upload` (multipart/form-data); `FileProcessor` parses to `UploadedFile` domain entity; tabular files get summary stats + sample rows; PDFs get text extraction (pymupdf); uploaded data injected into Director/Researcher prompts as `<uploaded_data>` XML block; `query_uploaded_data` tool intercepted by `ToolDispatcher` for pandas-based filtering
 
 ### Integration Patterns
 
@@ -423,15 +425,16 @@ All paths relative to `server/src/ehrlich/`.
 
 | File | Purpose |
 |------|---------|
-| `application/multi_orchestrator.py` | Director-Worker-Summarizer orchestrator (main 6-phase loop) |
+| `application/multi_orchestrator.py` | Director-Worker-Summarizer orchestrator (main 6-phase loop, upload context injection) |
 | `application/diagram_builder.py` | Excalidraw evidence synthesis diagram generation |
-| `application/tool_dispatcher.py` | Tool execution dispatcher with caching and special handlers |
+| `application/tool_dispatcher.py` | Tool execution dispatcher with caching, `search_prior_research` and `query_uploaded_data` interception |
 | `application/researcher_executor.py` | Single researcher experiment executor with tool loop |
 | `application/batch_executor.py` | Parallel batch experiment executor (2 concurrent researchers) |
 | `application/cost_tracker.py` | Per-model cost tracking with tiered pricing |
 | `application/tool_cache.py` | In-memory TTL cache for tool results |
 | `application/tool_registry.py` | `ToolRegistry` with domain tag filtering |
-| `application/prompts.py` | Domain-adaptive prompts (PICO, literature survey, director, researcher, summarizer) |
+| `application/file_processor.py` | CSV/XLSX/PDF parser producing `UploadedFile` domain entities |
+| `application/prompts.py` | Domain-adaptive prompts (PICO, literature survey, director, researcher, summarizer, uploaded data context) |
 | `domain/schemas.py` | JSON schemas for structured output responses (6 schemas: PICO, Formulation, Experiment Design, Evaluation, Synthesis, Literature Grading) |
 | `domain/hypothesis.py` | Hypothesis entity + HypothesisStatus + HypothesisType enums |
 | `domain/experiment.py` | Experiment entity + ExperimentStatus enum |
@@ -448,9 +451,11 @@ All paths relative to `server/src/ehrlich/`.
 | `domain/domains/training.py` | `TRAINING_SCIENCE` config |
 | `domain/domains/nutrition.py` | `NUTRITION_SCIENCE` config |
 | `domain/domains/impact.py` | `IMPACT_EVALUATION` config |
+| `domain/uploaded_file.py` | `UploadedFile`, `TabularData`, `DocumentData` frozen dataclasses |
 | `domain/mcp_config.py` | `MCPServerConfig` frozen dataclass |
+| `tools.py` | `query_uploaded_data` tool (intercepted by ToolDispatcher) |
 | `tools_viz.py` | 17 visualization tools |
-| `infrastructure/repository.py` | PostgreSQL persistence (asyncpg) + tsvector findings search + user/credit management |
+| `infrastructure/repository.py` | PostgreSQL persistence (asyncpg) + tsvector findings search + user/credit management + uploaded files |
 | `infrastructure/anthropic_client.py` | Anthropic API adapter with retry, streaming, and structured outputs |
 | `infrastructure/mcp_bridge.py` | MCP client bridge (stdio/SSE/streamable_http) |
 
@@ -461,7 +466,8 @@ All paths relative to `server/src/ehrlich/api/`.
 | File | Purpose |
 |------|---------|
 | `auth.py` | WorkOS JWT middleware (JWKS verification, header + query param auth for SSE) |
-| `routes/investigation.py` | REST + SSE endpoints, 84-tool registry, domain registry, MCP bridge, credit system, BYOK |
+| `routes/investigation.py` | REST + SSE endpoints, 85-tool registry, domain registry, MCP bridge, credit system, BYOK |
+| `routes/upload.py` | `POST /upload` multipart file upload (CSV/XLSX/PDF), preview response, pending upload store |
 | `routes/methodology.py` | GET /methodology: phases, domains, tools, data sources, models |
 | `routes/molecule.py` | Molecule depiction, conformer, descriptors, targets endpoints |
 | `routes/stats.py` | GET /stats: aggregate counts |
@@ -490,7 +496,9 @@ All paths relative to `console/src/`.
 | `features/investigation/components/NegativeControlPanel.tsx` | Negative control validation table |
 | `features/investigation/components/TemplateCards.tsx` | 9 cross-domain research prompt templates |
 | `features/investigation/components/ThreatAssessment.tsx` | Validity threat assessment panel with severity badges |
-| `features/investigation/components/PromptInput.tsx` | Controlled prompt input with director tier selector pills |
+| `features/investigation/components/FileUpload.tsx` | Drag-and-drop file upload (CSV/XLSX/PDF) with progress and preview |
+| `features/investigation/components/DataPreview.tsx` | Compact inline preview cards for uploaded tabular/document data |
+| `features/investigation/components/PromptInput.tsx` | Controlled prompt input with director tier selector pills and file upload |
 | `features/investigation/components/BYOKSettings.tsx` | API key management for BYOK users |
 
 ### Investigation lib + hooks
@@ -502,6 +510,7 @@ All paths relative to `console/src/`.
 | `features/investigation/lib/export-markdown.ts` | Client-side markdown report generation |
 | `features/investigation/hooks/use-methodology.ts` | React hook for methodology data |
 | `features/investigation/hooks/use-credits.ts` | Credit balance hook (TanStack Query) |
+| `features/investigation/hooks/use-upload.ts` | File upload mutation hook (TanStack Query) |
 
 ### Molecule components
 

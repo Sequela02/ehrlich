@@ -474,12 +474,16 @@ File upload
 
 ## 10. Implementation Phases
 
-### Phase 1: Foundation (document upload + universal APIs)
-- File upload API (CSV, PDF, Excel)
-- `extract_program_data` tool
-- World Bank, FRED, WHO API clients
-- Basic `compare_programs` tool using existing `run_statistical_test`
-- 2 new viz tools: `render_program_dashboard`, `render_geographic_comparison`
+### Phase 1: Foundation (document upload + universal APIs) -- DONE
+- [x] File upload API (`POST /upload`, CSV/XLSX/PDF, 50MB limit, multipart/form-data)
+- [x] `FileProcessor` service + `UploadedFile` domain entity (TabularData/DocumentData)
+- [x] `query_uploaded_data` tool (intercepted by ToolDispatcher, pandas filtering)
+- [x] PostgreSQL `uploaded_files` table with JSONB parsed_data
+- [x] Uploaded data injected into Director/Researcher prompts as `<uploaded_data>` XML
+- [x] Frontend: `FileUpload.tsx` drag-and-drop + `DataPreview.tsx` + `use-upload.ts` hook
+- [x] World Bank, FRED, WHO API clients (done in Phase 13A)
+- [x] `compare_programs` tool using existing `run_statistical_test` (done in Phase 13A)
+- [x] 2 new viz tools: `render_program_dashboard`, `render_geographic_comparison` (done in Phase 13B)
 
 ### Phase 2: Causal Inference Engine -- DONE (lives in `analysis/`)
 - `estimate_did`, `estimate_psm`, `estimate_rdd`, `estimate_synthetic_control` tools (in `analysis/tools.py`)

@@ -57,7 +57,7 @@ Ehrlich uses a three-tier Claude model architecture for cost-efficient investiga
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesizes (3-5 calls)
-Sonnet 4.5 (Researcher) -- Executes experiments with 84 tools (10-20 calls)
+Sonnet 4.5 (Researcher) -- Executes experiments with 85 tools (10-20 calls)
 Haiku 4.5 (Summarizer)  -- Compresses large outputs, classifies domains (5-10 calls)
 ```
 
@@ -88,7 +88,7 @@ Cost: ~$3-4 per investigation (vs ~$11 with all-Opus).
 
 All data sources are free and open-access.
 
-## 84 Tools
+## 85 Tools
 
 | Context | Tool | Description |
 |---------|------|-------------|
@@ -175,6 +175,7 @@ All data sources are free and open-access.
 | Investigation | `record_finding` | Record finding linked to hypothesis |
 | Investigation | `record_negative_control` | Validate model with known-inactive compounds |
 | Investigation | `search_prior_research` | Search past investigation findings via full-text search |
+| Investigation | `query_uploaded_data` | Query user-uploaded files (CSV/Excel filtering, PDF text) |
 | Investigation | `conclude_investigation` | Final summary with ranked candidates |
 
 ## Tech Stack
@@ -299,6 +300,7 @@ Server at :8000, Console at :3000.
 | POST | `/api/v1/investigate` | Create new investigation (`director_tier`: haiku/sonnet/opus) |
 | GET | `/api/v1/investigate/{id}/stream` | SSE stream of investigation events (supports `?token=` for EventSource) |
 | POST | `/api/v1/investigate/{id}/approve` | Approve/reject formulated hypotheses |
+| POST | `/api/v1/upload` | Upload file (CSV/XLSX/PDF) for investigation data, returns preview |
 | GET | `/api/v1/credits/balance` | Current credit balance + BYOK status |
 
 ### SSE Event Types

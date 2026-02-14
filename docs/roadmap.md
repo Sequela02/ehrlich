@@ -471,7 +471,7 @@ Enhancement Enhancement  Sports
            |
      Phase 13: Impact Evaluation Domain -- IN PROGRESS
      (Causal inference + Document upload + MX/US APIs)
-     13A (Foundation) DONE -> 13B (Causal Inference) DONE -> 13A-2 (Upload) -> 13C (Mexico) -> 13D (US) -> 13E (MCP)
+     13A (Foundation) DONE -> 13B (Causal Inference) DONE -> 13A-2 (Upload) DONE -> 13C (Mexico) -> 13D (US) -> 13E (MCP)
            |
      Phase 14: Scientific Engine Hardening -- IN PROGRESS (parallel with 13A-2)
      14A (Orchestrator Split) ──┬── 14B (Route Cleanup) ──┬── 14D (Tool Enrichment)
@@ -1061,15 +1061,23 @@ Refactored causal inference from impact-specific to domain-agnostic. All causal 
 
 **Counts:** 78 -> 84 tools (6 causal + 1 cost-effectiveness - 2 moved + 2 viz), 15 -> 17 viz tools, 5 -> 3 impact tools, 0 -> 6 causal tools (analysis/), 7 -> 9 templates.
 
-### Phase 13A-2: Document Upload (TODO -- deferred post-hackathon)
+### Phase 13A-2: Document Upload -- DONE
 
-- [ ] File upload API (CSV, PDF, Excel) via multipart/form-data on `POST /investigate`
-- [ ] PDF text extraction (`pymupdf`) + Haiku summarization for long documents
-- [ ] CSV/Excel parsing (`pandas` + `openpyxl`) with schema detection and summary statistics
-- [ ] Inject uploaded data into Director prompt as `<uploaded_data>` XML block
-- [ ] `extract_program_data` tool -- parse uploaded files into structured program data
-- [ ] Frontend: `FileUpload.tsx` drag-and-drop component in `PromptInput`
-- [ ] Frontend: `DataPreview.tsx` for uploaded dataset preview
+- [x] File upload API (`POST /upload`) with multipart/form-data, 50MB limit, WorkOS auth
+- [x] PDF text extraction (`pymupdf`) with page-level parsing and 8000-char truncation
+- [x] CSV/Excel parsing (`pandas` + `openpyxl`) with summary statistics and sample rows
+- [x] `UploadedFile` domain entity with `TabularData` / `DocumentData` frozen dataclasses
+- [x] `FileProcessor` application service (zero external deps in domain layer)
+- [x] PostgreSQL `uploaded_files` table with JSONB `parsed_data` column
+- [x] Inject uploaded data into Director/Researcher prompts as `<uploaded_data>` XML block
+- [x] `query_uploaded_data` tool -- intercepted by `ToolDispatcher`, pandas-based filtering (eq/gt/lt/gte/lte/contains)
+- [x] Upload-first flow: `POST /upload` returns preview, `POST /investigate` references `file_ids`
+- [x] Frontend: `FileUpload.tsx` drag-and-drop component with progress spinner
+- [x] Frontend: `DataPreview.tsx` compact inline cards for tabular/document previews
+- [x] Frontend: `use-upload.ts` TanStack Query mutation hook
+- [x] Tests: 16 server tests (FileProcessor + domain entities + query handler) + 16 console tests
+
+**Counts:** 84 -> 85 tools (added `query_uploaded_data`). Investigation tools: 7 -> 8.
 
 ### Phase 13C: Mexico Integration
 

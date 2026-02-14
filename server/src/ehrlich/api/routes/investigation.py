@@ -58,6 +58,7 @@ from ehrlich.investigation.tools import (
     design_experiment,
     evaluate_hypothesis,
     propose_hypothesis,
+    query_uploaded_data,
     record_finding,
     record_negative_control,
     search_prior_research,
@@ -158,6 +159,7 @@ _investigation_meta: dict[str, dict[str, Any]] = {}
 class InvestigateRequest(BaseModel):
     prompt: str
     director_tier: str = "opus"
+    file_ids: list[str] = []
 
 
 class CreditBalanceResponse(BaseModel):
@@ -335,6 +337,7 @@ def _build_registry() -> ToolRegistry:
         ("evaluate_hypothesis", evaluate_hypothesis, None),
         ("record_negative_control", record_negative_control, None),
         ("search_prior_research", search_prior_research, None),
+        ("query_uploaded_data", query_uploaded_data, None),
     ]
     for name, func, tags in tagged_tools:
         registry.register(name, func, tags)
@@ -441,6 +444,16 @@ async def start_investigation(
     # Save investigation first (credit_transactions FK references investigations)
     await repo.save(investigation, user_id=str(db_user["id"]))
 
+    # Attach uploaded files
+    if request.file_ids:
+        from ehrlich.api.routes.upload import get_pending_upload
+
+        for fid in request.file_ids:
+            uploaded = get_pending_upload(fid)
+            if uploaded:
+                investigation.uploaded_files.append(uploaded)
+                await repo.save_uploaded_file(investigation.id, uploaded)
+
     if not is_byok:
         deducted = await repo.deduct_credits(user["workos_id"], credit_cost, investigation.id)
         if not deducted:
@@ -484,6 +497,8 @@ async def stream_investigation(
     investigation = _active_investigations.get(investigation_id)
     if investigation is None:
         investigation = await repo.get_by_id(investigation_id)
+        if investigation is not None:
+            investigation.uploaded_files = await repo.get_uploaded_files(investigation.id)
     if investigation is None:
         raise HTTPException(status_code=404, detail="Investigation not found")
 

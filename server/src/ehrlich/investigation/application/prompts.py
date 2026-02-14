@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from ehrlich.investigation.domain.domain_config import DomainConfig
     from ehrlich.investigation.domain.investigation import Investigation
+    from ehrlich.investigation.domain.uploaded_file import UploadedFile
 
 SCIENTIST_SYSTEM_PROMPT = """\
 You are Ehrlich, an AI molecular discovery scientist named after \
@@ -900,6 +901,7 @@ _DEFAULT_CATEGORIES = frozenset(
 
 def build_pico_and_classification_prompt(
     categories: frozenset[str] | None = None,
+    uploaded_data_context: str = "",
 ) -> str:
     """Build a combined domain classification + PICO decomposition prompt.
 
@@ -937,7 +939,7 @@ def build_pico_and_classification_prompt(
         '  "outcome": "measurable endpoint",\n'
         '  "search_terms": ["broad query 1", "broad query 2", "broad query 3"]\n'
         "}\n"
-        "</output_format>"
+        "</output_format>" + (f"\n\n{uploaded_data_context}" if uploaded_data_context else "")
     )
 
 
@@ -1075,7 +1077,10 @@ def build_multi_investigation_context(
     return "\n".join(parts)
 
 
-def build_formulation_prompt(config: DomainConfig) -> str:
+def build_formulation_prompt(
+    config: DomainConfig,
+    uploaded_data_context: str = "",
+) -> str:
     """Build Director formulation prompt adapted to the domain config."""
     hyp_types = "|".join(config.hypothesis_types) if config.hypothesis_types else "other"
     examples = config.director_examples or ""
@@ -1142,11 +1147,14 @@ def build_formulation_prompt(config: DomainConfig) -> str:
         "    }\n"
         "  ]\n"
         "}\n"
-        "</output_format>"
+        "</output_format>" + (f"\n\n{uploaded_data_context}" if uploaded_data_context else "")
     )
 
 
-def build_experiment_prompt(config: DomainConfig) -> str:
+def build_experiment_prompt(
+    config: DomainConfig,
+    uploaded_data_context: str = "",
+) -> str:
     """Build Director experiment design prompt adapted to the domain config."""
     examples = config.experiment_examples or ""
     return (
@@ -1195,7 +1203,7 @@ def build_experiment_prompt(config: DomainConfig) -> str:
         '  "success_criteria": "What result would support the hypothesis",\n'
         '  "failure_criteria": "What result would refute the hypothesis"\n'
         "}\n"
-        "</output_format>"
+        "</output_format>" + (f"\n\n{uploaded_data_context}" if uploaded_data_context else "")
     )
 
 
@@ -1366,7 +1374,10 @@ def build_synthesis_prompt(config: DomainConfig) -> str:
     )
 
 
-def build_researcher_prompt(config: DomainConfig) -> str:
+def build_researcher_prompt(
+    config: DomainConfig,
+    uploaded_data_context: str = "",
+) -> str:
     """Build researcher experiment prompt adapted to the domain config."""
     examples = config.experiment_examples or ""
     return (
@@ -1425,7 +1436,7 @@ def build_researcher_prompt(config: DomainConfig) -> str:
         "4. If a tool returns an error, try an alternative approach.\n"
         "5. Be quantitative: report exact numbers and scores.\n"
         "6. Use at least 3 tool calls in this experiment.\n"
-        "</rules>"
+        "</rules>" + (f"\n\n{uploaded_data_context}" if uploaded_data_context else "")
     )
 
 
@@ -1448,4 +1459,46 @@ def _build_prior_context(investigation: Investigation) -> str:
                 parts.append(f"    Evidence: {evidence}")
             parts.append("  </hypothesis>")
     parts.append("</prior_hypotheses>")
+    return "\n".join(parts)
+
+
+def build_uploaded_data_context(files: list[UploadedFile]) -> str:
+    """Build XML context block describing user-uploaded files.
+
+    Injected into Director and Researcher prompts so the model is aware
+    of available datasets and can reference them via ``query_uploaded_data``.
+    """
+    if not files:
+        return ""
+    parts: list[str] = ["<uploaded_data>"]
+    for f in files:
+        if f.tabular:
+            t = f.tabular
+            cols = ", ".join(t.columns)
+            dtypes = ", ".join(t.dtypes)
+            parts.append(f'  <file id="{f.file_id}" name="{f.filename}" type="tabular">')
+            parts.append(f"    Columns ({len(t.columns)}): {cols}")
+            parts.append(f"    Dtypes: {dtypes}")
+            parts.append(f"    Rows: {t.row_count}")
+            if t.summary_stats:
+                stats_lines = []
+                for col_name, stats in list(t.summary_stats.items())[:6]:
+                    mean = stats.get("mean", "?")
+                    std = stats.get("std", "?")
+                    stats_lines.append(f"{col_name}: mean={mean}, std={std}")
+                parts.append(f"    Stats: {'; '.join(stats_lines)}")
+            if t.sample_rows:
+                header = " | ".join(t.columns)
+                parts.append(f"    Sample: {header}")
+                for row in t.sample_rows[:3]:
+                    parts.append(f"            {' | '.join(row)}")
+            parts.append("  </file>")
+        elif f.document:
+            d = f.document
+            excerpt = d.text[:500] + "..." if len(d.text) > 500 else d.text
+            parts.append(f'  <file id="{f.file_id}" name="{f.filename}" type="document">')
+            parts.append(f"    Pages: {d.page_count}")
+            parts.append(f"    Excerpt: {excerpt}")
+            parts.append("  </file>")
+    parts.append("</uploaded_data>")
     return "\n".join(parts)

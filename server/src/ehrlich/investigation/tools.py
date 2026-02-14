@@ -3,6 +3,31 @@ from __future__ import annotations
 import json
 
 
+async def query_uploaded_data(
+    file_id: str,
+    columns: str | None = None,
+    filter_column: str | None = None,
+    filter_op: str | None = None,
+    filter_value: str | None = None,
+    head: int = 50,
+) -> str:
+    """Query data from a user-uploaded file (CSV, Excel, or PDF).
+
+    For tabular files: select columns, filter rows, and return JSON results.
+    For PDF files: return the extracted text content.
+
+    Args:
+        file_id: The ID of the uploaded file to query
+        columns: Comma-separated column names to select (omit for all columns)
+        filter_column: Column name to filter on
+        filter_op: Filter operation: eq, gt, lt, gte, lte, contains
+        filter_value: Value to filter against
+        head: Maximum number of rows to return (default 50)
+    """
+    # Stub -- intercepted by orchestrator._dispatch_tool()
+    return json.dumps({"status": "query_dispatched", "file_id": file_id})
+
+
 async def search_prior_research(query: str, limit: int = 10) -> str:
     """Search Ehrlich's own past investigation findings for prior knowledge.
 

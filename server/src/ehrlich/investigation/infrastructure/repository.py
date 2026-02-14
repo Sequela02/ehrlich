@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import uuid
 from datetime import UTC, datetime
 from typing import Any
 
@@ -14,6 +15,7 @@ from ehrlich.investigation.domain.hypothesis import Hypothesis, HypothesisStatus
 from ehrlich.investigation.domain.investigation import Investigation, InvestigationStatus
 from ehrlich.investigation.domain.negative_control import NegativeControl
 from ehrlich.investigation.domain.repository import InvestigationRepository as _Base
+from ehrlich.investigation.domain.uploaded_file import DocumentData, TabularData, UploadedFile
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +76,17 @@ CREATE INDEX IF NOT EXISTS idx_findings_fts ON investigations USING GIN(findings
 CREATE INDEX IF NOT EXISTS idx_investigations_user ON investigations(user_id);
 CREATE INDEX IF NOT EXISTS idx_events_investigation ON events(investigation_id);
 CREATE INDEX IF NOT EXISTS idx_credit_transactions_user ON credit_transactions(user_id);
+
+CREATE TABLE IF NOT EXISTS uploaded_files (
+    id UUID PRIMARY KEY,
+    investigation_id TEXT NOT NULL REFERENCES investigations(id) ON DELETE CASCADE,
+    filename TEXT NOT NULL,
+    content_type TEXT NOT NULL,
+    parsed_data JSONB NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_uploaded_files_investigation ON uploaded_files(investigation_id);
 """
 
 
@@ -279,6 +292,74 @@ class InvestigationRepository(_Base):
                         }
                     )
             return results[:limit]
+
+    async def save_uploaded_file(self, investigation_id: str, file: UploadedFile) -> None:
+        pool = self._get_pool()
+        parsed_data: dict[str, Any] = {}
+        if file.tabular:
+            parsed_data["type"] = "tabular"
+            parsed_data["columns"] = list(file.tabular.columns)
+            parsed_data["dtypes"] = list(file.tabular.dtypes)
+            parsed_data["row_count"] = file.tabular.row_count
+            parsed_data["summary_stats"] = file.tabular.summary_stats
+            parsed_data["sample_rows"] = [list(r) for r in file.tabular.sample_rows]
+        elif file.document:
+            parsed_data["type"] = "document"
+            parsed_data["text"] = file.document.text
+            parsed_data["page_count"] = file.document.page_count
+
+        async with pool.acquire() as conn:
+            await conn.execute(
+                """INSERT INTO uploaded_files
+                   (id, investigation_id, filename, content_type, parsed_data)
+                   VALUES ($1, $2, $3, $4, $5)""",
+                uuid.UUID(file.file_id),
+                investigation_id,
+                file.filename,
+                file.content_type,
+                json.dumps(parsed_data),
+            )
+
+    async def get_uploaded_files(self, investigation_id: str) -> list[UploadedFile]:
+        pool = self._get_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(
+                "SELECT id, filename, content_type, parsed_data "
+                "FROM uploaded_files WHERE investigation_id = $1",
+                investigation_id,
+            )
+        files: list[UploadedFile] = []
+        for row in rows:
+            data = (
+                json.loads(row["parsed_data"])
+                if isinstance(row["parsed_data"], str)
+                else row["parsed_data"]
+            )
+            tabular = None
+            document = None
+            if data.get("type") == "tabular":
+                tabular = TabularData(
+                    columns=tuple(data["columns"]),
+                    dtypes=tuple(data["dtypes"]),
+                    row_count=data["row_count"],
+                    summary_stats=data["summary_stats"],
+                    sample_rows=tuple(tuple(r) for r in data["sample_rows"]),
+                )
+            elif data.get("type") == "document":
+                document = DocumentData(
+                    text=data["text"],
+                    page_count=data["page_count"],
+                )
+            files.append(
+                UploadedFile(
+                    file_id=str(row["id"]),
+                    filename=row["filename"],
+                    content_type=row["content_type"],
+                    tabular=tabular,
+                    document=document,
+                )
+            )
+        return files
 
     # -- User management (PostgreSQL-specific, not on ABC) -------------------------
 
