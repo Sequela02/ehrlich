@@ -1,7 +1,7 @@
 # Ehrlich Business Strategy
 
 > Public strategy document. Ehrlich is AGPL-3.0 open source.
-> For technical implementation, see [roadmap.md](roadmap.md) Phase 12.
+> For technical implementation, see [Phase 12: SaaS Infrastructure](roadmap/phase-12-saas-infrastructure.md).
 
 ## Market Position
 

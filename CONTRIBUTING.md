@@ -2,7 +2,7 @@
 
 Ehrlich is an AI-powered scientific discovery engine that uses Claude as a hypothesis-driven reasoning engine. The core engine is domain-agnostic -- any scientific domain can plug in with its own tools, scoring, and visualization.
 
-See [docs/domain-agnostic.md](docs/domain-agnostic.md) for the full story of how and why the engine was generalized.
+See [docs/adr/domain-agnostic.md](docs/adr/domain-agnostic.md) for the full story of how and why the engine was generalized.
 
 ## Contributor License Agreement
 
@@ -152,16 +152,16 @@ Before writing any code, research the domain deeply. This upfront work determine
 5. **Visualization needs** -- How should results be displayed? Charts, 3D models, diagrams, maps, tables?
 6. **Domain vocabulary** -- Key terms, units, standard notations that Claude needs in its prompts
 
-**Document your research** in `research/{yourdomain}/`:
+**Document your research** in `docs/research/{yourdomain}/`:
 
 ```
-research/yourdomain/
+docs/research/yourdomain/
     data-sources.md       # APIs, databases, auth, rate limits
     domain-model.md       # Entities, scoring criteria, thresholds
     prior-work.md         # Existing tools and approaches in this field
 ```
 
-See `research/molecular/`, `research/methodology/`, and the `training/` and `nutrition/` bounded contexts for examples of thorough domain research and implementation.
+See `docs/research/molecular/`, `docs/research/methodology/`, and the `training/` and `nutrition/` bounded contexts for examples of thorough domain research and implementation.
 
 ### Step 1: Create the Bounded Context
 
@@ -406,7 +406,7 @@ Update these files (in the same commit as the code):
 | `CLAUDE.md` | Tool count, bounded contexts table, tools section, scopes list |
 | `README.md` | Tool count, bounded contexts table, tools table, "What Can Ehrlich Investigate" |
 | `docs/architecture.md` | Bounded contexts, tool count, data flow |
-| `docs/roadmap.md` | Add completion entry |
+| `docs/roadmap/` | Add completion entry to appropriate phase file |
 | `web/src/lib/constants.ts` | STATS counts, DOMAINS array (toolCount, capabilities, sources, vizTools), DATA_SOURCES array |
 | `console/` | Template prompts, domain badges, tool references where applicable |
 

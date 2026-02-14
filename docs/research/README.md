@@ -14,7 +14,7 @@ Architecture and infrastructure decisions made before and during initial develop
 
 ## Methodology
 
-Scientific methodology research (phases 2-6). Each file contains verified sources, implementation notes, and design rationale. See [docs/scientific-methodology.md](../docs/scientific-methodology.md) for the implemented specification.
+Scientific methodology research (phases 2-6). Each file contains verified sources, implementation notes, and design rationale. See [scientific-methodology.md](../scientific-methodology.md) for the implemented specification.
 
 | File | Phase | Sources |
 |------|-------|---------|

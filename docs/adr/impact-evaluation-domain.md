@@ -527,4 +527,4 @@ File upload
 - [World Bank API](https://api.worldbank.org/v2/)
 - [FRED API](https://api.stlouisfed.org/fred/)
 - [CGD: Only 11 Impact Evaluations out of 2,800](https://pubs.cgdev.org/evidence-to-impact/1-progress-and-challenges/challenges/index.html)
-- See also: `docs/competitive-landscape-social-programs.md`, `docs/us-public-data-apis.md`
+- See also: `../research/impact/competitive-landscape-social-programs.md`, `../research/impact/us-public-data-apis.md`

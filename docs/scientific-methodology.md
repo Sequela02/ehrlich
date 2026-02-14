@@ -1,6 +1,6 @@
 # Scientific Methodology
 
-> Part of the [development roadmap](roadmap.md). This is a cross-cutting upgrade that applies to all investigation phases.
+> Part of the [development roadmap](roadmap/README.md). This is a cross-cutting upgrade that applies to all investigation phases.
 
 Ehrlich grounds every phase of its investigation workflow in established scientific methodology. Each phase is backed by research from the world's best scientists and epistemological frameworks.
 
@@ -208,7 +208,7 @@ Hypotheses are tested in parallel batches of 2. Without differentiation, paralle
 
 ### Phase 4: Evidence Evaluation -- UPGRADED
 
-**Status:** Complete. Grounded in 47 verified sources spanning evidence hierarchies (Burns & Chung), effect sizes (Cohen), Bayesian updating (Kass & Raftery, Jeffreys), contradiction resolution (Lakatos, Hunter & Schmidt), and convergence of evidence (Munafo et al.). See [evidence-evaluation.md](../research/methodology/evidence-evaluation.md).
+**Status:** Complete. Grounded in 47 verified sources spanning evidence hierarchies (Burns & Chung), effect sizes (Cohen), Bayesian updating (Kass & Raftery, Jeffreys), contradiction resolution (Lakatos, Hunter & Schmidt), and convergence of evidence (Munafo et al.). See [evidence-evaluation.md](research/methodology/evidence-evaluation.md).
 
 **Sources:**
 - Burns & Chung (2011) -- Evidence hierarchy (8-tier ranking by directness, reproducibility, controls)
@@ -274,7 +274,7 @@ Orchestrator wiring:
 
 ### Phase 5: Negative Controls & Model Validation -- UPGRADED
 
-**Status:** Complete. Grounded in 33 verified sources. See [negative-controls.md](../research/methodology/negative-controls.md).
+**Status:** Complete. Grounded in 33 verified sources. See [negative-controls.md](research/methodology/negative-controls.md).
 
 **Sources:**
 - Zhang et al. (1999) -- Z-factor / Z' statistic for assay quality separation
@@ -361,7 +361,7 @@ PositiveControlRecorded domain event → positive_control SSE event type
 
 ### Phase 6: Synthesis -- UPGRADED
 
-**Status:** Complete. Grounded in 29 verified sources. See [synthesis.md](../research/methodology/synthesis.md).
+**Status:** Complete. Grounded in 29 verified sources. See [synthesis.md](research/methodology/synthesis.md).
 
 **Sources:**
 - Guyatt et al. (2008) -- GRADE: certainty of evidence (high/moderate/low/very low) with 5 downgrading + 3 upgrading domains

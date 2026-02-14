@@ -11,7 +11,7 @@ The engine is domain-agnostic: a pluggable `DomainConfig` + `DomainRegistry` sys
 - **Molecular Science** -- antimicrobial resistance, drug discovery, toxicology, agricultural biocontrol
 - **Training Science** -- exercise physiology, protocol optimization, injury risk assessment, clinical trials
 - **Nutrition Science** -- supplement evidence analysis, dietary supplement safety, nutrient profiling, DRI adequacy assessment, drug-nutrient interactions, inflammatory index scoring
-- **Impact Evaluation** -- causal analysis of social programs (education, health, sports, employment, housing). Economic indicators (World Bank, WHO GHO, FRED), cross-program comparison, benchmark fetching. See `docs/impact-evaluation-domain.md`
+- **Impact Evaluation** -- causal analysis of social programs (education, health, sports, employment, housing). Economic indicators (World Bank, WHO GHO, FRED), cross-program comparison, benchmark fetching. See `docs/adr/impact-evaluation-domain.md`
 
 ## Architecture
 

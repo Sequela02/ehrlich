@@ -151,7 +151,7 @@ The fourth domain proves the architecture handles non-scientific domains too. **
 
 **Why it matters:** Of 2,800 evaluations commissioned by CONEVAL in Mexico, only 11 are impact evaluations (0.4%). No existing platform combines autonomous hypothesis formulation, automated causal inference, public API integration, and evidence-graded reporting. Ehrlich fills this gap.
 
-**What's new:** Document/CSV upload (user-provided program data), causal inference tools (DiD, PSM, RDD, synthetic control), Mexico + US public data API clients (INEGI, Census, World Bank, FRED), evaluation report templates (CONEVAL ECR, WWC-compliant). See `docs/impact-evaluation-domain.md` for full design.
+**What's new:** Document/CSV upload (user-provided program data), causal inference tools (DiD, PSM, RDD, synthetic control), Mexico + US public data API clients (INEGI, Census, World Bank, FRED), evaluation report templates (CONEVAL ECR, WWC-compliant). See `impact-evaluation-domain.md` for full design.
 
 **What stays the same:** The DomainConfig, tool tagging, multi-model orchestration, hypothesis framework, evidence grading, and visualization pipeline are all reused. Zero changes to existing code paths.
 
