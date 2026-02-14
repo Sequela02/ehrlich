@@ -315,9 +315,7 @@ async def run_researcher_experiment(
                     identifier=tool_input.get("identifier", tool_input.get("smiles", "")),
                     identifier_type=tool_input.get("identifier_type", ""),
                     name=tool_input.get("name", ""),
-                    score=float(
-                        tool_input.get("score", tool_input.get("prediction_score", 0.0))
-                    ),
+                    score=float(tool_input.get("score", tool_input.get("prediction_score", 0.0))),
                     threshold=float(tool_input.get("threshold", 0.5)),
                     source=tool_input.get("source", ""),
                 )

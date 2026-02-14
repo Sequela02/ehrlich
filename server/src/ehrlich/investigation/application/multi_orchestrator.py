@@ -186,11 +186,15 @@ class MultiModelOrchestrator:
             pico: dict[str, Any] = {}
             prior_context = ""
             async for event in run_classification_phase(
-                investigation, cost, self._summarizer,
-                self._uploaded_data_context, self._repository,
-                self._domain_registry, self._director_call,
+                investigation,
+                cost,
+                self._summarizer,
+                self._uploaded_data_context,
+                self._repository,
+                self._domain_registry,
+                self._director_call,
             ):
-                if isinstance(event, dict) and "__phase_result__" in event:
+                if isinstance(event, dict):
                     result = event["__phase_result__"]
                     pico = result["pico"]
                     prior_context = result["prior_context"]
@@ -209,10 +213,16 @@ class MultiModelOrchestrator:
                 investigation_id=investigation.id,
             )
             async for event in run_literature_survey(
-                self._researcher, self._summarizer, self._dispatcher,
-                self._registry, self._active_config,
-                self._summarizer_threshold, self._max_iterations_per_experiment,
-                investigation, cost, pico,
+                self._researcher,
+                self._summarizer,
+                self._dispatcher,
+                self._registry,
+                self._active_config,
+                self._summarizer_threshold,
+                self._max_iterations_per_experiment,
+                investigation,
+                cost,
+                pico,
             ):
                 yield event
             yield self._cost_event(cost, investigation.id)
@@ -221,12 +231,18 @@ class MultiModelOrchestrator:
             neg_control_suggestions: list[dict[str, Any]] = []
             pos_control_suggestions: list[dict[str, Any]] = []
             async for event in run_formulation_phase(
-                investigation, cost, self._active_config,
-                self._uploaded_data_context, prior_context, pico,
-                self._require_approval, self._approval_event,
-                self._director_call, self._cost_event,
+                investigation,
+                cost,
+                self._active_config,
+                self._uploaded_data_context,
+                prior_context,
+                pico,
+                self._require_approval,
+                self._approval_event,
+                self._director_call,
+                self._cost_event,
             ):
-                if isinstance(event, dict) and "__phase_result__" in event:
+                if isinstance(event, dict):
                     result = event["__phase_result__"]
                     neg_control_suggestions = result["neg_control_suggestions"]
                     pos_control_suggestions = result["pos_control_suggestions"]
@@ -235,32 +251,46 @@ class MultiModelOrchestrator:
 
             # 4. Hypothesis testing loop
             async for event in run_hypothesis_testing_phase(
-                investigation, cost, self._active_config,
-                self._uploaded_data_context, self._researcher_prompt,
-                self._researcher, self._summarizer, self._dispatcher,
-                self._registry, self._max_hypotheses,
+                investigation,
+                cost,
+                self._active_config,
+                self._uploaded_data_context,
+                self._researcher_prompt,
+                self._researcher,
+                self._summarizer,
+                self._dispatcher,
+                self._registry,
+                self._max_hypotheses,
                 self._max_iterations_per_experiment,
-                self._summarizer_threshold, self._state_lock,
-                self._director_call, self._cost_event,
+                self._summarizer_threshold,
+                self._state_lock,
+                self._director_call,
+                self._cost_event,
             ):
                 yield event
 
             # 5. Controls validation
             validation_metrics: dict[str, Any] = {}
             async for event in run_controls_phase(
-                investigation, cost, self._active_config,
-                neg_control_suggestions, pos_control_suggestions,
+                investigation,
+                cost,
+                self._active_config,
+                neg_control_suggestions,
+                pos_control_suggestions,
                 self._dispatcher,
             ):
-                if isinstance(event, dict) and "__phase_result__" in event:
+                if isinstance(event, dict):
                     validation_metrics = event["__phase_result__"]["validation_metrics"]
                 else:
                     yield event
 
             # 6. Director synthesis
             async for event in run_synthesis_phase(
-                investigation, cost, self._active_config,
-                validation_metrics, self._mcp_bridge,
+                investigation,
+                cost,
+                self._active_config,
+                validation_metrics,
+                self._mcp_bridge,
                 self._director_call,
             ):
                 yield event

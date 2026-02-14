@@ -40,8 +40,20 @@ async def run_experiment_batch(
     if len(batch) == 1:
         h, exp, design = batch[0]
         async for event in run_researcher_experiment(
-            researcher, summarizer, dispatcher, registry, active_config, researcher_prompt,
-            summarizer_threshold, max_iterations, investigation, h, exp, cost, design, state_lock,
+            researcher,
+            summarizer,
+            dispatcher,
+            registry,
+            active_config,
+            researcher_prompt,
+            summarizer_threshold,
+            max_iterations,
+            investigation,
+            h,
+            exp,
+            cost,
+            design,
+            state_lock,
         ):
             yield event
         return
@@ -69,9 +81,21 @@ async def run_experiment_batch(
     ) -> None:
         try:
             async for ev in run_researcher_experiment(
-                researcher, summarizer, dispatcher, registry, active_config, researcher_prompt,
-                summarizer_threshold, max_iterations, investigation, hyp, exp, cost, design,
-                state_lock, sibling_context=sib_ctx,
+                researcher,
+                summarizer,
+                dispatcher,
+                registry,
+                active_config,
+                researcher_prompt,
+                summarizer_threshold,
+                max_iterations,
+                investigation,
+                hyp,
+                exp,
+                cost,
+                design,
+                state_lock,
+                sibling_context=sib_ctx,
             ):
                 await queue.put(ev)
         except Exception as e:

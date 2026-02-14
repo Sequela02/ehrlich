@@ -7,6 +7,10 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 from ehrlich.analysis.tools import (
     analyze_substructures,
@@ -144,7 +148,7 @@ def build_tool_registry() -> ToolRegistry:
     _impact_viz = frozenset({"impact", "visualization"})
     _causal_viz = frozenset({"causal", "visualization"})
 
-    tagged_tools = [
+    tagged_tools: list[tuple[str, Callable[..., Any], frozenset[str] | None]] = [
         # Chemistry (6)
         ("validate_smiles", validate_smiles, _chem),
         ("compute_descriptors", compute_descriptors, _chem),

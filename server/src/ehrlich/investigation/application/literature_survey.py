@@ -17,6 +17,8 @@ from ehrlich.investigation.application.prompts.builders import (
 )
 from ehrlich.investigation.application.researcher_executor import (
     _compact_result as compact_result,
+)
+from ehrlich.investigation.application.researcher_executor import (
     maybe_viz_event,
     summarize_output,
 )
@@ -218,7 +220,11 @@ async def run_literature_survey(
                 pass
 
             summarized_str, summarize_event = await summarize_output(
-                summarizer, cost, tool_name, result_str, investigation.id,
+                summarizer,
+                cost,
+                tool_name,
+                result_str,
+                investigation.id,
                 summarizer_threshold,
             )
             if summarize_event is not None:
@@ -276,8 +282,7 @@ async def run_literature_survey(
     assessment = ""
     if investigation.findings:
         findings_for_grading = "\n".join(
-            f"- [level={f.evidence_level}] {f.title}: {f.detail}"
-            for f in investigation.findings
+            f"- [level={f.evidence_level}] {f.title}: {f.detail}" for f in investigation.findings
         )
         grade_response = await summarizer.create_message(
             system=build_literature_assessment_prompt(),

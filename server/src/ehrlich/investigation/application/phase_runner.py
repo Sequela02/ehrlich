@@ -123,9 +123,7 @@ async def run_classification_phase(
         valid_categories: frozenset[str] = frozenset()
         if domain_registry:
             valid_categories = domain_registry.all_categories()
-        pico_prompt = build_pico_and_classification_prompt(
-            valid_categories, uploaded_data_context
-        )
+        pico_prompt = build_pico_and_classification_prompt(valid_categories, uploaded_data_context)
         pico_response = await summarizer.create_message(
             system=pico_prompt,
             messages=[{"role": "user", "content": investigation.prompt}],
@@ -163,9 +161,7 @@ async def run_classification_phase(
         if domain_registry:
             detected_configs, is_fallback = domain_registry.detect(domain_categories)
             active_config = merge_domain_configs(detected_configs)
-            researcher_prompt = build_researcher_prompt(
-                active_config, uploaded_data_context
-            )
+            researcher_prompt = build_researcher_prompt(active_config, uploaded_data_context)
             yield DomainDetected(
                 domain=active_config.name,
                 display_config=active_config.to_display_dict(),
@@ -235,8 +231,7 @@ async def run_formulation_phase(
         formulation_prompt,
         f"Research prompt: {investigation.prompt}\n\n"
         f"{literature_context}\n\n"
-        f"Formulate 2-4 testable hypotheses and identify negative controls."
-        + prior_section,
+        f"Formulate 2-4 testable hypotheses and identify negative controls." + prior_section,
         investigation.id,
         output_config=_build_output_config(FORMULATION_SCHEMA),
     ):
@@ -344,9 +339,7 @@ async def run_hypothesis_testing_phase(
     )
     tested = 0
     while tested < max_hypotheses:
-        proposed = [
-            h for h in investigation.hypotheses if h.status == HypothesisStatus.PROPOSED
-        ]
+        proposed = [h for h in investigation.hypotheses if h.status == HypothesisStatus.PROPOSED]
         if not proposed:
             break
 
@@ -362,9 +355,7 @@ async def run_hypothesis_testing_phase(
 
             # Director designs experiment
             if active_config:
-                tools_csv = ", ".join(
-                    registry.list_tools_for_domain(active_config.tool_tags)
-                )
+                tools_csv = ", ".join(registry.list_tools_for_domain(active_config.tool_tags))
             else:
                 tools_csv = ", ".join(registry.list_tools())
             experiment_prompt = (
@@ -606,11 +597,7 @@ async def run_controls_phase(
             nc.get("identifier", nc.get("smiles", ""))
             for nc in neg_control_suggestions
             if nc.get("identifier", nc.get("smiles", ""))
-        ] + [
-            pc.get("identifier", "")
-            for pc in pos_control_suggestions
-            if pc.get("identifier", "")
-        ]
+        ] + [pc.get("identifier", "") for pc in pos_control_suggestions if pc.get("identifier", "")]
         if all_identifiers:
             try:
                 pred_result = await dispatcher.dispatch(
@@ -764,9 +751,7 @@ async def run_synthesis_phase(
         )
 
     synthesis_prompt = (
-        build_synthesis_prompt(active_config)
-        if active_config
-        else DIRECTOR_SYNTHESIS_PROMPT
+        build_synthesis_prompt(active_config) if active_config else DIRECTOR_SYNTHESIS_PROMPT
     )
     result = _DirectorResult(data={}, thinking="")
     async for director_event in director_call(
@@ -806,9 +791,7 @@ async def run_synthesis_phase(
             rank=c.get("rank", i + 1),
             priority=c.get("priority", 0),
             scores={
-                k: float(v)
-                for k, v in c.get("scores", {}).items()
-                if isinstance(v, (int, float))
+                k: float(v) for k, v in c.get("scores", {}).items() if isinstance(v, (int, float))
             },
             attributes={k: str(v) for k, v in c.get("attributes", {}).items()},
         )

@@ -28,9 +28,7 @@ class FileProcessor:
 
         ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
         if ext not in ALLOWED_EXTENSIONS:
-            msg = (
-                f"Unsupported file type: .{ext}. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
-            )
+            msg = f"Unsupported file type: .{ext}. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
             raise ValueError(msg)
 
         if ext == "csv":
