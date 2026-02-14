@@ -115,7 +115,7 @@ The Haiku classifier outputs a JSON array of domain categories. Tool filtering u
 
 Ehrlich queries its own past investigation findings during new research. The `search_prior_research` tool (available during Phase 2 Literature Survey) queries a PostgreSQL `tsvector` column with GIN index on the `investigations` table, indexing finding titles, details, evidence types, hypothesis statements/statuses, and source provenance.
 
-The tool is intercepted in the orchestrator's `_dispatch_tool()` and routed to `InvestigationRepository.search_findings()`, which performs ranked full-text search with prompt context.
+The tool is intercepted by `ToolDispatcher.dispatch()` in `tool_dispatcher.py` and routed to `InvestigationRepository.search_findings()`, which performs ranked full-text search with prompt context.
 
 Findings from past investigations carry provenance `source_type: "ehrlich"`, `source_id: "{investigation_id}"`. Frontend renders Ehrlich-branded source badges linking to past investigations (internal navigation, no external tab).
 
@@ -140,7 +140,7 @@ Invalid SMILES on `/depict` returns a dark error SVG (200 status). Invalid SMILE
 
 ## Domain-Specific Visualization
 
-17 visualization tools produce structured `VisualizationPayload` JSON (viz_type, title, data, config, domain). The orchestrator intercepts viz tool results via `_maybe_viz_event()` and emits a `VisualizationRendered` SSE event. On the frontend, `VizRegistry` maps each `viz_type` to a lazy-loaded React component rendered in the `VisualizationPanel` grid.
+17 visualization tools produce structured `VisualizationPayload` JSON (viz_type, title, data, config, domain). Viz tool results are intercepted by `maybe_viz_event()` in `researcher_executor.py`, which emits a `VisualizationRendered` SSE event. On the frontend, `VizRegistry` maps each `viz_type` to a lazy-loaded React component rendered in the `VisualizationPanel` grid.
 
 | Tool | Chart Library | Purpose |
 |------|--------------|---------|

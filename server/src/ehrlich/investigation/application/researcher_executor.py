@@ -33,12 +33,27 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_COMPACT_SCHEMAS: dict[str, list[str]] = {
+    "compute_descriptors": ["molecular_weight", "logp", "tpsa", "hbd", "hba", "qed", "num_rings"],
+    "compute_fingerprint": ["fingerprint_type", "num_bits"],
+    "validate_smiles": ["valid", "canonical_smiles"],
+    "explore_dataset": ["name", "target", "size", "active_count"],
+    "search_bioactivity": ["target", "size", "active_count"],
+    "search_protein_targets": ["query", "count", "targets"],
+    "tanimoto_similarity": ["similarity"],
+}
+
 
 def _compact_result(tool_name: str, result: str) -> str:
-    """Import and delegate to the module-level _compact_result in multi_orchestrator."""
-    from ehrlich.investigation.application.multi_orchestrator import _compact_result as _cr
-
-    return _cr(tool_name, result)
+    schema = _COMPACT_SCHEMAS.get(tool_name)
+    if not schema:
+        return result
+    try:
+        data = json.loads(result)
+        compacted = {k: data[k] for k in schema if k in data}
+        return json.dumps(compacted)
+    except (json.JSONDecodeError, TypeError):
+        return result
 
 
 async def summarize_output(
