@@ -194,6 +194,16 @@ Orchestrator wiring:
 - `expected_findings` removed from Director output format (was never read by orchestrator)
 - Domain config examples updated with protocol fields for molecular, training, and nutrition science
 
+**Parallel researcher differentiation (3 layers):**
+
+Hypotheses are tested in parallel batches of 2. Without differentiation, parallel researchers can converge on identical API queries, duplicate ML models, or execute near-identical tool sequences. Three layers prevent this:
+
+1. **Orthogonal hypothesis formulation** -- Director prompt includes explicit diversity principle: each hypothesis must attack a different mechanism, pathway, or data source. Different validation strategies required (e.g., ML prediction vs structural docking vs substructure enrichment).
+
+2. **Sibling-aware experiment design** -- Experiments are designed sequentially within a batch. Experiment 2+ receives a `<sibling_experiments>` XML block containing prior designs (hypothesis, description, tool plan), with instructions to use different tools, data sources, or validation strategies.
+
+3. **Researcher sibling context** -- Each parallel researcher receives a `<parallel_experiment>` XML block describing the other's hypothesis, experiment, and tool plan. This lets researchers actively differentiate at query time (different search terms, data sources, analytical approaches) even when their designs are already orthogonal.
+
 ---
 
 ### Phase 4: Evidence Evaluation -- UPGRADED

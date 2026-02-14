@@ -248,7 +248,7 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - Each bounded context has: `domain/`, `application/`, `infrastructure/`, `tools.py`
 - Domain entities use `@dataclass` with `__post_init__` validation; repository interfaces are ABCs in `domain/repository.py`; infrastructure adapters implement those ABCs
 - Tool functions in `tools.py` are the boundary between Claude and application services
-- **Parallel researchers**: `_run_experiment_batch()` uses `asyncio.Queue` to merge events from 2 concurrent experiments
+- **Parallel researchers**: `_run_experiment_batch()` uses `asyncio.Queue` to merge events from 2 concurrent experiments; three-layer differentiation prevents duplicate work: (1) orthogonal hypothesis formulation via Director prompt, (2) sibling-aware experiment design with `<sibling_experiments>` context, (3) researcher sibling context via `<parallel_experiment>` tag
 - **Context compaction**: `_build_prior_context()` compresses completed hypotheses into XML summary for Director
 - **Prompt engineering**: XML-tagged instructions (`<instructions>`, `<examples>`, `<output_format>`, `<tool_reference>`), multishot examples (2 per Director prompt), tool usage examples for Researcher
 - **ToolCache**: in-memory TTL-based caching for deterministic and API tool results

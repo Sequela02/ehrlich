@@ -121,6 +121,15 @@ formulate 2-4 testable hypotheses. Each hypothesis must be:
 - Specific and falsifiable
 - Grounded in the literature findings provided
 - Testable with the available cheminformatics and ML tools
+- Orthogonal to sibling hypotheses: each must attack a different \
+mechanism, pathway, or data source
+
+Hypotheses tested in parallel must maximize scientific coverage:
+- Different causal mechanisms or molecular targets
+- Different primary data sources or tool chains
+- Different validation strategies (e.g., ML prediction vs \
+structural docking vs substructure enrichment)
+Do NOT formulate hypotheses that would produce overlapping experiments.
 
 If prior investigation results are provided in \
 <prior_investigations>, leverage their outcomes:
@@ -1079,7 +1088,15 @@ def build_formulation_prompt(config: DomainConfig) -> str:
         "formulate 2-4 testable hypotheses. Each hypothesis must be:\n"
         "- Specific and falsifiable\n"
         "- Grounded in the literature findings provided\n"
-        "- Testable with the available tools\n\n"
+        "- Testable with the available tools\n"
+        "- Orthogonal to sibling hypotheses: each must attack a different "
+        "mechanism, pathway, or data source\n\n"
+        "Hypotheses tested in parallel must maximize scientific coverage:\n"
+        "- Different causal mechanisms or molecular targets\n"
+        "- Different primary data sources or tool chains\n"
+        "- Different validation strategies (e.g., ML prediction vs "
+        "structural docking vs substructure enrichment)\n"
+        "Do NOT formulate hypotheses that would produce overlapping experiments.\n\n"
         "If prior investigation results are provided in "
         "<prior_investigations>, leverage their outcomes:\n"
         "- Build on supported hypotheses from related investigations\n"

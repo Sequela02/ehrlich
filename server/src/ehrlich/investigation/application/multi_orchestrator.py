@@ -402,6 +402,7 @@ class MultiModelOrchestrator:
                 # Take up to 2 hypotheses per batch
                 batch_hypotheses = proposed[:2]
                 batch: list[tuple[Hypothesis, Experiment, dict[str, Any]]] = []
+                prior_designs: list[str] = []
 
                 for hypothesis in batch_hypotheses:
                     hypothesis.status = HypothesisStatus.TESTING
@@ -420,6 +421,17 @@ class MultiModelOrchestrator:
                         if self._active_config
                         else DIRECTOR_EXPERIMENT_PROMPT
                     )
+                    sibling_section = ""
+                    if prior_designs:
+                        joined = "\n---\n".join(prior_designs)
+                        sibling_section = (
+                            f"\n\n<sibling_experiments>\n{joined}\n"
+                            f"</sibling_experiments>\n\n"
+                            f"Your experiment runs in PARALLEL with the above. "
+                            f"Design a DIFFERENT approach: use different tools, "
+                            f"data sources, or validation strategies."
+                        )
+
                     result = _DirectorResult(data={}, thinking="")
                     async for director_event in self._director_call(
                         cost,
@@ -430,7 +442,8 @@ class MultiModelOrchestrator:
                         f"Rationale: {hypothesis.rationale}\n\n"
                         f"Available tools: {tools_csv}\n\n"
                         f"Design an experiment to test this "
-                        f"hypothesis.",
+                        f"hypothesis."
+                        + sibling_section,
                         investigation.id,
                         output_config=_build_output_config(EXPERIMENT_DESIGN_SCHEMA),
                     ):
@@ -443,6 +456,11 @@ class MultiModelOrchestrator:
                     desc = design.get(
                         "description",
                         f"Test: {hypothesis.statement}",
+                    )
+                    prior_designs.append(
+                        f"Hypothesis: {hypothesis.statement}\n"
+                        f"Experiment: {desc}\n"
+                        f"Tools: {', '.join(design.get('tool_plan', []))}"
                     )
                     experiment = Experiment(
                         hypothesis_id=hypothesis.id,
@@ -1230,6 +1248,7 @@ class MultiModelOrchestrator:
         experiment: Experiment,
         cost: CostTracker,
         design: dict[str, Any],
+        sibling_context: str = "",
     ) -> AsyncGenerator[DomainEvent, None]:
         planned = set(experiment.tool_plan) if experiment.tool_plan else set()
         control_tools = {"record_finding", "record_negative_control"}
@@ -1255,6 +1274,17 @@ class MultiModelOrchestrator:
             tool_schemas = [t for t in self._registry.list_schemas() if t["name"] not in excluded]
 
         exp_controls = ", ".join(experiment.controls) or "None specified"
+        sibling_section = ""
+        if sibling_context:
+            sibling_section = (
+                f"\n\n<parallel_experiment>\n"
+                f"A parallel researcher is simultaneously testing a different hypothesis:\n"
+                f"{sibling_context}\n\n"
+                f"Avoid duplicating their queries. Use different search terms, "
+                f"data sources, or analytical approaches where your experiment "
+                f"design allows flexibility.\n"
+                f"</parallel_experiment>"
+            )
         messages: list[dict[str, Any]] = [
             {
                 "role": "user",
@@ -1275,6 +1305,7 @@ class MultiModelOrchestrator:
                     f"Execute this experiment. Compare results against the "
                     f"pre-defined success/failure criteria. Link all findings to "
                     f"hypothesis_id='{hypothesis.id}'."
+                    + sibling_section
                 ),
             },
         ]
@@ -1434,12 +1465,23 @@ class MultiModelOrchestrator:
         batch: list[tuple[Hypothesis, Experiment, dict[str, Any]]],
         cost: CostTracker,
     ) -> AsyncGenerator[DomainEvent, None]:
-        """Run up to 2 experiments concurrently."""
+        """Run up to 2 experiments concurrently with sibling awareness."""
         if len(batch) == 1:
             h, exp, design = batch[0]
             async for event in self._run_researcher_experiment(investigation, h, exp, cost, design):
                 yield event
             return
+
+        # Build sibling context strings so each researcher knows what the other is doing
+        sibling_contexts: list[str] = []
+        for i, (_hyp, _exp, _design) in enumerate(batch):
+            other_idx = 1 - i
+            other_hyp, other_exp, other_design = batch[other_idx]
+            sibling_contexts.append(
+                f"Hypothesis: {other_hyp.statement}\n"
+                f"Experiment: {other_exp.description}\n"
+                f"Tools: {', '.join(other_design.get('tool_plan', []))}"
+            )
 
         queue: asyncio.Queue[DomainEvent | None] = asyncio.Queue()
 
@@ -1447,10 +1489,11 @@ class MultiModelOrchestrator:
             hyp: Hypothesis,
             exp: Experiment,
             design: dict[str, Any],
+            sib_ctx: str,
         ) -> None:
             try:
                 async for ev in self._run_researcher_experiment(
-                    investigation, hyp, exp, cost, design
+                    investigation, hyp, exp, cost, design, sibling_context=sib_ctx
                 ):
                     await queue.put(ev)
             except Exception as e:
@@ -1458,7 +1501,10 @@ class MultiModelOrchestrator:
             finally:
                 await queue.put(None)
 
-        tasks = [asyncio.create_task(_run_one(h, e, d)) for h, e, d in batch]
+        tasks = [
+            asyncio.create_task(_run_one(h, e, d, sc))
+            for (h, e, d), sc in zip(batch, sibling_contexts, strict=True)
+        ]
 
         done_count = 0
         while done_count < len(tasks):
