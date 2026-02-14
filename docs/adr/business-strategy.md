@@ -1,7 +1,7 @@
 # Ehrlich Business Strategy
 
 > Public strategy document. Ehrlich is AGPL-3.0 open source.
-> For technical implementation, see [Phase 12: SaaS Infrastructure](roadmap/phase-12-saas-infrastructure.md).
+> For technical implementation, see [Phase 12: Platform Infrastructure](../roadmap/phase-12-platform-infrastructure.md).
 
 ## Market Position
 
@@ -12,7 +12,8 @@ Ehrlich sits between AI wrappers and enterprise platforms.
 - Not a chatbot with a science skin
 
 ### What Ehrlich Is
-- A domain-agnostic scientific reasoning engine
+- A **COSS** (Commercial Open-Source Software) scientific reasoning engine
+- Open source (AGPL-3.0), self-hostable, with an optional managed hosted instance
 - 67 real tools with real computation (RDKit, XGBoost, molecular docking, scipy.stats)
 - 15 external data sources (ChEMBL, PubChem, RCSB PDB, UniProt, ClinicalTrials.gov, PubMed, wger, NIH DSLD, USDA FoodData, OpenFDA, EPA CompTox, Semantic Scholar, Open Targets, GtoPdb, RxNav) + 1 internal (FTS5)
 - Multi-model orchestration (Director-Worker-Summarizer)
@@ -24,7 +25,19 @@ Ehrlich sits between AI wrappers and enterprise platforms.
 - Enterprise platforms (Schrodinger, Recursion): full stack, $100K+/year, single domain
 - Ehrlich: multi-domain scientific engine, $2-10 per investigation, accessible to students and pharma alike
 
-## Pricing Model
+## Classification
+
+Ehrlich follows the COSS (Commercial Open-Source Software) model:
+
+| Layer | What | Model |
+|-------|------|-------|
+| **Software** | Ehrlich engine (server + console) | Open source, AGPL-3.0 |
+| **Hosted instance** | app.ehrlich.dev | Managed hosting — credits cover Anthropic API costs |
+| **License** | AGPL-3.0 + commercial option | Dual licensing for private modifications |
+
+Self-hosters use their own Anthropic API key and bypass the credit system entirely. The hosted instance exists for users who don't want to manage infrastructure.
+
+## Hosted Instance Pricing
 
 ### Universal Credits
 One currency. User decides quality per investigation.
@@ -47,6 +60,8 @@ Researcher is always Sonnet 4.5 (tool execution). Summarizer is always Haiku 4.5
 | Monthly (30/mo) | 30 auto-refill | 33% |
 
 Monthly subscription = auto-refilling credit pack at a discount. Not a separate product. Credits expire after 60 days (prevents hoarding, encourages usage).
+
+> **Self-hosting?** None of the above applies. Self-hosters bring their own Anthropic API key (BYOK) and pay Anthropic directly. No credits, no packs, no limits.
 
 ### Why Per-Investigation, Not Per-Token
 An investigation is a complete scientific workflow: literature survey, hypothesis formulation, experiment execution, evaluation, synthesis. That's an outcome with a deliverable (the report), not a token count. Pricing the outcome aligns cost with value.

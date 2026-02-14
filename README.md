@@ -1,10 +1,25 @@
 # Ehrlich
 
-AI-powered scientific discovery engine. Ehrlich uses Claude as a hypothesis-driven scientific reasoning engine that works across multiple scientific domains. The core engine is domain-agnostic: a pluggable `DomainConfig` system lets any domain bring its own tools, scoring, and visualization.
+Open-source (AGPL-3.0), self-hostable scientific discovery engine. Ehrlich uses Claude as a hypothesis-driven scientific reasoning engine that works across multiple scientific domains. The core engine is domain-agnostic: a pluggable `DomainConfig` system lets any domain bring its own tools, scoring, and visualization. Run it on your own infrastructure with your own API keys, or use the [hosted instance](https://app.ehrlich.dev) where credits cover the Anthropic API costs.
 
 Named after Paul Ehrlich, the father of the "magic bullet" -- finding the right answer for any question.
 
 Built for the [Claude Code Hackathon](https://docs.anthropic.com/en/docs/claude-code-hackathon) (Feb 10-16, 2026).
+
+## Philosophy
+
+Ehrlich is **COSS** (Commercial Open-Source Software) -- the same model used by Supabase, PostHog, Cal.com, and GitLab. The entire codebase is open source under AGPL-3.0. There is no proprietary version.
+
+**Two paths, same product:**
+
+| Path | How It Works | Cost |
+|------|-------------|------|
+| **Self-host** | Clone the repo, bring your own Anthropic API key | Free. No limits, no credits, no account needed |
+| **Hosted instance** | Use app.ehrlich.dev | Credits cover Anthropic API costs (Opus is expensive) |
+
+Credits exist because Claude Opus costs real money per investigation. They make scientific reasoning **accessible** -- not monetized. A student in Mexico and a pharma company in Boston get the same 85 tools, the same 17 data sources, the same methodology. The model quality is the only variable.
+
+The AI is the scientist. The platform is the laboratory.
 
 ## What Can Ehrlich Investigate?
 
@@ -188,6 +203,8 @@ All data sources are free and open-access.
 - **Data:** ChEMBL, RCSB PDB, PubChem, EPA CompTox, Semantic Scholar (all free APIs)
 
 ## Quick Start
+
+> **Self-hosting?** You use your own Anthropic API key directly -- no credits, no account, no hosted dependency. The credit system only applies to the managed hosted instance.
 
 ### Prerequisites
 

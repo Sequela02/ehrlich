@@ -2,6 +2,8 @@ Back to [Roadmap Index](README.md)
 
 # Phase 2: Literature + Analysis (Feb 10) -- DONE
 
+> **Evolution note:** This phase established the literature search and bioactivity analysis foundation. Originally chemistry-specific (ChEMBL, Semantic Scholar), the analysis tools were later generalized into domain-agnostic components in [Phase 10B](phase-10b-domain-agnostic.md).
+
 Two independent contexts. Can be built in parallel.
 
 ## 2A. Semantic Scholar Client

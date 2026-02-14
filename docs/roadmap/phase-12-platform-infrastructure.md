@@ -1,8 +1,8 @@
 Back to [Roadmap Index](README.md)
 
-# Phase 12: SaaS Infrastructure (Feb 13) -- DONE
+# Phase 12: Platform Infrastructure (Feb 13) -- DONE
 
-Production-ready authentication, credit-based billing, model-tiered investigations, and PostgreSQL persistence.
+The COSS managed-hosting layer: production-ready authentication, credit-based billing, model-tiered investigations, and PostgreSQL persistence for the hosted instance.
 
 > Business rationale and pricing research: see [business-strategy.md](../adr/business-strategy.md)
 

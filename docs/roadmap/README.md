@@ -22,7 +22,7 @@ Hackathon: Feb 10-16, 2026. Each phase ends with something testable.
 | Phase 10D: Landing Site (web/) | DONE | [phase-10d-landing-site.md](phase-10d-landing-site.md) |
 | Phase 10E: Training Science Enhancement | DONE | [phase-10e-training-enhancement.md](phase-10e-training-enhancement.md) |
 | Phase 10F: Nutrition Science Enhancement | DONE | [phase-10f-nutrition-enhancement.md](phase-10f-nutrition-enhancement.md) |
-| Phase 12: SaaS Infrastructure | DONE | [phase-12-saas-infrastructure.md](phase-12-saas-infrastructure.md) |
+| Phase 12: Platform Infrastructure | DONE | [phase-12-platform-infrastructure.md](phase-12-platform-infrastructure.md) |
 | Phase 13: Impact Evaluation Domain | IN PROGRESS | [phase-13-impact-evaluation.md](phase-13-impact-evaluation.md) |
 | Phase 14: Scientific Engine Hardening | IN PROGRESS | [phase-14-engine-hardening.md](phase-14-engine-hardening.md) |
 | Backlog | TODO | [backlog.md](backlog.md) |
@@ -80,7 +80,7 @@ Enhancement Enhancement  Sports
      │     │              │
      └─────┼──────────────┘
            |
-     Phase 12: SaaS Infrastructure -- DONE
+     Phase 12: Platform Infrastructure -- DONE
      (PostgreSQL + WorkOS Auth + BYOK + Credits)
            |
      Phase 13: Impact Evaluation Domain -- IN PROGRESS
