@@ -17,14 +17,14 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "Formulate hypotheses, design experiments, test against 15 real databases, grade evidence. 67 computational tools across molecular, training, and nutrition science. Not a chatbot. Not a wrapper. Open source, AGPL-3.0.",
+          "Formulate hypotheses, design experiments, test against 19 real databases, grade evidence. 85 computational tools across 4 scientific domains. Open source (AGPL-3.0), self-hostable.",
       },
       { name: "theme-color", content: "#1a2a1a" },
       { property: "og:title", content: "Ehrlich — Scientific Methodology, Automated" },
       {
         property: "og:description",
         content:
-          "67 computational tools. 16 data sources. 3 scientific domains. Hypothesis-driven reasoning grounded in Popper, Fisher, and GRADE. Free tier available.",
+          "85 computational tools. 19 data sources. 4 scientific domains. Hypothesis-driven reasoning grounded in Popper, Fisher, and GRADE. Open source, self-hostable.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

@@ -37,6 +37,10 @@ export function Hero() {
             tools across {STATS.domains} scientific domains. Grounded in Popper, Fisher, and GRADE.
           </p>
 
+          <p className="font-mono text-[11px] text-muted-foreground/60">
+            Open source (AGPL-3.0) &middot; Self-hostable &middot; COSS
+          </p>
+
           <div className="flex flex-wrap items-center gap-3">
             <span className="font-mono text-[11px] text-primary border border-primary/20 bg-primary/5 px-2.5 py-1 rounded">
               {STATS.tools} tools

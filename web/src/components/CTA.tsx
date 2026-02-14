@@ -40,12 +40,10 @@ export function CTA() {
 
       <div className="mb-12 max-w-2xl">
         <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-4">
-          Same product at every tier.
+          Hosted instance pricing.
         </h2>
         <p className="text-base text-muted-foreground leading-relaxed">
-          No feature gates. All 70 tools, all 16 data sources, full 6-phase methodology
-          at every level. The only variable is the Director model quality: Haiku reasons
-          adequately, Sonnet reasons well, Opus reasons deeply.
+          Self-hosting is free with your own API key. The hosted instance uses credits to cover Anthropic API costs. No feature gates -- all 85 tools, all 19 data sources, full 6-phase methodology at every level. The only variable is the Director model quality.
         </p>
       </div>
 
