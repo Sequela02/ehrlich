@@ -39,7 +39,7 @@ export function InvestigationComparison({ invA, invB }: InvestigationComparisonP
       {/* Shared candidates detail */}
       {sharedIdentifiers.length > 0 && (
         <div className="space-y-3">
-          <h3 className="border-l-2 border-accent pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          <h3 className="border-l-2 border-accent pl-4 font-mono text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
             Shared Candidates ({sharedIdentifiers.length})
           </h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -48,7 +48,7 @@ export function InvestigationComparison({ invA, invB }: InvestigationComparisonP
               const fromB = invB.candidates.find((c) => c.identifier === id);
               const isMolecular = fromA?.identifier_type === "smiles";
               return (
-                <div key={id} className="rounded-lg border border-accent/30 bg-accent/5 p-3">
+                <div key={id} className="rounded-md border border-accent/30 bg-accent/5 p-3">
                   {isMolecular && (
                     <div className="flex justify-center">
                       <MolViewer2D smiles={id} width={120} height={90} />
@@ -85,7 +85,7 @@ export function InvestigationComparison({ invA, invB }: InvestigationComparisonP
 
 function StatCard({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
-    <div className={cn("rounded-lg border p-3 text-center", accent ? "border-accent/30 bg-accent/5" : "border-border bg-surface")}>
+    <div className={cn("rounded-md border p-3 text-center", accent ? "border-accent/30 bg-accent/5" : "border-border bg-surface")}>
       <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
       <p className={cn("mt-1 text-sm font-medium", accent ? "text-accent" : "text-foreground")}>{value}</p>
     </div>
@@ -94,7 +94,7 @@ function StatCard({ label, value, accent }: { label: string; value: string; acce
 
 function PromptCard({ prompt, status }: { prompt: string; status: string }) {
   return (
-    <div className="rounded-lg border border-border bg-surface p-4">
+    <div className="rounded-md border border-border bg-surface p-4">
       <span className={cn(
         "font-mono text-[10px] uppercase",
         status === "completed" ? "text-secondary" : "text-muted-foreground",
@@ -156,14 +156,14 @@ function HypothesisSummary({
   }, {});
 
   return (
-    <div className="rounded-lg border border-border bg-surface p-3">
+    <div className="rounded-md border border-border bg-surface p-3">
       <h4 className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{title}</h4>
       <div className="mt-2 flex gap-3 font-mono text-[10px]">
         {Object.entries(counts).map(([status, count]) => (
           <span key={status} className={cn(
             status === "supported" ? "text-secondary" :
             status === "refuted" ? "text-destructive" :
-            status === "revised" ? "text-amber-400" : "text-muted-foreground",
+            status === "revised" ? "text-primary" : "text-muted-foreground",
           )}>
             {count} {status}
           </span>

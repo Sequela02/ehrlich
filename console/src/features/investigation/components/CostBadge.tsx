@@ -26,7 +26,7 @@ export function CostBadge({ cost }: CostBadgeProps) {
         onClick={() =>
           cost.byModel ? setShowBreakdown((p) => !p) : undefined
         }
-        className="inline-flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-1.5 font-mono text-xs text-muted-foreground transition-colors hover:border-primary/20"
+        className="inline-flex items-center gap-3 rounded-sm border border-border bg-surface px-3 py-1.5 font-mono text-xs text-muted-foreground transition-colors hover:border-primary/20"
       >
         <span>{cost.inputTokens.toLocaleString()} in</span>
         <span className="text-border">|</span>
@@ -39,7 +39,7 @@ export function CostBadge({ cost }: CostBadgeProps) {
         </span>
       </button>
       {showBreakdown && cost.byModel && (
-        <div className="absolute right-0 top-full z-10 mt-1 rounded-lg border border-border bg-surface p-3 shadow-lg">
+        <div className="absolute right-0 top-full z-10 mt-1 rounded-md border border-border bg-surface p-3 shadow-lg">
           <div className="space-y-1.5">
             {Object.entries(cost.byModel).map(([model, data]) => (
               <div

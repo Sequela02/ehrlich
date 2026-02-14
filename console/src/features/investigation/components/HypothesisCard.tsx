@@ -141,7 +141,7 @@ export function HypothesisCard({ hypothesis }: HypothesisCardProps) {
   return (
     <div
       className={cn(
-        "cursor-pointer rounded-lg border p-3 transition-colors hover:bg-muted/20",
+        "cursor-pointer rounded-md border p-3 transition-colors hover:bg-muted/20",
         borderColor,
       )}
       onClick={() => setExpanded(!expanded)}

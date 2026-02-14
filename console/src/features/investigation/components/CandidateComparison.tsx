@@ -17,7 +17,7 @@ export function CandidateComparison({ candidates, domainConfig, onClose }: Candi
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+        <h3 className="border-l-2 border-primary pl-4 font-mono text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
           Comparing {candidates.length} Candidates
         </h3>
         <button
@@ -27,7 +27,7 @@ export function CandidateComparison({ candidates, domainConfig, onClose }: Candi
           <X className="h-4 w-4" />
         </button>
       </div>
-      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+      <div className="overflow-x-auto rounded-md border border-border bg-surface">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50">

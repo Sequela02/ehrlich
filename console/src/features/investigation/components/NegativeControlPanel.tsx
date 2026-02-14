@@ -14,14 +14,14 @@ export function NegativeControlPanel({ controls }: NegativeControlPanelProps) {
   return (
     <div className="space-y-3">
       <div>
-        <h3 className="border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+        <h3 className="border-l-2 border-primary pl-4 font-mono text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
           Negative Controls ({correct}/{controls.length} correct)
         </h3>
-        <p className="mt-1 pl-3 text-[11px] leading-relaxed text-muted-foreground/50">
+        <p className="mt-1 pl-4 text-xs leading-relaxed text-muted-foreground/50">
           Known-inactive compounds used to validate the ML model. Low scores confirm the model is not producing false positives.
         </p>
       </div>
-      <div className="overflow-hidden rounded-lg border border-border">
+      <div className="overflow-hidden rounded-md border border-border">
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-border bg-muted/30">

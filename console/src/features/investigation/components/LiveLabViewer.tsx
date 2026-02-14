@@ -82,7 +82,7 @@ export function LiveLabViewer({ events, completed, experiments }: LiveLabViewerP
   }, [events, ready, activeExperimentId]);
 
   return (
-    <div className="relative overflow-hidden rounded-lg border border-border">
+    <div className="relative overflow-hidden rounded-md border border-border">
       {experiments && experiments.length > 0 && (
         <div className="flex items-center gap-2 border-b border-border p-2">
           <span className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">

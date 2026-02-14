@@ -27,8 +27,8 @@ export function ActiveExperimentCard({
 
   if (!currentExperimentId) {
     return (
-      <div className="relative overflow-hidden rounded-lg border border-accent/30 bg-accent/5 p-4">
-        <div className="absolute inset-0 animate-pulse rounded-lg border border-accent/20" />
+      <div className="relative overflow-hidden rounded-md border border-accent/30 bg-accent/5 p-4">
+        <div className="absolute inset-0 animate-pulse rounded-md border border-accent/20" />
         <div className="relative flex items-center gap-3">
           <FlaskConical className="h-5 w-5 animate-pulse text-accent" />
           <div>
@@ -51,8 +51,8 @@ export function ActiveExperimentCard({
   const controlCount = currentExperiment?.controls?.length ?? 0;
 
   return (
-    <div className="relative overflow-hidden rounded-lg border border-primary/30 bg-primary/5 p-4">
-      <div className="absolute inset-0 animate-pulse rounded-lg border border-primary/10" />
+    <div className="relative overflow-hidden rounded-md border border-primary/30 bg-primary/5 p-4">
+      <div className="absolute inset-0 animate-pulse rounded-md border border-primary/10" />
       <div className="relative flex flex-col gap-2">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">

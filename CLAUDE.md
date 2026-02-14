@@ -286,6 +286,10 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - **Investigation templates**: 7 cross-domain prompts (4 molecular + 2 training + 1 nutrition) on home page via `TemplateCards` with domain badges
 - **Candidate comparison**: side-by-side scoring view for 2-4 candidates with best-in-group highlighting
 - **HypothesisBoard**: kanban-style card grid showing hypothesis status with expandable confidence bars
+- **Hypothesis approval**: `HypothesisApprovalCard` renders in main content area (not status bar) for maximum prominence during approval gate
+- **Home page**: hero section with stats, collapsible BYOK toggle, SectionHeader-driven sections, empty state for new users
+- **Design system**: OKLCH hue 155 (green) brand primary; `rounded-sm` buttons, `rounded-md` cards; `hover:opacity-90` (no glow); Space Grotesk + JetBrains Mono fonts; shared `SectionHeader` component for consistent section headings; VIZ_COLORS aligned to hue 155
+- **Layout**: conditional `hideHeader` on AppLayout for investigation/compare pages (own header); consistent `max-w-[1200px]` across all pages
 - TanStack Router file-based routing; `ErrorBoundary` wraps LiveLabViewer and InvestigationDiagram
 - Toast notifications via `sonner` (dark-themed OKLCH colors); custom scrollbar CSS (8px webkit + Firefox thin)
 - `InvestigationCompleted` event carries `findings[]`, `hypotheses[]`, `negative_controls[]`, `prompt` for replay hydration
@@ -489,6 +493,7 @@ All paths relative to `console/src/`.
 | `shared/hooks/use-auth.ts` | WorkOS auth hook wrapper (AuthKitProvider integration) |
 | `shared/lib/api.ts` | Authenticated fetch with BYOK `X-Anthropic-Key` header support |
 | `shared/components/ErrorBoundary.tsx` | Error boundary for LiveLabViewer and InvestigationDiagram |
+| `shared/components/ui/SectionHeader.tsx` | Shared section header with icon, title, description (border-l-2 accent) |
 | `shared/components/ui/Toaster.tsx` | Sonner toast wrapper with dark OKLCH theme |
 | `routes/methodology.tsx` | Methodology page |
 | `routes/callback.tsx` | WorkOS OAuth callback (waits for auth, then redirects home) |

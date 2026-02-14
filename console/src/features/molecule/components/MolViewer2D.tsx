@@ -13,7 +13,7 @@ export function MolViewer2D({ smiles, width = 300, height = 200, className }: Mo
   if (error) {
     return (
       <div
-        className={`flex items-center justify-center rounded-lg border border-border bg-surface ${className ?? ""}`}
+        className={`flex items-center justify-center rounded-md border border-border bg-surface ${className ?? ""}`}
         style={{ width, height }}
       >
         <span className="font-mono text-xs text-muted-foreground">{smiles}</span>
@@ -28,7 +28,7 @@ export function MolViewer2D({ smiles, width = 300, height = 200, className }: Mo
       width={width}
       height={height}
       loading="lazy"
-      className={`rounded-lg border border-border ${className ?? ""}`}
+      className={`rounded-md border border-border ${className ?? ""}`}
       onError={() => setError(true)}
     />
   );

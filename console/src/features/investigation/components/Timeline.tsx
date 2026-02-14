@@ -305,7 +305,7 @@ function TimelineEntry({
           : grade === "moderate"
             ? "bg-accent/20 text-accent"
             : grade === "low"
-              ? "bg-orange-500/20 text-orange-400"
+              ? "bg-accent/20 text-accent"
               : "bg-destructive/20 text-destructive";
       return (
         <div

@@ -148,112 +148,119 @@ function InvestigationPage() {
         </div>
       </header>
 
-      {/* Experiment status bar */}
-      <div className="shrink-0 border-b border-border px-4 py-2 lg:px-6">
-        {completed ? (
-          <CompletionSummaryCard
-            candidateCount={candidates.length}
-            findingCount={findings.length}
-            hypothesisCount={hypotheses.length}
-            cost={cost}
-          />
-        ) : approvalPending ? (
-          <HypothesisApprovalCard
-            investigationId={id}
-            hypotheses={pendingApprovalHypotheses}
-            onApproved={() => {}}
-          />
-        ) : (
-          <ActiveExperimentCard
-            completed={completed}
-            currentExperimentId={currentExperimentId}
-            experimentDescription={currentExperiment?.description}
-            linkedHypothesis={linkedHypothesis}
-            activeToolName={activeToolName}
-            experimentToolCount={experimentToolCount}
-            experimentFindingCount={experimentFindingCount}
-            currentExperiment={currentExperiment}
-          />
-        )}
-      </div>
+      {/* Experiment status bar (hidden when approval is pending -- approval moves to main content) */}
+      {!approvalPending && (
+        <div className="shrink-0 border-b border-border px-4 py-2 lg:px-6">
+          {completed ? (
+            <CompletionSummaryCard
+              candidateCount={candidates.length}
+              findingCount={findings.length}
+              hypothesisCount={hypotheses.length}
+              cost={cost}
+            />
+          ) : (
+            <ActiveExperimentCard
+              completed={completed}
+              currentExperimentId={currentExperimentId}
+              experimentDescription={currentExperiment?.description}
+              linkedHypothesis={linkedHypothesis}
+              activeToolName={activeToolName}
+              experimentToolCount={experimentToolCount}
+              experimentFindingCount={experimentFindingCount}
+              currentExperiment={currentExperiment}
+            />
+          )}
+        </div>
+      )}
 
       {/* Split pane: left content + right timeline sidebar */}
       <div className="flex flex-1 flex-col lg:min-h-0 lg:flex-row">
         {/* Left panel */}
         <main className="flex-1 space-y-6 p-4 lg:min-w-0 lg:overflow-y-auto lg:p-6">
-          {/* --- LIVE VIEW: show components as they build up --- */}
+          {/* --- APPROVAL GATE: prominent in main content when hypotheses need review --- */}
+          {approvalPending && (
+            <HypothesisApprovalCard
+              investigationId={id}
+              hypotheses={pendingApprovalHypotheses}
+              onApproved={() => {}}
+            />
+          )}
+
+          {/* Hypothesis board (live view only) */}
+          {!completed && (
+            <HypothesisBoard
+              hypotheses={hypotheses}
+              currentHypothesisId={currentHypothesisId}
+            />
+          )}
+
+          {/* --- Shared: Tab bar + Diagram + Visualizations --- */}
+          <div className="flex gap-1 rounded-md border border-border bg-muted/30 p-1">
+            <button
+              onClick={() => setActiveTab("timeline")}
+              className={cn(
+                "rounded-md px-4 py-1.5 font-mono text-[11px] font-medium uppercase tracking-wider transition-colors lg:hidden",
+                activeTab === "timeline"
+                  ? "bg-surface text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Timeline
+            </button>
+            <button
+              onClick={() => setActiveTab("diagram")}
+              className={cn(
+                "rounded-md px-4 py-1.5 font-mono text-[11px] font-medium uppercase tracking-wider transition-colors",
+                activeTab === "diagram"
+                  ? "bg-surface text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Diagram
+            </button>
+          </div>
+
+          {activeTab === "timeline" && (
+            <section className="lg:hidden">
+              <div
+                ref={mobileTimelineRef}
+                className="max-h-[500px] overflow-y-auto rounded-md border border-border bg-surface p-4"
+              >
+                <Timeline events={events} />
+              </div>
+            </section>
+          )}
+
+          {activeTab === "diagram" && (
+            <section className="space-y-2">
+              <div>
+                <h3 className="border-l-2 border-primary pl-4 font-mono text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                  Investigation Diagram
+                </h3>
+                <p className="mt-1 pl-6 text-xs leading-relaxed text-muted-foreground/60">
+                  Visual map of hypothesis-experiment-finding relationships. Scroll to zoom, drag to pan.
+                </p>
+              </div>
+              <ErrorBoundary fallbackMessage="Failed to load investigation diagram">
+                <InvestigationDiagram
+                  hypotheses={diagramHypotheses}
+                  experiments={diagramExperiments}
+                  findings={diagramFindings}
+                />
+              </ErrorBoundary>
+            </section>
+          )}
+
+          <VisualizationPanel
+            visualizations={visualizations}
+            events={events}
+            experiments={experiments}
+            completed={completed}
+          />
+
+          {/* --- LIVE VIEW: progressive components --- */}
           {!completed && (
             <>
-              <HypothesisBoard
-                hypotheses={hypotheses}
-                currentHypothesisId={currentHypothesisId}
-              />
-
-              {/* Tab bar */}
-              <div className="flex gap-1 rounded-lg border border-border bg-muted/30 p-1">
-                <button
-                  onClick={() => setActiveTab("timeline")}
-                  className={cn(
-                    "rounded-md px-4 py-1.5 font-mono text-[11px] font-medium uppercase tracking-wider transition-colors lg:hidden",
-                    activeTab === "timeline"
-                      ? "bg-surface text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  Timeline
-                </button>
-                <button
-                  onClick={() => setActiveTab("diagram")}
-                  className={cn(
-                    "rounded-md px-4 py-1.5 font-mono text-[11px] font-medium uppercase tracking-wider transition-colors",
-                    activeTab === "diagram"
-                      ? "bg-surface text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  Diagram
-                </button>
-              </div>
-
-              {/* Tab content */}
-              {activeTab === "timeline" && (
-                <section className="lg:hidden">
-                  <div
-                    ref={mobileTimelineRef}
-                    className="max-h-[500px] overflow-y-auto rounded-lg border border-border bg-surface p-4"
-                  >
-                    <Timeline events={events} />
-                  </div>
-                </section>
-              )}
-
-              {activeTab === "diagram" && (
-                <section className="space-y-2">
-                  <div>
-                    <h3 className="border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                      Investigation Diagram
-                    </h3>
-                    <p className="mt-1 pl-3 text-[11px] leading-relaxed text-muted-foreground/50">
-                      Visual map of hypothesis-experiment-finding relationships. Scroll to zoom, drag to pan.
-                    </p>
-                  </div>
-                  <ErrorBoundary fallbackMessage="Failed to load investigation diagram">
-                    <InvestigationDiagram
-                      hypotheses={diagramHypotheses}
-                      experiments={diagramExperiments}
-                      findings={diagramFindings}
-                    />
-                  </ErrorBoundary>
-                </section>
-              )}
-
-              <VisualizationPanel
-                visualizations={visualizations}
-                events={events}
-                experiments={experiments}
-                completed={completed}
-              />
-
               <section>
                 <FindingsPanel findings={findings} />
               </section>
@@ -272,74 +279,9 @@ function InvestigationPage() {
             </>
           )}
 
-          {/* --- COMPLETED VIEW: structured report following scientific workflow --- */}
+          {/* --- COMPLETED VIEW: structured report --- */}
           {completed && (
             <>
-              {/* Visual exploration tabs (Diagram) */}
-              <div className="flex gap-1 rounded-lg border border-border bg-muted/30 p-1">
-                <button
-                  onClick={() => setActiveTab("timeline")}
-                  className={cn(
-                    "rounded-md px-4 py-1.5 font-mono text-[11px] font-medium uppercase tracking-wider transition-colors lg:hidden",
-                    activeTab === "timeline"
-                      ? "bg-surface text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  Timeline
-                </button>
-                <button
-                  onClick={() => setActiveTab("diagram")}
-                  className={cn(
-                    "rounded-md px-4 py-1.5 font-mono text-[11px] font-medium uppercase tracking-wider transition-colors",
-                    activeTab === "diagram"
-                      ? "bg-surface text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  Diagram
-                </button>
-              </div>
-
-              {activeTab === "timeline" && (
-                <section className="lg:hidden">
-                  <div
-                    ref={mobileTimelineRef}
-                    className="max-h-[500px] overflow-y-auto rounded-lg border border-border bg-surface p-4"
-                  >
-                    <Timeline events={events} />
-                  </div>
-                </section>
-              )}
-
-              {activeTab === "diagram" && (
-                <section className="space-y-2">
-                  <div>
-                    <h3 className="border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                      Investigation Diagram
-                    </h3>
-                    <p className="mt-1 pl-3 text-[11px] leading-relaxed text-muted-foreground/50">
-                      Visual map of hypothesis-experiment-finding relationships. Scroll to zoom, drag to pan.
-                    </p>
-                  </div>
-                  <ErrorBoundary fallbackMessage="Failed to load investigation diagram">
-                    <InvestigationDiagram
-                      hypotheses={diagramHypotheses}
-                      experiments={diagramExperiments}
-                      findings={diagramFindings}
-                    />
-                  </ErrorBoundary>
-                </section>
-              )}
-
-              <VisualizationPanel
-                visualizations={visualizations}
-                events={events}
-                experiments={experiments}
-                completed={completed}
-              />
-
-              {/* Structured report: follows scientific method workflow */}
               <InvestigationReport
                 prompt={prompt}
                 summary={summary}
@@ -358,7 +300,7 @@ function InvestigationPage() {
                   href={diagramUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2.5 font-mono text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+                  className="inline-flex items-center gap-2 rounded-sm border border-primary/30 bg-primary/5 px-4 py-2.5 font-mono text-xs font-medium text-primary transition-colors hover:bg-primary/10"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
                   View Visual Summary

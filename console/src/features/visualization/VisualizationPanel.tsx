@@ -16,7 +16,7 @@ interface VisualizationPanelProps {
 function VizFallback() {
   return (
     <div
-      className="flex h-48 items-center justify-center rounded-lg border border-border"
+      className="flex h-48 items-center justify-center rounded-md border border-border"
       style={{ background: VIZ_COLORS.background }}
     >
       <span className="font-mono text-xs" style={{ color: VIZ_COLORS.neutral }}>
@@ -31,7 +31,7 @@ function VizCard({ payload }: { payload: VizPayload }) {
   if (!Component) {
     return (
       <div
-        className="rounded-lg border border-border p-4"
+        className="rounded-md border border-border p-4"
         style={{ background: VIZ_COLORS.background }}
       >
         <span className="font-mono text-xs" style={{ color: VIZ_COLORS.neutral }}>
@@ -43,7 +43,7 @@ function VizCard({ payload }: { payload: VizPayload }) {
 
   return (
     <div
-      className="rounded-lg border border-border p-4"
+      className="rounded-md border border-border p-4"
       style={{ background: VIZ_COLORS.background }}
     >
       <Suspense fallback={<VizFallback />}>
@@ -75,13 +75,13 @@ export default function VisualizationPanel({
 
   return (
     <section className="space-y-3">
-      <h3 className="border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+      <h3 className="border-l-2 border-primary pl-4 font-mono text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
         Visualizations
       </h3>
 
       {showLab && (
         <div>
-          <p className="mb-2 pl-3 text-[11px] leading-relaxed text-muted-foreground/50">
+          <p className="mb-2 pl-4 text-xs leading-relaxed text-muted-foreground/50">
             Real-time 3D molecular visualization as structures are analyzed.
           </p>
           <ErrorBoundary fallbackMessage="Failed to load 3D viewer">

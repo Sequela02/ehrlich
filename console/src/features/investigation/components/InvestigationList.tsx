@@ -69,7 +69,7 @@ export function InvestigationList({ investigations }: InvestigationListProps) {
           <button
             onClick={handleCompare}
             disabled={selected.size !== 2}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 font-mono text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground disabled:opacity-40"
+            className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-surface px-3 py-1.5 font-mono text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground disabled:opacity-40"
           >
             <GitCompareArrows className="h-3.5 w-3.5" />
             Compare{selected.size > 0 ? ` (${selected.size}/2)` : ""}
@@ -96,7 +96,7 @@ export function InvestigationList({ investigations }: InvestigationListProps) {
               to="/investigation/$id"
               params={{ id: inv.id }}
               className={cn(
-                "flex min-w-0 flex-1 items-center justify-between rounded-lg border border-border bg-surface p-3",
+                "flex min-w-0 flex-1 items-center justify-between rounded-md border border-border bg-surface p-3",
                 "transition-colors hover:border-primary/30",
               )}
             >

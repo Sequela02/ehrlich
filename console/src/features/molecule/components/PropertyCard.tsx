@@ -11,7 +11,7 @@ interface PropertyCardProps {
 
 export function PropertyCard({ title, properties }: PropertyCardProps) {
   return (
-    <div className="rounded-lg border border-border p-4">
+    <div className="rounded-md border border-border p-4">
       <h3 className="mb-3 text-sm font-medium">{title}</h3>
       <dl className="grid grid-cols-2 gap-2">
         {properties.map((p) => (

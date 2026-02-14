@@ -1,17 +1,20 @@
 @import "tailwindcss";
 
 @theme {
+  --font-sans: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
   --color-background: oklch(0.10 0.005 155);
   --color-surface: oklch(0.14 0.008 155);
   --color-foreground: oklch(0.93 0.005 155);
   --color-primary: oklch(0.72 0.19 155);
   --color-primary-foreground: oklch(0.10 0.02 155);
-  --color-secondary: oklch(0.55 0.10 200);
+  --color-secondary: oklch(0.60 0.10 200);
   --color-secondary-foreground: oklch(0.95 0.01 200);
   --color-accent: oklch(0.75 0.15 80);
   --color-accent-foreground: oklch(0.15 0.02 80);
   --color-muted: oklch(0.18 0.005 155);
-  --color-muted-foreground: oklch(0.55 0.01 155);
+  --color-muted-foreground: oklch(0.60 0.01 155);
   --color-border: oklch(0.22 0.01 155);
   --color-destructive: oklch(0.60 0.22 25);
   --color-destructive-foreground: oklch(0.95 0.01 25);
@@ -21,7 +24,7 @@
 }
 
 body {
-  font-family: "Space Grotesk", system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
   background-color: var(--color-background);
   color: var(--color-foreground);
   -webkit-font-smoothing: antialiased;

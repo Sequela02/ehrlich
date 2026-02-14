@@ -8,9 +8,9 @@ interface MethodologyDrawerProps {
 }
 
 const MODEL_COLORS: Record<string, string> = {
-  haiku: "text-blue-400",
-  opus: "text-green-400",
-  sonnet: "text-amber-400",
+  haiku: "text-secondary",
+  opus: "text-primary",
+  sonnet: "text-accent",
 };
 
 const MODEL_LABELS: Record<string, string> = {
@@ -140,7 +140,7 @@ export function MethodologyDrawer({ open, onClose }: MethodologyDrawerProps) {
             <Link
               to="/methodology"
               onClick={onClose}
-              className="flex items-center justify-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 font-mono text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
+              className="flex items-center justify-center gap-2 rounded-sm border border-border bg-surface px-3 py-2 font-mono text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
             >
               View full methodology
               <ArrowRight className="h-3 w-3" />

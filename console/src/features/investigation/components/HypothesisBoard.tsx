@@ -15,10 +15,10 @@ export function HypothesisBoard({
   return (
     <div className="space-y-3">
       <div>
-        <h3 className="border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+        <h3 className="border-l-2 border-primary pl-4 font-mono text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
           Hypotheses ({hypotheses.length})
         </h3>
-        <p className="mt-1 pl-3 text-[11px] leading-relaxed text-muted-foreground/50">
+        <p className="mt-1 pl-4 text-xs leading-relaxed text-muted-foreground/50">
           Testable hypotheses formulated by the AI. Each is tested through experiments, then evaluated as supported, refuted, or revised.
         </p>
       </div>
@@ -28,7 +28,7 @@ export function HypothesisBoard({
             key={h.id}
             className={
               h.id === currentHypothesisId
-                ? "ring-1 ring-accent/30 rounded-lg"
+                ? "ring-1 ring-accent/30 rounded-md"
                 : ""
             }
           >

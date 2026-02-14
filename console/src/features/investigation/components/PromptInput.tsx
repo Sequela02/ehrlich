@@ -46,7 +46,7 @@ export function PromptInput({ value, onChange }: PromptInputProps) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Describe your research question...&#10;&#10;Example: Find novel drug candidates for a specific disease target or screen compounds for desired properties"
-        className="w-full rounded-lg border border-border bg-surface p-4 text-sm leading-relaxed placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40"
+        className="w-full rounded-sm border border-border bg-surface p-4 text-sm leading-relaxed placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/40"
         rows={5}
       />
       <div className="flex items-center justify-between gap-4">
@@ -59,7 +59,7 @@ export function PromptInput({ value, onChange }: PromptInputProps) {
               key={t.value}
               type="button"
               onClick={() => setTier(t.value)}
-              className={`rounded px-2.5 py-1 font-mono text-[11px] transition-colors ${
+              className={`rounded-sm px-2.5 py-1 font-mono text-[11px] transition-colors ${
                 tier === t.value
                   ? "bg-primary text-primary-foreground"
                   : "border border-border text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -86,7 +86,7 @@ export function PromptInput({ value, onChange }: PromptInputProps) {
           <button
             type="submit"
             disabled={!value.trim() || mutation.isPending || !hasEnoughCredits}
-            className="rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition-all hover:brightness-110 hover:shadow-[0_0_12px_oklch(0.72_0.19_155_/_0.3)] disabled:opacity-50 disabled:hover:shadow-none"
+            className="rounded-sm bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {mutation.isPending ? "Starting..." : "Start Investigation"}
           </button>

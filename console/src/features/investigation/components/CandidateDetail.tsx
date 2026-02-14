@@ -89,7 +89,7 @@ function MolecularDetail({ smiles, name }: { smiles: string; name: string }) {
       )}
 
       {descriptors && (
-        <div className="space-y-2 rounded-lg border border-border bg-surface p-3">
+        <div className="space-y-2 rounded-md border border-border bg-surface p-3">
           <div className="flex items-center justify-between">
             <span className="font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Properties</span>
             <span
@@ -134,7 +134,7 @@ function GenericDetail({
 
   return (
     <div className="p-4">
-      <div className="space-y-2 rounded-lg border border-border bg-surface p-3">
+      <div className="space-y-2 rounded-md border border-border bg-surface p-3">
         <div className="flex items-center justify-between">
           <span className="font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
             Details

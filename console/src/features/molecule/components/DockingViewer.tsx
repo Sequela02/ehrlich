@@ -53,7 +53,7 @@ export function DockingViewer({
     <div
       ref={containerRef}
       style={{ width, height, position: "relative" }}
-      className="rounded-lg border border-border"
+      className="rounded-md border border-border"
     />
   );
 }

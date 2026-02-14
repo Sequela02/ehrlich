@@ -49,7 +49,7 @@ export function HypothesisApprovalCard({
   const approvedCount = hypotheses.length - rejected.size;
 
   return (
-    <div className="rounded-lg border border-accent/30 bg-accent/5 p-4">
+    <div className="rounded-md border border-accent/30 bg-accent/5 p-4">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-accent">
@@ -62,7 +62,7 @@ export function HypothesisApprovalCard({
         <button
           onClick={handleApprove}
           disabled={submitting || approvedCount === 0}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-sm bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           <Play className="h-3.5 w-3.5" />
           {submitting ? "Starting..." : `Test ${approvedCount} Hypotheses`}
@@ -75,7 +75,7 @@ export function HypothesisApprovalCard({
             <div
               key={h.id}
               className={cn(
-                "flex items-start gap-3 rounded-lg border p-3 transition-colors",
+                "flex items-start gap-3 rounded-md border p-3 transition-colors",
                 isRejected
                   ? "border-destructive/30 bg-destructive/5 opacity-60"
                   : "border-border bg-surface",

@@ -12,6 +12,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
+import { SectionHeader } from "@/shared/components/ui/SectionHeader";
 import { useMethodology } from "@/features/investigation/hooks/use-methodology";
 import type { Methodology } from "@/features/investigation/hooks/use-methodology";
 
@@ -20,9 +21,9 @@ export const Route = createFileRoute("/methodology")({
 });
 
 const MODEL_COLORS: Record<string, string> = {
-  haiku: "text-blue-400 bg-blue-400/10 border-blue-400/20",
-  opus: "text-green-400 bg-green-400/10 border-green-400/20",
-  sonnet: "text-amber-400 bg-amber-400/10 border-amber-400/20",
+  haiku: "text-secondary bg-secondary/10 border-secondary/20",
+  opus: "text-primary bg-primary/10 border-primary/20",
+  sonnet: "text-accent bg-accent/10 border-accent/20",
 };
 
 const MODEL_LABELS: Record<string, string> = {
@@ -36,7 +37,7 @@ function MethodologyPage() {
 
   if (isLoading || !data) {
     return (
-      <div className="mx-auto max-w-5xl p-8">
+      <div className="mx-auto max-w-[1200px] p-8">
         <div className="animate-pulse space-y-6">
           <div className="h-8 w-64 rounded bg-muted" />
           <div className="h-4 w-96 rounded bg-muted/50" />
@@ -47,7 +48,7 @@ function MethodologyPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-12 p-8">
+    <div className="mx-auto max-w-[1200px] space-y-12 p-8">
       <div className="space-y-3">
         <Link
           to="/"
@@ -87,7 +88,7 @@ function WorkflowDiagram({ phases }: { phases: Methodology["phases"] }) {
       />
 
       {/* Horizontal stepper */}
-      <div className="overflow-x-auto rounded-lg border border-border bg-surface p-6">
+      <div className="overflow-x-auto rounded-md border border-border bg-surface p-6">
         <div className="flex min-w-[700px] items-start justify-between gap-1">
           {phases.map((phase, i) => (
             <div key={phase.number} className="flex items-start">
@@ -129,7 +130,7 @@ function WorkflowDiagram({ phases }: { phases: Methodology["phases"] }) {
 
       {/* Expanded description */}
       {expandedPhase && (
-        <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+        <div className="rounded-md border border-primary/20 bg-primary/5 p-4">
           <div className="flex items-center gap-2">
             <span className="font-mono text-[11px] font-semibold uppercase tracking-wider text-primary">
               Phase {expandedPhase}
@@ -151,9 +152,9 @@ function WorkflowDiagram({ phases }: { phases: Methodology["phases"] }) {
 
 function ModelArchitecture({ models }: { models: Methodology["models"] }) {
   const roleColors: Record<string, string> = {
-    Director: "text-green-400",
-    Researcher: "text-amber-400",
-    Summarizer: "text-blue-400",
+    Director: "text-primary",
+    Researcher: "text-accent",
+    Summarizer: "text-secondary",
   };
 
   return (
@@ -167,7 +168,7 @@ function ModelArchitecture({ models }: { models: Methodology["models"] }) {
         {models.map((model) => (
           <div
             key={model.role}
-            className="rounded-lg border border-border bg-surface p-4"
+            className="rounded-md border border-border bg-surface p-4"
           >
             <div className="flex items-center gap-2">
               <span
@@ -208,7 +209,7 @@ function DomainRegistry({ domains }: { domains: Methodology["domains"] }) {
         {domains.map((domain) => (
           <div
             key={domain.name}
-            className="rounded-lg border border-border bg-surface"
+            className="rounded-md border border-border bg-surface"
           >
             <button
               onClick={() =>
@@ -311,7 +312,7 @@ function ToolCatalog({ tools }: { tools: Methodology["tools"] }) {
         {tools.map((group) => (
           <div
             key={group.context}
-            className="rounded-lg border border-border bg-surface"
+            className="rounded-md border border-border bg-surface"
           >
             <button
               onClick={() =>
@@ -371,14 +372,14 @@ function DataSources({ sources }: { sources: Methodology["data_sources"] }) {
         {sources.map((source) => (
           <div
             key={source.name}
-            className="rounded-lg border border-border bg-surface p-4"
+            className="rounded-md border border-border bg-surface p-4"
           >
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">{source.name}</span>
               {source.auth === "api_key" ? (
-                <Lock className="h-3 w-3 text-amber-400" />
+                <Lock className="h-3 w-3 text-accent" />
               ) : (
-                <Globe className="h-3 w-3 text-green-400" />
+                <Globe className="h-3 w-3 text-primary" />
               )}
             </div>
             <p className="mt-1.5 text-[11px] leading-relaxed text-muted-foreground">
@@ -401,26 +402,3 @@ function DataSources({ sources }: { sources: Methodology["data_sources"] }) {
   );
 }
 
-// ── Shared Section Header ────────────────────────────────────────────────
-
-function SectionHeader({
-  icon: Icon,
-  title,
-  description,
-}: {
-  icon: typeof Layers;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div>
-      <h2 className="flex items-center gap-2 border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-        <Icon className="h-3.5 w-3.5 text-primary" />
-        {title}
-      </h2>
-      <p className="mt-1 pl-5 text-[11px] leading-relaxed text-muted-foreground/50">
-        {description}
-      </p>
-    </div>
-  );
-}

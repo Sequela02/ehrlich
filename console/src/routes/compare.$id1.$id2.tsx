@@ -33,7 +33,7 @@ function ComparePage() {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-6xl p-4 lg:p-6">
+      <main className="mx-auto max-w-[1200px] p-4 lg:p-6">
         {loading && (
           <p className="text-sm text-muted-foreground">Loading investigations...</p>
         )}

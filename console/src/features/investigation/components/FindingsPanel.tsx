@@ -47,10 +47,10 @@ export function FindingsPanel({ findings }: FindingsPanelProps) {
   return (
     <div className="space-y-3">
       <div>
-        <h3 className="border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+        <h3 className="border-l-2 border-primary pl-4 font-mono text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
           Findings{findings.length > 0 && ` (${findings.length})`}
         </h3>
-        <p className="mt-1 pl-3 text-[11px] leading-relaxed text-muted-foreground/50">
+        <p className="mt-1 pl-4 text-xs leading-relaxed text-muted-foreground/50">
           Evidence collected during experiments, linked to hypotheses and classified as supporting, contradicting, or neutral.
         </p>
       </div>
@@ -74,7 +74,7 @@ export function FindingsPanel({ findings }: FindingsPanelProps) {
                   {groupFindings.map((f, i) => (
                     <div
                       key={i}
-                      className="rounded-lg border border-border bg-surface p-3"
+                      className="rounded-md border border-border bg-surface p-3"
                     >
                       <div className="flex items-start gap-2">
                         <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />

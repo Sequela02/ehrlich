@@ -79,7 +79,7 @@ export function TemplateCards({ onSelect }: TemplateCardsProps) {
         <button
           key={template.title}
           onClick={() => onSelect(template.prompt)}
-          className="group rounded-lg border border-border bg-surface p-4 text-left transition-all hover:border-primary/30 hover:bg-primary/5"
+          className="group rounded-sm border border-border bg-surface p-4 text-left transition-all hover:border-primary/30 hover:bg-primary/5"
         >
           <div className="flex items-start gap-3">
             <template.Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />

@@ -56,10 +56,10 @@ export function CandidateTable({ candidates, domainConfig }: CandidateTableProps
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+          <h3 className="border-l-2 border-primary pl-4 font-mono text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
             {candidateLabel}
           </h3>
-          <p className="mt-1 pl-3 text-[11px] leading-relaxed text-muted-foreground/50">
+          <p className="mt-1 pl-4 text-xs leading-relaxed text-muted-foreground/50">
             {isMolecular
               ? "Top molecules identified by the investigation. Click a row to view 3D structure, properties, and drug-likeness profile."
               : "Top candidates identified by the investigation. Click a row to view details."}
@@ -69,7 +69,7 @@ export function CandidateTable({ candidates, domainConfig }: CandidateTableProps
           <button
             onClick={() => setComparing(true)}
             disabled={selected.size < 2}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 font-mono text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground disabled:opacity-40 disabled:hover:border-border disabled:hover:text-muted-foreground"
+            className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-surface px-3 py-1.5 font-mono text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground disabled:opacity-40 disabled:hover:border-border disabled:hover:text-muted-foreground"
           >
             <GitCompareArrows className="h-3.5 w-3.5" />
             Compare{selected.size > 0 ? ` (${selected.size})` : ""}
@@ -87,7 +87,7 @@ export function CandidateTable({ candidates, domainConfig }: CandidateTableProps
           ))}
         </div>
       )}
-      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+      <div className="overflow-x-auto rounded-md border border-border bg-surface">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/50 text-left">

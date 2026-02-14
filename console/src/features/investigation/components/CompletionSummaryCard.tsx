@@ -18,7 +18,7 @@ export function CompletionSummaryCard({
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="relative overflow-hidden rounded-lg border border-primary/30 bg-primary/5 p-4">
+    <div className="relative overflow-hidden rounded-md border border-primary/30 bg-primary/5 p-4">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <CheckCircle2 className="h-5 w-5 text-primary" />

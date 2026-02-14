@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { generateMarkdown, downloadMarkdown } from "../lib/export-markdown";
 import { cn } from "@/shared/lib/utils";
+import { SectionHeader } from "@/shared/components/ui/SectionHeader";
 import type {
   CandidateRow,
   CostInfo,
@@ -39,33 +40,11 @@ interface InvestigationReportProps {
 
 const STATUS_COLORS: Record<string, string> = {
   proposed: "text-muted-foreground",
-  testing: "text-blue-400",
+  testing: "text-accent",
   supported: "text-secondary",
   refuted: "text-destructive",
-  revised: "text-amber-400",
+  revised: "text-primary",
 };
-
-function SectionHeader({
-  icon: Icon,
-  title,
-  description,
-}: {
-  icon: typeof BookOpen;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div>
-      <h3 className="flex items-center gap-2 border-l-2 border-primary pl-3 font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-        <Icon className="h-3.5 w-3.5 text-primary" />
-        {title}
-      </h3>
-      <p className="mt-1 pl-5 text-[11px] leading-relaxed text-muted-foreground/50">
-        {description}
-      </p>
-    </div>
-  );
-}
 
 export function InvestigationReport({
   prompt,
@@ -104,7 +83,7 @@ export function InvestigationReport({
         </h2>
         <button
           onClick={handleExport}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 font-mono text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
+          className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-surface px-3 py-1.5 font-mono text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
         >
           <Download className="h-3.5 w-3.5" />
           Export Report
@@ -119,7 +98,7 @@ export function InvestigationReport({
             title="Research Question"
             description="The original scientific question that initiated this investigation. Defines the domain, target, and scope of scientific discovery."
           />
-          <div className="rounded-lg border border-border bg-surface p-5">
+          <div className="rounded-md border border-border bg-surface p-5">
             <p className="text-sm leading-relaxed">{prompt}</p>
           </div>
         </section>
@@ -133,7 +112,7 @@ export function InvestigationReport({
             title="Executive Summary"
             description="AI-generated synthesis of all hypotheses, experiments, and findings. Summarizes conclusions, confidence levels, and recommended next steps."
           />
-          <div className="rounded-lg border border-border bg-surface p-5">
+          <div className="rounded-md border border-border bg-surface p-5">
             <div className="prose prose-sm prose-invert max-w-none prose-headings:text-foreground prose-a:text-primary prose-strong:text-foreground prose-code:text-primary prose-pre:rounded-lg prose-pre:border prose-pre:border-border prose-pre:bg-muted">
               <Markdown>{summary}</Markdown>
             </div>
@@ -162,7 +141,7 @@ export function InvestigationReport({
               if (hExps.length === 0) return null;
               const hFindings = findings.filter((f) => f.hypothesis_id === h.id);
               return (
-                <div key={h.id} className="rounded-lg border border-border bg-surface p-4">
+                <div key={h.id} className="rounded-md border border-border bg-surface p-4">
                   <div className="flex items-center gap-2">
                     <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground/60">
                       Hypothesis {h.id.slice(0, 8)}
@@ -216,7 +195,7 @@ export function InvestigationReport({
         <section className="space-y-3">
           <NegativeControlPanel controls={negativeControls} />
           {validationMetrics && validationMetrics.z_prime != null && (
-            <div className="rounded-lg border border-border bg-surface p-4">
+            <div className="rounded-md border border-border bg-surface p-4">
               <div className="flex items-center gap-3">
                 <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground/60">
                   Z&apos;-factor
@@ -227,7 +206,7 @@ export function InvestigationReport({
                     validationMetrics.z_prime_quality === "excellent"
                       ? "bg-secondary/20 text-secondary"
                       : validationMetrics.z_prime_quality === "marginal"
-                        ? "bg-amber-500/20 text-amber-400"
+                        ? "bg-accent/20 text-accent"
                         : "bg-destructive/20 text-destructive",
                   )}
                 >
@@ -261,7 +240,7 @@ export function InvestigationReport({
             title="Cost & Performance"
             description="Token usage and cost breakdown by model tier. Tracks Director (Opus), Researcher (Sonnet), and Summarizer (Haiku) usage separately."
           />
-          <div className="rounded-lg border border-border bg-surface p-5">
+          <div className="rounded-md border border-border bg-surface p-5">
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <Stat label="Input Tokens" value={cost.inputTokens.toLocaleString()} />
               <Stat label="Output Tokens" value={cost.outputTokens.toLocaleString()} />

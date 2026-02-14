@@ -42,7 +42,7 @@ export function MolViewer3D({ molBlock, width = 400, height = 300 }: MolViewer3D
     <div
       ref={containerRef}
       style={{ width, height, position: "relative" }}
-      className="rounded-lg border border-border"
+      className="rounded-md border border-border"
     />
   );
 }
