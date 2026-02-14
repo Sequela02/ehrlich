@@ -316,6 +316,7 @@ Server at :8000, Console at :3000.
 | POST | `/api/v1/investigate` | Create new investigation (`director_tier`: haiku/sonnet/opus) |
 | GET | `/api/v1/investigate/{id}` | Full investigation detail (owner only) |
 | GET | `/api/v1/investigate/{id}/stream` | SSE stream of investigation events (owner only, supports `?token=`) |
+| GET | `/api/v1/investigate/{id}/paper` | Structured scientific paper + visualizations from completed investigation (owner only). PDF via `/paper/:id` route + browser print |
 | POST | `/api/v1/investigate/{id}/approve` | Approve/reject formulated hypotheses (owner only) |
 | POST | `/api/v1/upload` | Upload file (CSV/XLSX/PDF) for investigation data, returns preview |
 | GET | `/api/v1/credits/balance` | Current credit balance + BYOK status |

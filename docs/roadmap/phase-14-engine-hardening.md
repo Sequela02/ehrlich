@@ -74,23 +74,38 @@ Replace linear hypothesis testing with tree-based exploration inspired by AI Sci
 - [ ] `HypothesisTreeEvent` SSE event for frontend tree rendering
 - [ ] Console: `InvestigationDiagram.tsx` already renders React Flow graph -- tree structure renders naturally as growing/pruning graph
 
-## 14F: Scientific Paper Generator -- TODO
+## 14F: Scientific Paper Generator -- DONE
 
-Generate structured scientific papers from completed investigations. Not AI-generated prose -- structured assembly of existing investigation data into publication format.
+Generate structured scientific papers from completed investigations. Structured assembly of investigation data + persisted events into publication-format Markdown.
 
-- [ ] `application/paper_generator.py` -- takes `Investigation` entity, produces structured sections:
-  - Title (from research question)
+- [x] `application/paper_generator.py` -- pure function, takes investigation data + events, produces 8-section structured paper:
+  - Title (from research question, domain, date, ID)
   - Abstract (Director synthesis summary)
-  - Introduction (PICO decomposition + literature survey context)
-  - Methods (experiment designs, tool descriptions, statistical approach)
-  - Results (findings with statistical tests, visualizations as base64 SVG)
-  - Discussion (hypothesis assessments, GRADE certainty, limitations, knowledge gaps)
-  - References (collected DOIs + citations)
-  - Supplementary (cost breakdown, model info, negative controls, tool call trace)
-- [ ] `GET /investigate/{id}/paper` endpoint -- returns structured paper as JSON or Markdown
-- [ ] `GET /investigate/{id}/paper?format=pdf` -- server-side PDF generation (optional, `weasyprint` or `reportlab`)
-- [ ] Console: "Export Paper" button on completed investigation page
-- [ ] Console: paper preview with section navigation
+  - Introduction (PICO decomposition + literature survey from events)
+  - Methods (experiment designs with variables/controls/analysis plans, tool usage counts from events)
+  - Results (hypothesis outcomes table, findings grouped by evidence type with provenance, candidate ranking table)
+  - Discussion (hypothesis assessments with evaluation reasoning from events, supporting/contradicting evidence)
+  - References (citations + unique data source provenance from findings)
+  - Supplementary (negative/positive controls, Z'-factor validation metrics from events, cost breakdown by model)
+- [x] `GET /investigate/{id}/paper` endpoint -- returns JSON with section keys + `full_markdown` combined document. Auth + ownership verification, only for COMPLETED investigations
+- [x] Console: "Export Paper" button replaces "Export Report" on completed investigations, fetches server-side paper with loading state, downloads as Markdown
+- [x] 37 unit tests covering all 8 sections, event extraction, empty data, malformed events
+
+Result: `paper_generator.py` (285 lines), API endpoint (65 lines), console updates (InvestigationReport.tsx). 908 server tests passing, 138 console tests passing.
+
+## 14F-2: Paper View + PDF Export -- DONE
+
+Dedicated paper view route with print-optimized CSS for browser-native PDF export. Zero new dependencies -- Recharts/Visx charts render as SVG, captured at full vector quality by browser print.
+
+- [x] `extract_visualizations(events)` in `paper_generator.py` -- extracts visualization payloads from persisted events
+- [x] `GET /investigate/{id}/paper` response updated -- includes `visualizations` key with `[{viz_type, title, data, config}]`
+- [x] `routes/paper.$id.tsx` -- new paper view route at `/paper/:id`, renders 8 Markdown sections + numbered figures via VizRegistry
+- [x] `styles/print.css` -- `@media print` stylesheet: white bg, serif body, SVG color preservation, page break hints, hidden toolbar
+- [x] InvestigationReport: "View Paper" link + "Export Markdown" (renamed from "Export Paper")
+- [x] `/paper/` added to `HEADERLESS_ROUTES` in `__root__.tsx`
+- [x] 5 unit tests for `extract_visualizations()` (extraction, preservation, empty, no-viz, malformed)
+
+Result: 42 paper generator tests passing, 138 console tests passing. Zero ruff/mypy/tsc violations.
 
 ## 14G: Validation Runs -- TODO
 
@@ -126,6 +141,8 @@ Phase 14D (Domain Tool Enrichment)     -- after 14A (touches tool layer)
 Phase 14E (Agentic Tree Search)        -- after 14A (modifies orchestrator)
     |
 Phase 14F (Paper Generator)            -- after 14A (reads investigation data)
+    |
+Phase 14F-2 (Paper View + PDF Export)  -- after 14F (needs paper endpoint + viz events)
     |
 Phase 14G (Validation Runs)            -- after 14E + 14F (needs tree search + paper gen)
 ```

@@ -7,6 +7,7 @@ import { useAuth } from "@/shared/hooks/use-auth";
 import { setTokenProvider } from "@/shared/lib/api";
 import { routeTree } from "./routeTree.gen";
 import "./styles/globals.css";
+import "./styles/print.css";
 
 const WORKOS_CLIENT_ID = import.meta.env.VITE_WORKOS_CLIENT_ID;
 const WORKOS_REDIRECT_URI = import.meta.env.VITE_WORKOS_REDIRECT_URI;

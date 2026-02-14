@@ -25,6 +25,7 @@ from ehrlich.api.schemas.investigation import (
 from ehrlich.api.sse import SSEEventType, domain_event_to_sse
 from ehrlich.config import get_settings
 from ehrlich.investigation.application.orchestrator_factory import create_orchestrator
+from ehrlich.investigation.application.paper_generator import extract_visualizations, generate_paper
 from ehrlich.investigation.application.registry_factory import (
     build_domain_registry,
     build_mcp_configs,
@@ -161,6 +162,110 @@ async def get_investigation(
         raise HTTPException(status_code=404, detail="Investigation not found")
     await _verify_ownership(investigation_id, user, repo)
     return to_detail(investigation)
+
+
+@router.get("/investigate/{investigation_id}/paper")
+async def get_paper(
+    investigation_id: str,
+    user: dict[str, Any] = _require_user,
+) -> dict[str, Any]:
+    """Generate a structured scientific paper from a completed investigation."""
+    repo = _get_repository()
+    investigation = await repo.get_by_id(investigation_id)
+    if investigation is None:
+        raise HTTPException(status_code=404, detail="Investigation not found")
+    await _verify_ownership(investigation_id, user, repo)
+    if investigation.status != InvestigationStatus.COMPLETED:
+        raise HTTPException(status_code=409, detail="Investigation not completed")
+
+    events = await repo.get_events(investigation_id)
+    paper: dict[str, Any] = generate_paper(
+        investigation_id=investigation.id,
+        prompt=investigation.prompt,
+        summary=investigation.summary,
+        domain=investigation.domain,
+        created_at=investigation.created_at.isoformat(),
+        hypotheses=[
+            {
+                "id": h.id,
+                "statement": h.statement,
+                "rationale": h.rationale,
+                "status": h.status.value,
+                "confidence": h.confidence,
+                "certainty_of_evidence": h.certainty_of_evidence,
+                "supporting_evidence": h.supporting_evidence,
+                "contradicting_evidence": h.contradicting_evidence,
+            }
+            for h in investigation.hypotheses
+        ],
+        experiments=[
+            {
+                "id": e.id,
+                "hypothesis_id": e.hypothesis_id,
+                "description": e.description,
+                "tool_plan": e.tool_plan,
+                "status": e.status.value,
+                "independent_variable": e.independent_variable,
+                "dependent_variable": e.dependent_variable,
+                "controls": e.controls,
+                "confounders": e.confounders,
+                "analysis_plan": e.analysis_plan,
+                "success_criteria": e.success_criteria,
+                "failure_criteria": e.failure_criteria,
+            }
+            for e in investigation.experiments
+        ],
+        findings=[
+            {
+                "title": f.title,
+                "detail": f.detail,
+                "hypothesis_id": f.hypothesis_id,
+                "evidence_type": f.evidence_type,
+                "source_type": f.source_type,
+                "source_id": f.source_id,
+            }
+            for f in investigation.findings
+        ],
+        candidates=[
+            {
+                "identifier": c.identifier,
+                "identifier_type": c.identifier_type,
+                "name": c.name,
+                "rank": c.rank,
+                "notes": c.notes,
+                "scores": c.scores,
+                "attributes": c.attributes,
+            }
+            for c in investigation.candidates
+        ],
+        negative_controls=[
+            {
+                "identifier": nc.identifier,
+                "name": nc.name,
+                "score": nc.score,
+                "threshold": nc.threshold,
+                "correctly_classified": nc.correctly_classified,
+                "source": nc.source,
+            }
+            for nc in investigation.negative_controls
+        ],
+        positive_controls=[
+            {
+                "identifier": pc.identifier,
+                "name": pc.name,
+                "known_activity": pc.known_activity,
+                "score": pc.score,
+                "correctly_classified": pc.correctly_classified,
+                "source": pc.source,
+            }
+            for pc in investigation.positive_controls
+        ],
+        citations=investigation.citations,
+        cost_data=investigation.cost_data,
+        events=events,
+    )
+    paper["visualizations"] = extract_visualizations(events)
+    return paper
 
 
 @router.post("/investigate")

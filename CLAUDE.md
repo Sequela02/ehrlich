@@ -173,6 +173,7 @@ All paths relative to `server/src/ehrlich/`.
 | `investigation/application/tool_dispatcher.py` | Tool execution with caching, `search_prior_research` and `query_uploaded_data` interception |
 | `investigation/application/researcher_executor.py` | Single researcher experiment executor |
 | `investigation/application/batch_executor.py` | Parallel batch executor (2 concurrent) |
+| `investigation/application/paper_generator.py` | Scientific paper generation from investigation data + events |
 | `investigation/application/prompts.py` | All domain-adaptive prompts |
 | `investigation/domain/schemas.py` | 6 JSON schemas for structured outputs |
 | `investigation/domain/domain_config.py` | `DomainConfig` + `ScoreDefinition` + `merge_domain_configs()` |
@@ -188,7 +189,7 @@ All paths relative to `server/src/ehrlich/api/`.
 | File | Purpose |
 |------|---------|
 | `auth.py` | WorkOS JWT middleware (JWKS, header + query param) |
-| `routes/investigation.py` | REST + SSE, 85-tool registry, domain registry, credits, BYOK |
+| `routes/investigation.py` | REST + SSE + paper export, 85-tool registry, domain registry, credits, BYOK |
 | `routes/upload.py` | File upload (CSV/XLSX/PDF) |
 | `routes/molecule.py` | Molecule depiction, conformer, descriptors, targets |
 | `sse.py` | Domain event to SSE conversion (20 types) |
@@ -213,6 +214,8 @@ All paths relative to `console/src/`.
 | `features/visualization/VizRegistry.tsx` | Lazy-loaded chart component registry |
 | `features/visualization/VisualizationPanel.tsx` | Grid layout for multiple charts |
 | `features/visualization/theme.ts` | OKLCH color tokens |
+| `routes/paper.$id.tsx` | Print-optimized paper view with PDF export |
+| `styles/print.css` | `@media print` stylesheet for PDF export |
 | `shared/hooks/use-auth.ts` | WorkOS auth wrapper |
 | `shared/lib/api.ts` | Authenticated fetch with BYOK support |
 

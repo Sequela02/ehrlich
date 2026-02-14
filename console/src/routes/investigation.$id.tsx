@@ -283,6 +283,7 @@ function InvestigationPage() {
           {completed && (
             <>
               <InvestigationReport
+                investigationId={id}
                 prompt={prompt}
                 summary={summary}
                 hypotheses={hypotheses}

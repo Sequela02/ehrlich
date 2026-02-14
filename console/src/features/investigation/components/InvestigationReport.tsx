@@ -1,13 +1,18 @@
+import { useState } from "react";
 import Markdown from "react-markdown";
+import { Link } from "@tanstack/react-router";
 import {
   BookOpen,
   Download,
+  FileText,
   FlaskConical,
+  Loader2,
   Target,
   TestTube,
   Zap,
 } from "lucide-react";
-import { generateMarkdown, downloadMarkdown } from "../lib/export-markdown";
+import { downloadMarkdown } from "../lib/export-markdown";
+import { apiFetch } from "@/shared/lib/api";
 import { cn } from "@/shared/lib/utils";
 import { SectionHeader } from "@/shared/components/ui/SectionHeader";
 import type {
@@ -27,6 +32,7 @@ import { NegativeControlPanel } from "./NegativeControlPanel";
 import { ThreatAssessment } from "./ThreatAssessment";
 
 interface InvestigationReportProps {
+  investigationId: string;
   prompt: string;
   summary: string;
   hypotheses: Hypothesis[];
@@ -48,6 +54,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export function InvestigationReport({
+  investigationId,
   prompt,
   summary,
   hypotheses,
@@ -59,21 +66,20 @@ export function InvestigationReport({
   domainConfig,
   validationMetrics,
 }: InvestigationReportProps) {
-  function handleExport() {
-    const md = generateMarkdown({
-      prompt,
-      summary,
-      hypotheses,
-      experiments,
-      findings,
-      candidates,
-      negativeControls,
-      cost,
-      validationMetrics,
-    });
-    const slug = prompt.slice(0, 40).replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase();
-    const ts = new Date().toISOString().slice(0, 10);
-    downloadMarkdown(md, `${slug}_${ts}_report.md`);
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const paper = await apiFetch<Record<string, string>>(
+        `/investigate/${investigationId}/paper`,
+      );
+      const slug = prompt.slice(0, 40).replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase();
+      const ts = new Date().toISOString().slice(0, 10);
+      downloadMarkdown(paper.full_markdown, `${slug}_${ts}_paper.md`);
+    } finally {
+      setExporting(false);
+    }
   }
 
   return (
@@ -82,13 +88,24 @@ export function InvestigationReport({
         <h2 className="font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
           Investigation Report
         </h2>
-        <button
-          onClick={handleExport}
-          className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-surface px-3 py-1.5 font-mono text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
-        >
-          <Download className="h-3.5 w-3.5" />
-          Export Report
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/paper/$id"
+            params={{ id: investigationId }}
+            className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-surface px-3 py-1.5 font-mono text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
+          >
+            <FileText className="h-3.5 w-3.5" />
+            View Paper
+          </Link>
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-surface px-3 py-1.5 font-mono text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground disabled:opacity-50"
+          >
+            {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+            Export Markdown
+          </button>
+        </div>
       </div>
 
       {/* 1. Research Question */}

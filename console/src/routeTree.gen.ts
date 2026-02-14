@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as CallbackRouteImport } from './routes/callback'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PaperIdRouteImport } from './routes/paper.$id'
 import { Route as InvestigationIdRouteImport } from './routes/investigation.$id'
 import { Route as CompareId1Id2RouteImport } from './routes/compare.$id1.$id2'
 
@@ -30,6 +31,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PaperIdRoute = PaperIdRouteImport.update({
+  id: '/paper/$id',
+  path: '/paper/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InvestigationIdRoute = InvestigationIdRouteImport.update({
   id: '/investigation/$id',
   path: '/investigation/$id',
@@ -46,6 +52,7 @@ export interface FileRoutesByFullPath {
   '/callback': typeof CallbackRoute
   '/methodology': typeof MethodologyRoute
   '/investigation/$id': typeof InvestigationIdRoute
+  '/paper/$id': typeof PaperIdRoute
   '/compare/$id1/$id2': typeof CompareId1Id2Route
 }
 export interface FileRoutesByTo {
@@ -53,6 +60,7 @@ export interface FileRoutesByTo {
   '/callback': typeof CallbackRoute
   '/methodology': typeof MethodologyRoute
   '/investigation/$id': typeof InvestigationIdRoute
+  '/paper/$id': typeof PaperIdRoute
   '/compare/$id1/$id2': typeof CompareId1Id2Route
 }
 export interface FileRoutesById {
@@ -61,6 +69,7 @@ export interface FileRoutesById {
   '/callback': typeof CallbackRoute
   '/methodology': typeof MethodologyRoute
   '/investigation/$id': typeof InvestigationIdRoute
+  '/paper/$id': typeof PaperIdRoute
   '/compare/$id1/$id2': typeof CompareId1Id2Route
 }
 export interface FileRouteTypes {
@@ -70,6 +79,7 @@ export interface FileRouteTypes {
     | '/callback'
     | '/methodology'
     | '/investigation/$id'
+    | '/paper/$id'
     | '/compare/$id1/$id2'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -77,6 +87,7 @@ export interface FileRouteTypes {
     | '/callback'
     | '/methodology'
     | '/investigation/$id'
+    | '/paper/$id'
     | '/compare/$id1/$id2'
   id:
     | '__root__'
@@ -84,6 +95,7 @@ export interface FileRouteTypes {
     | '/callback'
     | '/methodology'
     | '/investigation/$id'
+    | '/paper/$id'
     | '/compare/$id1/$id2'
   fileRoutesById: FileRoutesById
 }
@@ -92,6 +104,7 @@ export interface RootRouteChildren {
   CallbackRoute: typeof CallbackRoute
   MethodologyRoute: typeof MethodologyRoute
   InvestigationIdRoute: typeof InvestigationIdRoute
+  PaperIdRoute: typeof PaperIdRoute
   CompareId1Id2Route: typeof CompareId1Id2Route
 }
 
@@ -118,6 +131,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/paper/$id': {
+      id: '/paper/$id'
+      path: '/paper/$id'
+      fullPath: '/paper/$id'
+      preLoaderRoute: typeof PaperIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/investigation/$id': {
       id: '/investigation/$id'
       path: '/investigation/$id'
@@ -140,6 +160,7 @@ const rootRouteChildren: RootRouteChildren = {
   CallbackRoute: CallbackRoute,
   MethodologyRoute: MethodologyRoute,
   InvestigationIdRoute: InvestigationIdRoute,
+  PaperIdRoute: PaperIdRoute,
   CompareId1Id2Route: CompareId1Id2Route,
 }
 export const routeTree = rootRouteImport

@@ -88,11 +88,10 @@ Enhancement Enhancement  Sports
      13A (Foundation) DONE -> 13B (Causal Inference) DONE -> 13A-2 (Upload) DONE -> 13C (Mexico) -> 13D (US) -> 13E (MCP)
            |
      Phase 14: Scientific Engine Hardening -- IN PROGRESS (parallel with 13A-2)
-     14A (Orchestrator Split) ──┬── 14B (Route Cleanup) ──┬── 14D (Tool Enrichment)
-                                ├── 14C (Prompt Split)     ├── 14E (Tree Search)
-                                └───────────────────────── └── 14F (Paper Generator)
-                                                                      |
-                                                               14G (Validation Runs)
+     14A (Orchestrator Split) DONE ──┬── 14B (Route Cleanup) DONE ──┬── 14D (Tool Enrichment) DONE
+                                     ├── 14C (Prompt Split) DONE     ├── 14E (Tree Search)
+                                     ├── 14H (Upload Validation) DONE├── 14F (Paper Generator) DONE -> 14F-2 (Paper View + PDF) DONE
+                                     └──────────────────────────────  └── 14G (Validation Runs)
            |
      Demo + Video -- TODO
            |
