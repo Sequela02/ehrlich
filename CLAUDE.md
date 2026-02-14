@@ -40,7 +40,7 @@ Always uses `MultiModelOrchestrator`. Hypotheses tested in parallel batches of 2
 | simulation | `server/src/ehrlich/simulation/` | Docking, ADMET, resistance, target discovery (RCSB PDB, UniProt, Open Targets), toxicity (EPA CompTox) |
 | training | `server/src/ehrlich/training/` | Evidence analysis, protocol comparison, injury risk, training metrics, clinical trials (ClinicalTrials.gov), PubMed literature (E-utilities), exercise database (wger) |
 | nutrition | `server/src/ehrlich/nutrition/` | Supplement evidence, supplement labels (NIH DSLD), nutrient data (USDA FoodData), supplement safety (OpenFDA CAERS), drug-nutrient interactions (RxNav), DRI adequacy, nutrient ratios, inflammatory index |
-| impact | `server/src/ehrlich/impact/` | Social program evaluation: economic indicators (World Bank, WHO GHO, FRED), cross-program comparison, benchmark fetching |
+| impact | `server/src/ehrlich/impact/` | Social program evaluation: causal inference (DiD), threat assessment, economic indicators (World Bank, WHO GHO, FRED), cross-program comparison |
 | investigation | `server/src/ehrlich/investigation/` | Multi-model orchestration + PostgreSQL persistence + domain registry + MCP bridge |
 
 ### External Data Sources (18 external + 1 internal)
@@ -141,7 +141,7 @@ Types: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`
 
 Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation, training, nutrition, impact, investigation, api, console, mol, data, ci, docs, infra
 
-## Tools (73 Total)
+## Tools (78 Total)
 
 ### Chemistry (6) -- RDKit cheminformatics, domain-agnostic
 - `validate_smiles` -- Validate SMILES string
@@ -206,12 +206,14 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - `analyze_nutrient_ratios` -- Clinically relevant nutrient ratios (omega-6:3, Ca:Mg, Na:K, Zn:Cu, Ca:P, Fe:Cu)
 - `compute_inflammatory_index` -- Simplified Dietary Inflammatory Index (DII) scoring
 
-### Impact Evaluation (3) -- Social program analysis and economic indicators
+### Impact Evaluation (5) -- Social program analysis, causal inference, economic indicators
 - `search_economic_indicators` -- Query economic time series from FRED, World Bank, or WHO GHO
 - `fetch_benchmark` -- Get comparison values from international sources (World Bank, WHO GHO)
 - `compare_programs` -- Cross-program comparison using existing statistical tests
+- `estimate_did` -- Difference-in-differences causal estimation with parallel trends test and threat assessment
+- `assess_threats` -- Knowledge-based validity threat assessment for causal methods (DiD, PSM, RDD, RCT, IV)
 
-### Visualization (12) -- Domain-specific interactive charts
+### Visualization (15) -- Domain-specific interactive charts
 - `render_binding_scatter` -- Scatter plot of compound binding affinities (Recharts)
 - `render_admet_radar` -- Radar chart of ADMET/drug-likeness properties (Recharts)
 - `render_training_timeline` -- Training load timeline with ACWR danger zones (Recharts)
@@ -224,6 +226,9 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - `render_nutrient_comparison` -- Grouped bar chart comparing nutrient profiles across foods (Recharts)
 - `render_nutrient_adequacy` -- Horizontal bar chart showing % RDA with MAR score (Recharts)
 - `render_therapeutic_window` -- Range chart showing EAR/RDA/UL safety zones per nutrient (Visx)
+- `render_program_dashboard` -- Multi-indicator KPI dashboard with target tracking (Recharts)
+- `render_geographic_comparison` -- Region bar chart with benchmark reference line (Recharts)
+- `render_parallel_trends` -- DiD parallel trends chart, treatment vs control over time (Recharts)
 
 ### Statistics (2) -- Domain-agnostic hypothesis testing (scipy.stats)
 - `run_statistical_test` -- Compare two numeric groups (auto-selects t-test/Welch/Mann-Whitney, returns p-value, Cohen's d, 95% CI)
@@ -392,13 +397,16 @@ All paths relative to `server/src/ehrlich/`.
 
 | File | Purpose |
 |------|---------|
-| `tools.py` | 3 impact evaluation tools |
-| `domain/entities.py` | EconomicIndicator, BenchmarkValue, ProgramComparison, ProgramMetric |
-| `domain/repository.py` | EconomicDataRepository, BenchmarkRepository ABCs |
-| `application/impact_service.py` | ImpactService (economic indicators, benchmarks, program comparison) |
+| `tools.py` | 5 impact evaluation tools |
+| `domain/entities.py` | DataPoint, Program, Indicator, ThreatToValidity, CausalEstimate, Benchmark, EconomicSeries, HealthIndicator |
+| `domain/repository.py` | EconomicDataRepository, HealthDataRepository, DevelopmentDataRepository ABCs |
+| `domain/ports.py` | `CausalEstimator` ABC for causal inference methods |
+| `domain/evaluation_standards.py` | WWC evidence tiers, CONEVAL MIR levels, CREMAA criteria, `classify_evidence_tier()` |
+| `application/impact_service.py` | ImpactService (economic indicators, benchmarks, program comparison, DiD estimation, threat assessment) |
 | `infrastructure/worldbank_client.py` | World Bank API v2 client for development indicators |
 | `infrastructure/who_client.py` | WHO GHO API client for health statistics |
 | `infrastructure/fred_client.py` | FRED API client for US economic time series |
+| `infrastructure/did_estimator.py` | DiD estimator: effect size, SE, p-value, parallel trends, automated threat assessment |
 
 ### investigation/
 
@@ -426,7 +434,7 @@ All paths relative to `server/src/ehrlich/`.
 | `domain/domains/nutrition.py` | `NUTRITION_SCIENCE` config |
 | `domain/domains/impact.py` | `IMPACT_EVALUATION` config |
 | `domain/mcp_config.py` | `MCPServerConfig` frozen dataclass |
-| `tools_viz.py` | 12 visualization tools |
+| `tools_viz.py` | 15 visualization tools |
 | `infrastructure/repository.py` | PostgreSQL persistence (asyncpg) + tsvector findings search + user/credit management |
 | `infrastructure/anthropic_client.py` | Anthropic API adapter with retry, streaming, and structured outputs |
 | `infrastructure/mcp_bridge.py` | MCP client bridge (stdio/SSE/streamable_http) |
@@ -438,7 +446,7 @@ All paths relative to `server/src/ehrlich/api/`.
 | File | Purpose |
 |------|---------|
 | `auth.py` | WorkOS JWT middleware (JWKS verification, header + query param auth for SSE) |
-| `routes/investigation.py` | REST + SSE endpoints, 73-tool registry, domain registry, MCP bridge, credit system, BYOK |
+| `routes/investigation.py` | REST + SSE endpoints, 78-tool registry, domain registry, MCP bridge, credit system, BYOK |
 | `routes/methodology.py` | GET /methodology: phases, domains, tools, data sources, models |
 | `routes/molecule.py` | Molecule depiction, conformer, descriptors, targets endpoints |
 | `routes/stats.py` | GET /stats: aggregate counts |
@@ -505,6 +513,9 @@ All paths relative to `console/src/`.
 | `features/visualization/charts/NutrientComparison.tsx` | Recharts grouped BarChart for food nutrient comparison |
 | `features/visualization/charts/NutrientAdequacy.tsx` | Recharts horizontal BarChart showing % RDA with MAR score |
 | `features/visualization/charts/TherapeuticWindow.tsx` | Visx custom range chart with EAR/RDA/UL safety zones |
+| `features/visualization/charts/ProgramDashboard.tsx` | Recharts horizontal BarChart with target tracking |
+| `features/visualization/charts/GeographicComparison.tsx` | Recharts BarChart with benchmark ReferenceLine |
+| `features/visualization/charts/ParallelTrends.tsx` | Recharts ComposedChart for DiD treatment vs control |
 | `features/visualization/anatomy/BodyDiagram.tsx` | Custom SVG anatomical body diagram |
 | `features/visualization/anatomy/body-paths.ts` | SVG path data for front/back views |
 | `features/visualization/anatomy/color-scale.ts` | OKLCH intensity color interpolation |

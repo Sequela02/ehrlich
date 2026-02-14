@@ -471,7 +471,7 @@ Enhancement Enhancement  Sports
            |
      Phase 13: Impact Evaluation Domain -- IN PROGRESS
      (Causal inference + Document upload + MX/US APIs)
-     13A (Foundation) DONE -> 13A-2 (Upload+Viz) -> 13B (Causal) -> 13C (Mexico) -> 13D (US) -> 13E (MCP Self-Service)
+     13A (Foundation) DONE -> 13B partial (DiD+Viz) DONE -> 13A-2 (Upload) -> 13B remaining (PSM/RDD) -> 13C (Mexico) -> 13D (US) -> 13E (MCP)
            |
      Demo + Video -- TODO
            |
@@ -1013,29 +1013,37 @@ Of 2,800 evaluations commissioned by CONEVAL in Mexico, only 11 are impact evalu
 
 **Counts:** 70 -> 73 tools, 16 -> 19 data sources (18 external + 1 internal), 10 -> 11 bounded contexts, 3 -> 4 domains.
 
-### Phase 13A-2: Document Upload + Visualization (TODO)
+### Phase 13B (partial): Causal Inference + Impact Viz -- DONE
+
+- [x] `CausalEstimator` port ABC in `domain/ports.py`
+- [x] `DiDEstimator` infrastructure with parallel trends test and automated threat assessment
+- [x] `estimate_did` tool -- difference-in-differences with effect size, SE, p-value, threats, evidence tier
+- [x] `assess_threats` tool -- knowledge-based validity threat assessment (DiD, PSM, RDD, RCT, IV)
+- [x] `render_program_dashboard` viz tool -- multi-indicator KPI dashboard with target tracking
+- [x] `render_geographic_comparison` viz tool -- region bar chart with benchmark reference line
+- [x] `render_parallel_trends` viz tool -- DiD treatment vs control over time
+- [x] Console: 3 new React chart components (ProgramDashboard, GeographicComparison, ParallelTrends)
+- [x] Console: 2 Impact Evaluation template cards (CCT School Enrollment, Health Worker Programs)
+- [x] Tests: DiD estimator + tool tests (35+ new tests)
+
+**Counts:** 73 -> 78 tools, 12 -> 15 viz tools, 3 -> 5 impact tools.
+
+### Phase 13A-2: Document Upload (TODO -- deferred post-hackathon)
 
 - [ ] File upload API (CSV, PDF, Excel) via multipart/form-data on `POST /investigate`
 - [ ] PDF text extraction (`pymupdf`) + Haiku summarization for long documents
 - [ ] CSV/Excel parsing (`pandas` + `openpyxl`) with schema detection and summary statistics
 - [ ] Inject uploaded data into Director prompt as `<uploaded_data>` XML block
 - [ ] `extract_program_data` tool -- parse uploaded files into structured program data
-- [ ] `render_program_dashboard` viz tool -- multi-indicator KPI dashboard
-- [ ] `render_geographic_comparison` viz tool -- state/region comparison bar chart
 - [ ] Frontend: `FileUpload.tsx` drag-and-drop component in `PromptInput`
 - [ ] Frontend: `DataPreview.tsx` for uploaded dataset preview
 
-### Phase 13B: Causal Inference Engine
+### Phase 13B (remaining): Additional Causal Methods (TODO -- deferred post-hackathon)
 
-- [ ] `estimate_did` tool -- difference-in-differences with parallel trends test
 - [ ] `estimate_psm` tool -- propensity score matching with balance diagnostics
 - [ ] `estimate_rdd` tool -- regression discontinuity (sharp/fuzzy)
 - [ ] `estimate_synthetic_control` tool -- synthetic control method
-- [ ] `assess_threats` tool -- automated threat-to-validity assessment
 - [ ] `compute_cost_effectiveness` tool -- cost per unit outcome, ICER
-- [ ] `CausalEstimate` domain entity with effect size, CI, p-value, threats
-- [ ] `ThreatToValidity` domain entity (selection bias, attrition, spillover)
-- [ ] `render_parallel_trends` viz tool -- DiD pre/post trends visual
 - [ ] `render_rdd_plot` viz tool -- regression discontinuity scatter
 - [ ] `render_causal_diagram` viz tool -- DAG showing treatment/outcome/confounders
 - [ ] Frontend: `ThreatAssessment.tsx` panel with severity badges

@@ -56,7 +56,7 @@ Ehrlich uses a three-tier Claude model architecture for cost-efficient investiga
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesizes (3-5 calls)
-Sonnet 4.5 (Researcher) -- Executes experiments with 73 tools (10-20 calls)
+Sonnet 4.5 (Researcher) -- Executes experiments with 78 tools (10-20 calls)
 Haiku 4.5 (Summarizer)  -- Compresses large outputs, classifies domains (5-10 calls)
 ```
 
@@ -87,7 +87,7 @@ Cost: ~$3-4 per investigation (vs ~$11 with all-Opus).
 
 All data sources are free and open-access.
 
-## 73 Tools
+## 78 Tools
 
 | Context | Tool | Description |
 |---------|------|-------------|
@@ -143,6 +143,8 @@ All data sources are free and open-access.
 | Impact | `search_economic_indicators` | Query economic time series from FRED, World Bank, or WHO GHO |
 | Impact | `fetch_benchmark` | Get comparison values from international sources |
 | Impact | `compare_programs` | Cross-program comparison using statistical tests |
+| Impact | `estimate_did` | Difference-in-differences causal estimation |
+| Impact | `assess_threats` | Validity threat assessment for causal methods |
 | Visualization | `render_binding_scatter` | Scatter plot of compound binding affinities |
 | Visualization | `render_admet_radar` | Radar chart of ADMET/drug-likeness properties |
 | Visualization | `render_training_timeline` | Training load timeline with ACWR danger zones |
@@ -155,6 +157,9 @@ All data sources are free and open-access.
 | Visualization | `render_nutrient_comparison` | Grouped bar chart comparing nutrient profiles |
 | Visualization | `render_nutrient_adequacy` | Horizontal bar chart with DRI adequacy + MAR score |
 | Visualization | `render_therapeutic_window` | Therapeutic window chart (EAR/RDA/AI/UL zones) |
+| Visualization | `render_program_dashboard` | Multi-indicator KPI dashboard with target tracking |
+| Visualization | `render_geographic_comparison` | Region bar chart with benchmark reference line |
+| Visualization | `render_parallel_trends` | DiD parallel trends chart (treatment vs control) |
 | Statistics | `run_statistical_test` | Compare two numeric groups (auto-selects t-test/Welch/Mann-Whitney) |
 | Statistics | `run_categorical_test` | Test contingency tables (auto-selects Fisher's exact/chi-squared) |
 | Investigation | `propose_hypothesis` | Register testable hypothesis |

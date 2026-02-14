@@ -40,6 +40,9 @@ const LazyDoseResponseCurve = lazy(() => import('./charts/DoseResponseCurve'));
 const LazyNutrientComparison = lazy(() => import('./charts/NutrientComparison'));
 const LazyNutrientAdequacy = lazy(() => import('./charts/NutrientAdequacy'));
 const LazyTherapeuticWindow = lazy(() => import('./charts/TherapeuticWindow'));
+const LazyProgramDashboard = lazy(() => import('./charts/ProgramDashboard'));
+const LazyGeographicComparison = lazy(() => import('./charts/GeographicComparison'));
+const LazyParallelTrends = lazy(() => import('./charts/ParallelTrends'));
 
 registry.set('binding_scatter', LazyBindingScatter as unknown as ChartComponent);
 registry.set('admet_radar', LazyADMETRadar as unknown as ChartComponent);
@@ -53,6 +56,9 @@ registry.set('dose_response', LazyDoseResponseCurve as unknown as ChartComponent
 registry.set('nutrient_comparison', LazyNutrientComparison as unknown as ChartComponent);
 registry.set('nutrient_adequacy', LazyNutrientAdequacy as unknown as ChartComponent);
 registry.set('therapeutic_window', LazyTherapeuticWindow as unknown as ChartComponent);
+registry.set('program_dashboard', LazyProgramDashboard as unknown as ChartComponent);
+registry.set('geographic_comparison', LazyGeographicComparison as unknown as ChartComponent);
+registry.set('parallel_trends', LazyParallelTrends as unknown as ChartComponent);
 
 /**
  * Look up a chart component by viz_type string.

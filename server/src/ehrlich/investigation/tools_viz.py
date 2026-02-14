@@ -1,10 +1,11 @@
 """Visualization tools for the investigation engine.
 
-12 tools that generate structured chart payloads for the frontend:
+15 tools that generate structured chart payloads for the frontend:
 binding scatter, ADMET radar, training timeline, muscle heatmap,
 forest plot, evidence matrix, performance chart, funnel plot,
 dose-response curve, nutrient comparison, nutrient adequacy,
-and therapeutic window.
+therapeutic window, program dashboard, geographic comparison,
+and parallel trends.
 """
 
 from __future__ import annotations
@@ -612,3 +613,125 @@ async def render_therapeutic_window(
             "config": {"domain": "nutrition"},
         }
     )
+
+
+async def render_program_dashboard(
+    indicators: list[dict[str, Any]],
+    program_name: str = "Program",
+    title: str = "",
+) -> str:
+    """Render a multi-indicator KPI dashboard for a social program.
+
+    Shows baseline, target, and actual values for each indicator with
+    progress coloring (green >= 80%, yellow 50-80%, red < 50%).
+
+    Args:
+        indicators: List of dicts with 'name', 'baseline', 'target',
+                   'actual', 'unit'
+        program_name: Name of the program
+        title: Chart title (defaults to program name)
+    """
+    processed: list[dict[str, Any]] = []
+    for ind in indicators:
+        baseline = float(ind.get("baseline", 0.0))
+        target = float(ind.get("target", 0.0))
+        actual = float(ind.get("actual", 0.0))
+
+        pct_target = actual / target if target != 0 else 0.0
+        if pct_target >= 0.8:
+            status = "on_track"
+        elif pct_target >= 0.5:
+            status = "at_risk"
+        else:
+            status = "off_track"
+
+        processed.append({
+            "name": ind.get("name", ""),
+            "baseline": round(baseline, 2),
+            "target": round(target, 2),
+            "actual": round(actual, 2),
+            "unit": ind.get("unit", ""),
+            "pct_target": round(pct_target, 4),
+            "status": status,
+        })
+
+    return json.dumps({
+        "viz_type": "program_dashboard",
+        "title": title or f"{program_name} Dashboard",
+        "data": {
+            "program_name": program_name,
+            "indicators": processed,
+        },
+        "config": {"domain": "impact"},
+    })
+
+
+async def render_geographic_comparison(
+    regions: list[dict[str, Any]],
+    metric_name: str = "Value",
+    benchmark: float | None = None,
+    title: str = "Geographic Comparison",
+) -> str:
+    """Render a bar chart comparing regions with optional benchmark line.
+
+    Args:
+        regions: List of dicts with 'name' and 'value'
+        metric_name: Label for the metric axis
+        benchmark: Optional benchmark value shown as reference line
+        title: Chart title
+    """
+    processed: list[dict[str, Any]] = []
+    for r in regions:
+        processed.append({
+            "name": r.get("name", ""),
+            "value": round(float(r.get("value", 0.0)), 2),
+        })
+
+    return json.dumps({
+        "viz_type": "geographic_comparison",
+        "title": title,
+        "data": {
+            "regions": processed,
+            "metric_name": metric_name,
+            "benchmark": round(benchmark, 2) if benchmark is not None else None,
+        },
+        "config": {"domain": "impact"},
+    })
+
+
+async def render_parallel_trends(
+    treatment_series: list[dict[str, Any]],
+    control_series: list[dict[str, Any]],
+    treatment_start: str = "",
+    title: str = "Parallel Trends",
+) -> str:
+    """Render a DiD parallel trends chart (treatment vs control over time).
+
+    Shows two line series with a vertical reference line at treatment
+    start and shaded pre/post regions.
+
+    Args:
+        treatment_series: List of dicts with 'period' and 'value'
+        control_series: List of dicts with 'period' and 'value'
+        treatment_start: Period label where treatment begins
+        title: Chart title
+    """
+    treatment = [
+        {"period": t.get("period", ""), "value": round(float(t.get("value", 0.0)), 2)}
+        for t in treatment_series
+    ]
+    control = [
+        {"period": c.get("period", ""), "value": round(float(c.get("value", 0.0)), 2)}
+        for c in control_series
+    ]
+
+    return json.dumps({
+        "viz_type": "parallel_trends",
+        "title": title,
+        "data": {
+            "treatment": treatment,
+            "control": control,
+            "treatment_start": treatment_start,
+        },
+        "config": {"domain": "impact"},
+    })
