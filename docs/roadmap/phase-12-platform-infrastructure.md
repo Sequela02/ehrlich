@@ -27,8 +27,9 @@ User identity via WorkOS (1M MAU free tier). JWT-based.
 - [x] Frontend: `@workos-inc/authkit-react` provider + `<AuthKitProvider>`
 - [x] Backend: `get_current_user`, `get_current_user_sse`, `get_optional_user` dependencies
 - [x] `user_id` extraction from JWT, linked to `users` table via `get_or_create_user()`
-- [x] Public routes: `GET /health`, `GET /methodology`, `GET /stats`, `GET /molecule/*`, `GET /investigate/{id}`
-- [x] Protected routes: `POST /investigate`, `GET /investigate`, `GET /investigate/{id}/stream`, `POST /investigate/{id}/approve`, `GET /credits/balance`
+- [x] Public routes: `GET /health`, `GET /methodology`, `GET /stats`, `GET /molecule/*`
+- [x] Protected routes: `POST /investigate`, `GET /investigate`, `GET /investigate/{id}`, `GET /investigate/{id}/stream`, `POST /investigate/{id}/approve`, `GET /credits/balance`
+- [x] Ownership enforcement: all per-investigation endpoints verify the caller owns the resource (403 Forbidden)
 - [x] Env vars: `EHRLICH_WORKOS_API_KEY`, `EHRLICH_WORKOS_CLIENT_ID`
 - [x] SSE auth via `?token=` query param fallback (EventSource does not support headers)
 

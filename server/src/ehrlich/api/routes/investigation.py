@@ -85,6 +85,24 @@ def _get_repository() -> InvestigationRepository:
     return _repository
 
 
+async def _verify_ownership(
+    investigation_id: str,
+    user: dict[str, Any],
+    repo: InvestigationRepository,
+) -> None:
+    """Raise 403 if user does not own the investigation."""
+    # Active investigation -- check transient meta
+    meta = _investigation_meta.get(investigation_id)
+    if meta is not None:
+        if meta.get("workos_id") != user["workos_id"]:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        return
+    # DB investigation -- check via JOIN
+    owner_workos_id = await repo.get_investigation_owner_workos_id(investigation_id)
+    if owner_workos_id != user["workos_id"]:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
 def _broadcast_event(investigation_id: str, event: dict[str, str]) -> None:
     for queue in _subscribers.get(investigation_id, []):
         queue.put_nowait(event)
@@ -130,7 +148,10 @@ async def get_credit_balance(
 
 
 @router.get("/investigate/{investigation_id}")
-async def get_investigation(investigation_id: str) -> InvestigationDetail:
+async def get_investigation(
+    investigation_id: str,
+    user: dict[str, Any] = _require_user,
+) -> InvestigationDetail:
     repo = _get_repository()
     # Check active first (in-flight data is more current)
     investigation = _active_investigations.get(investigation_id)
@@ -138,6 +159,7 @@ async def get_investigation(investigation_id: str) -> InvestigationDetail:
         investigation = await repo.get_by_id(investigation_id)
     if investigation is None:
         raise HTTPException(status_code=404, detail="Investigation not found")
+    await _verify_ownership(investigation_id, user, repo)
     return to_detail(investigation)
 
 
@@ -195,6 +217,8 @@ async def approve_hypotheses(
     orchestrator = _active_orchestrators.get(investigation_id)
     if orchestrator is None:
         raise HTTPException(status_code=404, detail="No active orchestrator")
+    repo = _get_repository()
+    await _verify_ownership(investigation_id, user, repo)
     orchestrator.approve_hypotheses(request.approved_ids, request.rejected_ids)
     return {"status": "approved"}
 
@@ -213,6 +237,8 @@ async def stream_investigation(
             investigation.uploaded_files = await repo.get_uploaded_files(investigation.id)
     if investigation is None:
         raise HTTPException(status_code=404, detail="Investigation not found")
+
+    await _verify_ownership(investigation_id, user, repo)
 
     status = investigation.status
 

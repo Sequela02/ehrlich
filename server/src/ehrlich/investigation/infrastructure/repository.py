@@ -431,6 +431,17 @@ class InvestigationRepository(_Base):
                     investigation_id,
                 )
 
+    async def get_investigation_owner_workos_id(self, investigation_id: str) -> str | None:
+        """Get the workos_id of the user who owns the investigation."""
+        pool = self._get_pool()
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(
+                "SELECT u.workos_id FROM investigations i "
+                "JOIN users u ON i.user_id = u.id WHERE i.id = $1",
+                investigation_id,
+            )
+            return row["workos_id"] if row else None
+
     # -- Private helpers -----------------------------------------------------------
 
     async def _rebuild_fts(

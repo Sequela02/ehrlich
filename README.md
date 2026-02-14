@@ -303,7 +303,6 @@ Server at :8000, Console at :3000.
 | GET | `/api/v1/health` | Health check |
 | GET | `/api/v1/methodology` | Methodology: phases, domains, tools, data sources, models |
 | GET | `/api/v1/stats` | Aggregate counts (tools, domains, phases, data sources, events) |
-| GET | `/api/v1/investigate/{id}` | Full investigation detail |
 | GET | `/api/v1/molecule/depict?smiles=&w=&h=` | 2D SVG depiction (`image/svg+xml`, cached 24h) |
 | GET | `/api/v1/molecule/conformer?smiles=` | 3D conformer (JSON: mol_block, energy, num_atoms) |
 | GET | `/api/v1/molecule/descriptors?smiles=` | Molecular descriptors + Lipinski pass/fail |
@@ -315,8 +314,9 @@ Server at :8000, Console at :3000.
 |--------|------|-------------|
 | GET | `/api/v1/investigate` | List user's investigations (most recent first) |
 | POST | `/api/v1/investigate` | Create new investigation (`director_tier`: haiku/sonnet/opus) |
-| GET | `/api/v1/investigate/{id}/stream` | SSE stream of investigation events (supports `?token=` for EventSource) |
-| POST | `/api/v1/investigate/{id}/approve` | Approve/reject formulated hypotheses |
+| GET | `/api/v1/investigate/{id}` | Full investigation detail (owner only) |
+| GET | `/api/v1/investigate/{id}/stream` | SSE stream of investigation events (owner only, supports `?token=`) |
+| POST | `/api/v1/investigate/{id}/approve` | Approve/reject formulated hypotheses (owner only) |
 | POST | `/api/v1/upload` | Upload file (CSV/XLSX/PDF) for investigation data, returns preview |
 | GET | `/api/v1/credits/balance` | Current credit balance + BYOK status |
 
