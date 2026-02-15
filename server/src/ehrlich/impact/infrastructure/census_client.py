@@ -80,9 +80,7 @@ class CensusClient(DevelopmentDataRepository):
     async def get_countries(self) -> list[dict[str, str]]:
         return []
 
-    async def _get(
-        self, url: str, params: dict[str, str]
-    ) -> list[object]:
+    async def _get(self, url: str, params: dict[str, str]) -> list[object]:
         last_error: Exception | None = None
         for attempt in range(_MAX_RETRIES):
             try:

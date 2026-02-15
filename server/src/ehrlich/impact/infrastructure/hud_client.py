@@ -72,9 +72,7 @@ class HUDClient(HousingDataRepository):
             year=year,
         )
 
-    async def _get(
-        self, url: str, params: dict[str, str | int]
-    ) -> dict[str, object]:
+    async def _get(self, url: str, params: dict[str, str | int]) -> dict[str, object]:
         headers = {"Authorization": f"Bearer {self._token}"}
         last_error: Exception | None = None
         for attempt in range(_MAX_RETRIES):

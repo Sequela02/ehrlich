@@ -10,96 +10,110 @@ from ehrlich.investigation.application.paper_generator import extract_visualizat
 
 _PICO_EVENT = {
     "event_type": "literature_survey_completed",
-    "event_data": json.dumps({
-        "event": "literature_survey_completed",
-        "data": {
-            "pico": {
-                "population": "MRSA clinical isolates",
-                "intervention": "novel PBP2a inhibitors",
-                "comparison": "vancomycin",
-                "outcome": "minimum inhibitory concentration",
-                "search_terms": ["MRSA", "PBP2a", "antimicrobial"],
+    "event_data": json.dumps(
+        {
+            "event": "literature_survey_completed",
+            "data": {
+                "pico": {
+                    "population": "MRSA clinical isolates",
+                    "intervention": "novel PBP2a inhibitors",
+                    "comparison": "vancomycin",
+                    "outcome": "minimum inhibitory concentration",
+                    "search_terms": ["MRSA", "PBP2a", "antimicrobial"],
+                },
+                "search_queries": 4,
+                "total_results": 120,
+                "included_results": 18,
+                "evidence_grade": "moderate",
+                "assessment": "Moderate evidence from 3 RCTs and 15 observational studies.",
+                "investigation_id": "test-123",
             },
-            "search_queries": 4,
-            "total_results": 120,
-            "included_results": 18,
-            "evidence_grade": "moderate",
-            "assessment": "Moderate evidence from 3 RCTs and 15 observational studies.",
-            "investigation_id": "test-123",
-        },
-    }),
+        }
+    ),
 }
 
 _EXPERIMENT_EVENT = {
     "event_type": "experiment_started",
-    "event_data": json.dumps({
-        "event": "experiment_started",
-        "data": {
-            "experiment_id": "exp-1",
-            "hypothesis_id": "h1",
-            "description": "Dock compounds against PBP2a",
-            "independent_variable": "compound structure",
-            "dependent_variable": "docking score",
-            "controls": ["vancomycin"],
-            "analysis_plan": "Compare docking scores",
-            "investigation_id": "test-123",
-        },
-    }),
+    "event_data": json.dumps(
+        {
+            "event": "experiment_started",
+            "data": {
+                "experiment_id": "exp-1",
+                "hypothesis_id": "h1",
+                "description": "Dock compounds against PBP2a",
+                "independent_variable": "compound structure",
+                "dependent_variable": "docking score",
+                "controls": ["vancomycin"],
+                "analysis_plan": "Compare docking scores",
+                "investigation_id": "test-123",
+            },
+        }
+    ),
 }
 
 _EVAL_EVENT = {
     "event_type": "hypothesis_evaluated",
-    "event_data": json.dumps({
-        "event": "hypothesis_evaluated",
-        "data": {
-            "hypothesis_id": "h1",
-            "status": "supported",
-            "confidence": 0.85,
-            "reasoning": "Docking scores below -7 kcal/mol for 3 candidates.",
-            "certainty_of_evidence": "moderate",
-            "investigation_id": "test-123",
-        },
-    }),
+    "event_data": json.dumps(
+        {
+            "event": "hypothesis_evaluated",
+            "data": {
+                "hypothesis_id": "h1",
+                "status": "supported",
+                "confidence": 0.85,
+                "reasoning": "Docking scores below -7 kcal/mol for 3 candidates.",
+                "certainty_of_evidence": "moderate",
+                "investigation_id": "test-123",
+            },
+        }
+    ),
 }
 
 _TOOL_EVENTS = [
     {
         "event_type": "tool_called",
-        "event_data": json.dumps({
-            "event": "tool_called",
-            "data": {"tool_name": "dock_compound", "investigation_id": "test-123"},
-        }),
+        "event_data": json.dumps(
+            {
+                "event": "tool_called",
+                "data": {"tool_name": "dock_compound", "investigation_id": "test-123"},
+            }
+        ),
     },
     {
         "event_type": "tool_called",
-        "event_data": json.dumps({
-            "event": "tool_called",
-            "data": {"tool_name": "dock_compound", "investigation_id": "test-123"},
-        }),
+        "event_data": json.dumps(
+            {
+                "event": "tool_called",
+                "data": {"tool_name": "dock_compound", "investigation_id": "test-123"},
+            }
+        ),
     },
     {
         "event_type": "tool_called",
-        "event_data": json.dumps({
-            "event": "tool_called",
-            "data": {"tool_name": "search_chembl", "investigation_id": "test-123"},
-        }),
+        "event_data": json.dumps(
+            {
+                "event": "tool_called",
+                "data": {"tool_name": "search_chembl", "investigation_id": "test-123"},
+            }
+        ),
     },
 ]
 
 _VALIDATION_EVENT = {
     "event_type": "validation_metrics",
-    "event_data": json.dumps({
-        "event": "validation_metrics",
-        "data": {
-            "z_prime": 0.72,
-            "z_prime_quality": "excellent",
-            "positive_control_count": 3,
-            "negative_control_count": 5,
-            "positive_mean": 0.88,
-            "negative_mean": 0.12,
-            "investigation_id": "test-123",
-        },
-    }),
+    "event_data": json.dumps(
+        {
+            "event": "validation_metrics",
+            "data": {
+                "z_prime": 0.72,
+                "z_prime_quality": "excellent",
+                "positive_control_count": 3,
+                "negative_control_count": 5,
+                "positive_mean": 0.88,
+                "negative_mean": 0.12,
+                "investigation_id": "test-123",
+            },
+        }
+    ),
 }
 
 _HYPOTHESES = [
@@ -245,8 +259,14 @@ class TestPaperStructure:
     def test_has_all_section_keys(self) -> None:
         paper = _full_paper()
         expected = {
-            "title", "abstract", "introduction", "methods",
-            "results", "discussion", "references", "supplementary",
+            "title",
+            "abstract",
+            "introduction",
+            "methods",
+            "results",
+            "discussion",
+            "references",
+            "supplementary",
             "full_markdown",
         }
         assert expected == set(paper.keys())
@@ -289,10 +309,20 @@ class TestAbstract:
 
     def test_empty_summary(self) -> None:
         paper = generate_paper(
-            investigation_id="x", prompt="Q", summary="",
-            domain="", created_at="", hypotheses=[], experiments=[],
-            findings=[], candidates=[], negative_controls=[],
-            positive_controls=[], citations=[], cost_data={}, events=[],
+            investigation_id="x",
+            prompt="Q",
+            summary="",
+            domain="",
+            created_at="",
+            hypotheses=[],
+            experiments=[],
+            findings=[],
+            candidates=[],
+            negative_controls=[],
+            positive_controls=[],
+            citations=[],
+            cost_data={},
+            events=[],
         )
         assert "No synthesis available" in paper["abstract"]
 
@@ -322,10 +352,20 @@ class TestIntroduction:
 
     def test_no_pico_when_no_events(self) -> None:
         paper = generate_paper(
-            investigation_id="x", prompt="Q", summary="S",
-            domain="", created_at="", hypotheses=[], experiments=[],
-            findings=[], candidates=[], negative_controls=[],
-            positive_controls=[], citations=[], cost_data={}, events=[],
+            investigation_id="x",
+            prompt="Q",
+            summary="S",
+            domain="",
+            created_at="",
+            hypotheses=[],
+            experiments=[],
+            findings=[],
+            candidates=[],
+            negative_controls=[],
+            positive_controls=[],
+            citations=[],
+            cost_data={},
+            events=[],
         )
         assert "PICO" not in paper["introduction"]
 
@@ -357,10 +397,20 @@ class TestMethods:
 
     def test_empty_experiments(self) -> None:
         paper = generate_paper(
-            investigation_id="x", prompt="Q", summary="S",
-            domain="", created_at="", hypotheses=[], experiments=[],
-            findings=[], candidates=[], negative_controls=[],
-            positive_controls=[], citations=[], cost_data={}, events=[],
+            investigation_id="x",
+            prompt="Q",
+            summary="S",
+            domain="",
+            created_at="",
+            hypotheses=[],
+            experiments=[],
+            findings=[],
+            candidates=[],
+            negative_controls=[],
+            positive_controls=[],
+            citations=[],
+            cost_data={},
+            events=[],
         )
         assert "No experiments recorded" in paper["methods"]
 
@@ -424,10 +474,20 @@ class TestReferences:
 
     def test_empty_references(self) -> None:
         paper = generate_paper(
-            investigation_id="x", prompt="Q", summary="S",
-            domain="", created_at="", hypotheses=[], experiments=[],
-            findings=[], candidates=[], negative_controls=[],
-            positive_controls=[], citations=[], cost_data={}, events=[],
+            investigation_id="x",
+            prompt="Q",
+            summary="S",
+            domain="",
+            created_at="",
+            hypotheses=[],
+            experiments=[],
+            findings=[],
+            candidates=[],
+            negative_controls=[],
+            positive_controls=[],
+            citations=[],
+            cost_data={},
+            events=[],
         )
         assert "No references collected" in paper["references"]
 
@@ -467,10 +527,20 @@ class TestSupplementary:
 class TestEdgeCases:
     def test_empty_investigation(self) -> None:
         paper = generate_paper(
-            investigation_id="empty", prompt="Empty test", summary="",
-            domain="", created_at="", hypotheses=[], experiments=[],
-            findings=[], candidates=[], negative_controls=[],
-            positive_controls=[], citations=[], cost_data={}, events=[],
+            investigation_id="empty",
+            prompt="Empty test",
+            summary="",
+            domain="",
+            created_at="",
+            hypotheses=[],
+            experiments=[],
+            findings=[],
+            candidates=[],
+            negative_controls=[],
+            positive_controls=[],
+            citations=[],
+            cost_data={},
+            events=[],
         )
         assert "# Empty test" in paper["title"]
         assert "No synthesis available" in paper["abstract"]
@@ -481,20 +551,40 @@ class TestEdgeCases:
     def test_malformed_event_data_skipped(self) -> None:
         events = [{"event_type": "bad", "event_data": "not json{{{"}]
         paper = generate_paper(
-            investigation_id="x", prompt="Q", summary="S",
-            domain="", created_at="", hypotheses=[], experiments=[],
-            findings=[], candidates=[], negative_controls=[],
-            positive_controls=[], citations=[], cost_data={}, events=events,
+            investigation_id="x",
+            prompt="Q",
+            summary="S",
+            domain="",
+            created_at="",
+            hypotheses=[],
+            experiments=[],
+            findings=[],
+            candidates=[],
+            negative_controls=[],
+            positive_controls=[],
+            citations=[],
+            cost_data={},
+            events=events,
         )
         assert paper["full_markdown"]
 
     def test_event_missing_data_key(self) -> None:
         events = [{"event_type": "tool_called", "event_data": json.dumps({"tool_name": "x"})}]
         paper = generate_paper(
-            investigation_id="x", prompt="Q", summary="S",
-            domain="", created_at="", hypotheses=[], experiments=[],
-            findings=[], candidates=[], negative_controls=[],
-            positive_controls=[], citations=[], cost_data={}, events=events,
+            investigation_id="x",
+            prompt="Q",
+            summary="S",
+            domain="",
+            created_at="",
+            hypotheses=[],
+            experiments=[],
+            findings=[],
+            candidates=[],
+            negative_controls=[],
+            positive_controls=[],
+            citations=[],
+            cost_data={},
+            events=events,
         )
         assert paper["full_markdown"]
 
@@ -503,28 +593,32 @@ class TestEdgeCases:
 
 _VIZ_EVENT_1 = {
     "event_type": "visualization",
-    "event_data": json.dumps({
-        "event": "visualization",
-        "data": {
-            "viz_type": "binding_scatter",
-            "title": "Binding affinity vs LogP",
-            "data": {"points": [{"x": 1, "y": 2}]},
-            "config": {"xLabel": "LogP"},
-        },
-    }),
+    "event_data": json.dumps(
+        {
+            "event": "visualization",
+            "data": {
+                "viz_type": "binding_scatter",
+                "title": "Binding affinity vs LogP",
+                "data": {"points": [{"x": 1, "y": 2}]},
+                "config": {"xLabel": "LogP"},
+            },
+        }
+    ),
 }
 
 _VIZ_EVENT_2 = {
     "event_type": "visualization",
-    "event_data": json.dumps({
-        "event": "visualization",
-        "data": {
-            "viz_type": "forest_plot",
-            "title": "Effect sizes",
-            "data": {"studies": []},
-            "config": {},
-        },
-    }),
+    "event_data": json.dumps(
+        {
+            "event": "visualization",
+            "data": {
+                "viz_type": "forest_plot",
+                "title": "Effect sizes",
+                "data": {"studies": []},
+                "config": {},
+            },
+        }
+    ),
 }
 
 

@@ -44,9 +44,7 @@ class TestSearchEconomicIndicatorsBLS:
             new_callable=AsyncMock,
             return_value=series,
         ):
-            result = json.loads(
-                await search_economic_indicators("LNS14000000", source="bls")
-            )
+            result = json.loads(await search_economic_indicators("LNS14000000", source="bls"))
             assert result["source"] == "BLS"
             assert result["count"] == 1
             assert result["series"][0]["series_id"] == "LNS14000000"
@@ -71,9 +69,7 @@ class TestSearchEconomicIndicatorsCensus:
             new_callable=AsyncMock,
             return_value=benchmarks,
         ):
-            result = json.loads(
-                await search_economic_indicators("median_income", source="census")
-            )
+            result = json.loads(await search_economic_indicators("median_income", source="census"))
             assert result["source"] == "Census"
             assert result["count"] == 1
             assert result["data"][0]["geography"] == "California"
@@ -97,9 +93,7 @@ class TestSearchHealthIndicators:
             new_callable=AsyncMock,
             return_value=indicators,
         ):
-            result = json.loads(
-                await search_health_indicators("WHOSIS_000001", source="who")
-            )
+            result = json.loads(await search_health_indicators("WHOSIS_000001", source="who"))
             assert result["source"] == "WHO"
             assert result["count"] == 1
 
@@ -120,9 +114,7 @@ class TestSearchHealthIndicators:
             new_callable=AsyncMock,
             return_value=indicators,
         ):
-            result = json.loads(
-                await search_health_indicators("mortality", source="cdc")
-            )
+            result = json.loads(await search_health_indicators("mortality", source="cdc"))
             assert result["source"] == "CDC WONDER"
             assert result["count"] == 1
             assert result["data"][0]["value"] == 828.7
@@ -182,9 +174,7 @@ class TestSearchEducationData:
             new_callable=AsyncMock,
             return_value=records,
         ):
-            result = json.loads(
-                await search_education_data("Test University", state="CA")
-            )
+            result = json.loads(await search_education_data("Test University", state="CA"))
             assert result["source"] == "College Scorecard"
             assert result["count"] == 1
             assert result["schools"][0]["name"] == "Test University"

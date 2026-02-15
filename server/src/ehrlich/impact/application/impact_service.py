@@ -4,6 +4,7 @@ from dataclasses import asdict
 from typing import TYPE_CHECKING
 
 from ehrlich.analysis.application.statistics_service import StatisticsService
+from ehrlich.impact.domain.evaluation_standards import CONEVAL_MIR_LEVELS, CREMAA_CRITERIA
 
 if TYPE_CHECKING:
     from ehrlich.impact.domain.entities import (
@@ -39,6 +40,9 @@ class ImpactService:
         bls: EconomicDataRepository | None = None,
         census: DevelopmentDataRepository | None = None,
         cdc: HealthDataRepository | None = None,
+        inegi: EconomicDataRepository | None = None,
+        banxico: EconomicDataRepository | None = None,
+        datosgob: OpenDataRepository | None = None,
     ) -> None:
         self._economic = economic
         self._health = health
@@ -50,6 +54,9 @@ class ImpactService:
         self._bls = bls
         self._census = census
         self._cdc = cdc
+        self._inegi = inegi
+        self._banxico = banxico
+        self._datosgob = datosgob
         self._stats = StatisticsService()
 
     async def search_economic_data(self, query: str, limit: int = 10) -> list[EconomicSeries]:
@@ -116,9 +123,7 @@ class ImpactService:
     ) -> list[Benchmark]:
         if not self._census:
             return []
-        return await self._census.search_indicators(
-            indicator, state, year_start, year_end, limit
-        )
+        return await self._census.search_indicators(indicator, state, year_start, year_end, limit)
 
     async def search_spending_data(
         self,
@@ -160,6 +165,50 @@ class ImpactService:
         if not self._open_data:
             return []
         return await self._open_data.search_datasets(query, organization, limit)
+
+    async def search_inegi_data(self, query: str, limit: int = 10) -> list[EconomicSeries]:
+        if not self._inegi:
+            return []
+        return await self._inegi.search_series(query, limit)
+
+    async def search_banxico_data(self, query: str, limit: int = 10) -> list[EconomicSeries]:
+        if not self._banxico:
+            return []
+        return await self._banxico.search_series(query, limit)
+
+    async def search_mexican_open_data(
+        self,
+        query: str,
+        organization: str | None = None,
+        limit: int = 10,
+    ) -> list[DatasetMetadata]:
+        if not self._datosgob:
+            return []
+        return await self._datosgob.search_datasets(query, organization, limit)
+
+    def analyze_program_indicators(
+        self, indicator_name: str, level: str
+    ) -> dict[str, object]:
+        """Validate an MIR indicator against CREMAA criteria."""
+        level_clean = level.lower().strip()
+        level_description = CONEVAL_MIR_LEVELS.get(
+            level_clean, f"Unknown MIR level: {level_clean}"
+        )
+        criteria_results: dict[str, dict[str, str]] = {
+            criterion: {
+                "description": description,
+                "status": "requires_review",
+                "guidance": f"Evaluate '{indicator_name}' for: {description}",
+            }
+            for criterion, description in CREMAA_CRITERIA.items()
+        }
+        return {
+            "indicator_name": indicator_name,
+            "mir_level": level_clean,
+            "mir_level_description": level_description,
+            "cremaa_criteria": criteria_results,
+            "total_criteria": len(CREMAA_CRITERIA),
+        }
 
     async def fetch_benchmark(
         self,
@@ -211,9 +260,7 @@ class ImpactService:
             return [asdict(r) for r in health_results]
 
         if source == "cdc":
-            cdc_results = await self.search_cdc_data(
-                indicator, year_start, year_end, limit=10
-            )
+            cdc_results = await self.search_cdc_data(indicator, year_start, year_end, limit=10)
             return [asdict(r) for r in cdc_results]
 
         if source in ("world_bank", "development"):

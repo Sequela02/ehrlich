@@ -17,7 +17,9 @@ export type SSEEventType =
   | "domain_detected"
   | "literature_survey_completed"
   | "validation_metrics"
-  | "visualization";
+  | "visualization"
+  | "hypothesis_tree_updated"
+  | "positive_control";
 
 export interface SSEEvent {
   event: SSEEventType;
@@ -231,6 +233,24 @@ export interface ValidationMetricsData {
   negative_control_count: number;
   positive_mean: number;
   negative_mean: number;
+  investigation_id: string;
+}
+
+export interface PositiveControl {
+  identifier: string;
+  identifier_type: string;
+  name: string;
+  known_activity: string;
+  score: number;
+  correctly_classified: boolean;
+}
+
+export interface HypothesisTreeUpdatedData {
+  hypothesis_id: string;
+  action: string;
+  parent_id: string;
+  depth: number;
+  children_count: number;
   investigation_id: string;
 }
 

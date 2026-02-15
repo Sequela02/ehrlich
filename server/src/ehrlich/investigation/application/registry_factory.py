@@ -37,6 +37,7 @@ from ehrlich.chemistry.tools import (
     validate_smiles,
 )
 from ehrlich.impact.tools import (
+    analyze_program_indicators,
     compare_programs,
     fetch_benchmark,
     search_economic_indicators,
@@ -211,7 +212,7 @@ def build_tool_registry() -> ToolRegistry:
         ("check_interactions", check_interactions, _nutrition_safety),
         ("analyze_nutrient_ratios", analyze_nutrient_ratios, _nutrition),
         ("compute_inflammatory_index", compute_inflammatory_index, _nutrition),
-        # Impact Evaluation (8)
+        # Impact Evaluation (9)
         ("search_economic_indicators", search_economic_indicators, _impact),
         ("search_health_indicators", search_health_indicators, _impact),
         ("fetch_benchmark", fetch_benchmark, _impact),
@@ -220,6 +221,7 @@ def build_tool_registry() -> ToolRegistry:
         ("search_education_data", search_education_data, _impact),
         ("search_housing_data", search_housing_data, _impact),
         ("search_open_data", search_open_data, _impact),
+        ("analyze_program_indicators", analyze_program_indicators, _impact),
         # Causal Inference (6) -- domain-agnostic
         ("estimate_did", estimate_did, _causal),
         ("estimate_psm", estimate_psm, _causal),

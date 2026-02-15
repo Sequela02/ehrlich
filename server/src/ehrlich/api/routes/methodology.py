@@ -93,7 +93,7 @@ MODELS: list[dict[str, str]] = [
         "role": "Researcher",
         "model_id": "claude-sonnet-4-5-20250929",
         "purpose": (
-            "Executes experiments with 90 tools in parallel batches. "
+            "Executes experiments with 91 tools in parallel batches."
             "Records findings with evidence provenance and citations."
         ),
     },

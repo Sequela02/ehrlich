@@ -47,31 +47,27 @@ class CDCWonderClient(HealthDataRepository):
         year_end: int | None = None,
     ) -> str:
         params = [
-            '<parameter><name>B_1</name><value>*All*</value></parameter>',
-            '<parameter><name>B_2</name><value>*All*</value></parameter>',
-            '<parameter><name>M_1</name><value>D76.M1</value></parameter>',
-            '<parameter><name>O_V1_fmode</name><value>freg</value></parameter>',
-            '<parameter><name>O_V2_fmode</name><value>freg</value></parameter>',
+            "<parameter><name>B_1</name><value>*All*</value></parameter>",
+            "<parameter><name>B_2</name><value>*All*</value></parameter>",
+            "<parameter><name>M_1</name><value>D76.M1</value></parameter>",
+            "<parameter><name>O_V1_fmode</name><value>freg</value></parameter>",
+            "<parameter><name>O_V2_fmode</name><value>freg</value></parameter>",
         ]
         if year_start:
             params.append(
-                f'<parameter><name>V_D76.V1</name><value>{year_start}</value></parameter>'
+                f"<parameter><name>V_D76.V1</name><value>{year_start}</value></parameter>"
             )
         if year_end:
             params.append(
-                f'<parameter><name>V_D76.V1_end</name><value>{year_end}</value></parameter>'
+                f"<parameter><name>V_D76.V1_end</name><value>{year_end}</value></parameter>"
             )
 
         return (
             '<?xml version="1.0" encoding="utf-8"?>'
-            "<request-parameters>"
-            + "".join(params)
-            + "</request-parameters>"
+            "<request-parameters>" + "".join(params) + "</request-parameters>"
         )
 
-    def _parse_response(
-        self, xml_text: str, indicator: str, limit: int
-    ) -> list[HealthIndicator]:
+    def _parse_response(self, xml_text: str, indicator: str, limit: int) -> list[HealthIndicator]:
         try:
             root = ET.fromstring(xml_text)
         except ET.ParseError:
@@ -145,9 +141,7 @@ class CDCWonderClient(HealthDataRepository):
                     await asyncio.sleep(delay)
                     continue
             except httpx.HTTPStatusError as e:
-                raise ExternalServiceError(
-                    "CDC WONDER", f"HTTP {e.response.status_code}"
-                ) from e
+                raise ExternalServiceError("CDC WONDER", f"HTTP {e.response.status_code}") from e
         raise ExternalServiceError(
             "CDC WONDER",
             f"Request failed after {_MAX_RETRIES} attempts: {last_error}",

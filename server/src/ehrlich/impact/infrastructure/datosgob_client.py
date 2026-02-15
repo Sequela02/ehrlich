@@ -9,13 +9,13 @@ from ehrlich.kernel.exceptions import ExternalServiceError
 
 logger = logging.getLogger(__name__)
 
-_BASE_URL = "https://catalog.data.gov/api/3/action"
+_BASE_URL = "https://datos.gob.mx/busca/api/3/action"
 _TIMEOUT = 20.0
 _MAX_RETRIES = 3
 _BASE_DELAY = 1.0
 
 
-class DataGovClient(OpenDataRepository):
+class DatosGobClient(OpenDataRepository):
     def __init__(self) -> None:
         self._client = httpx.AsyncClient(timeout=_TIMEOUT)
 
@@ -80,7 +80,7 @@ class DataGovClient(OpenDataRepository):
                 if resp.status_code == 429:
                     delay = _BASE_DELAY * (2**attempt)
                     logger.warning(
-                        "data.gov rate limited (attempt %d/%d), retrying in %.1fs",
+                        "datos.gob.mx rate limited (attempt %d/%d), retrying in %.1fs",
                         attempt + 1,
                         _MAX_RETRIES,
                         delay,
@@ -88,14 +88,14 @@ class DataGovClient(OpenDataRepository):
                     if attempt < _MAX_RETRIES - 1:
                         await asyncio.sleep(delay)
                         continue
-                    raise ExternalServiceError("data.gov", "Rate limit exceeded")
+                    raise ExternalServiceError("datos.gob.mx", "Rate limit exceeded")
                 resp.raise_for_status()
                 return resp.json()  # type: ignore[no-any-return]
             except httpx.TimeoutException as e:
                 last_error = e
                 delay = _BASE_DELAY * (2**attempt)
                 logger.warning(
-                    "data.gov timeout (attempt %d/%d), retrying in %.1fs",
+                    "datos.gob.mx timeout (attempt %d/%d), retrying in %.1fs",
                     attempt + 1,
                     _MAX_RETRIES,
                     delay,
@@ -104,8 +104,8 @@ class DataGovClient(OpenDataRepository):
                     await asyncio.sleep(delay)
                     continue
             except httpx.HTTPStatusError as e:
-                raise ExternalServiceError("data.gov", f"HTTP {e.response.status_code}") from e
+                raise ExternalServiceError("datos.gob.mx", f"HTTP {e.response.status_code}") from e
         raise ExternalServiceError(
-            "data.gov",
+            "datos.gob.mx",
             f"Request failed after {_MAX_RETRIES} attempts: {last_error}",
         )

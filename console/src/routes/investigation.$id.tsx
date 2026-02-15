@@ -1,19 +1,21 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useRef, useEffect, useState, useMemo } from "react";
-import { ExternalLink, PanelRightClose, PanelRightOpen, WifiOff } from "lucide-react";
+import { AlertCircle, ChevronDown, ExternalLink, Home, Loader2, PanelRightClose, PanelRightOpen, WifiOff } from "lucide-react";
 import { PageHeader } from "@/shared/components/layout/PageHeader";
-import type { PhaseInfo } from "@/features/investigation/types";
+import { Badge } from "@/shared/components/ui/badge";
 import { cn } from "@/shared/lib/utils";
 import { ErrorBoundary } from "@/features/shared/components/ErrorBoundary";
 import {
   Timeline,
-  CandidateTable,
   CostBadge,
   HypothesisBoard,
   ActiveExperimentCard,
-  CompletionSummaryCard,
   NegativeControlPanel,
   InvestigationDiagram,
+  PhaseProgress,
+  PhaseSection,
+  LiteratureSurveyCard,
+  ClassificationCard,
 } from "@/features/investigation/components";
 import { HypothesisApprovalCard } from "@/features/investigation/components/HypothesisApprovalCard";
 import { FindingsPanel } from "@/features/investigation/components/FindingsPanel";
@@ -25,8 +27,6 @@ import VisualizationPanel from "@/features/visualization/VisualizationPanel";
 export const Route = createFileRoute("/investigation/$id")({
   component: InvestigationPage,
 });
-
-type ViewTab = "timeline" | "diagram";
 
 function InvestigationPage() {
   const { id } = Route.useParams();
@@ -41,6 +41,7 @@ function InvestigationPage() {
     currentExperimentId,
     experiments,
     negativeControls,
+    positiveControls,
     findings,
     candidates,
     summary,
@@ -50,6 +51,7 @@ function InvestigationPage() {
     approvalPending,
     pendingApprovalHypotheses,
     domainConfig,
+    literatureSurvey,
     validationMetrics,
     error,
     activeToolName,
@@ -59,20 +61,19 @@ function InvestigationPage() {
     diagramUrl,
   } = useSSE(streamUrl);
 
-  const [activeTab, setActiveTab] = useState<ViewTab>("diagram");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const sidebarTimelineRef = useRef<HTMLDivElement>(null);
-  const mobileTimelineRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    for (const ref of [sidebarTimelineRef, mobileTimelineRef]) {
-      const el = ref.current;
-      if (el) el.scrollTop = el.scrollHeight;
-    }
+    const el = sidebarTimelineRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [events.length]);
 
   const currentExperiment = experiments.find((e) => e.id === currentExperimentId);
   const linkedHypothesis = hypotheses.find((h) => h.id === currentHypothesisId);
+
+  const phaseNumber = currentPhase?.phase ?? 0;
+  const effectiveCurrentPhase = completed ? 7 : phaseNumber;
 
   const diagramHypotheses: HypothesisNode[] = useMemo(
     () =>
@@ -117,7 +118,11 @@ function InvestigationPage() {
         backTo="/"
         rightContent={
           <div className="flex items-center gap-3">
-            {!completed && <PhaseIndicator phase={currentPhase} />}
+            {domainConfig && (
+              <Badge variant="outline" className="hidden text-[10px] sm:inline-flex">
+                {domainConfig.display_name}
+              </Badge>
+            )}
             <StatusIndicator
               connected={connected}
               reconnecting={reconnecting}
@@ -141,99 +146,108 @@ function InvestigationPage() {
         }
       />
 
-      {/* Experiment status bar (hidden when approval is pending -- approval moves to main content) */}
-      {!approvalPending && (
-        <div className="shrink-0 border-b border-border px-4 py-2 lg:px-6">
-          {completed ? (
-            <CompletionSummaryCard
-              candidateCount={candidates.length}
-              findingCount={findings.length}
-              hypothesisCount={hypotheses.length}
-              cost={cost}
-            />
-          ) : (
-            <ActiveExperimentCard
-              completed={completed}
-              currentExperimentId={currentExperimentId}
-              experimentDescription={currentExperiment?.description}
-              linkedHypothesis={linkedHypothesis}
-              activeToolName={activeToolName}
-              experimentToolCount={experimentToolCount}
-              experimentFindingCount={experimentFindingCount}
-              currentExperiment={currentExperiment}
-            />
-          )}
-        </div>
-      )}
+      {/* Phase progress bar */}
+      <PhaseProgress phase={currentPhase} completed={completed} />
 
       {/* Split pane: left content + right timeline sidebar */}
       <div className="flex flex-1 flex-col lg:min-h-0 lg:flex-row">
         {/* Left panel */}
-        <main className="flex-1 space-y-6 p-4 lg:min-w-0 lg:overflow-y-auto lg:p-6">
-          {/* --- APPROVAL GATE: prominent in main content when hypotheses need review --- */}
-          {approvalPending && (
-            <HypothesisApprovalCard
-              investigationId={id}
-              hypotheses={pendingApprovalHypotheses}
-              onApproved={() => { }}
-            />
+        <main className="flex-1 space-y-4 p-4 lg:min-w-0 lg:overflow-y-auto lg:p-6">
+          {/* Error state */}
+          {error && (
+            <ErrorState error={error} investigationId={id} hasPartialResults={phaseNumber > 1} />
           )}
 
-          {/* Hypothesis board (live view only) */}
-          {!completed && (
-            <HypothesisBoard
-              hypotheses={hypotheses}
-              currentHypothesisId={currentHypothesisId}
-            />
+          {/* Loading state -- before any phase starts and no error */}
+          {!error && !completed && phaseNumber === 0 && (
+            <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">
+                {connected ? "Initializing investigation..." : "Connecting to investigation stream..."}
+              </p>
+            </div>
           )}
 
-          {/* --- Shared: Tab bar + Diagram + Visualizations --- */}
-          <div className="flex gap-1 rounded-md border border-border bg-muted/30 p-1">
-            <button
-              onClick={() => setActiveTab("timeline")}
-              className={cn(
-                "rounded-md px-4 py-1.5 font-mono text-[11px] font-medium uppercase tracking-wider transition-colors lg:hidden",
-                activeTab === "timeline"
-                  ? "bg-surface text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              Timeline
-            </button>
-            <button
-              onClick={() => setActiveTab("diagram")}
-              className={cn(
-                "rounded-md px-4 py-1.5 font-mono text-[11px] font-medium uppercase tracking-wider transition-colors",
-                activeTab === "diagram"
-                  ? "bg-surface text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              Diagram
-            </button>
-          </div>
+          {/* Phase 1: Classification */}
+          <PhaseSection
+            phaseNumber={1}
+            currentPhase={effectiveCurrentPhase}
+            completed={completed}
+            title="Classification"
+            summaryContent={domainConfig?.display_name ?? "Classified"}
+          >
+            <ClassificationCard domainConfig={domainConfig} />
+          </PhaseSection>
 
-          {activeTab === "timeline" && (
-            <section className="lg:hidden">
-              <div
-                ref={mobileTimelineRef}
-                className="max-h-[500px] overflow-y-auto rounded-md border border-border bg-surface p-4"
-              >
-                <Timeline events={events} />
+          {/* Phase 2: Literature Survey */}
+          <PhaseSection
+            phaseNumber={2}
+            currentPhase={effectiveCurrentPhase}
+            completed={completed}
+            title="Literature Survey"
+            summaryContent={
+              literatureSurvey
+                ? `${literatureSurvey.included_results}/${literatureSurvey.total_results} papers · ${literatureSurvey.evidence_grade} grade`
+                : "Surveyed"
+            }
+          >
+            {literatureSurvey ? (
+              <LiteratureSurveyCard data={literatureSurvey} />
+            ) : (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground/60">
+                <div className="h-2 w-2 animate-pulse rounded-full bg-primary/40" />
+                Searching literature...
               </div>
-            </section>
-          )}
+            )}
+          </PhaseSection>
 
-          {activeTab === "diagram" && (
-            <section className="space-y-2">
-              <div>
-                <h3 className="border-l-2 border-primary pl-4 font-mono text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                  Investigation Diagram
-                </h3>
-                <p className="mt-1 pl-6 text-xs leading-relaxed text-muted-foreground/60">
-                  Visual map of hypothesis-experiment-finding relationships. Scroll to zoom, drag to pan.
-                </p>
-              </div>
+          {/* Phase 3: Formulation */}
+          <PhaseSection
+            phaseNumber={3}
+            currentPhase={effectiveCurrentPhase}
+            completed={completed}
+            title="Formulation"
+            summaryContent={`${hypotheses.length} hypothes${hypotheses.length === 1 ? "is" : "es"} formulated`}
+          >
+            {approvalPending ? (
+              <HypothesisApprovalCard
+                investigationId={id}
+                hypotheses={pendingApprovalHypotheses}
+                onApproved={() => {}}
+              />
+            ) : (
+              <HypothesisBoard
+                hypotheses={hypotheses}
+                currentHypothesisId={currentHypothesisId}
+              />
+            )}
+          </PhaseSection>
+
+          {/* Phase 4: Hypothesis Testing */}
+          <PhaseSection
+            phaseNumber={4}
+            currentPhase={effectiveCurrentPhase}
+            completed={completed}
+            title="Hypothesis Testing"
+            summaryContent={`${experiments.length} experiment${experiments.length === 1 ? "" : "s"} · ${findings.length} finding${findings.length === 1 ? "" : "s"}`}
+          >
+            <div className="space-y-6">
+              <ActiveExperimentCard
+                completed={completed}
+                currentExperimentId={currentExperimentId}
+                experimentDescription={currentExperiment?.description}
+                linkedHypothesis={linkedHypothesis}
+                activeToolName={activeToolName}
+                experimentToolCount={experimentToolCount}
+                experimentFindingCount={experimentFindingCount}
+                currentExperiment={currentExperiment}
+              />
+
+              <HypothesisBoard
+                hypotheses={hypotheses}
+                currentHypothesisId={currentHypothesisId}
+              />
+
               <ErrorBoundary fallbackMessage="Failed to load investigation diagram">
                 <InvestigationDiagram
                   hypotheses={diagramHypotheses}
@@ -241,40 +255,43 @@ function InvestigationPage() {
                   findings={diagramFindings}
                 />
               </ErrorBoundary>
-            </section>
-          )}
 
-          <VisualizationPanel
-            visualizations={visualizations}
-            events={events}
-            experiments={experiments}
+              <VisualizationPanel
+                visualizations={visualizations}
+                events={events}
+                experiments={experiments}
+                completed={completed}
+              />
+
+              <FindingsPanel findings={findings} />
+            </div>
+          </PhaseSection>
+
+          {/* Phase 5: Controls */}
+          <PhaseSection
+            phaseNumber={5}
+            currentPhase={effectiveCurrentPhase}
             completed={completed}
-          />
+            title="Controls"
+            summaryContent={
+              validationMetrics
+                ? `${negativeControls.length + positiveControls.length} controls · Z'=${validationMetrics.z_prime?.toFixed(2) ?? "N/A"}`
+                : `${negativeControls.length + positiveControls.length} controls`
+            }
+          >
+            <NegativeControlPanel controls={negativeControls} />
+          </PhaseSection>
 
-          {/* --- LIVE VIEW: progressive components --- */}
-          {!completed && (
-            <>
-              <section>
-                <FindingsPanel findings={findings} />
-              </section>
-
-              {candidates.length > 0 && (
-                <section>
-                  <CandidateTable candidates={candidates} domainConfig={domainConfig} />
-                </section>
-              )}
-
-              {negativeControls.length > 0 && (
-                <section>
-                  <NegativeControlPanel controls={negativeControls} />
-                </section>
-              )}
-            </>
-          )}
-
-          {/* --- COMPLETED VIEW: structured report --- */}
-          {completed && (
-            <>
+          {/* Phase 6: Synthesis */}
+          <PhaseSection
+            phaseNumber={6}
+            currentPhase={effectiveCurrentPhase}
+            completed={completed}
+            title="Synthesis"
+            summaryContent={`${candidates.length} candidate${candidates.length === 1 ? "" : "s"} identified`}
+            defaultExpanded
+          >
+            <div className="space-y-6">
               <InvestigationReport
                 investigationId={id}
                 prompt={prompt}
@@ -300,8 +317,8 @@ function InvestigationPage() {
                   View Visual Summary
                 </a>
               )}
-            </>
-          )}
+            </div>
+          </PhaseSection>
         </main>
 
         {/* Right panel: timeline sidebar (desktop only) */}
@@ -335,6 +352,64 @@ function InvestigationPage() {
           </div>
         </aside>
       </div>
+    </div>
+  );
+}
+
+function ErrorState({
+  error,
+  investigationId,
+  hasPartialResults,
+}: {
+  error: string;
+  investigationId: string;
+  hasPartialResults: boolean;
+}) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
+
+  return (
+    <div className="flex flex-col items-center gap-6 py-12 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10">
+        <AlertCircle className="h-7 w-7 text-destructive" />
+      </div>
+
+      <div className="max-w-md space-y-2">
+        <h2 className="text-lg font-semibold text-foreground">
+          Something went wrong
+        </h2>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          {hasPartialResults
+            ? "The investigation encountered an error before it could finish. Partial results from completed phases are shown below."
+            : "The investigation could not be completed. This can happen due to a temporary service issue or an invalid research prompt."}
+        </p>
+      </div>
+
+      <Link
+        to="/"
+        className="inline-flex items-center gap-2 rounded-sm bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+      >
+        <Home className="h-3.5 w-3.5" />
+        Start New Investigation
+      </Link>
+
+      <button
+        onClick={() => setDetailsOpen((p) => !p)}
+        className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/50 transition-colors hover:text-muted-foreground"
+      >
+        Technical details
+        <ChevronDown className={`h-3 w-3 transition-transform ${detailsOpen ? "rotate-180" : ""}`} />
+      </button>
+
+      {detailsOpen && (
+        <div className="w-full max-w-lg rounded-md border border-border bg-muted/30 p-3 text-left">
+          <p className="font-mono text-[11px] text-muted-foreground/70 break-all">
+            {error}
+          </p>
+          <p className="mt-2 font-mono text-[10px] text-muted-foreground/40">
+            Investigation ID: {investigationId}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -387,31 +462,5 @@ function StatusIndicator({
       <span className="h-2 w-2 rounded-full bg-muted-foreground" />
       Connecting
     </span>
-  );
-}
-
-function PhaseIndicator({ phase }: { phase: PhaseInfo | null }) {
-  if (!phase) return null;
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex gap-0.5">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <div
-            key={i}
-            className={cn(
-              "h-1.5 w-6 rounded-full transition-colors",
-              i < phase.phase
-                ? "bg-primary"
-                : i === phase.phase
-                  ? "animate-pulse bg-primary"
-                  : "bg-muted",
-            )}
-          />
-        ))}
-      </div>
-      <span className="font-mono text-[11px] text-muted-foreground">
-        {phase.name}
-      </span>
-    </div>
   );
 }

@@ -3,15 +3,15 @@ Back to [Roadmap Index](README.md)
 # Backlog (Post-Hackathon)
 
 - ~~Phase 11: Investigation Comparison~~ DONE (11A + 11C client-side)
-- Phase 13C: Mexico Integration (INEGI, datos.gob.mx, Transparencia, Banxico)
-- Phase 13D: US Integration (Census, BLS, USAspending, CDC WONDER)
-- Phase 13E: MCP Bridge Self-Service
+- ~~Phase 13C: Mexico Integration~~ DONE (INEGI, Banxico, datos.gob.mx)
+- ~~Phase 13D: US Integration~~ DONE (Census, BLS, USAspending, CDC WONDER)
+- Phase 15: Stripe integration for paid credit packs
+- Phase 16: MCP Bridge Self-Service (user registration UI, connection testing, tool auto-discovery)
 - Competitive Sports Domain
 - Batch screening mode (score entire ZINC subsets)
 - Automated synthesis lab integration (Emerald Cloud Lab, Strateos)
 - Community contributions: new domains, new tools, new data sources
 - Rewarded ads for free credits (AdMob/AdSense integration)
-- Stripe integration for paid credit packs
 - Admin dashboard for usage analytics
 - Planner agent (Sonnet 4.5) for experiment design between Director and Researcher
 - Reviewer agent (Sonnet 4.5) for findings audit between Researcher and Director

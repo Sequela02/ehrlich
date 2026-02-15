@@ -28,13 +28,9 @@ class USAspendingClient(SpendingDataRepository):
     ) -> list[SpendingRecord]:
         filters: dict[str, object] = {"keyword": query}
         if agency:
-            filters["agencies"] = [
-                {"type": "awarding", "tier": "toptier", "name": agency}
-            ]
+            filters["agencies"] = [{"type": "awarding", "tier": "toptier", "name": agency}]
         if year:
-            filters["time_period"] = [
-                {"start_date": f"{year}-01-01", "end_date": f"{year}-12-31"}
-            ]
+            filters["time_period"] = [{"start_date": f"{year}-01-01", "end_date": f"{year}-12-31"}]
 
         body: dict[str, object] = {
             "filters": filters,
@@ -101,9 +97,7 @@ class USAspendingClient(SpendingDataRepository):
                     await asyncio.sleep(delay)
                     continue
             except httpx.HTTPStatusError as e:
-                raise ExternalServiceError(
-                    "USAspending", f"HTTP {e.response.status_code}"
-                ) from e
+                raise ExternalServiceError("USAspending", f"HTTP {e.response.status_code}") from e
         raise ExternalServiceError(
             "USAspending",
             f"Request failed after {_MAX_RETRIES} attempts: {last_error}",

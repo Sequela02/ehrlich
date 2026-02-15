@@ -1,6 +1,6 @@
 Back to [Roadmap Index](README.md)
 
-# Phase 13: Impact Evaluation Domain -- IN PROGRESS (13C, 13E remaining)
+# Phase 13: Impact Evaluation Domain -- DONE
 
 New bounded context for hypothesis-driven causal analysis of social programs. Domain-agnostic methodology works for any program type (sports, health, education, employment, housing) in any country. Initial focus: Mexico and US. Causal inference methods (DiD, PSM, RDD, Synthetic Control) live in `analysis/` as domain-agnostic tools usable by any domain. No existing platform combines autonomous hypothesis formulation, automated causal inference, public API integration, and evidence-graded reporting. See `docs/adr/impact-evaluation-domain.md` for full design.
 
@@ -81,19 +81,23 @@ Refactored causal inference from impact-specific to domain-agnostic. All causal 
 
 **Counts:** 84 -> 85 tools (added `query_uploaded_data`). Investigation tools: 7 -> 8.
 
-## Phase 13C: Mexico Integration
+## Phase 13C: Mexico Integration -- DONE
 
-- [ ] INEGI Indicadores API client (`https://www.inegi.org.mx/app/api/indicadores/`) -- census, demographics
-- [ ] INEGI DENUE API client (`https://www.inegi.org.mx/app/api/denue/v1/`) -- 5M+ businesses
-- [ ] datos.gob.mx CKAN client (`https://datos.gob.mx/api/3/action/`) -- 1000+ federal datasets
-- [ ] Transparencia Presupuestaria client (`https://nptp.hacienda.gob.mx/`) -- budget execution
-- [ ] Banxico SIE client (`https://www.banxico.org.mx/SieAPIRest/service/v1/`) -- economic indicators
-- [ ] `search_census_data` tool -- query INEGI/Census by indicator/geography/period
-- [ ] `search_budget_data` tool -- query budget execution and social program spending
-- [ ] `extract_mir` tool -- extract MIR (Matriz de Indicadores) from evaluation documents
-- [ ] `analyze_program_indicators` tool -- MIR/logical framework indicator analysis with CREMAA validation
-- [ ] Frontend: `MIRTable.tsx` logical framework matrix
-- [ ] CONEVAL ECR report template for `generate_evaluation_report`
+- [x] INEGI Indicadores API client (`https://www.inegi.org.mx/app/api/indicadores/`) -- economic/demographic time series
+- [x] Banxico SIE client (`https://www.banxico.org.mx/SieAPIRest/service/v1/`) -- central bank financial series
+- [x] datos.gob.mx CKAN client (`https://datos.gob.mx/busca/api/3/action/`) -- 1000+ federal open datasets
+- [x] `search_economic_indicators` extended with `source="inegi"` and `source="banxico"` branches
+- [x] `search_open_data` extended with `source="datosgob"` branch for datos.gob.mx
+- [x] `analyze_program_indicators` tool -- MIR logical framework indicator analysis with all 6 CREMAA criteria
+- [x] Mexico domain categories added: `mexico_social_program`, `coneval_evaluation`
+- [x] 2 Mexico template prompts (CONEVAL program evaluation, Banxico monetary policy)
+- [x] Mexico tool examples in `experiment_examples` (INEGI, Banxico, datos.gob.mx, CREMAA)
+- [x] `ImpactService`: `search_inegi_data`, `search_banxico_data`, `search_mexican_open_data`, `analyze_program_indicators`
+- [x] Tests: 37 new tests (test_mx_clients.py + test_mx_tools.py)
+
+**Counts:** 90 -> 91 tools (+1 `analyze_program_indicators`), 25 -> 27 data sources (+INEGI, Banxico, datos.gob.mx). Note: data.gov was already counted separately.
+
+Deferred (post-hackathon): INEGI DENUE, Transparencia Presupuestaria, `extract_mir`, `MIRTable.tsx`, CONEVAL ECR report template.
 
 ## Phase 13D: US Integration -- DONE
 
@@ -115,14 +119,7 @@ Refactored causal inference from impact-specific to domain-agnostic. All causal 
 
 **Counts:** 85 -> 90 tools (+5 new), 19 -> 25 data sources (+6: Census, BLS, USAspending, College Scorecard, HUD, CDC WONDER). Also added data.gov client (shares tool with datos.gob.mx).
 
-## Phase 13E: MCP Bridge Self-Service
-
-- [ ] User MCP server registration UI (`/settings/data-sources`)
-- [ ] Connection testing and tool auto-discovery
-- [ ] Per-organization data source management
-- [ ] Tool auto-tagging with domain tags for discovery
-
-## Data Sources (10 implemented, 5 planned for 13C)
+## Data Sources (13 implemented)
 
 | Source | API | Purpose | Auth | Phase | Status |
 |--------|-----|---------|------|-------|--------|
@@ -136,11 +133,11 @@ Refactored causal inference from impact-specific to domain-agnostic. All causal 
 | HUD | `https://www.huduser.gov/hudapi/public/` | Housing data (FMR, income limits) | Bearer token | 13D | DONE |
 | CDC WONDER | `https://wonder.cdc.gov/` | Mortality, natality (XML API) | None | 13D | DONE |
 | data.gov | `https://catalog.data.gov/api/3/action/` | Federal dataset discovery (CKAN) | None | 13D | DONE |
-| INEGI Indicadores | `https://www.inegi.org.mx/app/api/indicadores/` | Mexico census, demographics | Token | 13C | TODO |
-| INEGI DENUE | `https://www.inegi.org.mx/app/api/denue/v1/` | Mexico business directory (5M+) | Token | 13C | TODO |
-| datos.gob.mx | `https://datos.gob.mx/api/3/action/` | Mexico open data (CKAN, 1000+ datasets) | Token (optional) | 13C | TODO |
-| Transparencia Presupuestaria | `https://nptp.hacienda.gob.mx/` | Mexico budget execution | None | 13C | TODO |
-| Banxico SIE | `https://www.banxico.org.mx/SieAPIRest/service/v1/` | Mexico economic indicators | Token | 13C | TODO |
+| INEGI Indicadores | `https://www.inegi.org.mx/app/api/indicadores/` | Mexico economic/demographic time series | Token | 13C | DONE |
+| Banxico SIE | `https://www.banxico.org.mx/SieAPIRest/service/v1/` | Mexico central bank financial series | Token | 13C | DONE |
+| datos.gob.mx | `https://datos.gob.mx/busca/api/3/action/` | Mexico open data (CKAN, 1000+ datasets) | None | 13C | DONE |
+| INEGI DENUE | `https://www.inegi.org.mx/app/api/denue/v1/` | Mexico business directory (5M+) | Token | 13C | DEFERRED |
+| Transparencia Presupuestaria | `https://nptp.hacienda.gob.mx/` | Mexico budget execution | None | 13C | DEFERRED |
 
 ## Tools (Planned: ~18 new tools + ~6 viz tools)
 

@@ -14,6 +14,7 @@ import type {
   LiteratureSurveyCompletedData,
   NegativeControl,
   PhaseInfo,
+  PositiveControl,
   SSEEvent,
   SSEEventType,
   ValidationMetricsData,
@@ -40,6 +41,8 @@ const EVENT_TYPES: SSEEventType[] = [
   "literature_survey_completed",
   "validation_metrics",
   "visualization",
+  "hypothesis_tree_updated",
+  "positive_control",
 ];
 
 const MAX_RETRIES = 3;
@@ -55,6 +58,7 @@ interface SSEState {
   currentExperimentId: string;
   experiments: Experiment[];
   negativeControls: NegativeControl[];
+  positiveControls: PositiveControl[];
   findings: Finding[];
   candidates: CandidateRow[];
   summary: string;
@@ -86,6 +90,7 @@ export function useSSE(url: string | null): SSEState {
   const [currentExperimentId, setCurrentExperimentId] = useState("");
   const [experiments, setExperiments] = useState<Experiment[]>([]);
   const [negativeControls, setNegativeControls] = useState<NegativeControl[]>([]);
+  const [positiveControls, setPositiveControls] = useState<PositiveControl[]>([]);
   const [findings, setFindings] = useState<Finding[]>([]);
   const [candidates, setCandidates] = useState<CandidateRow[]>([]);
   const [summary, setSummary] = useState("");
@@ -111,6 +116,44 @@ export function useSSE(url: string | null): SSEState {
   const sourceRef = useRef<EventSource | null>(null);
   const attemptRef = useRef(0);
   const doneRef = useRef(false);
+  const prevUrlRef = useRef(url);
+
+  // Reset all state when url changes (switching investigations)
+  if (prevUrlRef.current !== url) {
+    prevUrlRef.current = url;
+    toast.dismiss();
+    setEvents([]);
+    setEventsByExperiment(new Map());
+    setConnected(false);
+    setReconnecting(false);
+    setCompleted(false);
+    setHypotheses([]);
+    setCurrentHypothesisId("");
+    setCurrentExperimentId("");
+    setExperiments([]);
+    setNegativeControls([]);
+    setPositiveControls([]);
+    setFindings([]);
+    setCandidates([]);
+    setSummary("");
+    setPrompt("");
+    setCost(null);
+    setCurrentPhase(null);
+    setApprovalPending(false);
+    setPendingApprovalHypotheses([]);
+    setDomainConfig(null);
+    setLiteratureSurvey(null);
+    setValidationMetrics(null);
+    setError(null);
+    setToolCallCount(0);
+    setActiveToolName("");
+    setExperimentToolCount(0);
+    setExperimentFindingCount(0);
+    setVisualizations([]);
+    setDiagramUrl(null);
+    doneRef.current = false;
+    attemptRef.current = 0;
+  }
 
   const handleEvent = useCallback((eventType: SSEEventType, raw: string) => {
     if (!raw || raw === "undefined") return;
@@ -304,6 +347,21 @@ export function useSSE(url: string | null): SSEState {
           parsed.data as unknown as VisualizationData,
         ]);
         break;
+      case "positive_control": {
+        const pc: PositiveControl = {
+          identifier: parsed.data.identifier as string,
+          identifier_type: (parsed.data.identifier_type as string) || "",
+          name: parsed.data.name as string,
+          known_activity: (parsed.data.known_activity as string) || "",
+          score: parsed.data.score as number,
+          correctly_classified: parsed.data.correctly_classified as boolean,
+        };
+        setPositiveControls((prev) => [...prev, pc]);
+        break;
+      }
+      case "hypothesis_tree_updated":
+        // Stored in events array for potential future use
+        break;
       case "completed": {
         const d = parsed.data as unknown as CompletedData;
         setSummary(d.summary);
@@ -423,6 +481,7 @@ export function useSSE(url: string | null): SSEState {
     currentExperimentId,
     experiments,
     negativeControls,
+    positiveControls,
     findings,
     candidates,
     summary,

@@ -17,7 +17,7 @@ Ehrlich is **COSS** (Commercial Open-Source Software) -- the same model used by 
 | **Self-host** | Clone the repo, bring your own Anthropic API key | Free. No limits, no credits, no account needed |
 | **Hosted instance** | Use app.ehrlich.dev | Credits cover Anthropic API costs (Opus is expensive) |
 
-Credits exist because Claude Opus costs real money per investigation. They make scientific reasoning **accessible** -- not monetized. A student in Mexico and a pharma company in Boston get the same 90 tools, the same 24 data sources, the same methodology. The model quality is the only variable.
+Credits exist because Claude Opus costs real money per investigation. They make scientific reasoning **accessible** -- not monetized. A student in Mexico and a pharma company in Boston get the same 91 tools, the same 28 data sources, the same methodology. The model quality is the only variable.
 
 The AI is the scientist. The platform is the laboratory.
 
@@ -44,8 +44,10 @@ Ehrlich is **domain-agnostic**. The hypothesis-driven engine works for any scien
 - **Social program analysis** -- "Evaluate the effectiveness of Sonora's sports scholarship program"
 - **Causal inference** -- "Does the conditional cash transfer reduce school dropout rates?" (4 methods: DiD, PSM, RDD, Synthetic Control)
 - **Cross-country benchmarking** -- "Compare cost-effectiveness of state sports programs in Mexico"
-- Economic indicators from World Bank, WHO GHO, FRED, Census Bureau, and BLS
+- Economic indicators from World Bank, WHO GHO, FRED, Census Bureau, BLS, INEGI, and Banxico
 - US federal data: USAspending grants, College Scorecard education outcomes, HUD housing data, CDC WONDER mortality/natality, data.gov open datasets
+- Mexico data: INEGI economic/demographic series, Banxico SIE financial series, datos.gob.mx open datasets
+- CONEVAL/CREMAA indicator quality analysis (MIR framework validation)
 - Cross-program comparison and international benchmarking
 - Domain-agnostic causal inference tools (in analysis/ context) usable by any domain
 
@@ -65,7 +67,7 @@ Ehrlich follows Domain-Driven Design with eleven bounded contexts:
 | **training** | Exercise physiology: evidence analysis, protocol comparison, injury risk, training metrics, clinical trials |
 | **nutrition** | Nutrition science: supplement evidence, labels, nutrients, safety, interactions, adequacy, inflammatory index |
 | **investigation** | Multi-model agent orchestration with Director-Worker-Summarizer pattern + domain registry + MCP bridge |
-| **impact** | Social program evaluation: economic indicators (World Bank, WHO GHO, FRED, Census, BLS), health (CDC WONDER), spending (USAspending), education (College Scorecard), housing (HUD), open data (data.gov). Causal estimators live in analysis/ (domain-agnostic) |
+| **impact** | Social program evaluation: economic indicators (World Bank, WHO GHO, FRED, Census, BLS, INEGI, Banxico), health (CDC WONDER), spending (USAspending), education (College Scorecard), housing (HUD), open data (data.gov, datos.gob.mx), CONEVAL/CREMAA MIR analysis. Causal estimators live in analysis/ (domain-agnostic) |
 
 ### Multi-Model Architecture
 
@@ -73,7 +75,7 @@ Ehrlich uses a three-tier Claude model architecture for cost-efficient investiga
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesizes (3-5 calls)
-Sonnet 4.5 (Researcher) -- Executes experiments with 90 tools (10-20 calls)
+Sonnet 4.5 (Researcher) -- Executes experiments with 91 tools (10-20 calls)
 Haiku 4.5 (Summarizer)  -- Compresses large outputs, classifies domains (5-10 calls)
 ```
 
@@ -107,10 +109,14 @@ Cost: ~$3-4 per investigation (vs ~$11 with all-Opus).
 | [College Scorecard](https://collegescorecard.ed.gov/) | US higher education outcomes (completion, earnings) | 6K+ institutions |
 | [HUD](https://www.huduser.gov/) | Fair Market Rents, income limits, housing data | All US counties |
 | [CDC WONDER](https://wonder.cdc.gov/) | US mortality, natality, public health statistics | National-level |
+| [data.gov](https://catalog.data.gov/) | US federal open dataset discovery (CKAN) | 300K+ datasets |
+| [INEGI Indicadores](https://www.inegi.org.mx/app/api/indicadores/) | Mexico economic/demographic time series | 400K+ series |
+| [Banxico SIE](https://www.banxico.org.mx/SieAPIRest/service/v1/) | Mexico central bank financial series | Exchange rates, inflation, reserves |
+| [datos.gob.mx](https://datos.gob.mx/) | Mexico federal open dataset discovery (CKAN) | 1000+ datasets |
 
 All data sources are free and open-access.
 
-## 90 Tools
+## 91 Tools
 
 | Context | Tool | Description |
 |---------|------|-------------|
@@ -169,14 +175,15 @@ All data sources are free and open-access.
 | Nutrition | `check_interactions` | Drug-supplement interaction screening via RxNav |
 | Nutrition | `analyze_nutrient_ratios` | Key nutrient ratio analysis (omega-6:3, Ca:Mg, etc.) |
 | Nutrition | `compute_inflammatory_index` | Simplified Dietary Inflammatory Index scoring |
-| Impact | `search_economic_indicators` | Query economic time series from FRED, BLS, Census, World Bank, or WHO GHO |
+| Impact | `search_economic_indicators` | Query economic time series from FRED, BLS, Census, World Bank, WHO GHO, INEGI, or Banxico |
 | Impact | `search_health_indicators` | Search WHO GHO or CDC WONDER for health indicators |
 | Impact | `fetch_benchmark` | Get comparison values from international or US data sources |
 | Impact | `compare_programs` | Cross-program comparison using statistical tests |
 | Impact | `search_spending_data` | Search USAspending.gov for federal spending awards and grants |
 | Impact | `search_education_data` | Search College Scorecard for US higher education outcomes |
 | Impact | `search_housing_data` | Search HUD for Fair Market Rents and income limits |
-| Impact | `search_open_data` | Search data.gov CKAN catalog for US federal open datasets |
+| Impact | `search_open_data` | Search data.gov or datos.gob.mx CKAN catalog for open datasets |
+| Impact | `analyze_program_indicators` | Validate MIR indicators against CREMAA quality criteria (CONEVAL methodology) |
 | Visualization | `render_binding_scatter` | Scatter plot of compound binding affinities |
 | Visualization | `render_admet_radar` | Radar chart of ADMET/drug-likeness properties |
 | Visualization | `render_training_timeline` | Training load timeline with ACWR danger zones |
@@ -244,6 +251,9 @@ All data sources are free and open-access.
 | `EHRLICH_MAX_ITERATIONS_PER_PHASE` | No | Max iterations per experiment in multi-model mode (default: 10) |
 | `EHRLICH_LOG_LEVEL` | No | Logging level (default: INFO) |
 | `EHRLICH_COMPTOX_API_KEY` | No | EPA CompTox API key (free, for toxicity data) |
+| `INEGI_API_TOKEN` | No | INEGI Indicadores API token (Mexico economic/demographic data) |
+| `BANXICO_API_TOKEN` | No | Banxico SIE API token (Mexico central bank financial series) |
+| `DATOSGOB_API_TOKEN` | No | datos.gob.mx API token (Mexico open datasets, optional) |
 
 ### Database
 

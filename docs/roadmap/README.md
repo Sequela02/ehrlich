@@ -23,8 +23,10 @@ Hackathon: Feb 10-16, 2026. Each phase ends with something testable.
 | Phase 10E: Training Science Enhancement | DONE | [phase-10e-training-enhancement.md](phase-10e-training-enhancement.md) |
 | Phase 10F: Nutrition Science Enhancement | DONE | [phase-10f-nutrition-enhancement.md](phase-10f-nutrition-enhancement.md) |
 | Phase 12: Platform Infrastructure | DONE | [phase-12-platform-infrastructure.md](phase-12-platform-infrastructure.md) |
-| Phase 13: Impact Evaluation Domain | IN PROGRESS | [phase-13-impact-evaluation.md](phase-13-impact-evaluation.md) |
+| Phase 13: Impact Evaluation Domain | DONE | [phase-13-impact-evaluation.md](phase-13-impact-evaluation.md) |
 | Phase 14: Scientific Engine Hardening | IN PROGRESS | [phase-14-engine-hardening.md](phase-14-engine-hardening.md) |
+| Phase 15: Stripe Integration | TODO | [backlog.md](backlog.md) |
+| Phase 16: MCP Bridge Self-Service | TODO | [backlog.md](backlog.md) |
 | Phase 11: Investigation Comparison | DONE | [backlog.md](backlog.md) |
 | Backlog | TODO | [backlog.md](backlog.md) |
 
@@ -84,17 +86,18 @@ Enhancement Enhancement  Sports
      Phase 12: Platform Infrastructure -- DONE
      (PostgreSQL + WorkOS Auth + BYOK + Credits)
            |
-     Phase 13: Impact Evaluation Domain -- IN PROGRESS
+     Phase 13: Impact Evaluation Domain -- DONE
      (Causal inference + Document upload + MX/US APIs)
-     13A (Foundation) DONE -> 13B (Causal Inference) DONE -> 13A-2 (Upload) DONE -> 13D (US) DONE -> 13C (Mexico) -> 13E (MCP)
+     13A (Foundation) DONE -> 13B (Causal Inference) DONE -> 13A-2 (Upload) DONE -> 13D (US) DONE -> 13C (Mexico) DONE
            |
-     Phase 14: Scientific Engine Hardening -- IN PROGRESS (parallel with 13A-2)
-     14A (Orchestrator Split) DONE ──┬── 14B (Route Cleanup) DONE ──┬── 14D (Tool Enrichment) DONE
-                                     ├── 14C (Prompt Split) DONE     ├── 14E (Tree Search)
-                                     ├── 14H (Upload Validation) DONE├── 14F (Paper Generator) DONE -> 14F-2 (Paper View + PDF) DONE
-                                     └──────────────────────────────  └── 14G (Validation Runs)
+     Phase 14: Scientific Engine Hardening -- IN PROGRESS
+     14A-14F DONE ── 14G (Validation Runs) TODO
            |
      Demo + Video -- TODO
            |
      Submission (Feb 16, 3PM ET) -- TODO
+           |
+     Phase 15: Stripe Integration -- TODO (post-hackathon)
+           |
+     Phase 16: MCP Bridge Self-Service -- TODO (post-hackathon)
 ```

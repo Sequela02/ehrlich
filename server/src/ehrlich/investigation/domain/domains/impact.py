@@ -59,6 +59,8 @@ IMPACT_EVALUATION = DomainConfig(
         "housing_policy",
         "labor_market",
         "public_health",
+        "mexico_social_program",
+        "coneval_evaluation",
     ),
     template_prompts=(
         {
@@ -115,6 +117,26 @@ IMPACT_EVALUATION = DomainConfig(
                 "What is the effect of Section 8 housing vouchers on "
                 "economic mobility and neighborhood quality? Compare HUD "
                 "Fair Market Rents with Census income data across states."
+            ),
+        },
+        {
+            "title": "CONEVAL Program Evaluation (Mexico)",
+            "domain": "Impact Evaluation",
+            "prompt": (
+                "Evaluate the impact of Becas Benito Juarez (Mexico) on "
+                "school retention using CONEVAL methodology. Use INEGI "
+                "education indicators and datos.gob.mx datasets to assess "
+                "outcomes against CREMAA quality criteria."
+            ),
+        },
+        {
+            "title": "Mexico Macroeconomic Impact",
+            "domain": "Impact Evaluation",
+            "prompt": (
+                "How have Banxico monetary policy interventions affected "
+                "inflation and the exchange rate in Mexico from 2020-2024? "
+                "Use INEGI inflation indicators and Banxico SIE series data "
+                "for difference-in-differences analysis."
             ),
         },
     ),
@@ -298,6 +320,32 @@ Example: Cost-effectiveness analysis
 total_cost=5000000.0, total_effect=1500.0, \
 currency="USD", effect_unit="additional enrollees")
 2. record_finding(title="Cost per additional enrollee", \
+detail="...", hypothesis_id="h1", evidence_type="supporting")
+
+Example: Searching INEGI economic data for Mexico
+1. search_economic_indicators(query="inflacion", source="inegi")
+2. search_economic_indicators(query="493911", source="inegi")
+3. record_finding(title="Mexico GDP trend from INEGI", \
+detail="...", hypothesis_id="h1", evidence_type="supporting")
+
+Example: Searching Banxico financial series
+1. search_economic_indicators(query="tipo de cambio", source="banxico")
+2. search_economic_indicators(query="SF60653", source="banxico")
+3. record_finding(title="MXN/USD exchange rate from Banxico SIE", \
+detail="...", hypothesis_id="h1", evidence_type="supporting")
+
+Example: Discovering Mexican open government datasets
+1. search_open_data(query="programa social educacion", source="datosgob")
+2. search_open_data(query="salud publica", source="datosgob", \
+organization="ssa")
+3. record_finding(title="Mexican open datasets on education programs", \
+detail="...", hypothesis_id="h1", evidence_type="supporting")
+
+Example: Validating MIR indicators with CREMAA criteria
+1. analyze_program_indicators(\
+indicator_name="Porcentaje de beneficiarios con mejora educativa", \
+level="proposito")
+2. record_finding(title="CREMAA validation of MIR indicator", \
 detail="...", hypothesis_id="h1", evidence_type="supporting")
 
 Example: Training a classifier on program outcome data

@@ -4,7 +4,7 @@ AGPL-3.0 | Claude Code Hackathon (Feb 10-16, 2026)
 
 Domain-agnostic scientific discovery platform using Claude as a hypothesis-driven reasoning engine. Pluggable `DomainConfig` + `DomainRegistry` system. Four domains: Molecular Science, Training Science, Nutrition Science, Impact Evaluation.
 
-See `README.md` for setup, tools catalog (90 tools), data sources (24 APIs), API endpoints, and demo instructions.
+See `README.md` for setup, tools catalog (91 tools), data sources (28 APIs), API endpoints, and demo instructions.
 
 ## Architecture
 
@@ -14,7 +14,7 @@ DDD monorepo: `server/` (Python 3.12) + `console/` (React 19 / TypeScript / Bun)
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, designs experiments, evaluates evidence, synthesizes (NO tools)
-Sonnet 4.5 (Researcher) -- Executes experiments with 90 tools (parallel: 2 experiments per batch)
+Sonnet 4.5 (Researcher) -- Executes experiments with 91 tools (parallel: 2 experiments per batch)
 Haiku 4.5 (Summarizer)  -- Compresses large tool outputs (>2000 chars), PICO decomposition, evidence grading
 ```
 
@@ -33,7 +33,7 @@ Always uses `MultiModelOrchestrator`. Hypotheses tested in parallel batches of 2
 | simulation | `server/src/ehrlich/simulation/` | Docking, ADMET, resistance, targets (RCSB PDB, UniProt, Open Targets), toxicity (EPA CompTox) |
 | training | `server/src/ehrlich/training/` | Evidence analysis, protocol comparison, injury risk, clinical trials, PubMed, exercises |
 | nutrition | `server/src/ehrlich/nutrition/` | Supplement evidence, labels, nutrients, safety, interactions, adequacy, inflammatory index |
-| impact | `server/src/ehrlich/impact/` | Economic indicators (World Bank, WHO GHO, FRED, Census, BLS), health (CDC WONDER), spending (USAspending), education (College Scorecard), housing (HUD), open data (data.gov) |
+| impact | `server/src/ehrlich/impact/` | Economic indicators (World Bank, WHO GHO, FRED, Census, BLS, INEGI, Banxico), health (CDC WONDER), spending (USAspending), education (College Scorecard), housing (HUD), open data (data.gov, datos.gob.mx) |
 | investigation | `server/src/ehrlich/investigation/` | Multi-model orchestration + PostgreSQL persistence + domain registry + MCP bridge |
 
 ### Dependency Rules (STRICT)
@@ -185,7 +185,7 @@ All paths relative to `server/src/ehrlich/`.
 | `training/application/training_service.py` | Evidence, protocols, injury risk, metrics, clinical trials, PubMed, exercises |
 | `nutrition/application/nutrition_service.py` | Supplements, labels, nutrients, safety, adequacy, interactions, ratios |
 | `nutrition/domain/dri.py` | DRI tables (EAR, RDA, AI, UL by age/sex) |
-| `impact/application/impact_service.py` | Economic indicators, benchmarks, program comparison, spending, education, housing, open data |
+| `impact/application/impact_service.py` | Economic indicators, benchmarks, program comparison, spending, education, housing, open data, Mexico INEGI/Banxico/datos.gob.mx, CREMAA/MIR analysis |
 | `investigation/application/multi_orchestrator.py` | Director-Worker-Summarizer orchestrator (main 6-phase loop) |
 | `investigation/application/tool_dispatcher.py` | Tool execution with caching, `search_prior_research` and `query_uploaded_data` interception |
 | `investigation/application/tree_manager.py` | Hypothesis tree exploration: scoring, selection, deepen/branch/prune actions |
@@ -207,7 +207,7 @@ All paths relative to `server/src/ehrlich/api/`.
 | File | Purpose |
 |------|---------|
 | `auth.py` | WorkOS JWT middleware (JWKS, header + query param) |
-| `routes/investigation.py` | REST + SSE + paper export, 90-tool registry, domain registry, credits, BYOK |
+| `routes/investigation.py` | REST + SSE + paper export, 91-tool registry, domain registry, credits, BYOK |
 | `routes/upload.py` | File upload (CSV/XLSX/PDF) |
 | `routes/molecule.py` | Molecule depiction, conformer, descriptors, targets |
 | `sse.py` | Domain event to SSE conversion (21 types) |

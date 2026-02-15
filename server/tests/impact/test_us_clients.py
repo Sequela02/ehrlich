@@ -119,9 +119,7 @@ class TestBLSClient:
     @respx.mock
     @pytest.mark.asyncio
     async def test_empty_results(self, client: BLSClient) -> None:
-        respx.post(_BLS_URL).mock(
-            return_value=Response(200, json={"Results": {"series": []}})
-        )
+        respx.post(_BLS_URL).mock(return_value=Response(200, json={"Results": {"series": []}}))
         results = await client.search_series("UNKNOWN")
         assert results == []
 
@@ -152,9 +150,7 @@ class TestUSAspendingClient:
     @respx.mock
     @pytest.mark.asyncio
     async def test_search_awards(self, client: USAspendingClient) -> None:
-        respx.post(_USASPENDING_URL).mock(
-            return_value=Response(200, json=_USASPENDING_RESPONSE)
-        )
+        respx.post(_USASPENDING_URL).mock(return_value=Response(200, json=_USASPENDING_RESPONSE))
         results = await client.search_awards("education")
         assert len(results) == 1
         assert results[0].award_id == "AWARD-001"
@@ -164,21 +160,15 @@ class TestUSAspendingClient:
     @respx.mock
     @pytest.mark.asyncio
     async def test_empty_results(self, client: USAspendingClient) -> None:
-        respx.post(_USASPENDING_URL).mock(
-            return_value=Response(200, json={"results": []})
-        )
+        respx.post(_USASPENDING_URL).mock(return_value=Response(200, json={"results": []}))
         results = await client.search_awards("nonexistent")
         assert results == []
 
     @respx.mock
     @pytest.mark.asyncio
     async def test_with_filters(self, client: USAspendingClient) -> None:
-        respx.post(_USASPENDING_URL).mock(
-            return_value=Response(200, json=_USASPENDING_RESPONSE)
-        )
-        results = await client.search_awards(
-            "Head Start", agency="HHS", year=2023
-        )
+        respx.post(_USASPENDING_URL).mock(return_value=Response(200, json=_USASPENDING_RESPONSE))
+        results = await client.search_awards("Head Start", agency="HHS", year=2023)
         assert len(results) == 1
 
     @respx.mock
@@ -216,9 +206,7 @@ class TestCollegeScorecardClient:
     @respx.mock
     @pytest.mark.asyncio
     async def test_search_schools(self, client: CollegeScorecardClient) -> None:
-        respx.get(_SCORECARD_URL).mock(
-            return_value=Response(200, json=_SCORECARD_RESPONSE)
-        )
+        respx.get(_SCORECARD_URL).mock(return_value=Response(200, json=_SCORECARD_RESPONSE))
         results = await client.search_schools("Test University")
         assert len(results) == 1
         assert results[0].name == "Test University"
@@ -230,9 +218,7 @@ class TestCollegeScorecardClient:
     @respx.mock
     @pytest.mark.asyncio
     async def test_empty_results(self, client: CollegeScorecardClient) -> None:
-        respx.get(_SCORECARD_URL).mock(
-            return_value=Response(200, json={"results": []})
-        )
+        respx.get(_SCORECARD_URL).mock(return_value=Response(200, json={"results": []}))
         results = await client.search_schools("nonexistent")
         assert results == []
 
@@ -285,9 +271,7 @@ class TestHUDClient:
     @respx.mock
     @pytest.mark.asyncio
     async def test_list_response(self, client: HUDClient) -> None:
-        respx.get(_HUD_URL).mock(
-            return_value=Response(200, json={"data": [_HUD_RESPONSE["data"]]})
-        )
+        respx.get(_HUD_URL).mock(return_value=Response(200, json={"data": [_HUD_RESPONSE["data"]]}))
         results = await client.search_housing_data("CA")
         assert len(results) == 1
 
@@ -388,9 +372,7 @@ class TestDataGovClient:
     @respx.mock
     @pytest.mark.asyncio
     async def test_search_datasets(self, client: DataGovClient) -> None:
-        respx.get(_DATAGOV_URL).mock(
-            return_value=Response(200, json=_DATAGOV_RESPONSE)
-        )
+        respx.get(_DATAGOV_URL).mock(return_value=Response(200, json=_DATAGOV_RESPONSE))
         results = await client.search_datasets("poverty")
         assert len(results) == 1
         assert results[0].title == "Poverty Statistics"
@@ -401,18 +383,14 @@ class TestDataGovClient:
     @respx.mock
     @pytest.mark.asyncio
     async def test_empty_results(self, client: DataGovClient) -> None:
-        respx.get(_DATAGOV_URL).mock(
-            return_value=Response(200, json={"result": {"results": []}})
-        )
+        respx.get(_DATAGOV_URL).mock(return_value=Response(200, json={"result": {"results": []}}))
         results = await client.search_datasets("nonexistent")
         assert results == []
 
     @respx.mock
     @pytest.mark.asyncio
     async def test_with_organization(self, client: DataGovClient) -> None:
-        respx.get(_DATAGOV_URL).mock(
-            return_value=Response(200, json=_DATAGOV_RESPONSE)
-        )
+        respx.get(_DATAGOV_URL).mock(return_value=Response(200, json=_DATAGOV_RESPONSE))
         results = await client.search_datasets("poverty", organization="census-gov")
         assert len(results) == 1
 

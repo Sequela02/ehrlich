@@ -46,9 +46,7 @@ class BLSClient(EconomicDataRepository):
         results = self._parse_series(data, [series_id])
         return results[0] if results else None
 
-    def _parse_series(
-        self, data: dict[str, object], series_ids: list[str]
-    ) -> list[EconomicSeries]:
+    def _parse_series(self, data: dict[str, object], series_ids: list[str]) -> list[EconomicSeries]:
         results_obj = data.get("Results", {})
         if not isinstance(results_obj, dict):
             return []

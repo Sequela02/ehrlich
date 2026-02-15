@@ -112,7 +112,7 @@ class TestGetCurrentUser:
                 "/protected", headers={"Authorization": "Bearer invalid.token.here"}
             )
         assert response.status_code == 401
-        assert "Invalid token" in response.json()["detail"]
+        assert response.json()["detail"] == "Invalid or expired token"
 
     def test_valid_token_returns_user(self, client: TestClient) -> None:
         token = _make_token(sub="user_abc", email="abc@test.com")
