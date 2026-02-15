@@ -1,6 +1,6 @@
 Back to [Roadmap Index](README.md)
 
-# Phase 13: Impact Evaluation Domain -- IN PROGRESS
+# Phase 13: Impact Evaluation Domain -- IN PROGRESS (13C, 13E remaining)
 
 New bounded context for hypothesis-driven causal analysis of social programs. Domain-agnostic methodology works for any program type (sports, health, education, employment, housing) in any country. Initial focus: Mexico and US. Causal inference methods (DiD, PSM, RDD, Synthetic Control) live in `analysis/` as domain-agnostic tools usable by any domain. No existing platform combines autonomous hypothesis formulation, automated causal inference, public API integration, and evidence-graded reporting. See `docs/adr/impact-evaluation-domain.md` for full design.
 
@@ -95,18 +95,25 @@ Refactored causal inference from impact-specific to domain-agnostic. All causal 
 - [ ] Frontend: `MIRTable.tsx` logical framework matrix
 - [ ] CONEVAL ECR report template for `generate_evaluation_report`
 
-## Phase 13D: US Integration
+## Phase 13D: US Integration -- DONE
 
-- [ ] Census Bureau API client (`https://api.census.gov/data/`) -- ACS, demographics
-- [ ] BLS API client (`https://api.bls.gov/publicAPI/v2/`) -- employment, wages, CPI
-- [ ] USAspending API client (`https://api.usaspending.gov/api/v2/`) -- federal grants/contracts
-- [ ] College Scorecard API client (`https://api.data.gov/ed/collegescorecard/v1/`) -- education outcomes
-- [ ] HUD API client (`https://www.huduser.gov/hudapi/public/`) -- housing data
-- [ ] CDC WONDER client (`https://wonder.cdc.gov/`) -- public health data
-- [ ] `search_health_indicators` tool -- query WHO GHO or CDC WONDER
-- [ ] `search_open_data` tool -- query datos.gob.mx or data.gov CKAN portals
-- [ ] WWC evidence tier classification in evaluation reports
-- [ ] US-formatted evaluation report template
+- [x] Census Bureau API client (`https://api.census.gov/data/`) -- ACS 5-year demographics, poverty, education
+- [x] BLS API client (`https://api.bls.gov/publicAPI/v2/`) -- employment, wages, CPI time series
+- [x] USAspending API client (`https://api.usaspending.gov/api/v2/`) -- federal grants/contracts search
+- [x] College Scorecard API client (`https://api.data.gov/ed/collegescorecard/v1/`) -- education outcomes
+- [x] HUD API client (`https://www.huduser.gov/hudapi/public/`) -- Fair Market Rents, income limits
+- [x] CDC WONDER client (`https://wonder.cdc.gov/`) -- mortality/natality via XML API
+- [x] data.gov CKAN client (`https://catalog.data.gov/api/3/action/`) -- federal dataset discovery
+- [x] `search_health_indicators` tool -- routes to WHO GHO or CDC WONDER by source
+- [x] `search_spending_data` tool -- USAspending awards/grants search
+- [x] `search_education_data` tool -- College Scorecard school outcomes
+- [x] `search_housing_data` tool -- HUD FMR and income limits
+- [x] `search_open_data` tool -- data.gov CKAN dataset metadata
+- [x] Extended `search_economic_indicators` with BLS and Census sources
+- [x] WWC evidence tier classification (already in `analysis/domain/evidence_standards.py`)
+- [x] US-focused domain config: 6 template prompts, expanded detection keywords, experiment examples
+
+**Counts:** 85 -> 90 tools (+5 new), 19 -> 25 data sources (+6: Census, BLS, USAspending, College Scorecard, HUD, CDC WONDER). Also added data.gov client (shares tool with datos.gob.mx).
 
 ## Phase 13E: MCP Bridge Self-Service
 
@@ -115,21 +122,25 @@ Refactored causal inference from impact-specific to domain-agnostic. All causal 
 - [ ] Per-organization data source management
 - [ ] Tool auto-tagging with domain tags for discovery
 
-## Data Sources (Planned: 8+ new, 3 implemented in 13A)
+## Data Sources (10 implemented, 5 planned for 13C)
 
-| Source | API | Purpose | Auth | Phase |
-|--------|-----|---------|------|-------|
-| World Bank | `https://api.worldbank.org/v2/` | Development indicators by country | None | 13A |
-| WHO GHO | `https://ghoapi.azureedge.net/api/` | Health statistics by country | None | 13A |
-| FRED | `https://api.stlouisfed.org/fred/` | 800K+ economic time series | API key | 13A |
-| INEGI Indicadores | `https://www.inegi.org.mx/app/api/indicadores/` | Mexico census, demographics | Token | 13C |
-| INEGI DENUE | `https://www.inegi.org.mx/app/api/denue/v1/` | Mexico business directory (5M+) | Token | 13C |
-| datos.gob.mx | `https://datos.gob.mx/api/3/action/` | Mexico open data (CKAN, 1000+ datasets) | Token (optional) | 13C |
-| Transparencia Presupuestaria | `https://nptp.hacienda.gob.mx/` | Mexico budget execution | None | 13C |
-| Banxico SIE | `https://www.banxico.org.mx/SieAPIRest/service/v1/` | Mexico economic indicators | Token | 13C |
-| US Census Bureau | `https://api.census.gov/data/` | ACS, demographics | API key (optional) | 13D |
-| BLS | `https://api.bls.gov/publicAPI/v2/` | Employment, wages, CPI | API key | 13D |
-| USAspending | `https://api.usaspending.gov/api/v2/` | Federal grants, contracts | None | 13D |
+| Source | API | Purpose | Auth | Phase | Status |
+|--------|-----|---------|------|-------|--------|
+| World Bank | `https://api.worldbank.org/v2/` | Development indicators by country | None | 13A | DONE |
+| WHO GHO | `https://ghoapi.azureedge.net/api/` | Health statistics by country | None | 13A | DONE |
+| FRED | `https://api.stlouisfed.org/fred/` | 800K+ economic time series | API key | 13A | DONE |
+| US Census Bureau | `https://api.census.gov/data/` | ACS 5-year demographics | API key (optional) | 13D | DONE |
+| BLS | `https://api.bls.gov/publicAPI/v2/` | Employment, wages, CPI | API key | 13D | DONE |
+| USAspending | `https://api.usaspending.gov/api/v2/` | Federal grants, contracts | None | 13D | DONE |
+| College Scorecard | `https://api.data.gov/ed/collegescorecard/v1/` | Education outcomes | API key | 13D | DONE |
+| HUD | `https://www.huduser.gov/hudapi/public/` | Housing data (FMR, income limits) | Bearer token | 13D | DONE |
+| CDC WONDER | `https://wonder.cdc.gov/` | Mortality, natality (XML API) | None | 13D | DONE |
+| data.gov | `https://catalog.data.gov/api/3/action/` | Federal dataset discovery (CKAN) | None | 13D | DONE |
+| INEGI Indicadores | `https://www.inegi.org.mx/app/api/indicadores/` | Mexico census, demographics | Token | 13C | TODO |
+| INEGI DENUE | `https://www.inegi.org.mx/app/api/denue/v1/` | Mexico business directory (5M+) | Token | 13C | TODO |
+| datos.gob.mx | `https://datos.gob.mx/api/3/action/` | Mexico open data (CKAN, 1000+ datasets) | Token (optional) | 13C | TODO |
+| Transparencia Presupuestaria | `https://nptp.hacienda.gob.mx/` | Mexico budget execution | None | 13C | TODO |
+| Banxico SIE | `https://www.banxico.org.mx/SieAPIRest/service/v1/` | Mexico economic indicators | Token | 13C | TODO |
 
 ## Tools (Planned: ~18 new tools + ~6 viz tools)
 

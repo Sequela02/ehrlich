@@ -86,7 +86,7 @@ Enhancement Enhancement  Sports
            |
      Phase 13: Impact Evaluation Domain -- IN PROGRESS
      (Causal inference + Document upload + MX/US APIs)
-     13A (Foundation) DONE -> 13B (Causal Inference) DONE -> 13A-2 (Upload) DONE -> 13C (Mexico) -> 13D (US) -> 13E (MCP)
+     13A (Foundation) DONE -> 13B (Causal Inference) DONE -> 13A-2 (Upload) DONE -> 13D (US) DONE -> 13C (Mexico) -> 13E (MCP)
            |
      Phase 14: Scientific Engine Hardening -- IN PROGRESS (parallel with 13A-2)
      14A (Orchestrator Split) DONE ──┬── 14B (Route Cleanup) DONE ──┬── 14D (Tool Enrichment) DONE

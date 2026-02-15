@@ -8,13 +8,21 @@ from ehrlich.analysis.application.statistics_service import StatisticsService
 if TYPE_CHECKING:
     from ehrlich.impact.domain.entities import (
         Benchmark,
+        DatasetMetadata,
         EconomicSeries,
+        EducationRecord,
         HealthIndicator,
+        HousingData,
+        SpendingRecord,
     )
     from ehrlich.impact.domain.repository import (
         DevelopmentDataRepository,
         EconomicDataRepository,
+        EducationDataRepository,
         HealthDataRepository,
+        HousingDataRepository,
+        OpenDataRepository,
+        SpendingDataRepository,
     )
 
 
@@ -24,16 +32,35 @@ class ImpactService:
         economic: EconomicDataRepository | None = None,
         health: HealthDataRepository | None = None,
         development: DevelopmentDataRepository | None = None,
+        spending: SpendingDataRepository | None = None,
+        education: EducationDataRepository | None = None,
+        housing: HousingDataRepository | None = None,
+        open_data: OpenDataRepository | None = None,
+        bls: EconomicDataRepository | None = None,
+        census: DevelopmentDataRepository | None = None,
+        cdc: HealthDataRepository | None = None,
     ) -> None:
         self._economic = economic
         self._health = health
         self._development = development
+        self._spending = spending
+        self._education = education
+        self._housing = housing
+        self._open_data = open_data
+        self._bls = bls
+        self._census = census
+        self._cdc = cdc
         self._stats = StatisticsService()
 
     async def search_economic_data(self, query: str, limit: int = 10) -> list[EconomicSeries]:
         if not self._economic:
             return []
         return await self._economic.search_series(query, limit)
+
+    async def search_bls_data(self, query: str, limit: int = 10) -> list[EconomicSeries]:
+        if not self._bls:
+            return []
+        return await self._bls.search_series(query, limit)
 
     async def get_economic_series(
         self, series_id: str, start: str | None = None, end: str | None = None
@@ -54,6 +81,17 @@ class ImpactService:
             return []
         return await self._health.search_indicators(indicator, country, year_start, year_end, limit)
 
+    async def search_cdc_data(
+        self,
+        indicator: str,
+        year_start: int | None = None,
+        year_end: int | None = None,
+        limit: int = 10,
+    ) -> list[HealthIndicator]:
+        if not self._cdc:
+            return []
+        return await self._cdc.search_indicators(indicator, "US", year_start, year_end, limit)
+
     async def search_development_data(
         self,
         indicator: str,
@@ -67,6 +105,61 @@ class ImpactService:
         return await self._development.search_indicators(
             indicator, country, year_start, year_end, limit
         )
+
+    async def search_census_data(
+        self,
+        indicator: str,
+        state: str | None = None,
+        year_start: int | None = None,
+        year_end: int | None = None,
+        limit: int = 10,
+    ) -> list[Benchmark]:
+        if not self._census:
+            return []
+        return await self._census.search_indicators(
+            indicator, state, year_start, year_end, limit
+        )
+
+    async def search_spending_data(
+        self,
+        query: str,
+        agency: str | None = None,
+        year: int | None = None,
+        limit: int = 10,
+    ) -> list[SpendingRecord]:
+        if not self._spending:
+            return []
+        return await self._spending.search_awards(query, agency, year, limit)
+
+    async def search_education_data(
+        self,
+        query: str,
+        state: str | None = None,
+        limit: int = 10,
+    ) -> list[EducationRecord]:
+        if not self._education:
+            return []
+        return await self._education.search_schools(query, state, limit)
+
+    async def search_housing_data(
+        self,
+        state: str,
+        county: str | None = None,
+        year: int | None = None,
+    ) -> list[HousingData]:
+        if not self._housing:
+            return []
+        return await self._housing.search_housing_data(state, county, year)
+
+    async def search_open_data(
+        self,
+        query: str,
+        organization: str | None = None,
+        limit: int = 10,
+    ) -> list[DatasetMetadata]:
+        if not self._open_data:
+            return []
+        return await self._open_data.search_datasets(query, organization, limit)
 
     async def fetch_benchmark(
         self,
@@ -92,11 +185,36 @@ class ImpactService:
                 for s in series
             ]
 
+        if source == "bls":
+            series = await self.search_bls_data(indicator, limit=5)
+            return [
+                {
+                    "source": "BLS",
+                    "series_id": s.series_id,
+                    "title": s.title,
+                    "unit": s.unit,
+                    "frequency": s.frequency,
+                }
+                for s in series
+            ]
+
+        if source == "census":
+            benchmarks = await self.search_census_data(
+                indicator, country, year_start, year_end, limit=10
+            )
+            return [asdict(b) for b in benchmarks]
+
         if source in ("who", "health"):
             health_results = await self.search_health_data(
                 indicator, country, year_start, year_end, limit=10
             )
             return [asdict(r) for r in health_results]
+
+        if source == "cdc":
+            cdc_results = await self.search_cdc_data(
+                indicator, year_start, year_end, limit=10
+            )
+            return [asdict(r) for r in cdc_results]
 
         if source in ("world_bank", "development"):
             dev_results = await self.search_development_data(

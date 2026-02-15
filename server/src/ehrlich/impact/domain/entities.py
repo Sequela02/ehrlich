@@ -63,3 +63,49 @@ class HealthIndicator:
     year: int
     value: float
     unit: str
+
+
+@dataclass(frozen=True)
+class SpendingRecord:
+    award_id: str
+    recipient_name: str
+    amount: float
+    agency: str
+    description: str
+    period: str
+    award_type: str
+
+
+@dataclass(frozen=True)
+class EducationRecord:
+    school_id: str
+    name: str
+    state: str
+    student_size: int
+    net_price: float
+    completion_rate: float
+    earnings_median: float
+
+
+@dataclass(frozen=True)
+class HousingData:
+    area_name: str
+    state: str
+    fmr_0br: float
+    fmr_1br: float
+    fmr_2br: float
+    fmr_3br: float
+    fmr_4br: float
+    median_income: float
+    year: int
+
+
+@dataclass(frozen=True)
+class DatasetMetadata:
+    dataset_id: str
+    title: str
+    organization: str
+    description: str
+    tags: tuple[str, ...]
+    resource_count: int
+    modified: str

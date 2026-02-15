@@ -40,6 +40,11 @@ from ehrlich.impact.tools import (
     compare_programs,
     fetch_benchmark,
     search_economic_indicators,
+    search_education_data,
+    search_health_indicators,
+    search_housing_data,
+    search_open_data,
+    search_spending_data,
 )
 from ehrlich.investigation.application.tool_registry import ToolRegistry
 from ehrlich.investigation.domain.domain_registry import DomainRegistry
@@ -206,10 +211,15 @@ def build_tool_registry() -> ToolRegistry:
         ("check_interactions", check_interactions, _nutrition_safety),
         ("analyze_nutrient_ratios", analyze_nutrient_ratios, _nutrition),
         ("compute_inflammatory_index", compute_inflammatory_index, _nutrition),
-        # Impact Evaluation (3)
+        # Impact Evaluation (8)
         ("search_economic_indicators", search_economic_indicators, _impact),
+        ("search_health_indicators", search_health_indicators, _impact),
         ("fetch_benchmark", fetch_benchmark, _impact),
         ("compare_programs", compare_programs, _impact),
+        ("search_spending_data", search_spending_data, _impact),
+        ("search_education_data", search_education_data, _impact),
+        ("search_housing_data", search_housing_data, _impact),
+        ("search_open_data", search_open_data, _impact),
         # Causal Inference (6) -- domain-agnostic
         ("estimate_did", estimate_did, _causal),
         ("estimate_psm", estimate_psm, _causal),

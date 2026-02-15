@@ -1,13 +1,13 @@
 export const STATS = {
-  tools: 85,
-  dataSources: 19,
+  tools: 90,
+  dataSources: 25,
   domains: 4,
   models: 3,
   phases: 6,
   vizTools: 17,
-  externalAPIs: 18,
+  externalAPIs: 24,
   boundedContexts: 11,
-  sseEvents: 20,
+  sseEvents: 21,
 } as const;
 
 export const NAV_LINKS = [
@@ -46,7 +46,7 @@ export const EXAMPLE_PROMPTS = [
 export const DIFFERENTIATORS = [
   {
     label: "Real Computation",
-    tagline: "85 tools that compute, not summarize.",
+    tagline: "90 tools that compute, not summarize.",
     description:
       "Ehrlich trains ML models, runs molecular docking, executes statistical tests, and validates with negative controls. Every tool returns structured data from real computation or real APIs.",
     capabilities: [
@@ -61,7 +61,7 @@ export const DIFFERENTIATORS = [
     label: "Open Source, Self-Hostable",
     tagline: "COSS. Same code, two paths.",
     description:
-      "Self-host with your own API key for free -- no limits, no credits, no account. Or use the hosted instance where credits cover Anthropic API costs. A student in Mexico and a pharma company in Boston get the same 85 tools, the same 19 data sources, the same methodology.",
+      "Self-host with your own API key for free -- no limits, no credits, no account. Or use the hosted instance where credits cover Anthropic API costs. A student in Mexico and a pharma company in Boston get the same 90 tools, the same 25 data sources, the same methodology.",
     capabilities: [
       "Self-host: clone, bring your API key, no limits",
       "Hosted: credits cover Anthropic costs (Opus is expensive)",
@@ -201,7 +201,7 @@ export const METHODOLOGY_PHASES = [
     number: "04",
     label: "Experiment Execution",
     foundation: "Fisher (1935)",
-    description: "Experiments with independent/dependent variables, controls, confounders, and analysis plans. Two experiments run in parallel. 85 tools across 4 domains.",
+    description: "Experiments with independent/dependent variables, controls, confounders, and analysis plans. Two experiments run in parallel. 90 tools across 4 domains.",
   },
   {
     number: "05",
@@ -311,10 +311,10 @@ export const PRICING_TIERS = [
     price: "$0",
     period: "forever",
     credits: "3 Haiku investigations/month",
-    description: "Full methodology. All 85 tools. All 19 data sources. Findings indexed for future research.",
+    description: "Full methodology. All 90 tools. All 25 data sources. Findings indexed for future research.",
     features: [
       "Full 6-phase scientific methodology",
-      "All 85 tools, all 19 data sources, 4 domains",
+      "All 90 tools, all 25 data sources, 4 domains",
       "Full audit trail and report",
       "Self-referential search (tsvector)",
       "No feature gates",

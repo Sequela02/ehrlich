@@ -12,7 +12,7 @@ from ehrlich.investigation.application.registry_factory import (
 router = APIRouter(tags=["stats"])
 
 PHASE_COUNT = 6
-DATA_SOURCE_COUNT = 19
+DATA_SOURCE_COUNT = 25
 
 
 class StatsResponse(BaseModel):

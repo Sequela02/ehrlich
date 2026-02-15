@@ -54,6 +54,11 @@ IMPACT_EVALUATION = DomainConfig(
         "social_program",
         "public_policy",
         "policy_analysis",
+        "us_federal_program",
+        "education_policy",
+        "housing_policy",
+        "labor_market",
+        "public_health",
     ),
     template_prompts=(
         {
@@ -82,6 +87,34 @@ IMPACT_EVALUATION = DomainConfig(
                 "Does youth sports program participation reduce juvenile "
                 "delinquency and improve educational outcomes? Analyze the "
                 "evidence from after-school sports interventions."
+            ),
+        },
+        {
+            "title": "SNAP Benefits & Nutrition",
+            "domain": "Impact Evaluation",
+            "prompt": (
+                "What is the causal effect of SNAP (food stamps) benefits "
+                "on food security and nutrition outcomes in US households? "
+                "Use USAspending data for program scale and Census/BLS for "
+                "demographic context."
+            ),
+        },
+        {
+            "title": "Pell Grant & College Completion",
+            "domain": "Impact Evaluation",
+            "prompt": (
+                "Do Pell Grant recipients have different completion rates "
+                "and post-graduation earnings compared to non-recipients? "
+                "Analyze College Scorecard data across institution types."
+            ),
+        },
+        {
+            "title": "Housing Vouchers & Mobility",
+            "domain": "Impact Evaluation",
+            "prompt": (
+                "What is the effect of Section 8 housing vouchers on "
+                "economic mobility and neighborhood quality? Compare HUD "
+                "Fair Market Rents with Census income data across states."
             ),
         },
     ),
@@ -145,8 +178,7 @@ test statistical significance",
 "run_statistical_test", "search_literature"],
   "independent_variable": "CCT program implementation \
 (present vs absent)",
-  "dependent_variable": "Primary school net enrollment rate (%)"\
-,
+  "dependent_variable": "Primary school net enrollment rate (%)",
   "controls": ["positive: Prospera program with known 3-9pp \
 effect", "negative: matched non-program region"],
   "confounders": ["GDP growth trends", "Demographic shifts", \
@@ -172,12 +204,51 @@ source="who", country="MEX")
 3. record_finding(title="Enrollment trends in Mexico 2000-2020", \
 detail="...", hypothesis_id="h1", evidence_type="supporting")
 
+Example: Searching US labor data from BLS
+1. search_economic_indicators(query="LNS14000000", \
+source="bls", limit=5)
+2. record_finding(title="US unemployment rate trends", \
+detail="...", hypothesis_id="h1", evidence_type="supporting")
+
+Example: Searching US Census demographics
+1. search_economic_indicators(query="median_income", \
+source="census", start_year=2020, end_year=2022)
+2. record_finding(title="Median income by state", \
+detail="...", hypothesis_id="h1", evidence_type="supporting")
+
+Example: Searching CDC health data
+1. search_health_indicators(indicator="mortality", source="cdc", \
+year_start=2015, year_end=2022)
+2. record_finding(title="US mortality trends", \
+detail="...", hypothesis_id="h1", evidence_type="supporting")
+
 Example: Fetching benchmark data for comparison
 1. fetch_benchmark(indicator="SE.PRM.ENRR", source="world_bank", \
 country="MX", period="2010-2020")
 2. fetch_benchmark(indicator="SE.PRM.ENRR", source="world_bank", \
 country="BR", period="2010-2020")
 3. record_finding(title="Cross-country enrollment comparison", \
+detail="...", hypothesis_id="h1", evidence_type="supporting")
+
+Example: Searching federal spending data
+1. search_spending_data(query="Head Start", \
+agency="Department of Health and Human Services", year=2023)
+2. record_finding(title="Head Start federal spending 2023", \
+detail="...", hypothesis_id="h1", evidence_type="supporting")
+
+Example: Searching education outcomes
+1. search_education_data(query="community college", state="CA", limit=10)
+2. record_finding(title="CA community college outcomes", \
+detail="...", hypothesis_id="h1", evidence_type="supporting")
+
+Example: Searching housing data
+1. search_housing_data(state="CA", year=2024)
+2. record_finding(title="California Fair Market Rents 2024", \
+detail="...", hypothesis_id="h1", evidence_type="supporting")
+
+Example: Discovering open datasets
+1. search_open_data(query="poverty education", organization="ed-gov")
+2. record_finding(title="Available federal datasets", \
 detail="...", hypothesis_id="h1", evidence_type="supporting")
 
 Example: Comparing program outcomes statistically
