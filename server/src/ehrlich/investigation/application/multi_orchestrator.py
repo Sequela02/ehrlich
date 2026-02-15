@@ -26,6 +26,7 @@ from ehrlich.investigation.application.tool_dispatcher import ToolDispatcher
 from ehrlich.investigation.domain.events import (
     CostUpdate,
     DomainEvent,
+    HypothesisApprovalRequested,
     InvestigationError,
     PhaseChanged,
     Thinking,
@@ -89,9 +90,14 @@ class MultiModelOrchestrator:
         self._dispatcher = ToolDispatcher(registry, self._cache, repository, {})
         self._state_lock = asyncio.Lock()
         self._approval_event = asyncio.Event()
+        self._awaiting_approval = False
         self._investigation: Investigation | None = None
         self._uploaded_files: dict[str, UploadedFile] = {}
         self._uploaded_data_context = ""
+
+    def is_awaiting_approval(self) -> bool:
+        """Return True if the orchestrator is blocked waiting for hypothesis approval."""
+        return self._awaiting_approval
 
     def approve_hypotheses(
         self,
@@ -99,6 +105,7 @@ class MultiModelOrchestrator:
         rejected_ids: list[str],
     ) -> None:
         """Called by API to approve/reject hypotheses and unblock the loop."""
+        self._awaiting_approval = False
         if self._investigation:
             from ehrlich.investigation.domain.hypothesis import HypothesisStatus
 
@@ -250,7 +257,11 @@ class MultiModelOrchestrator:
                     neg_control_suggestions = result["neg_control_suggestions"]
                     pos_control_suggestions = result["pos_control_suggestions"]
                 else:
+                    if isinstance(event, HypothesisApprovalRequested):
+                        self._awaiting_approval = True
                     yield event
+
+            self._awaiting_approval = False
 
             # 4. Hypothesis testing loop
             async for event in run_hypothesis_testing_phase(

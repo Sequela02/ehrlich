@@ -2,9 +2,13 @@ import importlib
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
 
 from ehrlich.api.routes.health import router as health_router
 from ehrlich.api.routes.investigation import close_repository, init_repository
@@ -21,6 +25,18 @@ logger = logging.getLogger(__name__)
 _OPTIONAL_DEPS = {
     "chemprop": "Chemprop D-MPNN (deep learning)",
 }
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add security headers to all responses."""
+
+    async def dispatch(self, request: Request, call_next: Any) -> Response:
+        response: Response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        return response
 
 
 def _check_optional(module: str) -> bool:
@@ -55,6 +71,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         status = "available" if _check_optional(mod) else "not installed"
         logger.info("  %s: %s", desc, status)
 
+    if "*" in settings.cors_origins and settings.environment != "development":
+        logger.warning(
+            "CORS allow_origins contains '*' in %s environment. "
+            "This is insecure and should be replaced with specific origins.",
+            settings.environment,
+        )
+
     await init_repository(settings.database_url)
     logger.info("PostgreSQL repository initialized")
 
@@ -74,12 +97,13 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-Anthropic-Key"],
     )
 
     app.include_router(health_router, prefix="/api/v1")

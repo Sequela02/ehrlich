@@ -29,7 +29,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
     }
   }
 
-  const byokKey = localStorage.getItem("ehrlich_api_key");
+  const byokKey = sessionStorage.getItem("ehrlich_api_key");
   if (byokKey) {
     headers["X-Anthropic-Key"] = byokKey;
   }

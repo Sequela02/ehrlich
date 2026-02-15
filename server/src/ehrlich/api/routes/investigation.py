@@ -293,7 +293,7 @@ async def start_investigation(
         from ehrlich.api.routes.upload import get_pending_upload
 
         for fid in request.file_ids:
-            uploaded = get_pending_upload(fid)
+            uploaded = get_pending_upload(fid, user["workos_id"])
             if uploaded:
                 investigation.uploaded_files.append(uploaded)
                 await repo.save_uploaded_file(investigation.id, uploaded)
@@ -324,6 +324,13 @@ async def approve_hypotheses(
         raise HTTPException(status_code=404, detail="No active orchestrator")
     repo = _get_repository()
     await _verify_ownership(investigation_id, user, repo)
+
+    # Verify orchestrator is awaiting approval
+    if not orchestrator.is_awaiting_approval():
+        raise HTTPException(
+            status_code=409, detail="Investigation is not awaiting hypothesis approval"
+        )
+
     orchestrator.approve_hypotheses(request.approved_ids, request.rejected_ids)
     return {"status": "approved"}
 

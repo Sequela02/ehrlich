@@ -25,9 +25,10 @@ CREATE TABLE IF NOT EXISTS users (
     workos_id TEXT UNIQUE NOT NULL,
     email TEXT NOT NULL,
     credits INTEGER NOT NULL DEFAULT 5,
-    encrypted_api_key BYTEA,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE users DROP COLUMN IF EXISTS encrypted_api_key;
 
 CREATE TABLE IF NOT EXISTS investigations (
     id TEXT PRIMARY KEY,
@@ -104,10 +105,17 @@ class InvestigationRepository(_Base):
 
     async def _ensure_database(self) -> None:
         """Create the database if it doesn't exist."""
+        import re
         from urllib.parse import urlparse
 
         parsed = urlparse(self._database_url)
         db_name = parsed.path.lstrip("/")
+
+        # Validate db_name to prevent SQL injection
+        if not re.match(r"^[a-zA-Z0-9_]+$", db_name):
+            msg = f"Invalid database name: {db_name}"
+            raise ValueError(msg)
+
         maintenance_url = self._database_url.rsplit("/", 1)[0] + "/postgres"
 
         try:

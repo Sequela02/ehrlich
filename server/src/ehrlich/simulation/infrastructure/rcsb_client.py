@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 
 import httpx
 
@@ -112,6 +113,10 @@ class RCSBClient(ProteinTargetRepository):
         )
 
     async def _fetch_entry(self, pdb_id: str) -> ProteinTarget | None:
+        # Validate PDB ID format to prevent URL path injection
+        if not re.match(r"^[0-9A-Za-z]{4}$", pdb_id):
+            msg = f"Invalid PDB ID format: {pdb_id}"
+            raise ValueError(msg)
         try:
             resp = await self._client.get(f"{_DATA_URL}/{pdb_id}")
             if resp.status_code == 404:

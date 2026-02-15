@@ -71,7 +71,7 @@ Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesize
 
 Investigations are persisted to PostgreSQL via `asyncpg` connection pooling. The `InvestigationRepository` implements the `InvestigationRepository` ABC defined in the domain layer. Hypotheses, experiments, findings, candidates, negative controls, citations, domain, and cost data are stored in `JSONB` columns in the `investigations` table. All SSE events are persisted to a separate `events` table for full timeline replay on page reload.
 
-Additional tables: `users` (WorkOS identity, credit balance, encrypted API key), `credit_transactions` (audit trail for credit purchases/spending/refunds). Full-text search uses PostgreSQL `tsvector` + GIN index.
+Additional tables: `users` (WorkOS identity, credit balance), `credit_transactions` (audit trail for credit purchases/spending/refunds). Full-text search uses PostgreSQL `tsvector` + GIN index.
 
 The API keeps `_active_investigations` and `_active_orchestrators` dicts for in-flight SSE streaming and user-guided steering (hypothesis approval). Persists to PostgreSQL on completion (or error).
 
@@ -101,7 +101,22 @@ Researcher is always Sonnet 4.5 and Summarizer is always Haiku 4.5, regardless o
 
 ### BYOK (Bring Your Own Key)
 
-Users can provide their own Anthropic API key via the `X-Anthropic-Key` HTTP header. BYOK users bypass the credit system entirely -- they pay Anthropic directly. The API key is forwarded to `AnthropicClientAdapter` for that investigation's API calls.
+Users can provide their own Anthropic API key via the `X-Anthropic-Key` HTTP header. BYOK users bypass the credit system entirely -- they pay Anthropic directly. The API key is forwarded to `AnthropicClientAdapter` for that investigation's API calls. BYOK keys are stored in `sessionStorage` (tab-scoped, cleared on close) and never persisted. API key patterns (`sk-ant-*`) are redacted from error logs via `_sanitize_error()`.
+
+## Security
+
+Defense-in-depth across server and console:
+
+- **Security headers**: `SecurityHeadersMiddleware` sets `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: geolocation=(), microphone=(), camera=()` on all responses.
+- **CORS hardening**: explicit `allow_methods` (`GET`, `POST`, `PUT`, `DELETE`, `OPTIONS`) and `allow_headers` (`Authorization`, `Content-Type`, `X-Anthropic-Key`). Wildcard origins logged as warning in non-development environments (`EHRLICH_ENVIRONMENT`).
+- **Upload isolation**: pending uploads are owner-scoped (`workos_id` validated on claim) with 30-minute TTL auto-expiry. File content validated via magic byte signatures (PDF: `%PDF-`, XLSX: `PK\x03\x04`, CSV: no null bytes + valid UTF-8).
+- **Prompt injection defense**: all user-controlled content in `<uploaded_data>` XML blocks is escaped via `html.escape()` — filenames, column names, dtypes, statistics, sample values, and document excerpts.
+- **Input validation**: request schema enforces `prompt` length (10-10000 chars), `director_tier` regex pattern (`haiku|sonnet|opus`), SMILES `max_length=500`, PDB ID format (`^[0-9A-Za-z]{4}$`), URL path encoding for external API clients (`urllib.parse.quote`).
+- **Markdown XSS**: all `<Markdown>` components use `rehype-sanitize` to strip dangerous HTML from AI-generated content.
+- **Error sanitization**: JWT validation errors return generic "Invalid or expired token" (no token details leaked). Tool execution errors don't expose internal stack traces. Anthropic API errors have `sk-ant-*` patterns redacted before logging.
+- **SQL injection prevention**: database name validated against `^[a-zA-Z0-9_]+$` in `_ensure_database()`. All other queries use parameterized SQL via `asyncpg`.
+- **State guards**: `POST /investigate/{id}/approve` returns 409 Conflict if the orchestrator is not actively awaiting approval. SSE reconnection refreshes auth token on each attempt.
+- **Production build**: source maps disabled in console production builds.
 
 ## Multi-Domain Investigations
 

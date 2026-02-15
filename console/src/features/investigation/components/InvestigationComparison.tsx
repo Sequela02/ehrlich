@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import Markdown from "react-markdown";
+import rehypeSanitize from "rehype-sanitize";
 import {
   BarChart,
   Bar,
@@ -333,7 +334,7 @@ function SummaryCard({ summary, label }: { summary: string; label: string }) {
     <div className="rounded-md border border-border bg-surface p-4">
       <h4 className="mb-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">{label}</h4>
       <div className="prose prose-invert prose-sm max-w-none text-xs leading-relaxed text-muted-foreground">
-        <Markdown>{summary || "No summary available."}</Markdown>
+        <Markdown rehypePlugins={[rehypeSanitize]}>{summary || "No summary available."}</Markdown>
       </div>
     </div>
   );

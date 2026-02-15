@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
@@ -20,8 +21,14 @@ _require_user = Depends(get_current_user)
 _processor = FileProcessor()
 
 # Pending uploads waiting to be linked to an investigation.
-# Keyed by file_id, removed when claimed by POST /investigate.
-_pending_uploads: dict[str, UploadedFileEntity] = {}
+# Keyed by file_id, value is (workos_id, UploadedFileEntity).
+# Removed when claimed by POST /investigate.
+_pending_uploads: dict[str, tuple[str, UploadedFileEntity]] = {}
+# TTL tracking: file_id -> upload timestamp
+_pending_upload_times: dict[str, float] = {}
+
+# TTL for pending uploads (30 minutes)
+_UPLOAD_TTL_SECONDS = 30 * 60
 
 
 class UploadResponse(BaseModel):
@@ -47,7 +54,8 @@ async def upload_file(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-    _pending_uploads[uploaded.file_id] = uploaded
+    _pending_uploads[uploaded.file_id] = (user["workos_id"], uploaded)
+    _pending_upload_times[uploaded.file_id] = time.time()
 
     preview: dict[str, Any] = {}
     if uploaded.tabular:
@@ -73,6 +81,29 @@ async def upload_file(
     )
 
 
-def get_pending_upload(file_id: str) -> UploadedFileEntity | None:
-    """Retrieve and remove a pending upload by ID. Called from investigation routes."""
-    return _pending_uploads.pop(file_id, None)
+def get_pending_upload(file_id: str, workos_id: str) -> UploadedFileEntity | None:
+    """Retrieve and remove a pending upload by ID. Called from investigation routes.
+
+    Validates ownership and TTL. Returns None if not found, expired, or ownership mismatch.
+    """
+    entry = _pending_uploads.get(file_id)
+    if entry is None:
+        return None
+
+    owner_id, uploaded = entry
+    upload_time = _pending_upload_times.get(file_id, 0)
+
+    # Check TTL
+    if time.time() - upload_time > _UPLOAD_TTL_SECONDS:
+        _pending_uploads.pop(file_id, None)
+        _pending_upload_times.pop(file_id, None)
+        return None
+
+    # Validate ownership
+    if owner_id != workos_id:
+        return None
+
+    # Valid -- pop and return
+    _pending_uploads.pop(file_id, None)
+    _pending_upload_times.pop(file_id, None)
+    return uploaded

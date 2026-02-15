@@ -129,10 +129,25 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - **Structured outputs**: Director uses `output_config` with 6 JSON schemas (`domain/schemas.py`)
 - **Director streaming**: `_director_call()` async generator with `stream_message()`; Researcher/Summarizer non-streaming
 - External API clients: `httpx.AsyncClient`, retry with exponential backoff
-- **Auth**: WorkOS JWT middleware; JWKS verification; header + query param auth for SSE
+- **Auth**: WorkOS JWT middleware; JWKS verification; header + query param auth for SSE; generic error messages (no token details leaked)
 - **Credits**: director tier (haiku=1, sonnet=3, opus=5); deducted on start, refunded on failure
-- **BYOK**: `X-Anthropic-Key` header pass-through; bypasses credits
-- **Document upload**: CSV/XLSX/PDF via `POST /upload`; `FileProcessor` -> `UploadedFile`; injected as `<uploaded_data>` XML
+- **BYOK**: `X-Anthropic-Key` header pass-through; bypasses credits; keys redacted from error logs via `_sanitize_error()`
+- **Document upload**: CSV/XLSX/PDF via `POST /upload`; `FileProcessor` -> `UploadedFile`; magic byte validation; owner-scoped with 30-min TTL; injected as `<uploaded_data>` XML with `html.escape()` sanitization
+
+### Security Patterns
+
+- **Security headers**: `SecurityHeadersMiddleware` in `app.py` — `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: geolocation=(), microphone=(), camera=()`
+- **CORS hardening**: explicit `allow_methods` and `allow_headers` (no wildcards); wildcard origin warning in non-development environments; `EHRLICH_ENVIRONMENT` setting in `config.py`
+- **Upload isolation**: `_pending_uploads` stores `(workos_id, UploadedFile)` tuples; ownership validated on claim; 30-min TTL auto-expiry
+- **Prompt injection defense**: all user-controlled content in `<uploaded_data>` XML escaped via `html.escape()` — filenames, column names, dtypes, stats, sample values, document excerpts
+- **Input validation**: `InvestigateRequest.prompt` min_length=10, max_length=10000; `director_tier` regex pattern; SMILES max_length=500; PDB ID format validation; URL path encoding for external API clients
+- **Markdown XSS**: `rehype-sanitize` on all `<Markdown>` components (InvestigationReport, InvestigationComparison, paper view)
+- **BYOK key storage**: `sessionStorage` (tab-scoped, cleared on close) instead of `localStorage`
+- **Error sanitization**: API key patterns (`sk-ant-*`) redacted from Anthropic client error logs; tool errors don't expose internal details; JWT errors return generic messages
+- **File content validation**: magic byte checks (PDF: `%PDF-`, XLSX: `PK\x03\x04`, CSV: no null bytes + valid UTF-8)
+- **SQL injection prevention**: `db_name` validated against `^[a-zA-Z0-9_]+$` before interpolation in `_ensure_database()`
+- **Approval state guard**: `POST /investigate/{id}/approve` returns 409 if orchestrator is not awaiting approval
+- **SSE reconnection**: fresh `buildSSEUrl()` call on each reconnect to refresh auth token
 
 ### Integration Patterns
 

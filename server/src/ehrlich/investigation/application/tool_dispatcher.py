@@ -62,9 +62,9 @@ class ToolDispatcher:
             result_str = str(result)
             self._cache.put(tool_name, args_hash, result_str)
             return result_str
-        except Exception as e:
-            logger.warning("Tool %s failed: %s", tool_name, e)
-            return json.dumps({"error": f"Tool {tool_name} failed: {e}"})
+        except Exception:
+            logger.exception("Tool %s failed", tool_name)
+            return json.dumps({"error": f"Tool {tool_name} failed"})
 
     def _handle_query_uploaded_data(self, tool_input: dict[str, Any]) -> str:
         """Handle query_uploaded_data tool calls from in-memory uploaded files."""

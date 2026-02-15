@@ -74,11 +74,11 @@ class TestListInvestigations:
     async def test_returns_created_investigations(self, client: httpx.AsyncClient) -> None:
         await client.post(
             "/api/v1/investigate",
-            json={"prompt": "Test 1", "director_tier": "haiku"},
+            json={"prompt": "Test prompt 1", "director_tier": "haiku"},
         )
         await client.post(
             "/api/v1/investigate",
-            json={"prompt": "Test 2", "director_tier": "haiku"},
+            json={"prompt": "Test prompt 2", "director_tier": "haiku"},
         )
 
         response = await client.get("/api/v1/investigate")
@@ -86,15 +86,15 @@ class TestListInvestigations:
         data = response.json()
         assert len(data) == 2
         # Most recent first
-        assert data[0]["prompt"] == "Test 2"
-        assert data[1]["prompt"] == "Test 1"
+        assert data[0]["prompt"] == "Test prompt 2"
+        assert data[1]["prompt"] == "Test prompt 1"
 
 
 class TestGetInvestigation:
     async def test_returns_investigation(self, client: httpx.AsyncClient) -> None:
         resp = await client.post(
             "/api/v1/investigate",
-            json={"prompt": "Test", "director_tier": "haiku"},
+            json={"prompt": "Test investigation prompt", "director_tier": "haiku"},
         )
         inv_id = resp.json()["id"]
 
@@ -102,7 +102,7 @@ class TestGetInvestigation:
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == inv_id
-        assert data["prompt"] == "Test"
+        assert data["prompt"] == "Test investigation prompt"
         assert data["status"] == "pending"
 
     async def test_not_found(self, client: httpx.AsyncClient) -> None:
@@ -118,7 +118,7 @@ class TestStreamInvestigation:
     async def test_completed_replays_final(self, client: httpx.AsyncClient) -> None:
         resp = await client.post(
             "/api/v1/investigate",
-            json={"prompt": "Test", "director_tier": "haiku"},
+            json={"prompt": "Test replay prompt", "director_tier": "haiku"},
         )
         inv_id = resp.json()["id"]
 
@@ -140,7 +140,7 @@ class TestOwnership:
         # Create investigation as TEST_USER
         resp = await client.post(
             "/api/v1/investigate",
-            json={"prompt": "Test", "director_tier": "haiku"},
+            json={"prompt": "Test ownership prompt", "director_tier": "haiku"},
         )
         inv_id = resp.json()["id"]
 
@@ -155,7 +155,7 @@ class TestOwnership:
     async def test_stream_forbidden_for_other_user(self, client: httpx.AsyncClient) -> None:
         resp = await client.post(
             "/api/v1/investigate",
-            json={"prompt": "Test", "director_tier": "haiku"},
+            json={"prompt": "Test stream forbidden", "director_tier": "haiku"},
         )
         inv_id = resp.json()["id"]
 

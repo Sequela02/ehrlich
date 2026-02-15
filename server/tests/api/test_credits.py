@@ -78,13 +78,13 @@ class TestStartInvestigationCredits:
     async def test_insufficient_credits_returns_402(self, client: httpx.AsyncClient) -> None:
         resp1 = await client.post(
             "/api/v1/investigate",
-            json={"prompt": "First opus", "director_tier": "opus"},
+            json={"prompt": "First opus test", "director_tier": "opus"},
         )
         assert resp1.status_code == 200
 
         resp2 = await client.post(
             "/api/v1/investigate",
-            json={"prompt": "Second opus", "director_tier": "opus"},
+            json={"prompt": "Second opus test", "director_tier": "opus"},
         )
         assert resp2.status_code == 402
         assert "Insufficient credits" in resp2.json()["detail"]
@@ -92,7 +92,7 @@ class TestStartInvestigationCredits:
     async def test_byok_skips_credit_check(self, client: httpx.AsyncClient) -> None:
         response = await client.post(
             "/api/v1/investigate",
-            json={"prompt": "BYOK test", "director_tier": "opus"},
+            json={"prompt": "BYOK test prompt", "director_tier": "opus"},
             headers={"X-Anthropic-Key": "sk-ant-byok"},
         )
         assert response.status_code == 200
@@ -100,20 +100,19 @@ class TestStartInvestigationCredits:
         balance = await client.get("/api/v1/credits/balance")
         assert balance.json()["credits"] == 5
 
-    async def test_invalid_tier_returns_400(self, client: httpx.AsyncClient) -> None:
+    async def test_invalid_tier_returns_422(self, client: httpx.AsyncClient) -> None:
         response = await client.post(
             "/api/v1/investigate",
-            json={"prompt": "Bad tier", "director_tier": "gpt4"},
+            json={"prompt": "Bad tier test prompt", "director_tier": "gpt4"},
         )
-        assert response.status_code == 400
-        assert "Invalid director tier" in response.json()["detail"]
+        assert response.status_code == 422
 
 
 class TestTierCredits:
     async def test_haiku_costs_1(self, client: httpx.AsyncClient) -> None:
         await client.post(
             "/api/v1/investigate",
-            json={"prompt": "Haiku test", "director_tier": "haiku"},
+            json={"prompt": "Haiku test prompt", "director_tier": "haiku"},
         )
         balance = await client.get("/api/v1/credits/balance")
         assert balance.json()["credits"] == 4
@@ -121,7 +120,7 @@ class TestTierCredits:
     async def test_sonnet_costs_3(self, client: httpx.AsyncClient) -> None:
         await client.post(
             "/api/v1/investigate",
-            json={"prompt": "Sonnet test", "director_tier": "sonnet"},
+            json={"prompt": "Sonnet test prompt", "director_tier": "sonnet"},
         )
         balance = await client.get("/api/v1/credits/balance")
         assert balance.json()["credits"] == 2
@@ -129,7 +128,7 @@ class TestTierCredits:
     async def test_opus_costs_5(self, client: httpx.AsyncClient) -> None:
         await client.post(
             "/api/v1/investigate",
-            json={"prompt": "Opus test", "director_tier": "opus"},
+            json={"prompt": "Opus test prompt", "director_tier": "opus"},
         )
         balance = await client.get("/api/v1/credits/balance")
         assert balance.json()["credits"] == 0
@@ -137,7 +136,7 @@ class TestTierCredits:
     async def test_default_tier_is_opus(self, client: httpx.AsyncClient) -> None:
         await client.post(
             "/api/v1/investigate",
-            json={"prompt": "Default tier"},
+            json={"prompt": "Default tier test"},
         )
         balance = await client.get("/api/v1/credits/balance")
         assert balance.json()["credits"] == 0

@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     comptox_api_key: str = ""
     workos_client_id: str = ""
     workos_api_key: str = ""
+    environment: str = "development"
 
     @property
     def has_api_key(self) -> bool:

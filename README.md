@@ -315,9 +315,9 @@ Server at :8000, Console at :3000.
 | GET | `/api/v1/health` | Health check |
 | GET | `/api/v1/methodology` | Methodology: phases, domains, tools, data sources, models |
 | GET | `/api/v1/stats` | Aggregate counts (tools, domains, phases, data sources, events) |
-| GET | `/api/v1/molecule/depict?smiles=&w=&h=` | 2D SVG depiction (`image/svg+xml`, cached 24h) |
-| GET | `/api/v1/molecule/conformer?smiles=` | 3D conformer (JSON: mol_block, energy, num_atoms) |
-| GET | `/api/v1/molecule/descriptors?smiles=` | Molecular descriptors + Lipinski pass/fail |
+| GET | `/api/v1/molecule/depict?smiles=&w=&h=` | 2D SVG depiction (`image/svg+xml`, cached 24h). SMILES max 500 chars |
+| GET | `/api/v1/molecule/conformer?smiles=` | 3D conformer (JSON: mol_block, energy, num_atoms). SMILES max 500 chars |
+| GET | `/api/v1/molecule/descriptors?smiles=` | Molecular descriptors + Lipinski pass/fail. SMILES max 500 chars |
 | GET | `/api/v1/targets` | List protein targets (pdb_id, name, organism) |
 
 ### Protected (WorkOS JWT required)

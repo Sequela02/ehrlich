@@ -382,7 +382,7 @@ export function useSSE(url: string | null): SSEState {
         });
       }
 
-      source.onerror = () => {
+      source.onerror = async () => {
         source.close();
         setConnected(false);
 
@@ -392,14 +392,16 @@ export function useSSE(url: string | null): SSEState {
           setReconnecting(true);
           const delay = Math.pow(2, attemptRef.current) * 1000;
           attemptRef.current += 1;
-          setTimeout(connect, delay);
+          setTimeout(async () => {
+            await connect();
+          }, delay);
         } else {
           setReconnecting(false);
         }
       };
     }
 
-    connect();
+    void connect();
 
     return () => {
       if (sourceRef.current) {

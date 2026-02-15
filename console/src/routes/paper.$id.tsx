@@ -1,10 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState, Suspense } from "react";
 import Markdown from "react-markdown";
-import { ArrowLeft, Download, Loader2 } from "lucide-react";
+import rehypeSanitize from "rehype-sanitize";
+import { Download, Loader2 } from "lucide-react";
 import { apiFetch } from "@/shared/lib/api";
 import { getVizComponent, type VizPayload } from "@/features/visualization/VizRegistry";
 import { VIZ_COLORS } from "@/features/visualization/theme";
+import { PageHeader } from "@/shared/components/layout/PageHeader";
 
 export const Route = createFileRoute("/paper/$id")({
   component: PaperPage,
@@ -84,16 +86,11 @@ function PaperPage() {
   return (
     <div className="min-h-screen">
       {/* Toolbar -- hidden when printing */}
-      <div className="no-print sticky top-0 z-10 border-b border-border bg-background/95 px-6 py-3 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-[900px] items-center justify-between">
-          <Link
-            to="/investigation/$id"
-            params={{ id }}
-            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Back to investigation
-          </Link>
+      <PageHeader
+        title={paper.title}
+        backTo={`/investigation/${id}`}
+        className="no-print sticky top-0 z-10 backdrop-blur-sm bg-background/95"
+        rightContent={
           <button
             onClick={() => window.print()}
             className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-surface px-3 py-1.5 font-mono text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
@@ -101,8 +98,8 @@ function PaperPage() {
             <Download className="h-3.5 w-3.5" />
             Download PDF
           </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Paper content */}
       <article className="mx-auto max-w-[900px] px-6 py-10">
@@ -113,7 +110,7 @@ function PaperPage() {
             return (
               <section key={key} className="paper-section">
                 <div className="prose prose-sm prose-invert max-w-none prose-headings:text-foreground prose-a:text-primary prose-strong:text-foreground prose-code:text-primary prose-pre:rounded-lg prose-pre:border prose-pre:border-border prose-pre:bg-muted prose-table:text-xs prose-th:text-left prose-th:font-mono prose-th:text-[10px] prose-th:uppercase prose-th:tracking-wider prose-th:text-muted-foreground">
-                  <Markdown>{content}</Markdown>
+                  <Markdown rehypePlugins={[rehypeSanitize]}>{content}</Markdown>
                 </div>
               </section>
             );

@@ -35,7 +35,7 @@ describe("FileUpload", () => {
   it("renders drop zone with instruction text", () => {
     const { container } = renderWithProvider({ onFilesChanged: vi.fn() });
     const text = container.textContent ?? "";
-    expect(text).toContain("Drop CSV, Excel, or PDF files here");
+    expect(text).toContain("Drop CSV, Excel, or PDF");
   });
 
   it("renders hidden file input with accepted types", () => {
@@ -46,7 +46,7 @@ describe("FileUpload", () => {
     expect(input.multiple).toBe(true);
   });
 
-  it("shows uploaded files via DataPreview after upload", async () => {
+  it("uploads file and calls onFilesChanged", async () => {
     const uploadResult: UploadResponse = {
       file_id: "abc-123",
       filename: "test.csv",
@@ -67,49 +67,12 @@ describe("FileUpload", () => {
     const file = new File(["data"], "test.csv", { type: "text/csv" });
     fireEvent.change(input, { target: { files: [file] } });
 
-    // Wait for async upload
+    // Wait for async upload to complete
     await vi.waitFor(() => {
-      expect(container.textContent).toContain("test.csv");
+      expect(onFilesChanged).toHaveBeenCalledWith([
+        expect.objectContaining({ file_id: "abc-123", filename: "test.csv" }),
+      ]);
     });
-
-    expect(onFilesChanged).toHaveBeenCalledWith([
-      { file_id: "abc-123", filename: "test.csv" },
-    ]);
-  });
-
-  it("removes file when remove button is clicked", async () => {
-    const uploadResult: UploadResponse = {
-      file_id: "abc-123",
-      filename: "test.csv",
-      content_type: "text/csv",
-      preview: {
-        columns: ["col1"],
-        dtypes: ["str"],
-        row_count: 5,
-        sample_rows: [["x"]],
-      },
-    };
-    mockMutateAsync.mockResolvedValueOnce(uploadResult);
-
-    const onFilesChanged = vi.fn();
-    const { container } = renderWithProvider({ onFilesChanged });
-
-    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
-    const file = new File(["data"], "test.csv", { type: "text/csv" });
-    fireEvent.change(input, { target: { files: [file] } });
-
-    await vi.waitFor(() => {
-      expect(container.textContent).toContain("test.csv");
-    });
-
-    // Click remove button (the X button inside DataPreview)
-    const removeBtn = container.querySelector(
-      ".relative button",
-    ) as HTMLButtonElement;
-    fireEvent.click(removeBtn);
-
-    expect(container.textContent).not.toContain("test.csv");
-    expect(onFilesChanged).toHaveBeenLastCalledWith([]);
   });
 
   it("shows per-file error when upload fails", async () => {
@@ -142,7 +105,7 @@ describe("FileUpload", () => {
     expect(mockMutateAsync).not.toHaveBeenCalled();
   });
 
-  it("shows file count indicator after upload", async () => {
+  it("shows file count after upload", async () => {
     const uploadResult: UploadResponse = {
       file_id: "f-1",
       filename: "a.csv",

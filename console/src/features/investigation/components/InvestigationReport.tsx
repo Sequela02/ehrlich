@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Markdown from "react-markdown";
+import rehypeSanitize from "rehype-sanitize";
 import { Link } from "@tanstack/react-router";
 import {
   BookOpen,
@@ -132,7 +133,7 @@ export function InvestigationReport({
           />
           <div className="rounded-md border border-border bg-surface p-5">
             <div className="prose prose-sm prose-invert max-w-none prose-headings:text-foreground prose-a:text-primary prose-strong:text-foreground prose-code:text-primary prose-pre:rounded-lg prose-pre:border prose-pre:border-border prose-pre:bg-muted">
-              <Markdown>{summary}</Markdown>
+              <Markdown rehypePlugins={[rehypeSanitize]}>{summary}</Markdown>
             </div>
           </div>
         </section>

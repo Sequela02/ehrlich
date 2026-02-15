@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from ehrlich.investigation.domain.upload_limits import MAX_FILES_PER_INVESTIGATION
 
@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 
 
 class InvestigateRequest(BaseModel):
-    prompt: str
-    director_tier: str = "opus"
+    prompt: str = Field(..., min_length=10, max_length=10000)
+    director_tier: str = Field(default="opus", pattern="^(haiku|sonnet|opus)$")
     file_ids: list[str] = []
 
     @field_validator("file_ids")

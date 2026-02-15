@@ -31,11 +31,35 @@ class FileProcessor:
             msg = f"Unsupported file type: .{ext}. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}"
             raise ValueError(msg)
 
+        self._validate_content_type(content, ext)
+
         if ext == "csv":
             return self._process_csv(filename, content)
         if ext == "xlsx":
             return self._process_xlsx(filename, content)
         return self._process_pdf(filename, content)
+
+    def _validate_content_type(self, content: bytes, extension: str) -> None:
+        """Validate file content matches declared extension via magic bytes."""
+        if extension == "pdf":
+            if len(content) < 5 or content[:5] != b"%PDF-":
+                msg = "File content does not match PDF format"
+                raise ValueError(msg)
+        elif extension == "xlsx":
+            if len(content) < 4 or content[:4] != b"PK\x03\x04":
+                msg = "File content does not match XLSX format"
+                raise ValueError(msg)
+        elif extension == "csv":
+            # CSV should be valid UTF-8 text with no null bytes in first 1024 bytes
+            check_size = min(len(content), 1024)
+            if b"\x00" in content[:check_size]:
+                msg = "File content does not match CSV format (contains null bytes)"
+                raise ValueError(msg)
+            try:
+                content[:check_size].decode("utf-8")
+            except UnicodeDecodeError as e:
+                msg = "File content does not match CSV format (invalid UTF-8)"
+                raise ValueError(msg) from e
 
     def _process_csv(self, filename: str, content: bytes) -> UploadedFile:
         df = pd.read_csv(io.BytesIO(content))

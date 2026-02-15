@@ -6,6 +6,7 @@ and uploaded-data context builders.
 
 from __future__ import annotations
 
+import html
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -246,6 +247,8 @@ def build_uploaded_data_context(files: list[UploadedFile]) -> str:
 
     Injected into Director and Researcher prompts so the model is aware
     of available datasets and can reference them via ``query_uploaded_data``.
+
+    All user-controlled content is escaped to prevent prompt injection.
     """
     if not files:
         return ""
@@ -253,31 +256,48 @@ def build_uploaded_data_context(files: list[UploadedFile]) -> str:
     for f in files:
         if f.tabular:
             t = f.tabular
-            cols = ", ".join(t.columns)
-            dtypes = ", ".join(t.dtypes)
-            parts.append(f'  <file id="{f.file_id}" name="{f.filename}" type="tabular">')
-            parts.append(f"    Columns ({len(t.columns)}): {cols}")
-            parts.append(f"    Dtypes: {dtypes}")
+            # Escape all user-controlled values
+            escaped_file_id = html.escape(f.file_id, quote=True)
+            escaped_filename = html.escape(f.filename, quote=True)
+            escaped_cols = ", ".join(html.escape(c) for c in t.columns)
+            escaped_dtypes = ", ".join(html.escape(d) for d in t.dtypes)
+
+            parts.append(
+                f'  <file id="{escaped_file_id}" name="{escaped_filename}" type="tabular">'
+            )
+            parts.append(f"    Columns ({len(t.columns)}): {escaped_cols}")
+            parts.append(f"    Dtypes: {escaped_dtypes}")
             parts.append(f"    Rows: {t.row_count}")
+
             if t.summary_stats:
                 stats_lines = []
                 for col_name, stats in list(t.summary_stats.items())[:6]:
-                    mean = stats.get("mean", "?")
-                    std = stats.get("std", "?")
-                    stats_lines.append(f"{col_name}: mean={mean}, std={std}")
+                    escaped_col = html.escape(col_name)
+                    mean = html.escape(str(stats.get("mean", "?")))
+                    std = html.escape(str(stats.get("std", "?")))
+                    stats_lines.append(f"{escaped_col}: mean={mean}, std={std}")
                 parts.append(f"    Stats: {'; '.join(stats_lines)}")
+
             if t.sample_rows:
-                header = " | ".join(t.columns)
-                parts.append(f"    Sample: {header}")
+                escaped_header = " | ".join(html.escape(c) for c in t.columns)
+                parts.append(f"    Sample: {escaped_header}")
                 for row in t.sample_rows[:3]:
-                    parts.append(f"            {' | '.join(row)}")
+                    escaped_row = " | ".join(html.escape(str(val)) for val in row)
+                    parts.append(f"            {escaped_row}")
             parts.append("  </file>")
         elif f.document:
             d = f.document
             excerpt = d.text[:500] + "..." if len(d.text) > 500 else d.text
-            parts.append(f'  <file id="{f.file_id}" name="{f.filename}" type="document">')
+            # Escape all user-controlled values
+            escaped_file_id = html.escape(f.file_id, quote=True)
+            escaped_filename = html.escape(f.filename, quote=True)
+            escaped_excerpt = html.escape(excerpt)
+
+            parts.append(
+                f'  <file id="{escaped_file_id}" name="{escaped_filename}" type="document">'
+            )
             parts.append(f"    Pages: {d.page_count}")
-            parts.append(f"    Excerpt: {excerpt}")
+            parts.append(f"    Excerpt: {escaped_excerpt}")
             parts.append("  </file>")
     parts.append("</uploaded_data>")
     return "\n".join(parts)

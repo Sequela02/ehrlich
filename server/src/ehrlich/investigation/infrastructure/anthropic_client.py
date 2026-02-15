@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -11,6 +12,12 @@ if TYPE_CHECKING:
 import anthropic
 
 logger = logging.getLogger(__name__)
+
+
+def _sanitize_error(msg: str) -> str:
+    """Remove Anthropic API keys from error messages."""
+    return re.sub(r"sk-ant-[A-Za-z0-9_-]+", "[REDACTED]", msg)
+
 
 _MAX_RETRIES = 3
 _BASE_DELAY = 1.0
@@ -84,7 +91,7 @@ class AnthropicClientAdapter:
                 if attempt < _MAX_RETRIES - 1:
                     await asyncio.sleep(delay)
             except anthropic.APIError as e:
-                logger.error("Anthropic API error: %s", e)
+                logger.error("Anthropic API error: %s", _sanitize_error(str(e)))
                 raise
 
         raise last_error  # type: ignore[misc]
@@ -139,7 +146,7 @@ class AnthropicClientAdapter:
                 if attempt < _MAX_RETRIES - 1:
                     await asyncio.sleep(delay)
             except anthropic.APIError as e:
-                logger.error("Anthropic API error: %s", e)
+                logger.error("Anthropic API error: %s", _sanitize_error(str(e)))
                 raise
 
         raise last_error  # type: ignore[misc]
