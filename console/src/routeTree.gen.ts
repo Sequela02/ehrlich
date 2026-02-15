@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as CallbackRouteImport } from './routes/callback'
 import { Route as IndexRouteImport } from './routes/index'
@@ -16,6 +17,11 @@ import { Route as PaperIdRouteImport } from './routes/paper.$id'
 import { Route as InvestigationIdRouteImport } from './routes/investigation.$id'
 import { Route as CompareId1Id2RouteImport } from './routes/compare.$id1.$id2'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MethodologyRoute = MethodologyRouteImport.update({
   id: '/methodology',
   path: '/methodology',
@@ -51,6 +57,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/callback': typeof CallbackRoute
   '/methodology': typeof MethodologyRoute
+  '/settings': typeof SettingsRoute
   '/investigation/$id': typeof InvestigationIdRoute
   '/paper/$id': typeof PaperIdRoute
   '/compare/$id1/$id2': typeof CompareId1Id2Route
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/callback': typeof CallbackRoute
   '/methodology': typeof MethodologyRoute
+  '/settings': typeof SettingsRoute
   '/investigation/$id': typeof InvestigationIdRoute
   '/paper/$id': typeof PaperIdRoute
   '/compare/$id1/$id2': typeof CompareId1Id2Route
@@ -68,6 +76,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/callback': typeof CallbackRoute
   '/methodology': typeof MethodologyRoute
+  '/settings': typeof SettingsRoute
   '/investigation/$id': typeof InvestigationIdRoute
   '/paper/$id': typeof PaperIdRoute
   '/compare/$id1/$id2': typeof CompareId1Id2Route
@@ -78,6 +87,7 @@ export interface FileRouteTypes {
     | '/'
     | '/callback'
     | '/methodology'
+    | '/settings'
     | '/investigation/$id'
     | '/paper/$id'
     | '/compare/$id1/$id2'
@@ -86,6 +96,7 @@ export interface FileRouteTypes {
     | '/'
     | '/callback'
     | '/methodology'
+    | '/settings'
     | '/investigation/$id'
     | '/paper/$id'
     | '/compare/$id1/$id2'
@@ -94,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/callback'
     | '/methodology'
+    | '/settings'
     | '/investigation/$id'
     | '/paper/$id'
     | '/compare/$id1/$id2'
@@ -103,6 +115,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CallbackRoute: typeof CallbackRoute
   MethodologyRoute: typeof MethodologyRoute
+  SettingsRoute: typeof SettingsRoute
   InvestigationIdRoute: typeof InvestigationIdRoute
   PaperIdRoute: typeof PaperIdRoute
   CompareId1Id2Route: typeof CompareId1Id2Route
@@ -110,6 +123,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/methodology': {
       id: '/methodology'
       path: '/methodology'
@@ -159,6 +179,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CallbackRoute: CallbackRoute,
   MethodologyRoute: MethodologyRoute,
+  SettingsRoute: SettingsRoute,
   InvestigationIdRoute: InvestigationIdRoute,
   PaperIdRoute: PaperIdRoute,
   CompareId1Id2Route: CompareId1Id2Route,

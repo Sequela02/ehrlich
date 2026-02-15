@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useRef, useEffect, useState, useMemo } from "react";
-import { ArrowLeft, ExternalLink, PanelRightClose, PanelRightOpen, WifiOff } from "lucide-react";
+import { ExternalLink, PanelRightClose, PanelRightOpen, WifiOff } from "lucide-react";
+import { PageHeader } from "@/shared/components/layout/PageHeader";
 import type { PhaseInfo } from "@/features/investigation/types";
 import { cn } from "@/shared/lib/utils";
 import { ErrorBoundary } from "@/features/shared/components/ErrorBoundary";
@@ -110,20 +111,11 @@ function InvestigationPage() {
   return (
     <div className="flex min-h-screen flex-col lg:h-screen lg:overflow-hidden">
       {/* Header */}
-      <header className="shrink-0 border-b border-border bg-background px-4 py-3 lg:px-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <a
-              href="/"
-              className="rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </a>
-            <div>
-              <h1 className="text-xl font-semibold">Investigation</h1>
-              <p className="font-mono text-[11px] text-muted-foreground">{id}</p>
-            </div>
-          </div>
+      <PageHeader
+        title="Investigation"
+        subtitle={id}
+        backTo="/"
+        rightContent={
           <div className="flex items-center gap-3">
             {!completed && <PhaseIndicator phase={currentPhase} />}
             <StatusIndicator
@@ -137,6 +129,7 @@ function InvestigationPage() {
               onClick={() => setSidebarOpen((p) => !p)}
               className="hidden rounded-md p-1.5 text-muted-foreground transition-colors hover:text-foreground lg:inline-flex"
               title={sidebarOpen ? "Hide timeline" : "Show timeline"}
+              aria-label={sidebarOpen ? "Hide timeline" : "Show timeline"}
             >
               {sidebarOpen ? (
                 <PanelRightClose className="h-4 w-4" />
@@ -145,8 +138,8 @@ function InvestigationPage() {
               )}
             </button>
           </div>
-        </div>
-      </header>
+        }
+      />
 
       {/* Experiment status bar (hidden when approval is pending -- approval moves to main content) */}
       {!approvalPending && (
@@ -182,7 +175,7 @@ function InvestigationPage() {
             <HypothesisApprovalCard
               investigationId={id}
               hypotheses={pendingApprovalHypotheses}
-              onApproved={() => {}}
+              onApproved={() => { }}
             />
           )}
 

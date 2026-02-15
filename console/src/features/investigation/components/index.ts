@@ -4,7 +4,7 @@ export { CandidateTable } from "./CandidateTable";
 export { CandidateDetail } from "./CandidateDetail";
 export { CostBadge } from "./CostBadge";
 export { FindingsPanel } from "./FindingsPanel";
-export { InvestigationList } from "./InvestigationList";
+
 export { HypothesisBoard } from "./HypothesisBoard";
 export { HypothesisCard } from "./HypothesisCard";
 export { ActiveExperimentCard } from "./ActiveExperimentCard";

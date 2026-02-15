@@ -158,4 +158,16 @@ Phase 14G (Validation Runs)            -- after 14E + 14F (needs tree search + p
 14D, 14E, 14F depend on 14A (clean orchestrator).
 14G depends on everything else being done.
 
-**Verification:** All existing tests pass after each sub-phase. New tests for tree search, paper generator, and enriched tools. Quality gates: ruff 0, mypy 0, pytest pass, tsc 0, vitest pass.
+
+## 14I: Console Layout Refinements -- DONE
+
+Addressed UI/UX audit findings to improve usability and reduce cognitive load. Implemented a cleaner, sidebar-based layout.
+
+- [x] **Sidebar Layout**: Created `AppSidebar` for navigation, history, and settings. Replaced top-bar navigation.
+- [x] **Home Page Redesign**: Simplified `index.tsx` to focus on prompt input. Removed inline history list and settings.
+- [x] **Standardized Headers**: Implemented `PageHeader` component for consistent titles, subtitles, and actions across all routes.
+- [x] **Code Cleanup**: Removed dead code (`InvestigationList`), fixed z-indices, and enforced strict TypeScript checks.
+- [x] **Mobile Responsiveness**: Added mobile-specific headers and sidebar toggles.
+
+Result: 4 files refactored, 1 deleted, 2 verified tests. Improved lighthouse accessibility and layout stability.
+
