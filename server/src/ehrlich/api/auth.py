@@ -40,6 +40,7 @@ def _verify_token(token: str) -> dict[str, Any]:
             token,
             signing_key.key,
             algorithms=["RS256"],
+            leeway=60,
         )
         return {"workos_id": payload["sub"], "email": payload.get("email", "")}
     except jwt.exceptions.PyJWTError as e:
