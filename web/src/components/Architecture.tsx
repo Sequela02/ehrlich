@@ -1,4 +1,5 @@
-import { motion } from "motion/react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { Cpu, Activity, FileText, Network } from "lucide-react";
 
 const CARD_STYLES = {
@@ -21,6 +22,56 @@ const CARD_STYLES = {
     icon: FileText,
   },
 } as const;
+
+type TierKey = "haiku" | "sonnet" | "opus";
+
+interface TierConfig {
+  label: string;
+  credits: number;
+  tag: string;
+  director: string;
+  researcher: string;
+  summarizer: string;
+  directorReason: string;
+  researcherReason: string;
+  summarizerReason: string;
+}
+
+const TIERS: Record<TierKey, TierConfig> = {
+  haiku: {
+    label: "Haiku",
+    credits: 1,
+    tag: "Fast & efficient",
+    director: "Haiku 4.5",
+    researcher: "Haiku 4.5",
+    summarizer: "Haiku 4.5",
+    directorReason: "WHY: Fastest iteration. Lightweight reasoning for exploratory queries.",
+    researcherReason: "WHY: Fast tool execution. Domain-filtered to only relevant tools.",
+    summarizerReason: "WHY: Native compression speed. Consistent across the entire pipeline.",
+  },
+  sonnet: {
+    label: "Sonnet",
+    credits: 3,
+    tag: "Balanced",
+    director: "Sonnet 4.5",
+    researcher: "Sonnet 4.5",
+    summarizer: "Haiku 4.5",
+    directorReason: "WHY: Strong reasoning at moderate cost. Good hypothesis quality.",
+    researcherReason: "WHY: Fast tool execution. Domain-filtered to only relevant tools.",
+    summarizerReason: "WHY: Compression is mechanical, not creative. Haiku handles it efficiently.",
+  },
+  opus: {
+    label: "Opus",
+    credits: 5,
+    tag: "Maximum power",
+    director: "Opus 4.6",
+    researcher: "Sonnet 4.5",
+    summarizer: "Haiku 4.5",
+    directorReason: "WHY: Hypothesis quality requires deep reasoning. No tool access -- pure scientific thinking.",
+    researcherReason: "WHY: Fast tool execution. Domain-filtered to only relevant tools.",
+    summarizerReason: "WHY: Compression is mechanical, not creative. Haiku is 60x cheaper than Opus.",
+  },
+};
 
 function ModelCard({
   label,
@@ -60,7 +111,18 @@ function ModelCard({
             <div className={`font-mono text-[10px] ${styles.text} bg-black/40 px-2 py-0.5 rounded border ${styles.border} uppercase tracking-wider mb-1 inline-block`}>
               {label}
             </div>
-            <div className="font-bold text-lg leading-none">{model}</div>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={model}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.2 }}
+                className="font-bold text-lg leading-none"
+              >
+                {model}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
       </div>
@@ -69,9 +131,18 @@ function ModelCard({
         {children}
       </div>
 
-      <div className={`font-mono text-[10px] ${styles.text} opacity-70`}>
-        {reason}
-      </div>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={reason}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className={`font-mono text-[10px] ${styles.text} opacity-70`}
+        >
+          {reason}
+        </motion.div>
+      </AnimatePresence>
     </motion.div>
   );
 }
@@ -94,7 +165,48 @@ function DataPipe({ height = 40, delay = 0 }) {
   );
 }
 
+function TierSelector({ tier, onSelect }: { tier: TierKey; onSelect: (t: TierKey) => void }) {
+  const keys: TierKey[] = ["haiku", "sonnet", "opus"];
+
+  return (
+    <div className="inline-flex items-center rounded-lg border border-border bg-surface/50 backdrop-blur-sm p-1 gap-1">
+      {keys.map((key) => {
+        const t = TIERS[key];
+        const isActive = tier === key;
+        return (
+          <button
+            key={key}
+            onClick={() => onSelect(key)}
+            className={`relative px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              isActive
+                ? "text-foreground"
+                : "text-muted-foreground hover:text-foreground/80"
+            }`}
+          >
+            {isActive && (
+              <motion.div
+                layoutId="tier-bg"
+                className="absolute inset-0 bg-primary/15 border border-primary/30 rounded-md"
+                transition={{ type: "spring", bounce: 0.15, duration: 0.4 }}
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-2">
+              {t.label}
+              <span className="font-mono text-[10px] text-muted-foreground">
+                {t.credits}cr
+              </span>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function Architecture() {
+  const [tier, setTier] = useState<TierKey>("opus");
+  const config = TIERS[tier];
+
   return (
     <section
       id="architecture"
@@ -114,27 +226,30 @@ export function Architecture() {
             <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Multi-Model Architecture</span>
           </div>
           <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">
-            A research team, <span className="text-primary">assembled per question.</span>
+            Choose your team, <span className="text-primary">match the task.</span>
           </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
             Every investigation assembles a team of three specialized models.
-            Opus directs the science. Sonnet executes experiments in parallel.
-            Haiku compresses noise. Each model plays to its strength.
+            Pick the tier that fits your question -- from fast exploration to maximum reasoning power.
           </p>
+
+          <TierSelector tier={tier} onSelect={setTier} />
         </div>
 
         <div className="flex flex-col items-center">
           {/* Tier 1: Director */}
           <ModelCard
             label="Director"
-            model="Opus 4.6"
+            model={config.director}
             variant="accent"
-            reason="WHY: Hypothesis quality requires deep reasoning. No tool access -- pure scientific thinking."
+            reason={config.directorReason}
           >
             Formulates hypotheses with predictions, criteria, and Bayesian priors.
             Designs experiments with controls and confounders.
             Evaluates evidence and synthesizes findings with GRADE certainty.
-            <span className="text-accent/80"> Streaming with 10K token extended thinking.</span>
+            {tier === "opus" && (
+              <span className="text-accent/80"> Streaming with 10K token extended thinking.</span>
+            )}
           </ModelCard>
 
           <DataPipe height={60} delay={0.2} />
@@ -148,10 +263,10 @@ export function Architecture() {
             <div className="flex flex-col items-center">
               <ModelCard
                 label="Researcher A"
-                model="Sonnet 4.5"
+                model={config.researcher}
                 variant="primary"
                 delay={0.4}
-                reason="WHY: Fast tool execution. Domain-filtered to only relevant tools."
+                reason={config.researcherReason}
               >
                 Executes experiment protocol. Queries databases, trains models,
                 runs statistical tests, screens candidates. Max 10 tool calls per experiment.
@@ -160,7 +275,7 @@ export function Architecture() {
             <div className="flex flex-col items-center">
               <ModelCard
                 label="Researcher B"
-                model="Sonnet 4.5"
+                model={config.researcher}
                 variant="primary"
                 delay={0.5}
                 reason="WHY: Parallel execution halves wall-clock time per batch."
@@ -176,10 +291,10 @@ export function Architecture() {
           {/* Tier 3: Summarizer */}
           <ModelCard
             label="Summarizer"
-            model="Haiku 4.5"
+            model={config.summarizer}
             variant="secondary"
             delay={0.8}
-            reason="WHY: Compression is mechanical, not creative. Haiku is 60x cheaper than Opus."
+            reason={config.summarizerReason}
           >
             Compresses tool outputs over 2000 characters. PICO decomposition. Domain
             classification. GRADE evidence grading. Keeps the Director focused on
