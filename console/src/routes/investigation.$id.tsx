@@ -83,6 +83,7 @@ function InvestigationPage() {
         status: h.status,
         parentId: h.parent_id || undefined,
         confidence: h.confidence,
+        rationale: h.rationale,
       })),
     [hypotheses],
   );
@@ -94,6 +95,7 @@ function InvestigationPage() {
         hypothesisId: e.hypothesis_id,
         description: e.description,
         status: e.status as ExperimentNode["status"],
+        tool_count: e.tool_count,
       })),
     [experiments],
   );
@@ -105,6 +107,8 @@ function InvestigationPage() {
         hypothesisId: f.hypothesis_id,
         summary: f.title,
         evidenceType: f.evidence_type,
+        detail: f.detail,
+        source_id: f.source_id,
       })),
     [findings],
   );
@@ -213,7 +217,7 @@ function InvestigationPage() {
               <HypothesisApprovalCard
                 investigationId={id}
                 hypotheses={pendingApprovalHypotheses}
-                onApproved={() => {}}
+                onApproved={() => { }}
               />
             ) : (
               <HypothesisBoard
