@@ -118,8 +118,8 @@ export function Architecture() {
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Every investigation assembles a team of three specialized models.
-            A Director that thinks deeply. Researchers that execute in parallel.
-            A Summarizer that compresses noise. Cost: ~$3-4 instead of ~$11 all-Opus.
+            Opus directs the science. Sonnet executes experiments in parallel.
+            Haiku compresses noise. Each model plays to its strength.
           </p>
         </div>
 
