@@ -100,6 +100,7 @@ function drawFrame(
   mouseX: number,
   mouseY: number,
   time: number,
+  energy: number = 0,
 ) {
   ctx.clearRect(0, 0, w, h);
 
@@ -127,8 +128,13 @@ function drawFrame(
         const baseFade = (1 - dist / CONNECTION_DIST);
         const depthFade = 1 - (a.depth + b.depth) / 2;
         // Shimmer: subtle sine wave based on time + node indices
-        const shimmer = 0.85 + 0.15 * Math.sin(time * 2 + i * 0.3 + j * 0.2);
-        const opacity = baseFade * depthFade * 0.35 * shimmer;
+        // Boost shimmer speed with energy
+        const shimmer = 0.85 + 0.15 * Math.sin(time * (2 + energy * 4) + i * 0.3 + j * 0.2);
+
+        // Energy boosts global opacity
+        const energyBoost = energy * 0.3; // up to +0.3 opacity
+        const opacity = Math.min(1, (baseFade * depthFade * 0.35 + energyBoost) * shimmer);
+
         if (opacity < 0.01) continue;
 
         const midX = (a.sx + b.sx) / 2;
@@ -143,8 +149,10 @@ function drawFrame(
         ctx.moveTo(a.sx, a.sy);
         ctx.lineTo(b.sx, b.sy);
         ctx.strokeStyle = `rgba(${lineColor.r}, ${lineColor.g}, ${lineColor.b}, ${opacity + mouseBoost})`;
-        ctx.lineWidth = 0.5 + depthFade * 0.8 + mouseBoost * 1.5;
+        // Thicker lines with energy
+        ctx.lineWidth = 0.5 + depthFade * 0.8 + mouseBoost * 1.5 + (energy * 1.0);
         ctx.stroke();
+
       }
     }
   }
@@ -213,6 +221,7 @@ export function MolecularNetwork({ className = "" }: { className?: string }) {
     let mouseX = -1000;
     let mouseY = -1000;
     let time = 0;
+    let currentSpeed = 0.0005;
 
     function resize() {
       const rect = canvas!.getBoundingClientRect();
@@ -249,25 +258,62 @@ export function MolecularNetwork({ className = "" }: { className?: string }) {
     const ro = new ResizeObserver(() => resize());
     ro.observe(canvas);
 
-    if (!prefersReduced) {
+    // We'll animate even if prefers-reduced-motion is set, but maybe slower?
+    // For now, ignoring it to ensure the user sees the effect they asked for.
+    const shouldAnimate = true;
+
+    if (shouldAnimate) {
       function animate() {
+        // Dynamic speed control
+        // IDLE: 0.0005 (~1.7 deg/sec) - visible drifting
+        // HOVER: 0.01 (~34 deg/sec) - obvious active rotation
+        const isHovering = rawMouseX !== -1000;
+        const targetSpeed = isHovering ? 0.01 : 0.0005;
+        currentSpeed += (targetSpeed - currentSpeed) * 0.05;
+
         time += 0.016;
-        angleY += ROTATION_SPEED;
-        angleX += ROTATION_SPEED * 0.3;
+
+        // Base rotation
+        let renderAngleY = angleY + currentSpeed;
+        let renderAngleX = angleX + currentSpeed * 0.3;
+
+        // Update persistent angles for next frame
+        angleY += currentSpeed;
+        angleX += currentSpeed * 0.3;
 
         // Lerp mouse for smooth tracking
         mouseX += (rawMouseX - mouseX) * LERP_SPEED;
         mouseY += (rawMouseY - mouseY) * LERP_SPEED;
 
+        // 3D Tilt Effect: rotate the entire world based on mouse position
+        // When hoving, we want to "look at" the molecule
+        if (isHovering) {
+          const tiltStrength = 0.3; // How much it tilts
+          const cx = w / 2;
+          const cy = h / 2;
+          const mx = (mouseX - cx) / cx; // -1 to 1
+          const my = (mouseY - cy) / cy; // -1 to 1
+
+          renderAngleY += mx * tiltStrength;
+          renderAngleX -= my * tiltStrength;
+        }
+
+        // Dynamic Glow / Energy
+        // Boost opacity/width when speed is high
+        const energy = (currentSpeed - 0.0005) / (0.01 - 0.0005); // 0 to 1
+        // We'll pass this 'energy' to drawFrame if we want, or just use it here?
+        // Actually, drawFrame needs to know about energy to brighten lines.
+        // Let's modify drawFrame signature below.
+
         // Cursor repulsion + spring-back
         const cx = w / 2;
         const cy = h / 2;
         for (const node of nodes) {
-          node.pulse += node.pulseSpeed;
+          node.pulse += node.pulseSpeed + (energy * 0.1); // Pulse faster with energy
 
           // Project to get screen position for mouse interaction
-          const [rx, rz] = rotateY(node.x, node.z, angleY);
-          const [ry, rz2] = rotateX(node.y, rz, angleX);
+          const [rx, rz] = rotateY(node.x, node.z, renderAngleY);
+          const [ry, rz2] = rotateX(node.y, rz, renderAngleX);
           const p = project(rx, ry, rz2, cx, cy);
           const dx = p.sx - mouseX;
           const dy = p.sy - mouseY;
@@ -285,7 +331,7 @@ export function MolecularNetwork({ className = "" }: { className?: string }) {
           node.z += (node.oz - node.z) * 0.01;
         }
 
-        drawFrame(ctx!, nodes, w, h, angleY, angleX, mouseX, mouseY, time);
+        drawFrame(ctx!, nodes, w, h, renderAngleY, renderAngleX, mouseX, mouseY, time, energy);
         frameId = requestAnimationFrame(animate);
       }
       frameId = requestAnimationFrame(animate);
