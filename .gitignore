@@ -21,6 +21,7 @@ dist/
 
 # TanStack Start / Vite
 .output/
+.vercel/
 .tanstack/
 .vinxi/
 app.config.timestamp_*

@@ -21,7 +21,7 @@ export default defineConfig({
     tsConfigPaths({ projects: ["./tsconfig.json"] }),
     tanstackStart({ srcDirectory: "src" }),
     viteReact(),
-    nitro(),
+    nitro({ preset: "vercel" }),
   ],
   build: {
     chunkSizeWarningLimit: 300,
