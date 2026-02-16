@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: ehrlich
       POSTGRES_USER: ehrlich
-      POSTGRES_PASSWORD: ${EHRLICH_DB_PASSWORD:-ehrlich}
+      POSTGRES_PASSWORD: ${EHRLICH_DB_PASSWORD}
     volumes:
       - ehrlich_data:/var/lib/postgresql/data
     healthcheck:
@@ -19,13 +19,15 @@ services:
       context: ./server
       dockerfile: Dockerfile
     restart: unless-stopped
+    ports:
+      - "8000:8000"
     environment:
-      EHRLICH_DATABASE_URL: postgresql://ehrlich:${EHRLICH_DB_PASSWORD:-ehrlich}@db:5432/ehrlich
+      EHRLICH_DATABASE_URL: postgresql://ehrlich:${EHRLICH_DB_PASSWORD}@db:5432/ehrlich
       EHRLICH_ANTHROPIC_API_KEY: ${EHRLICH_ANTHROPIC_API_KEY}
       EHRLICH_WORKOS_CLIENT_ID: ${EHRLICH_WORKOS_CLIENT_ID:-}
       EHRLICH_WORKOS_API_KEY: ${EHRLICH_WORKOS_API_KEY:-}
-      EHRLICH_CORS_ORIGINS: '["https://ehrlich.sequel.com.mx"]'
-      EHRLICH_ENVIRONMENT: production
+      EHRLICH_CORS_ORIGINS: ${EHRLICH_CORS_ORIGINS}
+      EHRLICH_ENVIRONMENT: ${EHRLICH_ENVIRONMENT:-production}
     depends_on:
       db:
         condition: service_healthy
@@ -35,20 +37,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
-
-  console:
-    build:
-      context: ./console
-      dockerfile: Dockerfile
-      args:
-        VITE_WORKOS_CLIENT_ID: ${EHRLICH_WORKOS_CLIENT_ID:-}
-        VITE_WORKOS_REDIRECT_URI: ${VITE_WORKOS_REDIRECT_URI:-https://ehrlich.sequel.com.mx}
-    restart: unless-stopped
-    ports:
-      - "80:80"
-    depends_on:
-      server:
-        condition: service_healthy
 
 volumes:
   ehrlich_data:
