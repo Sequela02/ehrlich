@@ -17,7 +17,18 @@ export type SSEEventType =
   | "domain_detected"
   | "literature_survey_completed"
   | "validation_metrics"
-  | "visualization";
+  | "visualization"
+  | "hypothesis_tree_updated"
+  | "positive_control";
+
+export type InvestigationStatus =
+  | "pending"
+  | "running"
+  | "awaiting_approval"
+  | "paused"
+  | "completed"
+  | "failed"
+  | "cancelled";
 
 export interface SSEEvent {
   event: SSEEventType;
@@ -234,22 +245,60 @@ export interface ValidationMetricsData {
   investigation_id: string;
 }
 
+export interface PositiveControl {
+  identifier: string;
+  identifier_type: string;
+  name: string;
+  known_activity: string;
+  score: number;
+  correctly_classified: boolean;
+}
+
+export interface HypothesisTreeUpdatedData {
+  hypothesis_id: string;
+  action: string;
+  parent_id: string;
+  depth: number;
+  children_count: number;
+  investigation_id: string;
+}
+
 export type DirectorTier = "haiku" | "sonnet" | "opus";
+
+export interface TabularPreview {
+  columns: string[];
+  dtypes: string[];
+  row_count: number;
+  sample_rows: string[][];
+}
+
+export interface DocumentPreview {
+  text: string;
+  page_count: number;
+}
+
+export interface UploadResponse {
+  file_id: string;
+  filename: string;
+  content_type: string;
+  preview: TabularPreview | DocumentPreview;
+}
 
 export interface InvestigationRequest {
   prompt: string;
   director_tier?: DirectorTier;
+  file_ids?: string[];
 }
 
 export interface InvestigationResponse {
   id: string;
-  status: string;
+  status: InvestigationStatus;
 }
 
 export interface InvestigationSummary {
   id: string;
   prompt: string;
-  status: string;
+  status: InvestigationStatus;
   created_at: string;
   candidate_count: number;
 }
@@ -308,7 +357,7 @@ export interface VisualizationData {
 export interface InvestigationDetail {
   id: string;
   prompt: string;
-  status: string;
+  status: InvestigationStatus;
   hypotheses: Hypothesis[];
   experiments: Experiment[];
   findings: Finding[];
@@ -320,7 +369,9 @@ export interface InvestigationDetail {
   cost_data: Record<string, unknown>;
 }
 
-export interface ModelCost {
+export interface RoleCost {
+  model: string;
+  model_display: string;
   input_tokens: number;
   output_tokens: number;
   calls: number;
@@ -333,5 +384,5 @@ export interface CostInfo {
   totalTokens: number;
   totalCost: number;
   toolCalls: number;
-  byModel?: Record<string, ModelCost>;
+  byRole?: Record<string, RoleCost>;
 }

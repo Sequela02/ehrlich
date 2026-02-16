@@ -6,110 +6,39 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
-from ehrlich.analysis.tools import (
-    analyze_substructures,
-    compute_properties,
-    explore_dataset,
-    run_categorical_test,
-    run_statistical_test,
-    search_bioactivity,
-    search_compounds,
-    search_pharmacology,
-)
 from ehrlich.api.auth import get_current_user, get_current_user_sse
-from ehrlich.api.sse import SSEEventType, domain_event_to_sse
-from ehrlich.chemistry.tools import (
-    compute_descriptors,
-    compute_fingerprint,
-    generate_3d,
-    substructure_match,
-    tanimoto_similarity,
-    validate_smiles,
+from ehrlich.api.schemas.investigation import (
+    ApproveRequest,
+    CreditBalanceResponse,
+    InvestigateRequest,
+    InvestigateResponse,
+    InvestigationDetail,
+    InvestigationSummary,
+    serialize_candidates,
+    serialize_findings,
+    serialize_hypotheses,
+    serialize_negative_controls,
+    to_detail,
 )
+from ehrlich.api.sse import SSEEventType, domain_event_to_sse
 from ehrlich.config import get_settings
-from ehrlich.investigation.application.multi_orchestrator import MultiModelOrchestrator
-from ehrlich.investigation.application.tool_registry import ToolRegistry
-from ehrlich.investigation.domain.domain_registry import DomainRegistry
-from ehrlich.investigation.domain.domains.molecular import MOLECULAR_SCIENCE
-from ehrlich.investigation.domain.domains.nutrition import NUTRITION_SCIENCE
-from ehrlich.investigation.domain.domains.training import TRAINING_SCIENCE
+from ehrlich.investigation.application.orchestrator_factory import create_orchestrator
+from ehrlich.investigation.application.paper_generator import extract_visualizations, generate_paper
+from ehrlich.investigation.application.registry_factory import (
+    build_domain_registry,
+    build_mcp_configs,
+    build_tool_registry,
+)
 from ehrlich.investigation.domain.investigation import Investigation, InvestigationStatus
-from ehrlich.investigation.domain.mcp_config import MCPServerConfig
-from ehrlich.investigation.infrastructure.anthropic_client import AnthropicClientAdapter
 from ehrlich.investigation.infrastructure.mcp_bridge import MCPBridge
 from ehrlich.investigation.infrastructure.repository import InvestigationRepository
-from ehrlich.investigation.tools import (
-    conclude_investigation,
-    design_experiment,
-    evaluate_hypothesis,
-    propose_hypothesis,
-    record_finding,
-    record_negative_control,
-    search_prior_research,
-)
-from ehrlich.investigation.tools_viz import (
-    render_admet_radar,
-    render_binding_scatter,
-    render_dose_response,
-    render_evidence_matrix,
-    render_forest_plot,
-    render_funnel_plot,
-    render_muscle_heatmap,
-    render_nutrient_adequacy,
-    render_nutrient_comparison,
-    render_performance_chart,
-    render_therapeutic_window,
-    render_training_timeline,
-)
-from ehrlich.literature.tools import get_reference, search_citations, search_literature
-from ehrlich.nutrition.tools import (
-    analyze_nutrient_ratios,
-    assess_nutrient_adequacy,
-    check_intake_safety,
-    check_interactions,
-    compare_nutrients,
-    compute_inflammatory_index,
-    search_nutrient_data,
-    search_supplement_evidence,
-    search_supplement_labels,
-    search_supplement_safety,
-)
-from ehrlich.prediction.tools import (
-    cluster_compounds,
-    cluster_data,
-    predict_candidates,
-    predict_scores,
-    train_classifier,
-    train_model,
-)
-from ehrlich.simulation.tools import (
-    assess_resistance,
-    dock_against_target,
-    fetch_toxicity_profile,
-    get_protein_annotation,
-    predict_admet,
-    search_disease_targets,
-    search_protein_targets,
-)
-from ehrlich.training.tools import (
-    analyze_training_evidence,
-    assess_injury_risk,
-    compare_protocols,
-    compute_dose_response,
-    compute_performance_model,
-    compute_training_metrics,
-    plan_periodization,
-    search_clinical_trials,
-    search_exercise_database,
-    search_pubmed_training,
-    search_training_literature,
-)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
+
+    from ehrlich.investigation.application.multi_orchestrator import MultiModelOrchestrator
 
 logger = logging.getLogger(__name__)
 
@@ -130,52 +59,20 @@ TIER_CREDITS: dict[str, int] = {
     "opus": 5,
 }
 
+_TRANSIENT_EVENTS = frozenset({
+    SSEEventType.COMPLETED,
+    SSEEventType.ERROR,
+    SSEEventType.COST_UPDATE,
+    SSEEventType.HYPOTHESIS_APPROVAL_REQUESTED,
+    SSEEventType.THINKING,
+})
+
 _repository: InvestigationRepository | None = None
 _active_investigations: dict[str, Investigation] = {}
 _active_orchestrators: dict[str, MultiModelOrchestrator] = {}
 _subscribers: dict[str, list[asyncio.Queue[dict[str, str] | None]]] = {}
 # Transient per-investigation metadata (tier, credit cost, refund info)
 _investigation_meta: dict[str, dict[str, Any]] = {}
-
-
-class InvestigateRequest(BaseModel):
-    prompt: str
-    director_tier: str = "opus"
-
-
-class CreditBalanceResponse(BaseModel):
-    credits: int
-    is_byok: bool
-
-
-class InvestigateResponse(BaseModel):
-    id: str
-    status: str
-
-
-class InvestigationDetail(BaseModel):
-    id: str
-    prompt: str
-    status: str
-    hypotheses: list[dict[str, Any]]
-    experiments: list[dict[str, Any]]
-    current_hypothesis_id: str
-    current_experiment_id: str
-    findings: list[dict[str, Any]]
-    candidates: list[dict[str, Any]]
-    negative_controls: list[dict[str, Any]]
-    citations: list[str]
-    summary: str
-    created_at: str
-    cost_data: dict[str, object]
-
-
-class InvestigationSummary(BaseModel):
-    id: str
-    prompt: str
-    status: str
-    created_at: str
-    candidate_count: int
 
 
 async def init_repository(database_url: str) -> None:
@@ -197,137 +94,22 @@ def _get_repository() -> InvestigationRepository:
     return _repository
 
 
-def _build_registry() -> ToolRegistry:
-    registry = ToolRegistry()
-    _chem = frozenset({"chemistry"})
-    _lit = frozenset({"literature"})
-    _analysis = frozenset({"analysis"})
-    _pred = frozenset({"prediction"})
-    _sim = frozenset({"simulation"})
-    _training = frozenset({"training"})
-    _training_clinical = frozenset({"training", "clinical"})
-    _training_exercise = frozenset({"training", "exercise"})
-    _nutrition = frozenset({"nutrition"})
-    _nutrition_safety = frozenset({"nutrition", "safety"})
-    _ml = frozenset({"ml"})
-    _viz = frozenset({"visualization"})
-    _chem_viz = frozenset({"chemistry", "visualization"})
-    _sim_viz = frozenset({"simulation", "visualization"})
-    _training_viz = frozenset({"training", "visualization"})
-    _nutrition_viz = frozenset({"nutrition", "visualization"})
-
-    tagged_tools: list[tuple[str, Any, frozenset[str] | None]] = [
-        # Chemistry (6)
-        ("validate_smiles", validate_smiles, _chem),
-        ("compute_descriptors", compute_descriptors, _chem),
-        ("compute_fingerprint", compute_fingerprint, _chem),
-        ("tanimoto_similarity", tanimoto_similarity, _chem),
-        ("generate_3d", generate_3d, _chem),
-        ("substructure_match", substructure_match, _chem),
-        # Literature (3)
-        ("search_literature", search_literature, _lit),
-        ("get_reference", get_reference, _lit),
-        ("search_citations", search_citations, _lit),
-        # Analysis (6)
-        ("explore_dataset", explore_dataset, _analysis),
-        ("search_compounds", search_compounds, _analysis),
-        ("search_bioactivity", search_bioactivity, _analysis),
-        ("analyze_substructures", analyze_substructures, _analysis),
-        ("compute_properties", compute_properties, _analysis),
-        ("search_pharmacology", search_pharmacology, _analysis),
-        # Prediction (3) -- molecular-specific
-        ("train_model", train_model, _pred),
-        ("predict_candidates", predict_candidates, _pred),
-        ("cluster_compounds", cluster_compounds, _pred),
-        # ML (3) -- domain-agnostic
-        ("train_classifier", train_classifier, _ml),
-        ("predict_scores", predict_scores, _ml),
-        ("cluster_data", cluster_data, _ml),
-        # Simulation (7)
-        ("search_protein_targets", search_protein_targets, _sim),
-        ("dock_against_target", dock_against_target, _sim),
-        ("predict_admet", predict_admet, _sim),
-        ("fetch_toxicity_profile", fetch_toxicity_profile, _sim),
-        ("assess_resistance", assess_resistance, _sim),
-        ("get_protein_annotation", get_protein_annotation, _sim),
-        ("search_disease_targets", search_disease_targets, _sim),
-        # Training Science (11)
-        ("search_training_literature", search_training_literature, _training),
-        ("analyze_training_evidence", analyze_training_evidence, _training),
-        ("compare_protocols", compare_protocols, _training),
-        ("assess_injury_risk", assess_injury_risk, _training),
-        ("compute_training_metrics", compute_training_metrics, _training),
-        ("search_clinical_trials", search_clinical_trials, _training_clinical),
-        ("search_pubmed_training", search_pubmed_training, _training),
-        ("search_exercise_database", search_exercise_database, _training_exercise),
-        ("compute_performance_model", compute_performance_model, _training),
-        ("compute_dose_response", compute_dose_response, _training),
-        ("plan_periodization", plan_periodization, _training_exercise),
-        # Nutrition Science (10)
-        ("search_supplement_evidence", search_supplement_evidence, _nutrition),
-        ("search_supplement_labels", search_supplement_labels, _nutrition),
-        ("search_nutrient_data", search_nutrient_data, _nutrition),
-        ("search_supplement_safety", search_supplement_safety, _nutrition_safety),
-        ("compare_nutrients", compare_nutrients, _nutrition),
-        ("assess_nutrient_adequacy", assess_nutrient_adequacy, _nutrition),
-        ("check_intake_safety", check_intake_safety, _nutrition_safety),
-        ("check_interactions", check_interactions, _nutrition_safety),
-        ("analyze_nutrient_ratios", analyze_nutrient_ratios, _nutrition),
-        ("compute_inflammatory_index", compute_inflammatory_index, _nutrition),
-        # Visualization (12)
-        ("render_binding_scatter", render_binding_scatter, _chem_viz),
-        ("render_admet_radar", render_admet_radar, _sim_viz),
-        ("render_training_timeline", render_training_timeline, _training_viz),
-        ("render_muscle_heatmap", render_muscle_heatmap, _training_viz),
-        ("render_forest_plot", render_forest_plot, _viz),
-        ("render_evidence_matrix", render_evidence_matrix, _viz),
-        ("render_performance_chart", render_performance_chart, _training_viz),
-        ("render_funnel_plot", render_funnel_plot, _viz),
-        ("render_dose_response", render_dose_response, _training_viz),
-        ("render_nutrient_comparison", render_nutrient_comparison, _nutrition_viz),
-        ("render_nutrient_adequacy", render_nutrient_adequacy, _nutrition_viz),
-        ("render_therapeutic_window", render_therapeutic_window, _nutrition_viz),
-        # Statistics (2) -- universal, no tags
-        ("run_statistical_test", run_statistical_test, None),
-        ("run_categorical_test", run_categorical_test, None),
-        # Investigation control (7) -- universal, no tags
-        ("record_finding", record_finding, None),
-        ("conclude_investigation", conclude_investigation, None),
-        ("propose_hypothesis", propose_hypothesis, None),
-        ("design_experiment", design_experiment, None),
-        ("evaluate_hypothesis", evaluate_hypothesis, None),
-        ("record_negative_control", record_negative_control, None),
-        ("search_prior_research", search_prior_research, None),
-    ]
-    for name, func, tags in tagged_tools:
-        registry.register(name, func, tags)
-    return registry
-
-
-def _build_domain_registry() -> DomainRegistry:
-    domain_registry = DomainRegistry()
-    domain_registry.register(MOLECULAR_SCIENCE)
-    domain_registry.register(TRAINING_SCIENCE)
-    domain_registry.register(NUTRITION_SCIENCE)
-    return domain_registry
-
-
-def _build_mcp_configs() -> list[MCPServerConfig]:
-    """Build MCP server configs from environment. Currently supports Excalidraw."""
-    import os
-
-    configs: list[MCPServerConfig] = []
-    if os.environ.get("EHRLICH_MCP_EXCALIDRAW", "").lower() in ("1", "true"):
-        configs.append(
-            MCPServerConfig(
-                name="excalidraw",
-                transport="stdio",
-                command="npx",
-                args=("-y", "@anthropic/claude-code-mcp", "excalidraw"),
-                tags=frozenset({"visualization"}),
-            )
-        )
-    return configs
+async def _verify_ownership(
+    investigation_id: str,
+    user: dict[str, Any],
+    repo: InvestigationRepository,
+) -> None:
+    """Raise 403 if user does not own the investigation."""
+    # Active investigation -- check transient meta
+    meta = _investigation_meta.get(investigation_id)
+    if meta is not None:
+        if meta.get("workos_id") != user["workos_id"]:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        return
+    # DB investigation -- check via JOIN
+    owner_workos_id = await repo.get_investigation_owner_workos_id(investigation_id)
+    if owner_workos_id != user["workos_id"]:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
 
 def _broadcast_event(investigation_id: str, event: dict[str, str]) -> None:
@@ -339,6 +121,54 @@ def _end_broadcast(investigation_id: str) -> None:
     for queue in _subscribers.get(investigation_id, []):
         queue.put_nowait(None)
     _subscribers.pop(investigation_id, None)
+
+
+# ── Background Orchestrator ─────────────────────────────────────────────
+
+
+async def _run_orchestrator(
+    investigation: Investigation,
+    orchestrator: MultiModelOrchestrator,
+    repo: InvestigationRepository,
+    meta: dict[str, Any],
+) -> None:
+    """Run orchestrator as a background task, decoupled from SSE connections."""
+    failed = False
+    try:
+        async for domain_event in orchestrator.run(investigation):
+            sse_event = domain_event_to_sse(domain_event)
+            if sse_event is not None:
+                event: dict[str, str] = {
+                    "event": sse_event.event.value,
+                    "data": sse_event.format(),
+                }
+                if sse_event.event not in _TRANSIENT_EVENTS:
+                    event_id = await repo.save_event(
+                        investigation.id,
+                        sse_event.event.value,
+                        sse_event.format(),
+                    )
+                    event["id"] = str(event_id)
+                _broadcast_event(investigation.id, event)
+    except Exception:
+        failed = True
+        logger.exception("Investigation %s failed in background task", investigation.id)
+    finally:
+        _end_broadcast(investigation.id)
+        await repo.update(investigation)
+        _active_investigations.pop(investigation.id, None)
+        _active_orchestrators.pop(investigation.id, None)
+
+        if failed or investigation.status == InvestigationStatus.FAILED:
+            credit_cost = meta.get("credit_cost", 0)
+            workos_id = meta.get("workos_id")
+            if credit_cost > 0 and workos_id:
+                await repo.refund_credits(workos_id, credit_cost, investigation.id)
+
+        _investigation_meta.pop(investigation.id, None)
+
+
+# ── Route Handlers ──────────────────────────────────────────────────────
 
 
 @router.get("/investigate")
@@ -372,7 +202,10 @@ async def get_credit_balance(
 
 
 @router.get("/investigate/{investigation_id}")
-async def get_investigation(investigation_id: str) -> InvestigationDetail:
+async def get_investigation(
+    investigation_id: str,
+    user: dict[str, Any] = _require_user,
+) -> InvestigationDetail:
     repo = _get_repository()
     # Check active first (in-flight data is more current)
     investigation = _active_investigations.get(investigation_id)
@@ -380,7 +213,112 @@ async def get_investigation(investigation_id: str) -> InvestigationDetail:
         investigation = await repo.get_by_id(investigation_id)
     if investigation is None:
         raise HTTPException(status_code=404, detail="Investigation not found")
-    return _to_detail(investigation)
+    await _verify_ownership(investigation_id, user, repo)
+    return to_detail(investigation)
+
+
+@router.get("/investigate/{investigation_id}/paper")
+async def get_paper(
+    investigation_id: str,
+    user: dict[str, Any] = _require_user,
+) -> dict[str, Any]:
+    """Generate a structured scientific paper from a completed investigation."""
+    repo = _get_repository()
+    investigation = await repo.get_by_id(investigation_id)
+    if investigation is None:
+        raise HTTPException(status_code=404, detail="Investigation not found")
+    await _verify_ownership(investigation_id, user, repo)
+    if investigation.status != InvestigationStatus.COMPLETED:
+        raise HTTPException(status_code=409, detail="Investigation not completed")
+
+    events = await repo.get_events(investigation_id)
+    paper: dict[str, Any] = generate_paper(
+        investigation_id=investigation.id,
+        prompt=investigation.prompt,
+        summary=investigation.summary,
+        domain=investigation.domain,
+        created_at=investigation.created_at.isoformat(),
+        hypotheses=[
+            {
+                "id": h.id,
+                "statement": h.statement,
+                "rationale": h.rationale,
+                "status": h.status.value,
+                "confidence": h.confidence,
+                "certainty_of_evidence": h.certainty_of_evidence,
+                "supporting_evidence": h.supporting_evidence,
+                "contradicting_evidence": h.contradicting_evidence,
+            }
+            for h in investigation.hypotheses
+        ],
+        experiments=[
+            {
+                "id": e.id,
+                "hypothesis_id": e.hypothesis_id,
+                "description": e.description,
+                "tool_plan": e.tool_plan,
+                "status": e.status.value,
+                "independent_variable": e.independent_variable,
+                "dependent_variable": e.dependent_variable,
+                "controls": e.controls,
+                "confounders": e.confounders,
+                "analysis_plan": e.analysis_plan,
+                "success_criteria": e.success_criteria,
+                "failure_criteria": e.failure_criteria,
+            }
+            for e in investigation.experiments
+        ],
+        findings=[
+            {
+                "title": f.title,
+                "detail": f.detail,
+                "hypothesis_id": f.hypothesis_id,
+                "evidence_type": f.evidence_type,
+                "source_type": f.source_type,
+                "source_id": f.source_id,
+            }
+            for f in investigation.findings
+        ],
+        candidates=[
+            {
+                "identifier": c.identifier,
+                "identifier_type": c.identifier_type,
+                "name": c.name,
+                "rank": c.rank,
+                "notes": c.notes,
+                "scores": c.scores,
+                "attributes": c.attributes,
+            }
+            for c in investigation.candidates
+        ],
+        negative_controls=[
+            {
+                "identifier": nc.identifier,
+                "name": nc.name,
+                "score": nc.score,
+                "threshold": nc.threshold,
+                "correctly_classified": nc.correctly_classified,
+                "source": nc.source,
+            }
+            for nc in investigation.negative_controls
+        ],
+        positive_controls=[
+            {
+                "identifier": pc.identifier,
+                "name": pc.name,
+                "known_activity": pc.known_activity,
+                "score": pc.score,
+                "correctly_classified": pc.correctly_classified,
+                "source": pc.source,
+            }
+            for pc in investigation.positive_controls
+        ],
+        citations=investigation.citations,
+        cost_data=investigation.cost_data,
+        events=events,
+    )
+    paper["visualizations"] = extract_visualizations(events)
+    return paper
 
 
 @router.post("/investigate")
@@ -403,6 +341,16 @@ async def start_investigation(
     # Save investigation first (credit_transactions FK references investigations)
     await repo.save(investigation, user_id=str(db_user["id"]))
 
+    # Attach uploaded files
+    if request.file_ids:
+        from ehrlich.api.routes.upload import get_pending_upload
+
+        for fid in request.file_ids:
+            uploaded = get_pending_upload(fid, user["workos_id"])
+            if uploaded:
+                investigation.uploaded_files.append(uploaded)
+                await repo.save_uploaded_file(investigation.id, uploaded)
+
     if not is_byok:
         deducted = await repo.deduct_credits(user["workos_id"], credit_cost, investigation.id)
         if not deducted:
@@ -418,11 +366,6 @@ async def start_investigation(
     return InvestigateResponse(id=investigation.id, status=investigation.status.value)
 
 
-class ApproveRequest(BaseModel):
-    approved_ids: list[str]
-    rejected_ids: list[str] = []
-
-
 @router.post("/investigate/{investigation_id}/approve")
 async def approve_hypotheses(
     investigation_id: str,
@@ -432,8 +375,44 @@ async def approve_hypotheses(
     orchestrator = _active_orchestrators.get(investigation_id)
     if orchestrator is None:
         raise HTTPException(status_code=404, detail="No active orchestrator")
+    repo = _get_repository()
+    await _verify_ownership(investigation_id, user, repo)
+
+    if not orchestrator.is_awaiting_approval:
+        raise HTTPException(
+            status_code=409, detail="Investigation is not awaiting hypothesis approval"
+        )
+
     orchestrator.approve_hypotheses(request.approved_ids, request.rejected_ids)
     return {"status": "approved"}
+
+
+@router.post("/investigate/{investigation_id}/cancel")
+async def cancel_investigation(
+    investigation_id: str,
+    user: dict[str, Any] = _require_user,
+) -> dict[str, str]:
+    repo = _get_repository()
+    await _verify_ownership(investigation_id, user, repo)
+
+    orchestrator = _active_orchestrators.get(investigation_id)
+    if orchestrator is not None:
+        orchestrator.cancel()
+        return {"status": "cancelled"}
+
+    # No active orchestrator — check DB for cancellable states
+    investigation = await repo.get_by_id(investigation_id)
+    if investigation is None:
+        raise HTTPException(status_code=404, detail="Investigation not found")
+    if investigation.status in (
+        InvestigationStatus.COMPLETED,
+        InvestigationStatus.FAILED,
+        InvestigationStatus.CANCELLED,
+    ):
+        raise HTTPException(status_code=409, detail="Investigation already in terminal state")
+    investigation.transition_to(InvestigationStatus.CANCELLED)
+    await repo.update(investigation)
+    return {"status": "cancelled"}
 
 
 @router.get("/investigate/{investigation_id}/stream")
@@ -446,35 +425,48 @@ async def stream_investigation(
     investigation = _active_investigations.get(investigation_id)
     if investigation is None:
         investigation = await repo.get_by_id(investigation_id)
+        if investigation is not None:
+            investigation.uploaded_files = await repo.get_uploaded_files(investigation.id)
     if investigation is None:
         raise HTTPException(status_code=404, detail="Investigation not found")
 
+    await _verify_ownership(investigation_id, user, repo)
+
+    # SSE reconnection: browser sends Last-Event-ID header, manual reconnect sends query param
+    last_event_id = _parse_last_event_id(request)
     status = investigation.status
 
-    # Completed or failed -- replay final status
-    if status in (InvestigationStatus.COMPLETED, InvestigationStatus.FAILED):
-        return EventSourceResponse(_replay_final(investigation))
+    # Completed, failed, or cancelled -- replay final status
+    if status in (
+        InvestigationStatus.COMPLETED,
+        InvestigationStatus.FAILED,
+        InvestigationStatus.CANCELLED,
+    ):
+        return EventSourceResponse(_replay_final(investigation, last_event_id))
 
-    # Running -- subscribe to live events if broadcast is active
-    if status == InvestigationStatus.RUNNING:
-        if investigation.id in _subscribers:
-            return EventSourceResponse(_subscribe(investigation))
-        raise HTTPException(
-            status_code=409,
-            detail="Investigation is running but stream is not available for reconnection",
+    # Running or awaiting approval -- subscribe if orchestrator task is alive
+    if status in (InvestigationStatus.RUNNING, InvestigationStatus.AWAITING_APPROVAL):
+        if investigation.id in _active_orchestrators:
+            return EventSourceResponse(_subscribe(investigation, last_event_id))
+
+        # Zombie investigation (server restarted) -- mark as failed so UI shows error
+        logger.warning(
+            "Found zombie investigation %s (%s but no orchestrator)", investigation.id, status.value
         )
+        investigation.status = InvestigationStatus.FAILED
+        investigation.error = "Investigation interrupted by server restart"
+        await repo.update(investigation)
+        return EventSourceResponse(_replay_final(investigation, last_event_id))
 
-    # Pending -- start the investigation and stream
+    # Pending -- start the orchestrator as a background task and subscribe
     settings = get_settings()
-    registry = _build_registry()
-    domain_registry = _build_domain_registry()
-    mcp_configs = _build_mcp_configs()
+    registry = build_tool_registry()
+    domain_registry = build_domain_registry()
+    mcp_configs = build_mcp_configs()
     mcp_bridge = MCPBridge() if mcp_configs else None
 
-    # BYOK: check for user-provided API key
     api_key_override = request.headers.get("X-Anthropic-Key") or None
 
-    # Read tier from investigation meta (set during POST /investigate)
     meta = _investigation_meta.get(investigation.id, {})
     tier = meta.get("tier", "opus")
     director_model_override = TIER_MODELS.get(tier)
@@ -482,7 +474,7 @@ async def stream_investigation(
     _active_investigations[investigation.id] = investigation
     _subscribers[investigation.id] = []
 
-    orchestrator = _create_orchestrator(
+    orchestrator = create_orchestrator(
         settings,
         registry,
         repo,
@@ -494,116 +486,93 @@ async def stream_investigation(
     )
     _active_orchestrators[investigation.id] = orchestrator
 
-    async def event_generator() -> AsyncGenerator[dict[str, str], None]:
-        failed = False
-        try:
-            async for domain_event in orchestrator.run(investigation):
-                sse_event = domain_event_to_sse(domain_event)
-                if sse_event is not None:
-                    event = {
-                        "event": sse_event.event.value,
-                        "data": sse_event.format(),
-                    }
-                    # Skip completed/error (replayed from state) and cost_update (transient)
-                    if sse_event.event not in (
-                        SSEEventType.COMPLETED,
-                        SSEEventType.ERROR,
-                        SSEEventType.COST_UPDATE,
-                        SSEEventType.HYPOTHESIS_APPROVAL_REQUESTED,
-                    ):
-                        await repo.save_event(
-                            investigation.id,
-                            sse_event.event.value,
-                            sse_event.format(),
-                        )
-                    _broadcast_event(investigation.id, event)
-                    yield event
-        except Exception:
-            failed = True
-            raise
-        finally:
-            _end_broadcast(investigation.id)
-            await repo.update(investigation)
-            _active_investigations.pop(investigation.id, None)
-            _active_orchestrators.pop(investigation.id, None)
+    asyncio.create_task(_run_orchestrator(investigation, orchestrator, repo, meta))
 
-            # Refund credits on failure (not for BYOK)
-            if failed or investigation.status == InvestigationStatus.FAILED:
-                credit_cost = meta.get("credit_cost", 0)
-                workos_id = meta.get("workos_id")
-                if credit_cost > 0 and workos_id:
-                    await repo.refund_credits(workos_id, credit_cost, investigation.id)
-
-            _investigation_meta.pop(investigation.id, None)
-
-    return EventSourceResponse(event_generator())
+    return EventSourceResponse(_subscribe(investigation, last_event_id))
 
 
-def _create_orchestrator(
-    settings: Any,
-    registry: ToolRegistry,
-    repository: InvestigationRepository,
-    domain_registry: DomainRegistry | None = None,
-    mcp_bridge: MCPBridge | None = None,
-    mcp_configs: list[MCPServerConfig] | None = None,
-    api_key_override: str | None = None,
-    director_model_override: str | None = None,
-) -> MultiModelOrchestrator:
-    api_key = api_key_override or settings.anthropic_api_key or None
+# ── SSE Helpers ─────────────────────────────────────────────────────────
 
-    director_model = director_model_override or settings.director_model
 
-    # effort is only supported by Opus models (4.5+)
-    director_effort = settings.director_effort if "opus" in director_model else None
+def _parse_last_event_id(request: Request) -> int | None:
+    """Extract Last-Event-ID from SSE header or query param."""
+    raw = request.headers.get("Last-Event-ID") or request.query_params.get("last_event_id")
+    if not raw:
+        return None
+    try:
+        return int(raw)
+    except (ValueError, TypeError):
+        return None
 
-    thinking = None
-    if settings.director_thinking == "enabled":
-        thinking = {
-            "type": "enabled",
-            "budget_tokens": settings.director_thinking_budget,
-        }
 
-    director = AnthropicClientAdapter(
-        model=director_model,
-        api_key=api_key,
-        max_tokens=32768,
-        effort=director_effort,
-        thinking=thinking,
-    )
-    researcher = AnthropicClientAdapter(
-        model=settings.researcher_model,
-        api_key=api_key,
-    )
-    summarizer = AnthropicClientAdapter(
-        model=settings.summarizer_model,
-        api_key=api_key,
-    )
-    return MultiModelOrchestrator(
-        director=director,
-        researcher=researcher,
-        summarizer=summarizer,
-        registry=registry,
-        max_iterations_per_experiment=settings.max_iterations_per_experiment,
-        summarizer_threshold=settings.summarizer_threshold,
-        require_approval=True,
-        repository=repository,
-        domain_registry=domain_registry,
-        mcp_bridge=mcp_bridge,
-        mcp_configs=mcp_configs,
-    )
+async def _replay_events(
+    investigation_id: str, last_event_id: int | None
+) -> list[dict[str, Any]]:
+    """Fetch persisted events, optionally filtered by last_event_id."""
+    repo = _get_repository()
+    if last_event_id is not None:
+        return await repo.get_events_after(investigation_id, last_event_id)
+    return await repo.get_events(investigation_id)
 
 
 async def _subscribe(
     investigation: Investigation,
+    last_event_id: int | None,
 ) -> AsyncGenerator[dict[str, str], None]:
+    # Subscribe to live queue BEFORE replay to avoid race condition:
+    # events emitted during replay are captured in the queue, then deduplicated below.
     queue: asyncio.Queue[dict[str, str] | None] = asyncio.Queue()
     subs = _subscribers.setdefault(investigation.id, [])
     subs.append(queue)
+
     try:
+        # Replay persisted events from DB
+        stored_events = await _replay_events(investigation.id, last_event_id)
+        max_replayed_id = 0
+        for ev in stored_events:
+            yield {"event": ev["event_type"], "data": ev["event_data"], "id": str(ev["id"])}
+            max_replayed_id = ev["id"]
+
+        # Re-emit approval request if orchestrator is waiting for approval
+        orchestrator = _active_orchestrators.get(investigation.id)
+        if orchestrator is not None and orchestrator.is_awaiting_approval:
+            from ehrlich.investigation.domain.hypothesis import HypothesisStatus
+
+            hypotheses = [
+                {
+                    "id": h.id,
+                    "statement": h.statement,
+                    "rationale": h.rationale,
+                    "prediction": h.prediction,
+                    "scope": h.scope,
+                    "hypothesis_type": h.hypothesis_type,
+                    "prior_confidence": h.prior_confidence,
+                }
+                for h in investigation.hypotheses
+                if h.status == HypothesisStatus.PROPOSED
+            ]
+            approval_data = json.dumps(
+                {
+                    "event": SSEEventType.HYPOTHESIS_APPROVAL_REQUESTED.value,
+                    "data": {
+                        "hypotheses": hypotheses,
+                        "investigation_id": investigation.id,
+                    },
+                }
+            )
+            yield {
+                "event": SSEEventType.HYPOTHESIS_APPROVAL_REQUESTED.value,
+                "data": approval_data,
+            }
+
+        # Consume live events, skipping any already covered by replay
         while True:
             event = await queue.get()
             if event is None:
                 break
+            event_id = event.get("id")
+            if event_id and int(event_id) <= max_replayed_id:
+                continue
             yield event
     finally:
         subs = _subscribers.get(investigation.id, [])
@@ -613,62 +582,13 @@ async def _subscribe(
 
 async def _replay_final(
     investigation: Investigation,
+    last_event_id: int | None,
 ) -> AsyncGenerator[dict[str, str], None]:
-    repo = _get_repository()
-
     if investigation.status == InvestigationStatus.COMPLETED:
-        # Replay all stored events first (full timeline)
-        stored_events = await repo.get_events(investigation.id)
+        stored_events = await _replay_events(investigation.id, last_event_id)
         for ev in stored_events:
-            yield {"event": ev["event_type"], "data": ev["event_data"]}
+            yield {"event": ev["event_type"], "data": ev["event_data"], "id": str(ev["id"])}
 
-        candidates = [
-            {
-                "identifier": c.identifier,
-                "identifier_type": c.identifier_type,
-                "name": c.name,
-                "rank": c.rank,
-                "notes": c.notes,
-                "scores": c.scores,
-                "attributes": c.attributes,
-            }
-            for c in investigation.candidates
-        ]
-        findings = [
-            {
-                "title": f.title,
-                "detail": f.detail,
-                "hypothesis_id": f.hypothesis_id,
-                "evidence_type": f.evidence_type,
-                "evidence": f.evidence,
-            }
-            for f in investigation.findings
-        ]
-        hypotheses = [
-            {
-                "id": h.id,
-                "statement": h.statement,
-                "rationale": h.rationale,
-                "status": h.status.value,
-                "parent_id": h.parent_id,
-                "confidence": h.confidence,
-                "supporting_evidence": h.supporting_evidence,
-                "contradicting_evidence": h.contradicting_evidence,
-            }
-            for h in investigation.hypotheses
-        ]
-        negative_controls = [
-            {
-                "identifier": nc.identifier,
-                "identifier_type": nc.identifier_type,
-                "name": nc.name,
-                "score": nc.score,
-                "threshold": nc.threshold,
-                "correctly_classified": nc.correctly_classified,
-                "source": nc.source,
-            }
-            for nc in investigation.negative_controls
-        ]
         data = json.dumps(
             {
                 "event": SSEEventType.COMPLETED.value,
@@ -677,99 +597,29 @@ async def _replay_final(
                     "candidate_count": len(investigation.candidates),
                     "summary": investigation.summary,
                     "cost": investigation.cost_data,
-                    "candidates": candidates,
-                    "findings": findings,
-                    "hypotheses": hypotheses,
-                    "negative_controls": negative_controls,
+                    "candidates": serialize_candidates(investigation),
+                    "findings": serialize_findings(investigation),
+                    "hypotheses": serialize_hypotheses(investigation),
+                    "negative_controls": serialize_negative_controls(investigation),
                     "prompt": investigation.prompt,
                 },
             }
         )
         yield {"event": SSEEventType.COMPLETED.value, "data": data}
-    elif investigation.status == InvestigationStatus.FAILED:
+    elif investigation.status in (InvestigationStatus.FAILED, InvestigationStatus.CANCELLED):
+        # Replay partial results so the UI can show what was collected before failure
+        stored_events = await _replay_events(investigation.id, last_event_id)
+        for ev in stored_events:
+            yield {"event": ev["event_type"], "data": ev["event_data"], "id": str(ev["id"])}
+
+        error_msg = investigation.error or f"Investigation {investigation.status.value}"
         data = json.dumps(
             {
                 "event": SSEEventType.ERROR.value,
                 "data": {
-                    "error": investigation.error,
+                    "error": error_msg,
                     "investigation_id": investigation.id,
                 },
             }
         )
         yield {"event": SSEEventType.ERROR.value, "data": data}
-
-
-def _to_detail(inv: Investigation) -> InvestigationDetail:
-    findings = [
-        {
-            "title": f.title,
-            "detail": f.detail,
-            "hypothesis_id": f.hypothesis_id,
-            "evidence_type": f.evidence_type,
-            "evidence": f.evidence,
-        }
-        for f in inv.findings
-    ]
-    candidates = [
-        {
-            "identifier": c.identifier,
-            "identifier_type": c.identifier_type,
-            "name": c.name,
-            "rank": c.rank,
-            "notes": c.notes,
-            "scores": c.scores,
-            "attributes": c.attributes,
-        }
-        for c in inv.candidates
-    ]
-    hypotheses = [
-        {
-            "id": h.id,
-            "statement": h.statement,
-            "rationale": h.rationale,
-            "status": h.status.value,
-            "parent_id": h.parent_id,
-            "confidence": h.confidence,
-            "supporting_evidence": h.supporting_evidence,
-            "contradicting_evidence": h.contradicting_evidence,
-        }
-        for h in inv.hypotheses
-    ]
-    experiments = [
-        {
-            "id": e.id,
-            "hypothesis_id": e.hypothesis_id,
-            "description": e.description,
-            "tool_plan": e.tool_plan,
-            "status": e.status.value,
-        }
-        for e in inv.experiments
-    ]
-    negative_controls = [
-        {
-            "identifier": nc.identifier,
-            "identifier_type": nc.identifier_type,
-            "name": nc.name,
-            "score": nc.score,
-            "threshold": nc.threshold,
-            "correctly_classified": nc.correctly_classified,
-            "source": nc.source,
-        }
-        for nc in inv.negative_controls
-    ]
-    return InvestigationDetail(
-        id=inv.id,
-        prompt=inv.prompt,
-        status=inv.status.value,
-        hypotheses=hypotheses,
-        experiments=experiments,
-        current_hypothesis_id=inv.current_hypothesis_id,
-        current_experiment_id=inv.current_experiment_id,
-        findings=findings,
-        candidates=candidates,
-        negative_controls=negative_controls,
-        citations=inv.citations,
-        summary=inv.summary,
-        created_at=inv.created_at.isoformat(),
-        cost_data=inv.cost_data,
-    )

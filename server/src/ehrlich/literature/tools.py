@@ -11,7 +11,7 @@ _service = LiteratureService(
 )
 
 
-async def search_literature(query: str, limit: int = 10) -> str:
+async def search_literature(query: str, limit: int = 5) -> str:
     """Search scientific literature for papers related to the query."""
     papers = await _service.search_papers(query, limit)
     results = []
@@ -19,18 +19,17 @@ async def search_literature(query: str, limit: int = 10) -> str:
         results.append(
             {
                 "title": p.title,
-                "authors": p.authors,
+                "authors": p.authors[:3],
                 "year": p.year,
                 "doi": p.doi,
                 "abstract": p.abstract[:500] if p.abstract else "",
                 "citations": p.citations,
-                "citation": _service.format_citation(p),
             }
         )
     return json.dumps({"query": query, "count": len(results), "papers": results})
 
 
-async def search_citations(paper_id: str, direction: str = "both", limit: int = 10) -> str:
+async def search_citations(paper_id: str, direction: str = "both", limit: int = 5) -> str:
     """Search for papers that cite or are referenced by a given paper.
 
     Use this for citation chasing (snowballing) to discover related work.
@@ -39,7 +38,7 @@ async def search_citations(paper_id: str, direction: str = "both", limit: int = 
     Args:
         paper_id: Semantic Scholar paper ID or DOI (e.g. "10.1038/s41586-024-07613-w")
         direction: 'references' (cited by this paper), 'citing' (cite this paper), or 'both'
-        limit: Maximum papers to return per direction (default 10)
+        limit: Maximum papers to return per direction (default 5)
     """
     papers = await _service.search_citations(paper_id, direction, limit)
     results = []
@@ -47,12 +46,11 @@ async def search_citations(paper_id: str, direction: str = "both", limit: int = 
         results.append(
             {
                 "title": p.title,
-                "authors": p.authors,
+                "authors": p.authors[:3],
                 "year": p.year,
                 "doi": p.doi,
                 "abstract": p.abstract[:500] if p.abstract else "",
                 "citations": p.citations,
-                "citation": _service.format_citation(p),
             }
         )
     return json.dumps(

@@ -27,7 +27,7 @@ class SemanticScholarClient(PaperSearchRepository):
             timeout=_TIMEOUT,
         )
 
-    async def search(self, query: str, limit: int = 10) -> list[Paper]:
+    async def search(self, query: str, limit: int = 5) -> list[Paper]:
         last_error: Exception | None = None
         for attempt in range(_MAX_RETRIES):
             try:
@@ -114,7 +114,7 @@ class SemanticScholarClient(PaperSearchRepository):
             "SemanticScholar", f"DOI lookup failed after {_MAX_RETRIES} attempts: {last_error}"
         )
 
-    async def get_references(self, paper_id: str, limit: int = 10) -> list[Paper]:
+    async def get_references(self, paper_id: str, limit: int = 5) -> list[Paper]:
         last_error: Exception | None = None
         for attempt in range(_MAX_RETRIES):
             try:
@@ -137,7 +137,7 @@ class SemanticScholarClient(PaperSearchRepository):
                 resp.raise_for_status()
                 data = resp.json()
                 papers = []
-                for item in (data.get("data") or []):
+                for item in data.get("data") or []:
                     cited = item.get("citedPaper")
                     if cited and cited.get("title"):
                         papers.append(self._to_paper(cited))
@@ -163,7 +163,7 @@ class SemanticScholarClient(PaperSearchRepository):
             f"References lookup failed after {_MAX_RETRIES} attempts: {last_error}",
         )
 
-    async def get_citing(self, paper_id: str, limit: int = 10) -> list[Paper]:
+    async def get_citing(self, paper_id: str, limit: int = 5) -> list[Paper]:
         last_error: Exception | None = None
         for attempt in range(_MAX_RETRIES):
             try:
@@ -186,7 +186,7 @@ class SemanticScholarClient(PaperSearchRepository):
                 resp.raise_for_status()
                 data = resp.json()
                 papers = []
-                for item in (data.get("data") or []):
+                for item in data.get("data") or []:
                     citing = item.get("citingPaper")
                     if citing and citing.get("title"):
                         papers.append(self._to_paper(citing))

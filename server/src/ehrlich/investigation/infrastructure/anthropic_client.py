@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import random
+import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -11,6 +13,12 @@ if TYPE_CHECKING:
 import anthropic
 
 logger = logging.getLogger(__name__)
+
+
+def _sanitize_error(msg: str) -> str:
+    """Remove Anthropic API keys from error messages."""
+    return re.sub(r"sk-ant-[A-Za-z0-9_-]+", "[REDACTED]", msg)
+
 
 _MAX_RETRIES = 3
 _BASE_DELAY = 1.0
@@ -33,13 +41,11 @@ class AnthropicClientAdapter:
         max_tokens: int = 16384,
         api_key: str | None = None,
         effort: str | None = None,
-        thinking: dict[str, Any] | None = None,
     ) -> None:
         self._client = anthropic.AsyncAnthropic(api_key=api_key or None)
         self._model = model
         self._max_tokens = max_tokens
         self._effort = effort
-        self._thinking = thinking
 
     @property
     def model(self) -> str:
@@ -73,7 +79,7 @@ class AnthropicClientAdapter:
                 )
             except (anthropic.RateLimitError, anthropic.APITimeoutError) as e:
                 last_error = e
-                delay = _BASE_DELAY * (2**attempt)
+                delay = _BASE_DELAY * (2**attempt) + random.uniform(0, 0.5)
                 logger.warning(
                     "Anthropic API %s (attempt %d/%d), retrying in %.1fs",
                     type(e).__name__,
@@ -84,7 +90,7 @@ class AnthropicClientAdapter:
                 if attempt < _MAX_RETRIES - 1:
                     await asyncio.sleep(delay)
             except anthropic.APIError as e:
-                logger.error("Anthropic API error: %s", e)
+                logger.error("Anthropic API error: %s", _sanitize_error(str(e)))
                 raise
 
         raise last_error  # type: ignore[misc]
@@ -128,7 +134,7 @@ class AnthropicClientAdapter:
                     return
             except (anthropic.RateLimitError, anthropic.APITimeoutError) as e:
                 last_error = e
-                delay = _BASE_DELAY * (2**attempt)
+                delay = _BASE_DELAY * (2**attempt) + random.uniform(0, 0.5)
                 logger.warning(
                     "Anthropic API %s (attempt %d/%d), retrying in %.1fs",
                     type(e).__name__,
@@ -139,7 +145,7 @@ class AnthropicClientAdapter:
                 if attempt < _MAX_RETRIES - 1:
                     await asyncio.sleep(delay)
             except anthropic.APIError as e:
-                logger.error("Anthropic API error: %s", e)
+                logger.error("Anthropic API error: %s", _sanitize_error(str(e)))
                 raise
 
         raise last_error  # type: ignore[misc]
@@ -159,6 +165,23 @@ class AnthropicClientAdapter:
                 {**tools[-1], "cache_control": {"type": "ephemeral"}},
             ]
 
+        # Cache conversation prefix for multi-turn tool loops
+        cached_messages = list(messages)
+        if len(cached_messages) >= 3:
+            for i in range(len(cached_messages) - 2, -1, -1):
+                msg = cached_messages[i]
+                if msg.get("role") == "user":
+                    content = msg.get("content")
+                    if isinstance(content, list) and content:
+                        cached_messages[i] = {
+                            **msg,
+                            "content": [
+                                *content[:-1],
+                                {**content[-1], "cache_control": {"type": "ephemeral"}},
+                            ],
+                        }
+                    break
+
         kwargs: dict[str, Any] = {
             "model": self._model,
             "max_tokens": self._max_tokens,
@@ -169,7 +192,7 @@ class AnthropicClientAdapter:
                     "cache_control": {"type": "ephemeral"},
                 }
             ],
-            "messages": messages,
+            "messages": cached_messages,
             "tools": cached_tools,
         }
 
@@ -181,11 +204,10 @@ class AnthropicClientAdapter:
         if merged_output:
             kwargs["output_config"] = merged_output
 
-        if self._thinking is not None:
-            kwargs["thinking"] = self._thinking
-
         if tool_choice is not None:
             kwargs["tool_choice"] = tool_choice
+
+        kwargs["extra_headers"] = {"anthropic-beta": "token-efficient-tools-2025-02-19"}
 
         return kwargs
 

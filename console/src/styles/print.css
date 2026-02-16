@@ -1,0 +1,91 @@
+@media print {
+  /* Hide non-print elements */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Reset to clean white background */
+  body {
+    background: white !important;
+    color: black !important;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 11pt;
+    line-height: 1.5;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Remove dark theme surface styling */
+  * {
+    background: transparent !important;
+    color: black !important;
+    border-color: #ccc !important;
+    box-shadow: none !important;
+  }
+
+  /* Preserve SVG chart colors */
+  svg,
+  svg * {
+    color: inherit !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  svg [fill]:not([fill="none"]) {
+    background: unset !important;
+  }
+
+  /* Page setup */
+  @page {
+    margin: 2cm;
+    size: A4;
+  }
+
+  /* Page break hints */
+  h2,
+  h3 {
+    break-after: avoid;
+  }
+
+  figure,
+  table,
+  .viz-figure {
+    break-inside: avoid;
+  }
+
+  section {
+    break-before: auto;
+  }
+
+  /* Monospace code blocks */
+  code,
+  pre {
+    font-family: "Courier New", monospace !important;
+    font-size: 9pt;
+  }
+
+  /* Links: show URL */
+  a[href]::after {
+    content: " (" attr(href) ")";
+    font-size: 9pt;
+    color: #666 !important;
+  }
+
+  /* Tables */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 10pt;
+  }
+
+  th,
+  td {
+    border: 1px solid #ccc !important;
+    padding: 4px 8px;
+    text-align: left;
+  }
+
+  th {
+    font-weight: bold;
+  }
+}

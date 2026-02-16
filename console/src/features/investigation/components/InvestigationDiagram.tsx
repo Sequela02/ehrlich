@@ -33,7 +33,7 @@ export function InvestigationDiagram({
 
   if (hypotheses.length === 0) {
     return (
-      <div className="flex h-[500px] items-center justify-center rounded-md border border-border bg-[#0f1219]">
+      <div className="flex h-[500px] items-center justify-center rounded-md border border-border bg-card/50">
         <p className="text-sm text-muted-foreground/50">
           No hypotheses to diagram yet
         </p>
@@ -42,10 +42,10 @@ export function InvestigationDiagram({
   }
 
   return (
-    <div className="h-[500px] overflow-hidden rounded-md border border-border">
+    <div className="h-[500px] overflow-hidden rounded-md border border-border bg-card/50">
       <Suspense
         fallback={
-          <div className="flex h-full items-center justify-center bg-[#0f1219]">
+          <div className="flex h-full items-center justify-center bg-card/50">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         }

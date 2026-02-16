@@ -16,7 +16,7 @@ function renderWithProvider() {
 
 describe("BYOKSettings", () => {
   beforeEach(() => {
-    localStorage.clear();
+    sessionStorage.clear();
   });
 
   afterEach(() => {
@@ -28,7 +28,7 @@ describe("BYOKSettings", () => {
     expect(screen.getByPlaceholderText("sk-ant-...")).toBeInTheDocument();
   });
 
-  it("saves key to localStorage", () => {
+  it("saves key to sessionStorage", () => {
     renderWithProvider();
     const input = screen.getByPlaceholderText("sk-ant-...");
     fireEvent.change(input, { target: { value: "sk-ant-test123" } });
@@ -36,23 +36,23 @@ describe("BYOKSettings", () => {
     const saveButton = saveButtons.find((b) => b.textContent === "Save");
     expect(saveButton).toBeDefined();
     fireEvent.click(saveButton!);
-    expect(localStorage.getItem("ehrlich_api_key")).toBe("sk-ant-test123");
+    expect(sessionStorage.getItem("ehrlich_api_key")).toBe("sk-ant-test123");
   });
 
   it("shows stored key indicator", () => {
-    localStorage.setItem("ehrlich_api_key", "sk-ant-mykey123");
+    sessionStorage.setItem("ehrlich_api_key", "sk-ant-mykey123");
     renderWithProvider();
     expect(screen.getByText(/Using your own key/)).toBeInTheDocument();
   });
 
   it("clears key on remove click", () => {
-    localStorage.setItem("ehrlich_api_key", "sk-ant-remove");
+    sessionStorage.setItem("ehrlich_api_key", "sk-ant-remove");
     renderWithProvider();
     const removeButtons = screen.getAllByRole("button");
     const removeButton = removeButtons.find((b) => b.textContent?.includes("Remove"));
     expect(removeButton).toBeDefined();
     fireEvent.click(removeButton!);
-    expect(localStorage.getItem("ehrlich_api_key")).toBeNull();
+    expect(sessionStorage.getItem("ehrlich_api_key")).toBeNull();
   });
 
   it("renders BYOK heading", () => {

@@ -2,9 +2,13 @@ import importlib
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
 
 from ehrlich.api.routes.health import router as health_router
 from ehrlich.api.routes.investigation import close_repository, init_repository
@@ -12,13 +16,27 @@ from ehrlich.api.routes.investigation import router as investigation_router
 from ehrlich.api.routes.methodology import router as methodology_router
 from ehrlich.api.routes.molecule import router as molecule_router
 from ehrlich.api.routes.stats import router as stats_router
+from ehrlich.api.routes.upload import router as upload_router
 from ehrlich.config import get_settings
+from ehrlich.investigation.application.registry_factory import build_tool_registry
 
 logger = logging.getLogger(__name__)
 
 _OPTIONAL_DEPS = {
     "chemprop": "Chemprop D-MPNN (deep learning)",
 }
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add security headers to all responses."""
+
+    async def dispatch(self, request: Request, call_next: Any) -> Response:
+        response: Response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        return response
 
 
 def _check_optional(module: str) -> bool:
@@ -46,16 +64,25 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             settings.researcher_model,
         )
 
-    from ehrlich.api.routes.investigation import _build_registry
-
-    registry = _build_registry()
+    registry = build_tool_registry()
     logger.info("Tool registry: %d tools available", len(registry.list_tools()))
 
     for mod, desc in _OPTIONAL_DEPS.items():
         status = "available" if _check_optional(mod) else "not installed"
         logger.info("  %s: %s", desc, status)
 
-    await init_repository(settings.database_url)
+    if "*" in settings.cors_origins and settings.environment != "development":
+        logger.warning(
+            "CORS allow_origins contains '*' in %s environment. "
+            "This is insecure and should be replaced with specific origins.",
+            settings.environment,
+        )
+
+    try:
+        await init_repository(settings.database_url)
+    except ConnectionError as exc:
+        logger.critical("Startup aborted: %s", exc)
+        raise SystemExit(1) from exc
     logger.info("PostgreSQL repository initialized")
 
     yield
@@ -74,12 +101,13 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-Anthropic-Key"],
     )
 
     app.include_router(health_router, prefix="/api/v1")
@@ -87,5 +115,6 @@ def create_app() -> FastAPI:
     app.include_router(methodology_router, prefix="/api/v1")
     app.include_router(molecule_router, prefix="/api/v1")
     app.include_router(stats_router, prefix="/api/v1")
+    app.include_router(upload_router, prefix="/api/v1")
 
     return app

@@ -1,13 +1,13 @@
 export const STATS = {
-  tools: 67,
-  dataSources: 16,
-  domains: 3,
+  tools: 90,
+  dataSources: 25,
+  domains: 4,
   models: 3,
   phases: 6,
-  vizTools: 12,
-  externalAPIs: 15,
-  boundedContexts: 10,
-  sseEvents: 20,
+  vizTools: 17,
+  externalAPIs: 24,
+  boundedContexts: 11,
+  sseEvents: 21,
 } as const;
 
 export const NAV_LINKS = [
@@ -15,7 +15,7 @@ export const NAV_LINKS = [
   { label: "Architecture", href: "#architecture" },
   { label: "Domains", href: "#domains" },
   { label: "Who It's For", href: "#who-its-for" },
-  { label: "Pricing", href: "#pricing" },
+  { label: "Beta", href: "#pricing" },
   { label: "GitHub", href: "https://github.com/sequelcore/ehrlich" },
 ] as const;
 
@@ -23,7 +23,7 @@ export const FOOTER_LINKS = {
   product: [
     { label: "Console", href: "/console" },
     { label: "Methodology", href: "/console/methodology" },
-    { label: "Pricing", href: "#pricing" },
+    { label: "Beta", href: "#pricing" },
   ],
   developers: [
     { label: "GitHub", href: "https://github.com/sequelcore/ehrlich" },
@@ -46,7 +46,7 @@ export const EXAMPLE_PROMPTS = [
 export const DIFFERENTIATORS = [
   {
     label: "Real Computation",
-    tagline: "70 tools that compute, not summarize.",
+    tagline: "91 tools that compute, not summarize.",
     description:
       "Ehrlich trains ML models, runs molecular docking, executes statistical tests, and validates with negative controls. Every tool returns structured data from real computation or real APIs.",
     capabilities: [
@@ -58,16 +58,16 @@ export const DIFFERENTIATORS = [
     ],
   },
   {
-    label: "Accessible Pricing",
-    tagline: "$2-10 per investigation. Free tier included.",
+    label: "Open Source, Self-Hostable",
+    tagline: "COSS. Same code, two paths.",
     description:
-      "Full 6-phase methodology, all 70 tools, all 16 data sources at every tier. No feature gates. A student in Mexico and a pharma lab in Boston use the same product. The only variable is model quality.",
+      "Self-host with your own API key for free -- no limits, no credits, no account. Or use the hosted instance where credits cover Anthropic API costs. A student in Mexico and a pharma company in Boston get the same 91 tools, the same 28 data sources, the same methodology.",
     capabilities: [
-      "3 domains, extensible to any",
-      "Free: 3 Haiku investigations/month",
+      "Self-host: clone, bring your API key, no limits",
+      "Hosted: credits cover Anthropic costs (Opus is expensive)",
       "Credits: Haiku (1), Sonnet (3), Opus (5)",
-      "Enterprise: bring your own Anthropic key",
-      "AGPL-3.0: self-host, modify, extend",
+      "AGPL-3.0: inspect, modify, extend, contribute",
+      "Commercial license for private modifications",
     ],
   },
   {
@@ -137,6 +137,23 @@ export const DOMAINS = [
     prompt: "Assess safety and efficacy of vitamin D3 + K2 supplementation at high doses",
     vizTools: ["Nutrient comparison", "Nutrient adequacy", "Therapeutic window", "Funnel plot"],
   },
+  {
+    label: "IMPACT EVALUATION",
+    toolCount: 5,
+    description:
+      "Causal analysis of social programs: education, health, employment, housing, sports. Difference-in-differences estimation, automated threat assessment, economic indicators.",
+    capabilities: [
+      "Difference-in-differences causal estimation (DiD)",
+      "Automated validity threat assessment (WWC/CONEVAL)",
+      "World Bank development indicators (GDP, poverty, education)",
+      "WHO Global Health Observatory (mortality, disease burden)",
+      "FRED economic time series (800K+ US series)",
+      "Cross-program statistical comparison",
+    ],
+    sources: "World Bank, WHO GHO, FRED",
+    prompt: "What is the causal effect of conditional cash transfers on school enrollment in Latin America?",
+    vizTools: ["Program dashboard", "Geographic comparison", "Parallel trends"],
+  },
 ] as const;
 
 export const DATA_SOURCES = [
@@ -155,7 +172,10 @@ export const DATA_SOURCES = [
   { name: "USDA FoodData", domain: "api.nal.usda.gov", access: "API Key" as const, records: "300K+ foods", purpose: "Nutrient profiles (macro + micro)" },
   { name: "OpenFDA CAERS", domain: "api.fda.gov", access: "Free" as const, records: "Ongoing", purpose: "Supplement adverse event reports" },
   { name: "RxNav", domain: "rxnav.nlm.nih.gov", access: "Free" as const, records: "RxNorm DB", purpose: "Drug-nutrient interaction screening" },
-  { name: "Ehrlich FTS5", domain: "internal", access: "Internal" as const, records: "Growing", purpose: "Past findings (institutional memory)" },
+  { name: "World Bank", domain: "api.worldbank.org", access: "Free" as const, records: "16K+ indicators", purpose: "Development indicators by country (GDP, poverty, education)" },
+  { name: "WHO GHO", domain: "ghoapi.azureedge.net", access: "Free" as const, records: "2K+ indicators", purpose: "Global health statistics (mortality, disease, life expectancy)" },
+  { name: "FRED", domain: "api.stlouisfed.org", access: "API Key" as const, records: "800K+ series", purpose: "US economic time series (GDP, unemployment, CPI)" },
+  { name: "Ehrlich tsvector", domain: "internal", access: "Internal" as const, records: "Growing", purpose: "Past findings (institutional memory)" },
 ] as const;
 
 export const METHODOLOGY_PHASES = [
@@ -181,7 +201,7 @@ export const METHODOLOGY_PHASES = [
     number: "04",
     label: "Experiment Execution",
     foundation: "Fisher (1935)",
-    description: "Experiments with independent/dependent variables, controls, confounders, and analysis plans. 2 experiments run in parallel. 70 tools across all domains.",
+    description: "Experiments with independent/dependent variables, controls, confounders, and analysis plans. Two experiments run in parallel. 91 tools across 4 domains.",
   },
   {
     number: "05",
@@ -229,6 +249,9 @@ export const VISUALIZATION_CATEGORIES = [
       "Nutrient Comparison -- Grouped bar chart comparing foods",
       "Nutrient Adequacy -- Horizontal bars showing % RDA with MAR score",
       "Therapeutic Window -- EAR/RDA/UL safety zones per nutrient",
+      "Program Dashboard -- Multi-indicator KPI view with target tracking",
+      "Geographic Comparison -- Region bar chart with benchmark line",
+      "Parallel Trends -- DiD treatment vs control over time",
     ],
   },
   {
@@ -282,18 +305,19 @@ export const PLANNED_FEATURES = [
   },
 ] as const;
 
-export const PRICING_TIERS = [
+/*
+export const PRICING_TIERS_ORIGINAL = [
   {
     name: "Free",
     price: "$0",
     period: "forever",
     credits: "3 Haiku investigations/month",
-    description: "Full methodology. All 70 tools. All 16 data sources. Findings indexed for future research.",
+    description: "Full methodology. All 91 tools. All 28 data sources. Findings indexed for future research.",
     features: [
       "Full 6-phase scientific methodology",
-      "All 70 tools, all 16 data sources",
+      "All 91 tools, all 28 data sources, 4 domains",
       "Full audit trail and report",
-      "Self-referential search (FTS5)",
+      "Self-referential search (tsvector)",
       "No feature gates",
     ],
     cta: "Start Free",
@@ -348,3 +372,40 @@ export const PRICING_TIERS = [
     highlight: false,
   },
 ] as const;
+*/
+
+export const PUBLIC_BETA_TIERS = [
+  {
+    name: "Credits",
+    price: "Pay-as-you-go",
+    period: "",
+    credits: "Haiku (1), Sonnet (3), Opus (5)",
+    description: "Hosted infrastructure with no setup. Credits cover Anthropic API costs.",
+    features: [
+      "Haiku investigation = 1 credit",
+      "Sonnet investigation = 3 credits",
+      "Opus investigation = 5 credits",
+      "Full 6-phase methodology",
+      "Hosted high-performance infrastructure",
+    ],
+    cta: "Buy Credits",
+    highlight: true,
+  },
+  {
+    name: "BYOK",
+    price: "Free",
+    period: "during beta",
+    credits: "Unlimited (Subject to Anthropic limits)",
+    description: "Bring Your Own Key. Use your Anthropic API key directly. Ideal for judges and heavy testing.",
+    features: [
+      "Your own Anthropic API key",
+      "No Ehrlich credit limits",
+      "We cover the compute/hosting cost",
+      "Full 91 tool access",
+      "Perfect for hackathon evaluation",
+    ],
+    cta: "Use Own Key",
+    highlight: false,
+  },
+] as const;
+

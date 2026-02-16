@@ -210,3 +210,15 @@ class InvestigationCompleted(DomainEvent):
 class InvestigationError(DomainEvent):
     error: str = ""
     investigation_id: str = ""
+
+
+@dataclass(frozen=True)
+class HypothesisTreeUpdated(DomainEvent):
+    """Emitted when tree structure changes (branch/prune/deepen)."""
+
+    hypothesis_id: str = ""
+    action: str = ""  # "deepen" | "prune" | "branch"
+    parent_id: str = ""
+    depth: int = 0
+    children_count: int = 0
+    investigation_id: str = ""

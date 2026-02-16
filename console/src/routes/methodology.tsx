@@ -14,6 +14,7 @@ import {
 import { cn } from "@/shared/lib/utils";
 import { SectionHeader } from "@/shared/components/ui/SectionHeader";
 import { useMethodology } from "@/features/investigation/hooks/use-methodology";
+import { CapabilitiesGallery } from "@/features/methodology/components/CapabilitiesGallery";
 import type { Methodology } from "@/features/investigation/hooks/use-methodology";
 
 export const Route = createFileRoute("/methodology")({
@@ -66,6 +67,7 @@ function MethodologyPage() {
       </div>
 
       <WorkflowDiagram phases={data.phases} />
+      <CapabilitiesGallery />
       <ModelArchitecture models={data.models} />
       <DomainRegistry domains={data.domains} />
       <ToolCatalog tools={data.tools} />
@@ -401,4 +403,3 @@ function DataSources({ sources }: { sources: Methodology["data_sources"] }) {
     </section>
   );
 }
-

@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import urllib.parse
 
 import httpx
 
@@ -38,9 +39,10 @@ class CompToxClient(ToxicityRepository):
 
     async def _resolve_dtxsid(self, name: str) -> str | None:
         last_error: Exception | None = None
+        encoded_name = urllib.parse.quote(name, safe="")
         for attempt in range(_MAX_RETRIES):
             try:
-                resp = await self._client.get(f"/chemical/search/by-name/{name}")
+                resp = await self._client.get(f"/chemical/search/by-name/{encoded_name}")
                 if resp.status_code == 404:
                     return None
                 if resp.status_code == 429:

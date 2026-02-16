@@ -1,59 +1,13 @@
-import { ReactFlow, Background, Controls, MiniMap, Handle, Position } from "@xyflow/react";
-import type { NodeProps, Node, Edge } from "@xyflow/react";
+import { ReactFlow, Background, Controls, MiniMap, Panel } from "@xyflow/react";
+import type { Node, Edge } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { BrainCircuit, FlaskConical, FileText, Wrench } from "lucide-react";
 import type { InvestigationNodeData } from "../lib/diagram-builder";
+import { InvestigationNode } from "./InvestigationNode";
 
-// -- Custom node types (defined outside component to avoid re-registration) --
+// -- Custom node types ----------------------------------------------------
 
-function InvestigationNode({ data }: NodeProps<Node<InvestigationNodeData>>) {
-  return (
-    <div
-      style={{
-        width: 260,
-        height: 80,
-        borderRadius: 8,
-        border: `2px solid ${data.stroke}`,
-        backgroundColor: data.fill,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "8px 12px",
-      }}
-    >
-      <Handle type="target" position={Position.Top} style={{ opacity: 0 }} />
-      <span
-        style={{
-          color: data.textColor,
-          fontSize: 13,
-          fontFamily: "system-ui, sans-serif",
-          textAlign: "center",
-          lineHeight: 1.3,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          maxWidth: "100%",
-        }}
-      >
-        {data.label}
-      </span>
-      <span
-        style={{
-          color: data.textColor,
-          fontSize: 11,
-          fontFamily: "ui-monospace, monospace",
-          opacity: 0.7,
-          marginTop: 4,
-        }}
-      >
-        {data.sublabel}
-      </span>
-      <Handle type="source" position={Position.Bottom} style={{ opacity: 0 }} />
-    </div>
-  );
-}
-
-function AnnotationNode({ data }: NodeProps<Node<InvestigationNodeData>>) {
+function AnnotationNode({ data }: { data: InvestigationNodeData }) {
   return (
     <span
       style={{
@@ -73,6 +27,34 @@ const nodeTypes = {
   investigation: InvestigationNode,
   annotation: AnnotationNode,
 };
+
+// -- Legend Component -----------------------------------------------------
+
+const LEGEND_ITEMS = [
+  { label: "Hypothesis", icon: BrainCircuit, color: "var(--color-primary)" },
+  { label: "Experiment", icon: FlaskConical, color: "#22c55e" },
+  { label: "Finding", icon: FileText, color: "#6b7280" },
+  { label: "Tool Execution", icon: Wrench, color: "var(--color-muted-foreground)" },
+];
+
+function Legend() {
+  return (
+    <div className="bg-popover/90 backdrop-blur border border-border rounded-md p-3 shadow-lg space-y-2 max-w-[200px]">
+      <h4 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2 border-b border-border pb-1">Legend</h4>
+      <div className="space-y-1.5">
+        {LEGEND_ITEMS.map((item) => (
+          <div key={item.label} className="flex items-center gap-2 text-xs">
+            <item.icon className="w-3.5 h-3.5" style={{ color: item.color }} />
+            <span className="text-foreground/90">{item.label}</span>
+          </div>
+        ))}
+      </div>
+      <div className="text-[10px] text-muted-foreground pt-2 border-t border-border/50 italic leading-snug">
+        Hover over nodes to see detailed scientific reasoning.
+      </div>
+    </div>
+  );
+}
 
 // -- Diagram renderer component -------------------------------------------
 
@@ -95,17 +77,25 @@ export function DiagramRenderer({ nodes, edges }: DiagramRendererProps) {
       nodesConnectable={false}
       elementsSelectable={false}
       proOptions={{ hideAttribution: true }}
-      colorMode="dark"
-      minZoom={0.3}
+      colorMode="dark" // Enforce dark mode or use system preference? Debug used forced styles mostly.
+      minZoom={0.1}
       maxZoom={2}
+      className="bg-zinc-50 dark:bg-zinc-900"
     >
-      <Background color="#1f2937" gap={20} />
-      <Controls showInteractive={false} />
+      <Background color="var(--color-border)" gap={32} size={1} />
+      <Controls
+        position="top-left"
+        showInteractive={false}
+        className="!bg-card !border-border !shadow-sm [&>button]:!bg-card [&>button]:!border-border [&>button]:!fill-foreground [&>button:hover]:!bg-muted"
+      />
       <MiniMap
         nodeColor={(n) => (n.data as InvestigationNodeData).fill ?? "#1f2937"}
         maskColor="rgba(15, 18, 25, 0.8)"
         style={{ backgroundColor: "#0f1219" }}
       />
+      <Panel position="bottom-left">
+        <Legend />
+      </Panel>
     </ReactFlow>
   );
 }

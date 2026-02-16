@@ -3,13 +3,16 @@ from __future__ import annotations
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from ehrlich.api.routes.investigation import _build_domain_registry, _build_registry
 from ehrlich.api.sse import SSEEventType
+from ehrlich.investigation.application.registry_factory import (
+    build_domain_registry,
+    build_tool_registry,
+)
 
 router = APIRouter(tags=["stats"])
 
 PHASE_COUNT = 6
-DATA_SOURCE_COUNT = 16
+DATA_SOURCE_COUNT = 25
 
 
 class StatsResponse(BaseModel):
@@ -22,8 +25,8 @@ class StatsResponse(BaseModel):
 
 @router.get("/stats")
 async def get_stats() -> StatsResponse:
-    registry = _build_registry()
-    domain_registry = _build_domain_registry()
+    registry = build_tool_registry()
+    domain_registry = build_domain_registry()
     return StatsResponse(
         tool_count=len(registry.list_tools()),
         domain_count=len(domain_registry.all_configs()),

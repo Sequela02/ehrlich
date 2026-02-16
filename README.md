@@ -1,10 +1,25 @@
 # Ehrlich
 
-AI-powered scientific discovery engine. Ehrlich uses Claude as a hypothesis-driven scientific reasoning engine that works across multiple scientific domains. The core engine is domain-agnostic: a pluggable `DomainConfig` system lets any domain bring its own tools, scoring, and visualization.
+Open-source (AGPL-3.0), self-hostable scientific discovery engine. Ehrlich uses Claude as a hypothesis-driven scientific reasoning engine that works across multiple scientific domains. The core engine is domain-agnostic: a pluggable `DomainConfig` system lets any domain bring its own tools, scoring, and visualization. Run it on your own infrastructure with your own API keys, or use the [hosted instance](https://app.ehrlich.dev) where credits cover the Anthropic API costs.
 
 Named after Paul Ehrlich, the father of the "magic bullet" -- finding the right answer for any question.
 
 Built for the [Claude Code Hackathon](https://docs.anthropic.com/en/docs/claude-code-hackathon) (Feb 10-16, 2026).
+
+## Philosophy
+
+Ehrlich is **COSS** (Commercial Open-Source Software) -- the same model used by Supabase, PostHog, Cal.com, and GitLab. The entire codebase is open source under AGPL-3.0. There is no proprietary version.
+
+**Two paths, same product:**
+
+| Path | How It Works | Cost |
+|------|-------------|------|
+| **Self-host** | Clone the repo, bring your own Anthropic API key | Free. No limits, no credits, no account needed |
+| **Hosted instance** | Use app.ehrlich.dev | Credits cover Anthropic API costs (Opus is expensive) |
+
+Credits exist because Claude Opus costs real money per investigation. They make scientific reasoning **accessible** -- not monetized. A student in Mexico and a pharma company in Boston get the same 91 tools, the same 28 data sources, the same methodology. The model quality is the only variable.
+
+The AI is the scientist. The platform is the laboratory.
 
 ## What Can Ehrlich Investigate?
 
@@ -25,9 +40,20 @@ Ehrlich is **domain-agnostic**. The hypothesis-driven engine works for any scien
 - **Supplement evidence** -- "What is the evidence for creatine on strength performance?"
 - **Nutrient profiling** -- "Compare protein content and amino acid profiles of whey vs plant-based supplements"
 
+### Impact Evaluation
+- **Social program analysis** -- "Evaluate the effectiveness of Sonora's sports scholarship program"
+- **Causal inference** -- "Does the conditional cash transfer reduce school dropout rates?" (4 methods: DiD, PSM, RDD, Synthetic Control)
+- **Cross-country benchmarking** -- "Compare cost-effectiveness of state sports programs in Mexico"
+- Economic indicators from World Bank, WHO GHO, FRED, Census Bureau, BLS, INEGI, and Banxico
+- US federal data: USAspending grants, College Scorecard education outcomes, HUD housing data, CDC WONDER mortality/natality, data.gov open datasets
+- Mexico data: INEGI economic/demographic series, Banxico SIE financial series, datos.gob.mx open datasets
+- CONEVAL/CREMAA indicator quality analysis (MIR framework validation)
+- Cross-program comparison and international benchmarking
+- Domain-agnostic causal inference tools (in analysis/ context) usable by any domain
+
 ## Architecture
 
-Ehrlich follows Domain-Driven Design with ten bounded contexts:
+Ehrlich follows Domain-Driven Design with eleven bounded contexts:
 
 | Context | Purpose |
 |---------|---------|
@@ -35,12 +61,13 @@ Ehrlich follows Domain-Driven Design with ten bounded contexts:
 | **shared** | Cross-cutting ports and value objects (ChemistryPort, Fingerprint, Conformer3D) |
 | **literature** | Scientific paper search (Semantic Scholar) and reference management |
 | **chemistry** | Cheminformatics: molecular descriptors, fingerprints, 3D conformers |
-| **analysis** | Dataset exploration (ChEMBL, PubChem), substructure enrichment |
+| **analysis** | Dataset exploration (ChEMBL, PubChem), substructure enrichment, domain-agnostic causal inference (DiD, PSM, RDD, Synthetic Control) |
 | **prediction** | ML modeling: train, predict, ensemble, cluster |
 | **simulation** | Molecular docking, ADMET, resistance, target discovery (RCSB PDB), toxicity (EPA CompTox) |
 | **training** | Exercise physiology: evidence analysis, protocol comparison, injury risk, training metrics, clinical trials |
 | **nutrition** | Nutrition science: supplement evidence, labels, nutrients, safety, interactions, adequacy, inflammatory index |
 | **investigation** | Multi-model agent orchestration with Director-Worker-Summarizer pattern + domain registry + MCP bridge |
+| **impact** | Social program evaluation: economic indicators (World Bank, WHO GHO, FRED, Census, BLS, INEGI, Banxico), health (CDC WONDER), spending (USAspending), education (College Scorecard), housing (HUD), open data (data.gov, datos.gob.mx), CONEVAL/CREMAA MIR analysis. Causal estimators live in analysis/ (domain-agnostic) |
 
 ### Multi-Model Architecture
 
@@ -48,7 +75,7 @@ Ehrlich uses a three-tier Claude model architecture for cost-efficient investiga
 
 ```
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesizes (3-5 calls)
-Sonnet 4.5 (Researcher) -- Executes experiments with 70 tools (10-20 calls)
+Sonnet 4.5 (Researcher) -- Executes experiments with 91 tools (10-20 calls)
 Haiku 4.5 (Summarizer)  -- Compresses large outputs, classifies domains (5-10 calls)
 ```
 
@@ -73,10 +100,23 @@ Cost: ~$3-4 per investigation (vs ~$11 with all-Opus).
 | [USDA FoodData](https://fdc.nal.usda.gov/) | Nutrient profiles for foods and supplements | 1.1M+ foods |
 | [OpenFDA CAERS](https://open.fda.gov/) | Supplement adverse event reports | 200K+ reports |
 | [RxNav](https://rxnav.nlm.nih.gov/) | Drug interaction screening (RxCUI resolution) | 100K+ drugs |
+| [World Bank](https://data.worldbank.org/) | Development indicators by country (GDP, poverty, education) | 190+ countries |
+| [WHO GHO](https://www.who.int/data/gho) | Global health statistics (life expectancy, mortality, disease) | 190+ countries |
+| [FRED](https://fred.stlouisfed.org/) | US economic time series (GDP, unemployment, CPI) | 800K+ series |
+| [Census Bureau](https://data.census.gov/) | US demographics, poverty, education (ACS 5-year) | 50 states + territories |
+| [BLS](https://www.bls.gov/) | US labor statistics (unemployment, CPI, wages) | 130K+ series |
+| [USAspending](https://www.usaspending.gov/) | Federal spending awards and grants | All federal agencies |
+| [College Scorecard](https://collegescorecard.ed.gov/) | US higher education outcomes (completion, earnings) | 6K+ institutions |
+| [HUD](https://www.huduser.gov/) | Fair Market Rents, income limits, housing data | All US counties |
+| [CDC WONDER](https://wonder.cdc.gov/) | US mortality, natality, public health statistics | National-level |
+| [data.gov](https://catalog.data.gov/) | US federal open dataset discovery (CKAN) | 300K+ datasets |
+| [INEGI Indicadores](https://www.inegi.org.mx/app/api/indicadores/) | Mexico economic/demographic time series | 400K+ series |
+| [Banxico SIE](https://www.banxico.org.mx/SieAPIRest/service/v1/) | Mexico central bank financial series | Exchange rates, inflation, reserves |
+| [datos.gob.mx](https://datos.gob.mx/) | Mexico federal open dataset discovery (CKAN) | 1000+ datasets |
 
 All data sources are free and open-access.
 
-## 70 Tools
+## 91 Tools
 
 | Context | Tool | Description |
 |---------|------|-------------|
@@ -95,6 +135,12 @@ All data sources are free and open-access.
 | Analysis | `analyze_substructures` | Chi-squared enrichment analysis |
 | Analysis | `compute_properties` | Property distributions (active vs inactive) |
 | Analysis | `search_pharmacology` | GtoPdb curated receptor/ligand interactions |
+| Causal | `estimate_did` | Difference-in-differences causal estimation |
+| Causal | `estimate_psm` | Propensity score matching with balance diagnostics |
+| Causal | `estimate_rdd` | Regression discontinuity design (sharp/fuzzy) |
+| Causal | `estimate_synthetic_control` | Synthetic control method |
+| Causal | `assess_threats` | Validity threat assessment for causal methods |
+| Causal | `compute_cost_effectiveness` | Cost per unit outcome, ICER |
 | Prediction | `train_model` | Train XGBoost on SMILES+activity data |
 | Prediction | `predict_candidates` | Score compounds with trained model |
 | Prediction | `cluster_compounds` | Butina structural clustering |
@@ -108,7 +154,7 @@ All data sources are free and open-access.
 | Simulation | `assess_resistance` | Resistance mutation scoring |
 | Simulation | `get_protein_annotation` | UniProt protein function and disease links |
 | Simulation | `search_disease_targets` | Open Targets disease-target associations |
-| Training | `search_training_literature` | Training science literature via Semantic Scholar |
+| Training | `search_training_literature` | Training science literature with MeSH expansion, study type ranking, non-human filtering |
 | Training | `analyze_training_evidence` | Pooled effect sizes, heterogeneity, evidence grading |
 | Training | `compare_protocols` | Evidence-weighted protocol comparison |
 | Training | `assess_injury_risk` | Knowledge-based injury risk scoring |
@@ -119,16 +165,25 @@ All data sources are free and open-access.
 | Training | `compute_performance_model` | Banister fitness-fatigue model (CTL/ATL/TSB) |
 | Training | `compute_dose_response` | Dose-response curve from dose-effect data |
 | Training | `plan_periodization` | Evidence-based periodization planning (linear/undulating/block) |
-| Nutrition | `search_supplement_evidence` | Supplement efficacy literature search |
+| Nutrition | `search_supplement_evidence` | Supplement evidence with GRADE-style ranking, retracted paper exclusion |
 | Nutrition | `search_supplement_labels` | NIH DSLD supplement product ingredient lookup |
 | Nutrition | `search_nutrient_data` | USDA FoodData Central nutrient profiles |
 | Nutrition | `search_supplement_safety` | OpenFDA CAERS adverse event reports |
-| Nutrition | `compare_nutrients` | Side-by-side nutrient comparison between foods/supplements |
+| Nutrition | `compare_nutrients` | Side-by-side nutrient comparison with per-nutrient deltas, winner, MAR score |
 | Nutrition | `assess_nutrient_adequacy` | DRI-based nutrient adequacy assessment |
 | Nutrition | `check_intake_safety` | Tolerable Upper Intake Level safety screening |
 | Nutrition | `check_interactions` | Drug-supplement interaction screening via RxNav |
 | Nutrition | `analyze_nutrient_ratios` | Key nutrient ratio analysis (omega-6:3, Ca:Mg, etc.) |
 | Nutrition | `compute_inflammatory_index` | Simplified Dietary Inflammatory Index scoring |
+| Impact | `search_economic_indicators` | Query economic time series from FRED, BLS, Census, World Bank, WHO GHO, INEGI, or Banxico |
+| Impact | `search_health_indicators` | Search WHO GHO or CDC WONDER for health indicators |
+| Impact | `fetch_benchmark` | Get comparison values from international or US data sources |
+| Impact | `compare_programs` | Cross-program comparison using statistical tests |
+| Impact | `search_spending_data` | Search USAspending.gov for federal spending awards and grants |
+| Impact | `search_education_data` | Search College Scorecard for US higher education outcomes |
+| Impact | `search_housing_data` | Search HUD for Fair Market Rents and income limits |
+| Impact | `search_open_data` | Search data.gov or datos.gob.mx CKAN catalog for open datasets |
+| Impact | `analyze_program_indicators` | Validate MIR indicators against CREMAA quality criteria (CONEVAL methodology) |
 | Visualization | `render_binding_scatter` | Scatter plot of compound binding affinities |
 | Visualization | `render_admet_radar` | Radar chart of ADMET/drug-likeness properties |
 | Visualization | `render_training_timeline` | Training load timeline with ACWR danger zones |
@@ -141,6 +196,11 @@ All data sources are free and open-access.
 | Visualization | `render_nutrient_comparison` | Grouped bar chart comparing nutrient profiles |
 | Visualization | `render_nutrient_adequacy` | Horizontal bar chart with DRI adequacy + MAR score |
 | Visualization | `render_therapeutic_window` | Therapeutic window chart (EAR/RDA/AI/UL zones) |
+| Visualization | `render_program_dashboard` | Multi-indicator KPI dashboard with target tracking |
+| Visualization | `render_geographic_comparison` | Region bar chart with benchmark reference line |
+| Visualization | `render_parallel_trends` | DiD parallel trends chart (treatment vs control) |
+| Visualization | `render_rdd_plot` | Regression discontinuity scatter with cutoff line |
+| Visualization | `render_causal_diagram` | DAG showing treatment, outcome, confounders |
 | Statistics | `run_statistical_test` | Compare two numeric groups (auto-selects t-test/Welch/Mann-Whitney) |
 | Statistics | `run_categorical_test` | Test contingency tables (auto-selects Fisher's exact/chi-squared) |
 | Investigation | `propose_hypothesis` | Register testable hypothesis |
@@ -149,6 +209,7 @@ All data sources are free and open-access.
 | Investigation | `record_finding` | Record finding linked to hypothesis |
 | Investigation | `record_negative_control` | Validate model with known-inactive compounds |
 | Investigation | `search_prior_research` | Search past investigation findings via full-text search |
+| Investigation | `query_uploaded_data` | Query user-uploaded files (CSV/Excel filtering, PDF text) |
 | Investigation | `conclude_investigation` | Final summary with ranked candidates |
 
 ## Tech Stack
@@ -161,6 +222,8 @@ All data sources are free and open-access.
 - **Data:** ChEMBL, RCSB PDB, PubChem, EPA CompTox, Semantic Scholar (all free APIs)
 
 ## Quick Start
+
+> **Self-hosting?** You use your own Anthropic API key directly -- no credits, no account, no hosted dependency. The credit system only applies to the managed hosted instance.
 
 ### Prerequisites
 
@@ -188,6 +251,9 @@ All data sources are free and open-access.
 | `EHRLICH_MAX_ITERATIONS_PER_PHASE` | No | Max iterations per experiment in multi-model mode (default: 10) |
 | `EHRLICH_LOG_LEVEL` | No | Logging level (default: INFO) |
 | `EHRLICH_COMPTOX_API_KEY` | No | EPA CompTox API key (free, for toxicity data) |
+| `INEGI_API_TOKEN` | No | INEGI Indicadores API token (Mexico economic/demographic data) |
+| `BANXICO_API_TOKEN` | No | Banxico SIE API token (Mexico central bank financial series) |
+| `DATOSGOB_API_TOKEN` | No | datos.gob.mx API token (Mexico open datasets, optional) |
 
 ### Database
 
@@ -259,10 +325,9 @@ Server at :8000, Console at :3000.
 | GET | `/api/v1/health` | Health check |
 | GET | `/api/v1/methodology` | Methodology: phases, domains, tools, data sources, models |
 | GET | `/api/v1/stats` | Aggregate counts (tools, domains, phases, data sources, events) |
-| GET | `/api/v1/investigate/{id}` | Full investigation detail |
-| GET | `/api/v1/molecule/depict?smiles=&w=&h=` | 2D SVG depiction (`image/svg+xml`, cached 24h) |
-| GET | `/api/v1/molecule/conformer?smiles=` | 3D conformer (JSON: mol_block, energy, num_atoms) |
-| GET | `/api/v1/molecule/descriptors?smiles=` | Molecular descriptors + Lipinski pass/fail |
+| GET | `/api/v1/molecule/depict?smiles=&w=&h=` | 2D SVG depiction (`image/svg+xml`, cached 24h). SMILES max 500 chars |
+| GET | `/api/v1/molecule/conformer?smiles=` | 3D conformer (JSON: mol_block, energy, num_atoms). SMILES max 500 chars |
+| GET | `/api/v1/molecule/descriptors?smiles=` | Molecular descriptors + Lipinski pass/fail. SMILES max 500 chars |
 | GET | `/api/v1/targets` | List protein targets (pdb_id, name, organism) |
 
 ### Protected (WorkOS JWT required)
@@ -271,8 +336,11 @@ Server at :8000, Console at :3000.
 |--------|------|-------------|
 | GET | `/api/v1/investigate` | List user's investigations (most recent first) |
 | POST | `/api/v1/investigate` | Create new investigation (`director_tier`: haiku/sonnet/opus) |
-| GET | `/api/v1/investigate/{id}/stream` | SSE stream of investigation events (supports `?token=` for EventSource) |
-| POST | `/api/v1/investigate/{id}/approve` | Approve/reject formulated hypotheses |
+| GET | `/api/v1/investigate/{id}` | Full investigation detail (owner only) |
+| GET | `/api/v1/investigate/{id}/stream` | SSE stream of investigation events (owner only, supports `?token=`) |
+| GET | `/api/v1/investigate/{id}/paper` | Structured scientific paper + visualizations from completed investigation (owner only). PDF via `/paper/:id` route + browser print |
+| POST | `/api/v1/investigate/{id}/approve` | Approve/reject formulated hypotheses (owner only) |
+| POST | `/api/v1/upload` | Upload file (CSV/XLSX/PDF) for investigation data, returns preview |
 | GET | `/api/v1/credits/balance` | Current credit balance + BYOK status |
 
 ### SSE Event Types

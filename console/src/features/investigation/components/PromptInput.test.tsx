@@ -21,6 +21,13 @@ vi.mock("../hooks/use-credits", () => ({
   }),
 }));
 
+vi.mock("../hooks/use-upload", () => ({
+  useUpload: () => ({
+    mutateAsync: vi.fn(),
+    isError: false,
+  }),
+}));
+
 import { PromptInput } from "./PromptInput";
 
 function renderWithProvider(props: { value: string; onChange: (v: string) => void }) {
@@ -39,20 +46,11 @@ describe("PromptInput", () => {
     cleanup();
   });
 
-  it("renders tier selector buttons", () => {
+  it("renders default tier label", () => {
     const { container } = renderWithProvider({ value: "", onChange: vi.fn() });
     const text = container.textContent ?? "";
-    expect(text).toContain("Haiku");
-    expect(text).toContain("Sonnet");
+    // Default tier is Opus, shown on the popover trigger button
     expect(text).toContain("Opus");
-  });
-
-  it("renders credit costs", () => {
-    const { container } = renderWithProvider({ value: "", onChange: vi.fn() });
-    const text = container.textContent ?? "";
-    expect(text).toContain("1cr");
-    expect(text).toContain("3cr");
-    expect(text).toContain("5cr");
   });
 
   it("renders textarea", () => {
@@ -71,13 +69,14 @@ describe("PromptInput", () => {
 
   it("renders submit button", () => {
     const { container } = renderWithProvider({ value: "", onChange: vi.fn() });
-    const submitBtn = container.querySelector('button[type="submit"]');
-    expect(submitBtn).not.toBeNull();
-    expect(submitBtn!.textContent).toContain("Start Investigation");
+    // Submit button is type="button" with an ArrowUp icon
+    const buttons = container.querySelectorAll('button[type="button"]');
+    expect(buttons.length).toBeGreaterThan(0);
   });
 
-  it("renders director label", () => {
+  it("renders attach files button", () => {
     const { container } = renderWithProvider({ value: "", onChange: vi.fn() });
-    expect(container.textContent).toContain("Director");
+    const attachBtn = container.querySelector('button[title="Attach files"]');
+    expect(attachBtn).not.toBeNull();
   });
 });

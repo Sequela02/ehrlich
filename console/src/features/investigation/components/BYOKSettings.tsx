@@ -7,18 +7,18 @@ const STORAGE_KEY = "ehrlich_api_key";
 export function BYOKSettings() {
   const queryClient = useQueryClient();
   const [value, setValue] = useState("");
-  const stored = localStorage.getItem(STORAGE_KEY);
+  const stored = sessionStorage.getItem(STORAGE_KEY);
 
   function handleSave() {
     const trimmed = value.trim();
     if (!trimmed) return;
-    localStorage.setItem(STORAGE_KEY, trimmed);
+    sessionStorage.setItem(STORAGE_KEY, trimmed);
     setValue("");
     void queryClient.invalidateQueries({ queryKey: ["credits"] });
   }
 
   function handleClear() {
-    localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(STORAGE_KEY);
     void queryClient.invalidateQueries({ queryKey: ["credits"] });
   }
 
@@ -66,7 +66,7 @@ export function BYOKSettings() {
       <p className="font-mono text-[10px] leading-relaxed text-muted-foreground/60">
         {stored
           ? "Investigations use your key directly. No platform credits consumed."
-          : "Provide your Anthropic API key to bypass credit limits. Key is stored locally."}
+          : "Provide your Anthropic API key to bypass credit limits. Key is stored in this browser tab only and cleared when you close it."}
       </p>
     </div>
   );

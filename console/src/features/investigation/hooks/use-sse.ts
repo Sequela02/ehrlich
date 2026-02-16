@@ -14,6 +14,7 @@ import type {
   LiteratureSurveyCompletedData,
   NegativeControl,
   PhaseInfo,
+  PositiveControl,
   SSEEvent,
   SSEEventType,
   ValidationMetricsData,
@@ -40,6 +41,8 @@ const EVENT_TYPES: SSEEventType[] = [
   "literature_survey_completed",
   "validation_metrics",
   "visualization",
+  "hypothesis_tree_updated",
+  "positive_control",
 ];
 
 const MAX_RETRIES = 3;
@@ -55,6 +58,7 @@ interface SSEState {
   currentExperimentId: string;
   experiments: Experiment[];
   negativeControls: NegativeControl[];
+  positiveControls: PositiveControl[];
   findings: Finding[];
   candidates: CandidateRow[];
   summary: string;
@@ -86,6 +90,7 @@ export function useSSE(url: string | null): SSEState {
   const [currentExperimentId, setCurrentExperimentId] = useState("");
   const [experiments, setExperiments] = useState<Experiment[]>([]);
   const [negativeControls, setNegativeControls] = useState<NegativeControl[]>([]);
+  const [positiveControls, setPositiveControls] = useState<PositiveControl[]>([]);
   const [findings, setFindings] = useState<Finding[]>([]);
   const [candidates, setCandidates] = useState<CandidateRow[]>([]);
   const [summary, setSummary] = useState("");
@@ -111,6 +116,46 @@ export function useSSE(url: string | null): SSEState {
   const sourceRef = useRef<EventSource | null>(null);
   const attemptRef = useRef(0);
   const doneRef = useRef(false);
+  const prevUrlRef = useRef(url);
+  const lastEventIdRef = useRef("");
+
+  // Reset all state when url changes (switching investigations)
+  if (prevUrlRef.current !== url) {
+    prevUrlRef.current = url;
+    toast.dismiss();
+    setEvents([]);
+    setEventsByExperiment(new Map());
+    setConnected(false);
+    setReconnecting(false);
+    setCompleted(false);
+    setHypotheses([]);
+    setCurrentHypothesisId("");
+    setCurrentExperimentId("");
+    setExperiments([]);
+    setNegativeControls([]);
+    setPositiveControls([]);
+    setFindings([]);
+    setCandidates([]);
+    setSummary("");
+    setPrompt("");
+    setCost(null);
+    setCurrentPhase(null);
+    setApprovalPending(false);
+    setPendingApprovalHypotheses([]);
+    setDomainConfig(null);
+    setLiteratureSurvey(null);
+    setValidationMetrics(null);
+    setError(null);
+    setToolCallCount(0);
+    setActiveToolName("");
+    setExperimentToolCount(0);
+    setExperimentFindingCount(0);
+    setVisualizations([]);
+    setDiagramUrl(null);
+    doneRef.current = false;
+    attemptRef.current = 0;
+    lastEventIdRef.current = "";
+  }
 
   const handleEvent = useCallback((eventType: SSEEventType, raw: string) => {
     if (!raw || raw === "undefined") return;
@@ -123,6 +168,24 @@ export function useSSE(url: string | null): SSEState {
     }
 
     const sseEvent: SSEEvent = { event: eventType, data: parsed.data };
+
+    // Coalesce consecutive thinking chunks into a single event
+    if (eventType === "thinking") {
+      setEvents((prev) => {
+        const last = prev[prev.length - 1];
+        if (last?.event === "thinking") {
+          const merged = [...prev];
+          merged[merged.length - 1] = {
+            event: "thinking",
+            data: { ...last.data, text: (last.data.text as string) + (parsed.data.text as string) },
+          };
+          return merged;
+        }
+        return [...prev, sseEvent];
+      });
+      return;
+    }
+
     setEvents((prev) => [...prev, sseEvent]);
 
     switch (eventType) {
@@ -181,11 +244,11 @@ export function useSSE(url: string | null): SSEState {
           prev.map((e) =>
             e.id === expId
               ? {
-                  ...e,
-                  status: "completed",
-                  tool_count: parsed.data.tool_count as number,
-                  finding_count: parsed.data.finding_count as number,
-                }
+                ...e,
+                status: "completed",
+                tool_count: parsed.data.tool_count as number,
+                finding_count: parsed.data.finding_count as number,
+              }
               : e,
           ),
         );
@@ -304,6 +367,21 @@ export function useSSE(url: string | null): SSEState {
           parsed.data as unknown as VisualizationData,
         ]);
         break;
+      case "positive_control": {
+        const pc: PositiveControl = {
+          identifier: parsed.data.identifier as string,
+          identifier_type: (parsed.data.identifier_type as string) || "",
+          name: parsed.data.name as string,
+          known_activity: (parsed.data.known_activity as string) || "",
+          score: parsed.data.score as number,
+          correctly_classified: parsed.data.correctly_classified as boolean,
+        };
+        setPositiveControls((prev) => [...prev, pc]);
+        break;
+      }
+      case "hypothesis_tree_updated":
+        // Stored in events array for potential future use
+        break;
       case "completed": {
         const d = parsed.data as unknown as CompletedData;
         setSummary(d.summary);
@@ -334,7 +412,7 @@ export function useSSE(url: string | null): SSEState {
             totalTokens: costData.total_tokens as number,
             totalCost: costData.total_cost_usd as number,
             toolCalls: costData.tool_calls as number,
-            byModel: costData.by_model as CostInfo["byModel"],
+            byRole: (costData.by_role ?? costData.by_model) as CostInfo["byRole"],
           });
         }
         setCompleted(true);
@@ -349,11 +427,20 @@ export function useSSE(url: string | null): SSEState {
         break;
       }
       case "error":
-        setError(parsed.data.error as string);
+        const errMsg = parsed.data.error as string;
+        setError(errMsg);
         doneRef.current = true;
-        toast.error("Investigation failed", {
-          description: parsed.data.error as string,
-        });
+
+        if (errMsg.toLowerCase().includes("cancelled")) {
+          toast.info("Investigation cancelled", {
+            description: "The investigation was stopped by user request.",
+          });
+        } else {
+          toast.error("Investigation failed", {
+            description: errMsg,
+          });
+        }
+
         if (sourceRef.current) {
           sourceRef.current.close();
           sourceRef.current = null;
@@ -366,7 +453,12 @@ export function useSSE(url: string | null): SSEState {
     if (!url) return;
 
     async function connect() {
-      const resolvedUrl = await buildSSEUrl(url!);
+      let resolvedUrl = await buildSSEUrl(url!);
+      const lastId = lastEventIdRef.current;
+      if (lastId) {
+        const sep = resolvedUrl.includes("?") ? "&" : "?";
+        resolvedUrl = `${resolvedUrl}${sep}last_event_id=${lastId}`;
+      }
       const source = new EventSource(resolvedUrl);
       sourceRef.current = source;
 
@@ -378,11 +470,12 @@ export function useSSE(url: string | null): SSEState {
 
       for (const eventType of EVENT_TYPES) {
         source.addEventListener(eventType, (e: MessageEvent) => {
+          if (e.lastEventId) lastEventIdRef.current = e.lastEventId;
           handleEvent(eventType, e.data as string);
         });
       }
 
-      source.onerror = () => {
+      source.onerror = async () => {
         source.close();
         setConnected(false);
 
@@ -392,14 +485,16 @@ export function useSSE(url: string | null): SSEState {
           setReconnecting(true);
           const delay = Math.pow(2, attemptRef.current) * 1000;
           attemptRef.current += 1;
-          setTimeout(connect, delay);
+          setTimeout(async () => {
+            await connect();
+          }, delay);
         } else {
           setReconnecting(false);
         }
       };
     }
 
-    connect();
+    void connect();
 
     return () => {
       if (sourceRef.current) {
@@ -421,6 +516,7 @@ export function useSSE(url: string | null): SSEState {
     currentExperimentId,
     experiments,
     negativeControls,
+    positiveControls,
     findings,
     candidates,
     summary,

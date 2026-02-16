@@ -150,11 +150,11 @@ export function generateMarkdown(data: ExportData): string {
     sections.push(`- **Output Tokens:** ${data.cost.outputTokens.toLocaleString()}`);
     sections.push(`- **Tool Calls:** ${data.cost.toolCalls}`);
     sections.push(`- **Total Cost:** $${data.cost.totalCost.toFixed(4)}`);
-    if (data.cost.byModel) {
-      sections.push("\n| Model | Input | Output | Calls | Cost |");
-      sections.push("|-------|-------|--------|-------|------|");
-      for (const [model, mc] of Object.entries(data.cost.byModel)) {
-        sections.push(`| ${model} | ${mc.input_tokens.toLocaleString()} | ${mc.output_tokens.toLocaleString()} | ${mc.calls} | $${mc.cost_usd.toFixed(4)} |`);
+    if (data.cost.byRole) {
+      sections.push("\n| Role | Model | Input | Output | Calls | Cost |");
+      sections.push("|------|-------|-------|--------|-------|------|");
+      for (const [role, mc] of Object.entries(data.cost.byRole)) {
+        sections.push(`| ${role} | ${mc.model_display} | ${mc.input_tokens.toLocaleString()} | ${mc.output_tokens.toLocaleString()} | ${mc.calls} | $${mc.cost_usd.toFixed(4)} |`);
       }
     }
     sections.push("");

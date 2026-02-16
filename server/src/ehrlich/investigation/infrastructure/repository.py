@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import uuid
 from datetime import UTC, datetime
 from typing import Any
 
@@ -14,6 +16,7 @@ from ehrlich.investigation.domain.hypothesis import Hypothesis, HypothesisStatus
 from ehrlich.investigation.domain.investigation import Investigation, InvestigationStatus
 from ehrlich.investigation.domain.negative_control import NegativeControl
 from ehrlich.investigation.domain.repository import InvestigationRepository as _Base
+from ehrlich.investigation.domain.uploaded_file import DocumentData, TabularData, UploadedFile
 
 logger = logging.getLogger(__name__)
 
@@ -23,9 +26,10 @@ CREATE TABLE IF NOT EXISTS users (
     workos_id TEXT UNIQUE NOT NULL,
     email TEXT NOT NULL,
     credits INTEGER NOT NULL DEFAULT 5,
-    encrypted_api_key BYTEA,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE users DROP COLUMN IF EXISTS encrypted_api_key;
 
 CREATE TABLE IF NOT EXISTS investigations (
     id TEXT PRIMARY KEY,
@@ -74,6 +78,17 @@ CREATE INDEX IF NOT EXISTS idx_findings_fts ON investigations USING GIN(findings
 CREATE INDEX IF NOT EXISTS idx_investigations_user ON investigations(user_id);
 CREATE INDEX IF NOT EXISTS idx_events_investigation ON events(investigation_id);
 CREATE INDEX IF NOT EXISTS idx_credit_transactions_user ON credit_transactions(user_id);
+
+CREATE TABLE IF NOT EXISTS uploaded_files (
+    id UUID PRIMARY KEY,
+    investigation_id TEXT NOT NULL REFERENCES investigations(id) ON DELETE CASCADE,
+    filename TEXT NOT NULL,
+    content_type TEXT NOT NULL,
+    parsed_data JSONB NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_uploaded_files_investigation ON uploaded_files(investigation_id);
 """
 
 
@@ -82,21 +97,65 @@ class InvestigationRepository(_Base):
         self._database_url = database_url
         self._pool: asyncpg.Pool[asyncpg.Record] | None = None
 
-    async def initialize(self) -> None:
+    async def initialize(self, *, max_retries: int = 3, base_delay: float = 2.0) -> None:
+        """Initialize the database connection pool with retry logic.
+
+        Args:
+            max_retries: Maximum number of connection attempts.
+            base_delay: Base delay in seconds between retries (multiplied by attempt number).
+        """
         await self._ensure_database()
-        self._pool = await asyncpg.create_pool(
-            self._database_url, min_size=2, max_size=10
-        )
+
+        last_error: Exception | None = None
+        for attempt in range(1, max_retries + 1):
+            try:
+                self._pool = await asyncpg.create_pool(
+                    self._database_url,
+                    min_size=2,
+                    max_size=10,
+                )
+                break
+            except OSError as exc:
+                last_error = exc
+                if attempt == max_retries:
+                    logger.critical(
+                        "Failed to connect to PostgreSQL after %d attempts. "
+                        "Is the database server running? URL: %s",
+                        max_retries,
+                        self._database_url.rsplit("@", 1)[-1],  # hide credentials
+                    )
+                    msg = (
+                        f"Cannot connect to PostgreSQL after {max_retries} attempts: {exc}. "
+                        "Verify the database server is running and the connection URL is correct."
+                    )
+                    raise ConnectionError(msg) from exc
+                delay = base_delay * attempt
+                logger.warning(
+                    "PostgreSQL not ready, retrying in %.1fs… (attempt %d/%d)",
+                    delay,
+                    attempt,
+                    max_retries,
+                )
+                await asyncio.sleep(delay)
+
+        assert self._pool is not None  # noqa: S101 — guaranteed by loop
         async with self._pool.acquire() as conn:
             await conn.execute(_SCHEMA)
         logger.info("PostgreSQL repository initialized")
 
     async def _ensure_database(self) -> None:
         """Create the database if it doesn't exist."""
+        import re
         from urllib.parse import urlparse
 
         parsed = urlparse(self._database_url)
         db_name = parsed.path.lstrip("/")
+
+        # Validate db_name to prevent SQL injection
+        if not re.match(r"^[a-zA-Z0-9_]+$", db_name):
+            msg = f"Invalid database name: {db_name}"
+            raise ValueError(msg)
+
         maintenance_url = self._database_url.rsplit("/", 1)[0] + "/postgres"
 
         try:
@@ -122,9 +181,7 @@ class InvestigationRepository(_Base):
             raise RuntimeError(msg)
         return self._pool
 
-    async def save(
-        self, investigation: Investigation, *, user_id: str | None = None
-    ) -> None:
+    async def save(self, investigation: Investigation, *, user_id: str | None = None) -> None:
         pool = self._get_pool()
         async with pool.acquire() as conn:
             await conn.execute(
@@ -170,9 +227,7 @@ class InvestigationRepository(_Base):
     async def list_all(self) -> list[Investigation]:
         pool = self._get_pool()
         async with pool.acquire() as conn:
-            rows = await conn.fetch(
-                "SELECT * FROM investigations ORDER BY created_at DESC"
-            )
+            rows = await conn.fetch("SELECT * FROM investigations ORDER BY created_at DESC")
             return [_from_row(row) for row in rows]
 
     async def list_by_user(self, user_id: str) -> list[Investigation]:
@@ -216,29 +271,30 @@ class InvestigationRepository(_Base):
             if investigation.status == InvestigationStatus.COMPLETED:
                 await self._rebuild_fts(conn, investigation)
 
-    async def save_event(
-        self, investigation_id: str, event_type: str, event_data: str
-    ) -> None:
+    async def save_event(self, investigation_id: str, event_type: str, event_data: str) -> int:
         pool = self._get_pool()
         async with pool.acquire() as conn:
-            await conn.execute(
+            row = await conn.fetchrow(
                 "INSERT INTO events (investigation_id, event_type, event_data) "
-                "VALUES ($1, $2, $3)",
+                "VALUES ($1, $2, $3) RETURNING id",
                 investigation_id,
                 event_type,
                 event_data,
             )
+            assert row is not None  # noqa: S101 — INSERT RETURNING always returns
+            return int(row["id"])
 
-    async def get_events(self, investigation_id: str) -> list[dict[str, str]]:
+    async def get_events(self, investigation_id: str) -> list[dict[str, Any]]:
         pool = self._get_pool()
         async with pool.acquire() as conn:
             rows = await conn.fetch(
-                "SELECT event_type, event_data FROM events "
+                "SELECT id, event_type, event_data FROM events "
                 "WHERE investigation_id = $1 ORDER BY id ASC",
                 investigation_id,
             )
             return [
                 {
+                    "id": int(row["id"]),
                     "event_type": row["event_type"],
                     "event_data": (
                         row["event_data"]
@@ -249,9 +305,29 @@ class InvestigationRepository(_Base):
                 for row in rows
             ]
 
-    async def search_findings(
-        self, query: str, limit: int = 20
-    ) -> list[dict[str, Any]]:
+    async def get_events_after(self, investigation_id: str, after_id: int) -> list[dict[str, Any]]:
+        pool = self._get_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(
+                "SELECT id, event_type, event_data FROM events "
+                "WHERE investigation_id = $1 AND id > $2 ORDER BY id ASC",
+                investigation_id,
+                after_id,
+            )
+            return [
+                {
+                    "id": int(row["id"]),
+                    "event_type": row["event_type"],
+                    "event_data": (
+                        row["event_data"]
+                        if isinstance(row["event_data"], str)
+                        else json.dumps(row["event_data"])
+                    ),
+                }
+                for row in rows
+            ]
+
+    async def search_findings(self, query: str, limit: int = 20) -> list[dict[str, Any]]:
         pool = self._get_pool()
         async with pool.acquire() as conn:
             rows = await conn.fetch(
@@ -291,14 +367,81 @@ class InvestigationRepository(_Base):
                     )
             return results[:limit]
 
+    async def save_uploaded_file(self, investigation_id: str, file: UploadedFile) -> None:
+        pool = self._get_pool()
+        parsed_data: dict[str, Any] = {}
+        if file.tabular:
+            parsed_data["type"] = "tabular"
+            parsed_data["columns"] = list(file.tabular.columns)
+            parsed_data["dtypes"] = list(file.tabular.dtypes)
+            parsed_data["row_count"] = file.tabular.row_count
+            parsed_data["summary_stats"] = file.tabular.summary_stats
+            parsed_data["sample_rows"] = [list(r) for r in file.tabular.sample_rows]
+        elif file.document:
+            parsed_data["type"] = "document"
+            parsed_data["text"] = file.document.text
+            parsed_data["page_count"] = file.document.page_count
+
+        async with pool.acquire() as conn:
+            await conn.execute(
+                """INSERT INTO uploaded_files
+                   (id, investigation_id, filename, content_type, parsed_data)
+                   VALUES ($1, $2, $3, $4, $5)""",
+                uuid.UUID(file.file_id),
+                investigation_id,
+                file.filename,
+                file.content_type,
+                json.dumps(parsed_data),
+            )
+
+    async def get_uploaded_files(self, investigation_id: str) -> list[UploadedFile]:
+        pool = self._get_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(
+                "SELECT id, filename, content_type, parsed_data "
+                "FROM uploaded_files WHERE investigation_id = $1",
+                investigation_id,
+            )
+        files: list[UploadedFile] = []
+        for row in rows:
+            data = (
+                json.loads(row["parsed_data"])
+                if isinstance(row["parsed_data"], str)
+                else row["parsed_data"]
+            )
+            tabular = None
+            document = None
+            if data.get("type") == "tabular":
+                tabular = TabularData(
+                    columns=tuple(data["columns"]),
+                    dtypes=tuple(data["dtypes"]),
+                    row_count=data["row_count"],
+                    summary_stats=data["summary_stats"],
+                    sample_rows=tuple(tuple(r) for r in data["sample_rows"]),
+                )
+            elif data.get("type") == "document":
+                document = DocumentData(
+                    text=data["text"],
+                    page_count=data["page_count"],
+                )
+            files.append(
+                UploadedFile(
+                    file_id=str(row["id"]),
+                    filename=row["filename"],
+                    content_type=row["content_type"],
+                    tabular=tabular,
+                    document=document,
+                )
+            )
+        return files
+
     # -- User management (PostgreSQL-specific, not on ABC) -------------------------
 
     async def get_or_create_user(self, workos_id: str, email: str) -> dict[str, Any]:
         pool = self._get_pool()
         async with pool.acquire() as conn:
             row = await conn.fetchrow(
-                "SELECT id, workos_id, email, credits, created_at "
-                "FROM users WHERE workos_id = $1",
+                "SELECT id, workos_id, email, credits, created_at FROM users WHERE workos_id = $1",
                 workos_id,
             )
             if row is not None:
@@ -315,16 +458,12 @@ class InvestigationRepository(_Base):
     async def get_user_credits(self, workos_id: str) -> int:
         pool = self._get_pool()
         async with pool.acquire() as conn:
-            row = await conn.fetchrow(
-                "SELECT credits FROM users WHERE workos_id = $1", workos_id
-            )
+            row = await conn.fetchrow("SELECT credits FROM users WHERE workos_id = $1", workos_id)
             if row is None:
                 return 0
             return int(row["credits"])
 
-    async def deduct_credits(
-        self, workos_id: str, amount: int, investigation_id: str
-    ) -> bool:
+    async def deduct_credits(self, workos_id: str, amount: int, investigation_id: str) -> bool:
         pool = self._get_pool()
         async with pool.acquire() as conn, conn.transaction():
             row = await conn.fetchrow(
@@ -347,14 +486,11 @@ class InvestigationRepository(_Base):
             )
             return True
 
-    async def refund_credits(
-        self, workos_id: str, amount: int, investigation_id: str
-    ) -> None:
+    async def refund_credits(self, workos_id: str, amount: int, investigation_id: str) -> None:
         pool = self._get_pool()
         async with pool.acquire() as conn, conn.transaction():
             row = await conn.fetchrow(
-                "UPDATE users SET credits = credits + $1 "
-                "WHERE workos_id = $2 RETURNING id",
+                "UPDATE users SET credits = credits + $1 WHERE workos_id = $2 RETURNING id",
                 amount,
                 workos_id,
             )
@@ -368,6 +504,17 @@ class InvestigationRepository(_Base):
                     "refund",
                     investigation_id,
                 )
+
+    async def get_investigation_owner_workos_id(self, investigation_id: str) -> str | None:
+        """Get the workos_id of the user who owns the investigation."""
+        pool = self._get_pool()
+        async with pool.acquire() as conn:
+            row = await conn.fetchrow(
+                "SELECT u.workos_id FROM investigations i "
+                "JOIN users u ON i.user_id = u.id WHERE i.id = $1",
+                investigation_id,
+            )
+            return row["workos_id"] if row else None
 
     # -- Private helpers -----------------------------------------------------------
 
@@ -391,8 +538,7 @@ class InvestigationRepository(_Base):
             )
         text = " ".join(parts)
         await conn.execute(
-            "UPDATE investigations SET findings_search = to_tsvector('english', $1) "
-            "WHERE id = $2",
+            "UPDATE investigations SET findings_search = to_tsvector('english', $1) WHERE id = $2",
             text,
             investigation.id,
         )

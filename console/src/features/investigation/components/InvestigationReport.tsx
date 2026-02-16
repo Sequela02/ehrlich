@@ -1,13 +1,19 @@
+import { useState } from "react";
 import Markdown from "react-markdown";
+import rehypeSanitize from "rehype-sanitize";
+import { Link } from "@tanstack/react-router";
 import {
   BookOpen,
   Download,
+  FileText,
   FlaskConical,
+  Loader2,
   Target,
   TestTube,
   Zap,
 } from "lucide-react";
-import { generateMarkdown, downloadMarkdown } from "../lib/export-markdown";
+import { downloadMarkdown } from "../lib/export-markdown";
+import { apiFetch } from "@/shared/lib/api";
 import { cn } from "@/shared/lib/utils";
 import { SectionHeader } from "@/shared/components/ui/SectionHeader";
 import type {
@@ -24,8 +30,10 @@ import { CandidateTable } from "./CandidateTable";
 import { FindingsPanel } from "./FindingsPanel";
 import { HypothesisBoard } from "./HypothesisBoard";
 import { NegativeControlPanel } from "./NegativeControlPanel";
+import { ThreatAssessment } from "./ThreatAssessment";
 
 interface InvestigationReportProps {
+  investigationId: string;
   prompt: string;
   summary: string;
   hypotheses: Hypothesis[];
@@ -47,6 +55,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export function InvestigationReport({
+  investigationId,
   prompt,
   summary,
   hypotheses,
@@ -58,21 +67,20 @@ export function InvestigationReport({
   domainConfig,
   validationMetrics,
 }: InvestigationReportProps) {
-  function handleExport() {
-    const md = generateMarkdown({
-      prompt,
-      summary,
-      hypotheses,
-      experiments,
-      findings,
-      candidates,
-      negativeControls,
-      cost,
-      validationMetrics,
-    });
-    const slug = prompt.slice(0, 40).replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase();
-    const ts = new Date().toISOString().slice(0, 10);
-    downloadMarkdown(md, `${slug}_${ts}_report.md`);
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const paper = await apiFetch<Record<string, string>>(
+        `/investigate/${investigationId}/paper`,
+      );
+      const slug = prompt.slice(0, 40).replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase();
+      const ts = new Date().toISOString().slice(0, 10);
+      downloadMarkdown(paper.full_markdown, `${slug}_${ts}_paper.md`);
+    } finally {
+      setExporting(false);
+    }
   }
 
   return (
@@ -81,13 +89,24 @@ export function InvestigationReport({
         <h2 className="font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
           Investigation Report
         </h2>
-        <button
-          onClick={handleExport}
-          className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-surface px-3 py-1.5 font-mono text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
-        >
-          <Download className="h-3.5 w-3.5" />
-          Export Report
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/paper/$id"
+            params={{ id: investigationId }}
+            className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-surface px-3 py-1.5 font-mono text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
+          >
+            <FileText className="h-3.5 w-3.5" />
+            View Paper
+          </Link>
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="inline-flex items-center gap-1.5 rounded-sm border border-border bg-surface px-3 py-1.5 font-mono text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground disabled:opacity-50"
+          >
+            {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+            Export Markdown
+          </button>
+        </div>
       </div>
 
       {/* 1. Research Question */}
@@ -114,7 +133,7 @@ export function InvestigationReport({
           />
           <div className="rounded-md border border-border bg-surface p-5">
             <div className="prose prose-sm prose-invert max-w-none prose-headings:text-foreground prose-a:text-primary prose-strong:text-foreground prose-code:text-primary prose-pre:rounded-lg prose-pre:border prose-pre:border-border prose-pre:bg-muted">
-              <Markdown>{summary}</Markdown>
+              <Markdown rehypePlugins={[rehypeSanitize]}>{summary}</Markdown>
             </div>
           </div>
         </section>
@@ -190,7 +209,26 @@ export function InvestigationReport({
         <CandidateTable candidates={candidates} domainConfig={domainConfig} />
       </section>
 
-      {/* 7. Model Validation -- reuse NegativeControlPanel with pass/fail icons */}
+      {/* 7. Validity Threats -- causal findings */}
+      {(() => {
+        const threats = findings
+          .filter((f) => f.evidence && typeof f.evidence === "object")
+          .flatMap((f) => {
+            const ev = f.evidence as unknown as Record<string, unknown>;
+            return Array.isArray(ev.threats) ? ev.threats : [];
+          })
+          .filter(
+            (t): t is { type: string; severity: string; description: string; mitigation: string } =>
+              typeof t === "object" && t !== null && "type" in t && "severity" in t,
+          );
+        return threats.length > 0 ? (
+          <section>
+            <ThreatAssessment threats={threats} />
+          </section>
+        ) : null;
+      })()}
+
+      {/* 8. Model Validation -- reuse NegativeControlPanel with pass/fail icons */}
       {negativeControls.length > 0 && (
         <section className="space-y-3">
           <NegativeControlPanel controls={negativeControls} />
@@ -247,11 +285,12 @@ export function InvestigationReport({
               <Stat label="Tool Calls" value={cost.toolCalls.toLocaleString()} />
               <Stat label="Total Cost" value={`$${cost.totalCost.toFixed(4)}`} />
             </div>
-            {cost.byModel && Object.keys(cost.byModel).length > 0 && (
+            {cost.byRole && Object.keys(cost.byRole).length > 0 && (
               <div className="mt-4 overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-border text-left font-mono text-[10px] uppercase tracking-wider text-muted-foreground/70">
+                      <th className="pb-2 pr-4">Role</th>
                       <th className="pb-2 pr-4">Model</th>
                       <th className="pb-2 pr-4">Input</th>
                       <th className="pb-2 pr-4">Output</th>
@@ -260,9 +299,10 @@ export function InvestigationReport({
                     </tr>
                   </thead>
                   <tbody>
-                    {Object.entries(cost.byModel).map(([model, mc]) => (
-                      <tr key={model} className="border-b border-border/50 last:border-0">
-                        <td className="py-2 pr-4 font-mono">{model}</td>
+                    {Object.entries(cost.byRole).map(([role, mc]) => (
+                      <tr key={role} className="border-b border-border/50 last:border-0">
+                        <td className="py-2 pr-4 font-mono capitalize">{role}</td>
+                        <td className="py-2 pr-4 font-mono text-muted-foreground/70">{mc.model_display}</td>
                         <td className="py-2 pr-4 font-mono tabular-nums">{mc.input_tokens.toLocaleString()}</td>
                         <td className="py-2 pr-4 font-mono tabular-nums">{mc.output_tokens.toLocaleString()}</td>
                         <td className="py-2 pr-4 font-mono tabular-nums">{mc.calls}</td>
