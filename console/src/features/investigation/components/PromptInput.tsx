@@ -14,10 +14,46 @@ import {
 } from "@/shared/components/ui/popover";
 import { cn } from "@/shared/lib/utils";
 
-const TIERS: { value: DirectorTier; label: string; credits: number }[] = [
-  { value: "haiku", label: "Haiku", credits: 1 },
-  { value: "sonnet", label: "Sonnet", credits: 3 },
-  { value: "opus", label: "Opus", credits: 5 },
+const TIERS: {
+  value: DirectorTier;
+  label: string;
+  credits: number;
+  description: string;
+  models: { role: string; model: string }[];
+}[] = [
+  {
+    value: "haiku",
+    label: "Haiku",
+    credits: 1,
+    description: "Fast & efficient for simple queries.",
+    models: [
+      { role: "Director", model: "Haiku 4.5" },
+      { role: "Researcher", model: "Haiku 4.5" },
+      { role: "Summarizer", model: "Haiku 4.5" },
+    ],
+  },
+  {
+    value: "sonnet",
+    label: "Sonnet",
+    credits: 3,
+    description: "Balanced reasoning and speed.",
+    models: [
+      { role: "Director", model: "Sonnet 4.5" },
+      { role: "Researcher", model: "Sonnet 4.5" },
+      { role: "Summarizer", model: "Haiku 4.5" },
+    ],
+  },
+  {
+    value: "opus",
+    label: "Opus",
+    credits: 5,
+    description: "Maximum reasoning power for complex tasks.",
+    models: [
+      { role: "Director", model: "Opus 4.6" },
+      { role: "Researcher", model: "Sonnet 4.5" },
+      { role: "Summarizer", model: "Haiku 4.5" },
+    ],
+  },
 ];
 
 interface PromptInputProps {
@@ -132,16 +168,14 @@ export function PromptInput({ value, onChange }: PromptInputProps) {
             <Paperclip className="h-4 w-4" />
           </Button>
 
-          {/* Director Tier Selector */}
-
-          {/* Director Tier Selector - Popover Style */}
+          {/* Team Selector */}
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
                 size="sm"
                 className="h-8 gap-2 border-dashed px-2 text-xs font-medium"
-                title="Select Director Tier"
+                title="Choose your team"
               >
                 <Brain className="h-3.5 w-3.5" />
                 {selectedTier.label}
@@ -150,23 +184,18 @@ export function PromptInput({ value, onChange }: PromptInputProps) {
             <PopoverContent className="w-80 p-0" align="start">
               <div className="grid gap-1 p-2">
                 <div className="mb-2 px-2 pt-1">
-                  <h4 className="font-medium leading-none">Director Tier</h4>
+                  <h4 className="font-medium leading-none">Choose your team</h4>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Higher tiers provide more reasoning depth but cost more credits.
+                    Each tier assembles a different research team.
                   </p>
                 </div>
                 {TIERS.map((t) => (
                   <button
                     key={t.value}
-                    onClick={() => {
-                      setTier(t.value);
-                      // Optional: close popover on select? 
-                      // Popover primitive doesn't auto-close unless we control open state or use DialogClose inside.
-                      // For now we just select. User clicks outside to close.
-                    }}
+                    onClick={() => setTier(t.value)}
                     className={cn(
-                      "flex flex-col items-start gap-1 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
-                      tier === t.value && "bg-accent text-accent-foreground"
+                      "group flex flex-col items-start gap-1 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
+                      tier === t.value && "bg-accent text-accent-foreground",
                     )}
                   >
                     <div className="flex w-full items-center justify-between">
@@ -176,10 +205,16 @@ export function PromptInput({ value, onChange }: PromptInputProps) {
                       </span>
                     </div>
                     <span className="text-[10px] text-muted-foreground/80">
-                      {t.value === "haiku" && "Fast & efficient for simple queries."}
-                      {t.value === "sonnet" && "Balanced reasoning and speed."}
-                      {t.value === "opus" && "Maximum reasoning power for complex tasks."}
+                      {t.description}
                     </span>
+                    <div className="mt-0.5 flex w-full flex-col gap-px text-[10px] text-muted-foreground/60">
+                      {t.models.map((m) => (
+                        <div key={m.role} className="flex justify-between">
+                          <span>{m.role}</span>
+                          <span className="font-mono">{m.model}</span>
+                        </div>
+                      ))}
+                    </div>
                   </button>
                 ))}
               </div>

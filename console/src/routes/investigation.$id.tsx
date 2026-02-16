@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useRef, useEffect, useState, useMemo } from "react";
-import { AlertCircle, ChevronDown, ExternalLink, Home, Loader2, PanelRightClose, PanelRightOpen, WifiOff } from "lucide-react";
+import { useRef, useEffect, useState, useMemo, useCallback } from "react";
+import { AlertCircle, Ban, ChevronDown, ExternalLink, Home, Loader2, PanelRightClose, PanelRightOpen, WifiOff } from "lucide-react";
+import { toast } from "sonner";
 import { PageHeader } from "@/shared/components/layout/PageHeader";
 import { Badge } from "@/shared/components/ui/badge";
 import { cn } from "@/shared/lib/utils";
+import { apiFetch } from "@/shared/lib/api";
 import { ErrorBoundary } from "@/features/shared/components/ErrorBoundary";
 import {
   Timeline,
@@ -21,6 +23,7 @@ import { HypothesisApprovalCard } from "@/features/investigation/components/Hypo
 import { FindingsPanel } from "@/features/investigation/components/FindingsPanel";
 import { InvestigationReport } from "@/features/investigation/components/InvestigationReport";
 import { useSSE } from "@/features/investigation/hooks/use-sse";
+import { useInvestigationDetail } from "@/features/investigation/hooks/use-investigation-detail";
 import type { HypothesisNode, ExperimentNode, FindingNode } from "@/features/investigation/lib/diagram-builder";
 import VisualizationPanel from "@/features/visualization/VisualizationPanel";
 
@@ -61,8 +64,25 @@ function InvestigationPage() {
     diagramUrl,
   } = useSSE(streamUrl);
 
+  const { data: detail } = useInvestigationDetail(id);
+  const investigationPrompt = prompt || detail?.prompt || "";
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [cancelling, setCancelling] = useState(false);
   const sidebarTimelineRef = useRef<HTMLDivElement>(null);
+
+  const isActive = connected && !completed && !error;
+
+  const handleCancel = useCallback(async () => {
+    setCancelling(true);
+    try {
+      await apiFetch(`/investigate/${id}/cancel`, { method: "POST" });
+      toast.info("Investigation cancelled");
+    } catch {
+      toast.error("Failed to cancel investigation");
+      setCancelling(false);
+    }
+  }, [id]);
 
   useEffect(() => {
     const el = sidebarTimelineRef.current;
@@ -117,7 +137,8 @@ function InvestigationPage() {
     <div className="flex min-h-screen flex-col lg:h-screen lg:overflow-hidden">
       {/* Header */}
       <PageHeader
-        title="Investigation"
+        title={investigationPrompt || "Investigation"}
+        titleMaxLength={60}
         subtitle={id}
         backTo="/"
         rightContent={
@@ -134,6 +155,16 @@ function InvestigationPage() {
               error={error}
             />
             <CostBadge cost={cost} />
+            {isActive && (
+              <button
+                onClick={handleCancel}
+                disabled={cancelling}
+                className="inline-flex items-center gap-1.5 rounded-sm border border-destructive/30 px-2.5 py-1.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+              >
+                <Ban className="h-3 w-3" />
+                {cancelling ? "Cancelling..." : "Cancel"}
+              </button>
+            )}
             <button
               onClick={() => setSidebarOpen((p) => !p)}
               className="hidden rounded-md p-1.5 text-muted-foreground transition-colors hover:text-foreground lg:inline-flex"

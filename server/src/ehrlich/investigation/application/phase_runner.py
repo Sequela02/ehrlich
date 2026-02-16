@@ -802,11 +802,7 @@ async def run_synthesis_phase(
                 if isinstance(s, dict) and "name" in s and "value" in s
             }
         else:
-            scores = {
-                k: float(v)
-                for k, v in raw_scores.items()
-                if isinstance(v, (int, float))
-            }
+            scores = {k: float(v) for k, v in raw_scores.items() if isinstance(v, (int, float))}
         # Normalize attributes: array [{name, value}] -> dict or already dict
         raw_attrs = c.get("attributes", [])
         if isinstance(raw_attrs, list):

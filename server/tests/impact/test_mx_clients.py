@@ -313,9 +313,7 @@ class TestDatosGobClient:
     @respx.mock
     @pytest.mark.asyncio
     async def test_empty_results(self, client: DatosGobClient) -> None:
-        respx.get(_DATOSGOB_URL).mock(
-            return_value=Response(200, json={"result": {"results": []}})
-        )
+        respx.get(_DATOSGOB_URL).mock(return_value=Response(200, json={"result": {"results": []}}))
         results = await client.search_datasets("nonexistent")
         assert results == []
 

@@ -186,14 +186,10 @@ class ImpactService:
             return []
         return await self._datosgob.search_datasets(query, organization, limit)
 
-    def analyze_program_indicators(
-        self, indicator_name: str, level: str
-    ) -> dict[str, object]:
+    def analyze_program_indicators(self, indicator_name: str, level: str) -> dict[str, object]:
         """Validate an MIR indicator against CREMAA criteria."""
         level_clean = level.lower().strip()
-        level_description = CONEVAL_MIR_LEVELS.get(
-            level_clean, f"Unknown MIR level: {level_clean}"
-        )
+        level_description = CONEVAL_MIR_LEVELS.get(level_clean, f"Unknown MIR level: {level_clean}")
         criteria_results: dict[str, dict[str, str]] = {
             criterion: {
                 "description": description,

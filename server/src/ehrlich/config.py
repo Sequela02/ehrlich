@@ -20,8 +20,6 @@ class Settings(BaseSettings):
     summarizer_threshold: int = 2000
     max_iterations_per_experiment: int = 10
     director_effort: str = "high"
-    director_thinking: str = "enabled"
-    director_thinking_budget: int = 10000
     log_level: str = "INFO"
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
     database_url: str = "postgresql://postgres:postgres@localhost:5432/ehrlich"

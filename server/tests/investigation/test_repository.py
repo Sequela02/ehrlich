@@ -335,6 +335,52 @@ class TestEvents:
         events = await repo.get_events(inv.id)
         assert events == []
 
+    async def test_save_event_returns_id(self, repo: InvestigationRepository) -> None:
+        inv = _make_investigation()
+        await repo.save(inv)
+
+        id1 = await repo.save_event(inv.id, "event_a", json.dumps({"a": 1}))
+        id2 = await repo.save_event(inv.id, "event_b", json.dumps({"b": 2}))
+        assert isinstance(id1, int)
+        assert isinstance(id2, int)
+        assert id2 > id1
+
+    async def test_get_events_includes_id(self, repo: InvestigationRepository) -> None:
+        inv = _make_investigation()
+        await repo.save(inv)
+
+        saved_id = await repo.save_event(inv.id, "test_event", json.dumps({"x": 1}))
+        events = await repo.get_events(inv.id)
+        assert len(events) == 1
+        assert events[0]["id"] == saved_id
+
+    async def test_get_events_after(self, repo: InvestigationRepository) -> None:
+        inv = _make_investigation()
+        await repo.save(inv)
+
+        ids = []
+        for i in range(5):
+            eid = await repo.save_event(inv.id, f"event_{i}", json.dumps({"i": i}))
+            ids.append(eid)
+
+        # Get events after the 3rd one (index 2)
+        events = await repo.get_events_after(inv.id, ids[2])
+        assert len(events) == 2
+        assert events[0]["event_type"] == "event_3"
+        assert events[1]["event_type"] == "event_4"
+        assert events[0]["id"] == ids[3]
+        assert events[1]["id"] == ids[4]
+
+    async def test_get_events_after_returns_empty_when_caught_up(
+        self, repo: InvestigationRepository
+    ) -> None:
+        inv = _make_investigation()
+        await repo.save(inv)
+
+        last_id = await repo.save_event(inv.id, "only_event", json.dumps({"x": 1}))
+        events = await repo.get_events_after(inv.id, last_id)
+        assert events == []
+
 
 class TestSearchFindings:
     async def test_search_returns_matching_findings(self, repo: InvestigationRepository) -> None:

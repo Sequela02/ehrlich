@@ -177,6 +177,7 @@ class MultiModelOrchestrator:
     # ------------------------------------------------------------------
 
     async def run(self, investigation: Investigation) -> AsyncGenerator[DomainEvent, None]:
+        self._investigation = investigation
         investigation.transition_to(InvestigationStatus.RUNNING)
         cost = CostTracker()
 

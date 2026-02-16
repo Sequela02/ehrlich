@@ -157,9 +157,7 @@ class TestAnalyzeProgramIndicators:
     async def test_all_mir_levels(self) -> None:
         for level in ("fin", "proposito", "componente", "actividad"):
             result = json.loads(
-                await analyze_program_indicators(
-                    indicator_name="Test indicator", level=level
-                )
+                await analyze_program_indicators(indicator_name="Test indicator", level=level)
             )
             assert result["mir_level"] == level
             assert result["mir_level_description"] != f"Unknown MIR level: {level}"
@@ -167,9 +165,7 @@ class TestAnalyzeProgramIndicators:
     @pytest.mark.asyncio
     async def test_unknown_level_graceful(self) -> None:
         result = json.loads(
-            await analyze_program_indicators(
-                indicator_name="Test", level="unknown_level"
-            )
+            await analyze_program_indicators(indicator_name="Test", level="unknown_level")
         )
         assert "Unknown MIR level" in result["mir_level_description"]
 
@@ -182,8 +178,12 @@ class TestAnalyzeProgramIndicators:
         )
         criteria = result["cremaa_criteria"]
         cremaa_keys = (
-            "claridad", "relevancia", "economia",
-            "monitoreable", "adecuado", "aportacion_marginal",
+            "claridad",
+            "relevancia",
+            "economia",
+            "monitoreable",
+            "adecuado",
+            "aportacion_marginal",
         )
         for key in cremaa_keys:
             assert key in criteria
@@ -194,8 +194,6 @@ class TestAnalyzeProgramIndicators:
     @pytest.mark.asyncio
     async def test_level_normalized_to_lowercase(self) -> None:
         result = json.loads(
-            await analyze_program_indicators(
-                indicator_name="Test", level="PROPOSITO"
-            )
+            await analyze_program_indicators(indicator_name="Test", level="PROPOSITO")
         )
         assert result["mir_level"] == "proposito"

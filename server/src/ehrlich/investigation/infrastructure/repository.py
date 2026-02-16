@@ -110,7 +110,9 @@ class InvestigationRepository(_Base):
         for attempt in range(1, max_retries + 1):
             try:
                 self._pool = await asyncpg.create_pool(
-                    self._database_url, min_size=2, max_size=10,
+                    self._database_url,
+                    min_size=2,
+                    max_size=10,
                 )
                 break
             except OSError as exc:
@@ -130,7 +132,9 @@ class InvestigationRepository(_Base):
                 delay = base_delay * attempt
                 logger.warning(
                     "PostgreSQL not ready, retrying in %.1fs… (attempt %d/%d)",
-                    delay, attempt, max_retries,
+                    delay,
+                    attempt,
+                    max_retries,
                 )
                 await asyncio.sleep(delay)
 
@@ -267,26 +271,52 @@ class InvestigationRepository(_Base):
             if investigation.status == InvestigationStatus.COMPLETED:
                 await self._rebuild_fts(conn, investigation)
 
-    async def save_event(self, investigation_id: str, event_type: str, event_data: str) -> None:
+    async def save_event(self, investigation_id: str, event_type: str, event_data: str) -> int:
         pool = self._get_pool()
         async with pool.acquire() as conn:
-            await conn.execute(
-                "INSERT INTO events (investigation_id, event_type, event_data) VALUES ($1, $2, $3)",
+            row = await conn.fetchrow(
+                "INSERT INTO events (investigation_id, event_type, event_data) "
+                "VALUES ($1, $2, $3) RETURNING id",
                 investigation_id,
                 event_type,
                 event_data,
             )
+            assert row is not None  # noqa: S101 — INSERT RETURNING always returns
+            return int(row["id"])
 
-    async def get_events(self, investigation_id: str) -> list[dict[str, str]]:
+    async def get_events(self, investigation_id: str) -> list[dict[str, Any]]:
         pool = self._get_pool()
         async with pool.acquire() as conn:
             rows = await conn.fetch(
-                "SELECT event_type, event_data FROM events "
+                "SELECT id, event_type, event_data FROM events "
                 "WHERE investigation_id = $1 ORDER BY id ASC",
                 investigation_id,
             )
             return [
                 {
+                    "id": int(row["id"]),
+                    "event_type": row["event_type"],
+                    "event_data": (
+                        row["event_data"]
+                        if isinstance(row["event_data"], str)
+                        else json.dumps(row["event_data"])
+                    ),
+                }
+                for row in rows
+            ]
+
+    async def get_events_after(self, investigation_id: str, after_id: int) -> list[dict[str, Any]]:
+        pool = self._get_pool()
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(
+                "SELECT id, event_type, event_data FROM events "
+                "WHERE investigation_id = $1 AND id > $2 ORDER BY id ASC",
+                investigation_id,
+                after_id,
+            )
+            return [
+                {
+                    "id": int(row["id"]),
                     "event_type": row["event_type"],
                     "event_data": (
                         row["event_data"]

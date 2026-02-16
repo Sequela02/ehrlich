@@ -59,6 +59,14 @@ TIER_CREDITS: dict[str, int] = {
     "opus": 5,
 }
 
+_TRANSIENT_EVENTS = frozenset({
+    SSEEventType.COMPLETED,
+    SSEEventType.ERROR,
+    SSEEventType.COST_UPDATE,
+    SSEEventType.HYPOTHESIS_APPROVAL_REQUESTED,
+    SSEEventType.THINKING,
+})
+
 _repository: InvestigationRepository | None = None
 _active_investigations: dict[str, Investigation] = {}
 _active_orchestrators: dict[str, MultiModelOrchestrator] = {}
@@ -113,6 +121,51 @@ def _end_broadcast(investigation_id: str) -> None:
     for queue in _subscribers.get(investigation_id, []):
         queue.put_nowait(None)
     _subscribers.pop(investigation_id, None)
+
+
+# ── Background Orchestrator ─────────────────────────────────────────────
+
+
+async def _run_orchestrator(
+    investigation: Investigation,
+    orchestrator: MultiModelOrchestrator,
+    repo: InvestigationRepository,
+    meta: dict[str, Any],
+) -> None:
+    """Run orchestrator as a background task, decoupled from SSE connections."""
+    failed = False
+    try:
+        async for domain_event in orchestrator.run(investigation):
+            sse_event = domain_event_to_sse(domain_event)
+            if sse_event is not None:
+                event: dict[str, str] = {
+                    "event": sse_event.event.value,
+                    "data": sse_event.format(),
+                }
+                if sse_event.event not in _TRANSIENT_EVENTS:
+                    event_id = await repo.save_event(
+                        investigation.id,
+                        sse_event.event.value,
+                        sse_event.format(),
+                    )
+                    event["id"] = str(event_id)
+                _broadcast_event(investigation.id, event)
+    except Exception:
+        failed = True
+        logger.exception("Investigation %s failed in background task", investigation.id)
+    finally:
+        _end_broadcast(investigation.id)
+        await repo.update(investigation)
+        _active_investigations.pop(investigation.id, None)
+        _active_orchestrators.pop(investigation.id, None)
+
+        if failed or investigation.status == InvestigationStatus.FAILED:
+            credit_cost = meta.get("credit_cost", 0)
+            workos_id = meta.get("workos_id")
+            if credit_cost > 0 and workos_id:
+                await repo.refund_credits(workos_id, credit_cost, investigation.id)
+
+        _investigation_meta.pop(investigation.id, None)
 
 
 # ── Route Handlers ──────────────────────────────────────────────────────
@@ -379,6 +432,8 @@ async def stream_investigation(
 
     await _verify_ownership(investigation_id, user, repo)
 
+    # SSE reconnection: browser sends Last-Event-ID header, manual reconnect sends query param
+    last_event_id = _parse_last_event_id(request)
     status = investigation.status
 
     # Completed, failed, or cancelled -- replay final status
@@ -387,34 +442,31 @@ async def stream_investigation(
         InvestigationStatus.FAILED,
         InvestigationStatus.CANCELLED,
     ):
-        return EventSourceResponse(_replay_final(investigation))
+        return EventSourceResponse(_replay_final(investigation, last_event_id))
 
-    # Running or awaiting approval -- subscribe to live events if broadcast is active
+    # Running or awaiting approval -- subscribe if orchestrator task is alive
     if status in (InvestigationStatus.RUNNING, InvestigationStatus.AWAITING_APPROVAL):
-        if investigation.id in _subscribers:
-            return EventSourceResponse(_subscribe(investigation))
+        if investigation.id in _active_orchestrators:
+            return EventSourceResponse(_subscribe(investigation, last_event_id))
 
         # Zombie investigation (server restarted) -- mark as failed so UI shows error
         logger.warning(
-            "Found zombie investigation %s (%s but no subscribers)", investigation.id, status.value
+            "Found zombie investigation %s (%s but no orchestrator)", investigation.id, status.value
         )
-        # Bypass transition_to(): zombie recovery requires forcing terminal state
         investigation.status = InvestigationStatus.FAILED
         investigation.error = "Investigation interrupted by server restart"
         await repo.update(investigation)
-        return EventSourceResponse(_replay_final(investigation))
+        return EventSourceResponse(_replay_final(investigation, last_event_id))
 
-    # Pending -- start the investigation and stream
+    # Pending -- start the orchestrator as a background task and subscribe
     settings = get_settings()
     registry = build_tool_registry()
     domain_registry = build_domain_registry()
     mcp_configs = build_mcp_configs()
     mcp_bridge = MCPBridge() if mcp_configs else None
 
-    # BYOK: check for user-provided API key
     api_key_override = request.headers.get("X-Anthropic-Key") or None
 
-    # Read tier from investigation meta (set during POST /investigate)
     meta = _investigation_meta.get(investigation.id, {})
     tier = meta.get("tier", "opus")
     director_model_override = TIER_MODELS.get(tier)
@@ -434,66 +486,93 @@ async def stream_investigation(
     )
     _active_orchestrators[investigation.id] = orchestrator
 
-    async def event_generator() -> AsyncGenerator[dict[str, str], None]:
-        failed = False
-        try:
-            async for domain_event in orchestrator.run(investigation):
-                sse_event = domain_event_to_sse(domain_event)
-                if sse_event is not None:
-                    event = {
-                        "event": sse_event.event.value,
-                        "data": sse_event.format(),
-                    }
-                    # Skip transient events from DB persistence
-                    if sse_event.event not in (
-                        SSEEventType.COMPLETED,
-                        SSEEventType.ERROR,
-                        SSEEventType.COST_UPDATE,
-                        SSEEventType.HYPOTHESIS_APPROVAL_REQUESTED,
-                        SSEEventType.THINKING,
-                    ):
-                        await repo.save_event(
-                            investigation.id,
-                            sse_event.event.value,
-                            sse_event.format(),
-                        )
-                    _broadcast_event(investigation.id, event)
-                    yield event
-        except Exception:
-            failed = True
-            raise
-        finally:
-            _end_broadcast(investigation.id)
-            await repo.update(investigation)
-            _active_investigations.pop(investigation.id, None)
-            _active_orchestrators.pop(investigation.id, None)
+    asyncio.create_task(_run_orchestrator(investigation, orchestrator, repo, meta))
 
-            # Refund credits on failure (not for BYOK)
-            if failed or investigation.status == InvestigationStatus.FAILED:
-                credit_cost = meta.get("credit_cost", 0)
-                workos_id = meta.get("workos_id")
-                if credit_cost > 0 and workos_id:
-                    await repo.refund_credits(workos_id, credit_cost, investigation.id)
-
-            _investigation_meta.pop(investigation.id, None)
-
-    return EventSourceResponse(event_generator())
+    return EventSourceResponse(_subscribe(investigation, last_event_id))
 
 
 # ── SSE Helpers ─────────────────────────────────────────────────────────
 
 
+def _parse_last_event_id(request: Request) -> int | None:
+    """Extract Last-Event-ID from SSE header or query param."""
+    raw = request.headers.get("Last-Event-ID") or request.query_params.get("last_event_id")
+    if not raw:
+        return None
+    try:
+        return int(raw)
+    except (ValueError, TypeError):
+        return None
+
+
+async def _replay_events(
+    investigation_id: str, last_event_id: int | None
+) -> list[dict[str, Any]]:
+    """Fetch persisted events, optionally filtered by last_event_id."""
+    repo = _get_repository()
+    if last_event_id is not None:
+        return await repo.get_events_after(investigation_id, last_event_id)
+    return await repo.get_events(investigation_id)
+
+
 async def _subscribe(
     investigation: Investigation,
+    last_event_id: int | None,
 ) -> AsyncGenerator[dict[str, str], None]:
+    # Subscribe to live queue BEFORE replay to avoid race condition:
+    # events emitted during replay are captured in the queue, then deduplicated below.
     queue: asyncio.Queue[dict[str, str] | None] = asyncio.Queue()
     subs = _subscribers.setdefault(investigation.id, [])
     subs.append(queue)
+
     try:
+        # Replay persisted events from DB
+        stored_events = await _replay_events(investigation.id, last_event_id)
+        max_replayed_id = 0
+        for ev in stored_events:
+            yield {"event": ev["event_type"], "data": ev["event_data"], "id": str(ev["id"])}
+            max_replayed_id = ev["id"]
+
+        # Re-emit approval request if orchestrator is waiting for approval
+        orchestrator = _active_orchestrators.get(investigation.id)
+        if orchestrator is not None and orchestrator.is_awaiting_approval:
+            from ehrlich.investigation.domain.hypothesis import HypothesisStatus
+
+            hypotheses = [
+                {
+                    "id": h.id,
+                    "statement": h.statement,
+                    "rationale": h.rationale,
+                    "prediction": h.prediction,
+                    "scope": h.scope,
+                    "hypothesis_type": h.hypothesis_type,
+                    "prior_confidence": h.prior_confidence,
+                }
+                for h in investigation.hypotheses
+                if h.status == HypothesisStatus.PROPOSED
+            ]
+            approval_data = json.dumps(
+                {
+                    "event": SSEEventType.HYPOTHESIS_APPROVAL_REQUESTED.value,
+                    "data": {
+                        "hypotheses": hypotheses,
+                        "investigation_id": investigation.id,
+                    },
+                }
+            )
+            yield {
+                "event": SSEEventType.HYPOTHESIS_APPROVAL_REQUESTED.value,
+                "data": approval_data,
+            }
+
+        # Consume live events, skipping any already covered by replay
         while True:
             event = await queue.get()
             if event is None:
                 break
+            event_id = event.get("id")
+            if event_id and int(event_id) <= max_replayed_id:
+                continue
             yield event
     finally:
         subs = _subscribers.get(investigation.id, [])
@@ -503,14 +582,12 @@ async def _subscribe(
 
 async def _replay_final(
     investigation: Investigation,
+    last_event_id: int | None,
 ) -> AsyncGenerator[dict[str, str], None]:
-    repo = _get_repository()
-
     if investigation.status == InvestigationStatus.COMPLETED:
-        # Replay all stored events first (full timeline)
-        stored_events = await repo.get_events(investigation.id)
+        stored_events = await _replay_events(investigation.id, last_event_id)
         for ev in stored_events:
-            yield {"event": ev["event_type"], "data": ev["event_data"]}
+            yield {"event": ev["event_type"], "data": ev["event_data"], "id": str(ev["id"])}
 
         data = json.dumps(
             {
@@ -530,6 +607,11 @@ async def _replay_final(
         )
         yield {"event": SSEEventType.COMPLETED.value, "data": data}
     elif investigation.status in (InvestigationStatus.FAILED, InvestigationStatus.CANCELLED):
+        # Replay partial results so the UI can show what was collected before failure
+        stored_events = await _replay_events(investigation.id, last_event_id)
+        for ev in stored_events:
+            yield {"event": ev["event_type"], "data": ev["event_data"], "id": str(ev["id"])}
+
         error_msg = investigation.error or f"Investigation {investigation.status.value}"
         data = json.dumps(
             {

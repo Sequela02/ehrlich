@@ -498,19 +498,22 @@ def _build_supplementary(
         if tool_calls:
             lines.append(f"- **Tool calls:** {tool_calls}")
 
-        by_model = cost_data.get("by_model")
-        if isinstance(by_model, dict) and by_model:
+        by_role = cost_data.get("by_role") or cost_data.get("by_model")
+        if isinstance(by_role, dict) and by_role:
             lines.append("")
-            lines.append("| Model | Input | Output | Calls | Cost |")
-            lines.append("|-------|-------|--------|-------|------|")
-            for model, mc in by_model.items():
-                if not isinstance(mc, dict):
+            lines.append("| Role | Model | Input | Output | Calls | Cost |")
+            lines.append("|------|-------|-------|--------|-------|------|")
+            for role, rc in by_role.items():
+                if not isinstance(rc, dict):
                     continue
-                inp = mc.get("input_tokens", 0)
-                out = mc.get("output_tokens", 0)
-                calls = mc.get("calls", 0)
-                cost = mc.get("cost_usd", 0)
-                lines.append(f"| {model} | {inp:,} | {out:,} | {calls} | ${cost:.4f} |")
+                model = rc.get("model_display", rc.get("model", role))
+                inp = rc.get("input_tokens", 0)
+                out = rc.get("output_tokens", 0)
+                calls = rc.get("calls", 0)
+                cost = rc.get("cost_usd", 0)
+                lines.append(
+                    f"| {role.title()} | {model} | {inp:,} | {out:,} | {calls} | ${cost:.4f} |"
+                )
 
     return "\n".join(lines)
 

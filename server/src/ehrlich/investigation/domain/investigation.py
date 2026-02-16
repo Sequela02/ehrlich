@@ -36,25 +36,33 @@ class InvalidTransitionError(Exception):
 
 
 _VALID_TRANSITIONS: dict[InvestigationStatus, frozenset[InvestigationStatus]] = {
-    InvestigationStatus.PENDING: frozenset({
-        InvestigationStatus.RUNNING,
-        InvestigationStatus.CANCELLED,
-    }),
-    InvestigationStatus.RUNNING: frozenset({
-        InvestigationStatus.AWAITING_APPROVAL,
-        InvestigationStatus.PAUSED,
-        InvestigationStatus.COMPLETED,
-        InvestigationStatus.FAILED,
-        InvestigationStatus.CANCELLED,
-    }),
-    InvestigationStatus.AWAITING_APPROVAL: frozenset({
-        InvestigationStatus.RUNNING,
-        InvestigationStatus.CANCELLED,
-    }),
-    InvestigationStatus.PAUSED: frozenset({
-        InvestigationStatus.RUNNING,
-        InvestigationStatus.CANCELLED,
-    }),
+    InvestigationStatus.PENDING: frozenset(
+        {
+            InvestigationStatus.RUNNING,
+            InvestigationStatus.CANCELLED,
+        }
+    ),
+    InvestigationStatus.RUNNING: frozenset(
+        {
+            InvestigationStatus.AWAITING_APPROVAL,
+            InvestigationStatus.PAUSED,
+            InvestigationStatus.COMPLETED,
+            InvestigationStatus.FAILED,
+            InvestigationStatus.CANCELLED,
+        }
+    ),
+    InvestigationStatus.AWAITING_APPROVAL: frozenset(
+        {
+            InvestigationStatus.RUNNING,
+            InvestigationStatus.CANCELLED,
+        }
+    ),
+    InvestigationStatus.PAUSED: frozenset(
+        {
+            InvestigationStatus.RUNNING,
+            InvestigationStatus.CANCELLED,
+        }
+    ),
     # Terminal states — no transitions allowed
     InvestigationStatus.COMPLETED: frozenset(),
     InvestigationStatus.FAILED: frozenset(),

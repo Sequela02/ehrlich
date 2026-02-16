@@ -5,6 +5,7 @@ import { cn } from "@/shared/lib/utils";
 
 interface PageHeaderProps {
     title: string;
+    titleMaxLength?: number;
     subtitle?: string;
     backTo?: string;
     rightContent?: React.ReactNode;
@@ -13,11 +14,14 @@ interface PageHeaderProps {
 
 export function PageHeader({
     title,
+    titleMaxLength,
     subtitle,
     backTo,
     rightContent,
     className,
 }: PageHeaderProps) {
+    const isTruncated = titleMaxLength && title.length > titleMaxLength;
+    const displayTitle = isTruncated ? title.slice(0, titleMaxLength).trimEnd() + "..." : title;
     const router = useRouter();
     const { setSidebarOpen } = useLayout();
 
@@ -57,8 +61,11 @@ export function PageHeader({
                     )}
 
                     <div className="min-w-0">
-                        <h1 className="truncate text-lg font-semibold lg:text-xl">
-                            {title}
+                        <h1
+                            className="truncate text-lg font-semibold lg:text-xl"
+                            title={isTruncated ? title : undefined}
+                        >
+                            {displayTitle}
                         </h1>
                         {subtitle && (
                             <p className="truncate font-mono text-[11px] text-muted-foreground">

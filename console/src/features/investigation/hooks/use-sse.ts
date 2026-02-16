@@ -117,6 +117,7 @@ export function useSSE(url: string | null): SSEState {
   const attemptRef = useRef(0);
   const doneRef = useRef(false);
   const prevUrlRef = useRef(url);
+  const lastEventIdRef = useRef("");
 
   // Reset all state when url changes (switching investigations)
   if (prevUrlRef.current !== url) {
@@ -153,6 +154,7 @@ export function useSSE(url: string | null): SSEState {
     setDiagramUrl(null);
     doneRef.current = false;
     attemptRef.current = 0;
+    lastEventIdRef.current = "";
   }
 
   const handleEvent = useCallback((eventType: SSEEventType, raw: string) => {
@@ -451,7 +453,12 @@ export function useSSE(url: string | null): SSEState {
     if (!url) return;
 
     async function connect() {
-      const resolvedUrl = await buildSSEUrl(url!);
+      let resolvedUrl = await buildSSEUrl(url!);
+      const lastId = lastEventIdRef.current;
+      if (lastId) {
+        const sep = resolvedUrl.includes("?") ? "&" : "?";
+        resolvedUrl = `${resolvedUrl}${sep}last_event_id=${lastId}`;
+      }
       const source = new EventSource(resolvedUrl);
       sourceRef.current = source;
 
@@ -463,6 +470,7 @@ export function useSSE(url: string | null): SSEState {
 
       for (const eventType of EVENT_TYPES) {
         source.addEventListener(eventType, (e: MessageEvent) => {
+          if (e.lastEventId) lastEventIdRef.current = e.lastEventId;
           handleEvent(eventType, e.data as string);
         });
       }

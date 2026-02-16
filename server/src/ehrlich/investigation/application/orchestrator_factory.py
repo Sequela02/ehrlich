@@ -40,13 +40,6 @@ def create_orchestrator(
     # effort is only supported by Opus models (4.5+)
     director_effort = settings.director_effort if "opus" in director_model else None
 
-    thinking = None
-    if settings.director_thinking == "enabled" and "opus" in director_model:
-        thinking = {
-            "type": "enabled",
-            "budget_tokens": settings.director_thinking_budget,
-        }
-
     # Researcher model follows the tier: Haiku->Haiku, Sonnet->Sonnet, Opus->Sonnet
     researcher_model = _TIER_RESEARCHER.get(director_model, settings.researcher_model)
 
@@ -55,7 +48,6 @@ def create_orchestrator(
         api_key=api_key,
         max_tokens=32768,
         effort=director_effort,
-        thinking=thinking,
     )
     researcher = AnthropicClientAdapter(
         model=researcher_model,
@@ -64,6 +56,7 @@ def create_orchestrator(
     summarizer = AnthropicClientAdapter(
         model=settings.summarizer_model,
         api_key=api_key,
+        max_tokens=4096,
     )
     return MultiModelOrchestrator(
         director=director,
