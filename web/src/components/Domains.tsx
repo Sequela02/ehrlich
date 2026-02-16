@@ -156,7 +156,7 @@ export function Domains() {
               </p>
             </div>
             <a
-              href="https://github.com/sequelcore/ehrlich/blob/main/CONTRIBUTING.md"
+              href="https://github.com/Sequela02/ehrlich/blob/main/CONTRIBUTING.md"
               className="font-mono text-xs text-primary border border-primary/30 bg-primary/5 px-4 py-2 rounded hover:bg-primary/10 transition-colors shrink-0"
             >
               Contributing Guide

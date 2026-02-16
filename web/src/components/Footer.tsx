@@ -48,7 +48,7 @@ export function Footer() {
             AGPL-3.0 &middot; 2026
           </span>
           <span className="font-mono text-[10px] text-muted-foreground/60">
-            Built by Sequel &middot; Born at the Claude Code Hackathon 2026
+            Built by <a href="https://sequel.com.mx/es" className="hover:text-primary transition-colors">Sequel</a> &middot; Born at the Claude Code Hackathon 2026
           </span>
         </div>
       </div>

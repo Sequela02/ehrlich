@@ -4,7 +4,7 @@ import { motion, useInView } from "motion/react";
 import { PUBLIC_BETA_TIERS } from "@/lib/constants";
 import { SectionHeader } from "./SectionHeader";
 
-const QUICKSTART = `git clone https://github.com/sequelcore/ehrlich
+const QUICKSTART = `git clone https://github.com/Sequela02/ehrlich
 cd ehrlich/server && uv sync
 export ANTHROPIC_API_KEY=sk-...
 uv run uvicorn ehrlich.api.app:create_app --factory --port 8000`;
@@ -178,7 +178,7 @@ export function CTA() {
             <ArrowRight size={14} />
           </a>
           <a
-            href="https://github.com/sequelcore/ehrlich"
+            href="https://github.com/Sequela02/ehrlich"
             className="inline-flex items-center gap-2 border border-border text-foreground font-medium text-sm px-8 py-3 rounded-sm hover:border-primary hover:text-primary transition-colors"
           >
             View on GitHub

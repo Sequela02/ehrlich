@@ -2,6 +2,8 @@
 
 Open-source (AGPL-3.0), self-hostable scientific discovery engine. Ehrlich uses Claude as a hypothesis-driven scientific reasoning engine that works across multiple scientific domains. The core engine is domain-agnostic: a pluggable `DomainConfig` system lets any domain bring its own tools, scoring, and visualization. Run it on your own infrastructure with your own API keys, or use the [hosted instance](https://app.ehrlich.dev) where credits cover the Anthropic API costs.
 
+**[Landing page](https://ehrlich-two.vercel.app/)** | **[GitHub](https://github.com/Sequela02/ehrlich)**
+
 Named after Paul Ehrlich, the father of the "magic bullet" -- finding the right answer for any question.
 
 Built for the [Claude Code Hackathon](https://docs.anthropic.com/en/docs/claude-code-hackathon) (Feb 10-16, 2026).

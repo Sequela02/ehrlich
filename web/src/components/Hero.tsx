@@ -65,7 +65,7 @@ export function Hero() {
               <ArrowRight size={14} />
             </a>
             <a
-              href="https://github.com/sequelcore/ehrlich"
+              href="https://github.com/Sequela02/ehrlich"
               className="inline-flex items-center gap-2 border border-border text-foreground font-medium text-sm px-6 py-3 rounded-sm hover:border-primary hover:text-primary transition-colors"
             >
               View on GitHub

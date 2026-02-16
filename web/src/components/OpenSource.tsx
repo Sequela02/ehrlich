@@ -82,7 +82,7 @@ export function OpenSource() {
             </div>
             <div>
               <h3 className="text-foreground text-lg font-bold mb-2">
-                85 Tools, 4 Domains
+                91 Tools, 4 Domains
               </h3>
               <p className="text-muted-foreground leading-relaxed text-sm">
                 Molecular, training, nutrition, and impact evaluation. Each domain brings its own tools, scoring, and visualization. Add a{" "}
@@ -94,11 +94,11 @@ export function OpenSource() {
         </div>
 
         <a
-          href="https://github.com/sequelcore/ehrlich"
+          href="https://github.com/Sequela02/ehrlich"
           className="font-mono text-sm text-foreground/80 hover:text-primary border border-border bg-surface px-4 py-2 rounded-sm flex items-center gap-3 transition-colors group"
         >
           <Github size={16} />
-          github.com/sequelcore/ehrlich
+          github.com/Sequela02/ehrlich
         </a>
       </motion.div>
     </section>

@@ -72,8 +72,8 @@ Phase 2A-C    Phase 2D-E
            |
      Claude SDK Optimization -- DONE
            |
-     Landing Site (web/) -- DONE
-     (TanStack Start + SSR)
+     Landing Site (web/) -- DONE + DEPLOYED (Vercel)
+     (TanStack Start + Nitro)
            |
      ┌─────┼──────────────┐
      │     │              │
@@ -93,9 +93,7 @@ Enhancement Enhancement  Sports
      Phase 14: Scientific Engine Hardening -- IN PROGRESS
      14A-14F DONE ── 14G (Validation Runs) TODO
            |
-     Demo + Video -- TODO
-           |
-     Submission (Feb 16, 3PM ET) -- TODO
+     Demo + Video + Submission -- TODO (Feb 16, 3PM ET)
            |
      Phase 15: Stripe Integration -- TODO (post-hackathon)
            |

@@ -113,9 +113,19 @@ web/
 - [x] All OKLCH tokens (zero hardcoded gray-* classes)
 - [x] Lighthouse: Performance 67, Accessibility 95, Best Practices 100, SEO 100
 
+## Deployment
+
+- **Platform:** Vercel
+- **Preset:** Nitro (`preset: "vercel"` in `vite.config.ts`)
+- **Root Directory:** `web`
+- **Build Command:** `bun run build`
+- **Output:** `.vercel/output/` (auto-detected by Vercel)
+- **Branch:** `main` (auto-deploy on push)
+
 ## Verification
 
 - [x] `cd web && bun run build` -- zero errors
 - [x] `cd web && bun run typecheck` -- zero TypeScript errors
 - [x] Visual: Lab Protocol identity consistent with console (OKLCH tokens, fonts, dark theme)
 - [x] All docs updated: `CLAUDE.md`, `README.md`, `docs/architecture.md`, `docs/roadmap.md`
+- [x] Deployed to Vercel

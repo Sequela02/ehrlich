@@ -1,11 +1,11 @@
 export const STATS = {
-  tools: 90,
-  dataSources: 25,
+  tools: 91,
+  dataSources: 28,
   domains: 4,
   models: 3,
   phases: 6,
   vizTools: 17,
-  externalAPIs: 24,
+  externalAPIs: 27,
   boundedContexts: 11,
   sseEvents: 21,
 } as const;
@@ -16,7 +16,7 @@ export const NAV_LINKS = [
   { label: "Domains", href: "#domains" },
   { label: "Who It's For", href: "#who-its-for" },
   { label: "Beta", href: "#pricing" },
-  { label: "GitHub", href: "https://github.com/sequelcore/ehrlich" },
+  { label: "GitHub", href: "https://github.com/Sequela02/ehrlich" },
 ] as const;
 
 export const FOOTER_LINKS = {
@@ -26,13 +26,13 @@ export const FOOTER_LINKS = {
     { label: "Beta", href: "#pricing" },
   ],
   developers: [
-    { label: "GitHub", href: "https://github.com/sequelcore/ehrlich" },
-    { label: "Documentation", href: "/docs" },
-    { label: "Contributing", href: "https://github.com/sequelcore/ehrlich/blob/main/CONTRIBUTING.md" },
+    { label: "GitHub", href: "https://github.com/Sequela02/ehrlich" },
+    { label: "Documentation", href: "https://github.com/Sequela02/ehrlich#readme" },
+    { label: "Contributing", href: "https://github.com/Sequela02/ehrlich/blob/main/CONTRIBUTING.md" },
   ],
   legal: [
-    { label: "AGPL-3.0 License", href: "https://github.com/sequelcore/ehrlich/blob/main/LICENSE" },
-    { label: "Commercial License", href: "mailto:ricardo@sequel.com" },
+    { label: "AGPL-3.0 License", href: "https://github.com/Sequela02/ehrlich/blob/main/LICENSE" },
+    { label: "Commercial License", href: "mailto:ricardo@sequel.com.mx" },
   ],
 } as const;
 
@@ -139,18 +139,18 @@ export const DOMAINS = [
   },
   {
     label: "IMPACT EVALUATION",
-    toolCount: 5,
+    toolCount: 9,
     description:
-      "Causal analysis of social programs: education, health, employment, housing, sports. Difference-in-differences estimation, automated threat assessment, economic indicators.",
+      "Causal analysis of social programs: education, health, employment, housing, sports. Four causal methods (DiD, PSM, RDD, Synthetic Control), 13 data sources across US and Mexico.",
     capabilities: [
-      "Difference-in-differences causal estimation (DiD)",
-      "Automated validity threat assessment (WWC/CONEVAL)",
-      "World Bank development indicators (GDP, poverty, education)",
-      "WHO Global Health Observatory (mortality, disease burden)",
-      "FRED economic time series (800K+ US series)",
-      "Cross-program statistical comparison",
+      "4 causal methods: DiD, PSM, RDD, Synthetic Control",
+      "Automated validity threat assessment (WWC/CONEVAL/CREMAA)",
+      "US data: Census, BLS, USAspending, College Scorecard, HUD, CDC WONDER",
+      "Mexico data: INEGI, Banxico, datos.gob.mx + CREMAA/MIR validation",
+      "World Bank, WHO GHO, FRED economic indicators",
+      "Cross-program comparison + cost-effectiveness analysis",
     ],
-    sources: "World Bank, WHO GHO, FRED",
+    sources: "World Bank, WHO GHO, FRED, Census, BLS, USAspending, College Scorecard, HUD, CDC WONDER, data.gov, INEGI, Banxico, datos.gob.mx",
     prompt: "What is the causal effect of conditional cash transfers on school enrollment in Latin America?",
     vizTools: ["Program dashboard", "Geographic comparison", "Parallel trends"],
   },
@@ -175,6 +175,16 @@ export const DATA_SOURCES = [
   { name: "World Bank", domain: "api.worldbank.org", access: "Free" as const, records: "16K+ indicators", purpose: "Development indicators by country (GDP, poverty, education)" },
   { name: "WHO GHO", domain: "ghoapi.azureedge.net", access: "Free" as const, records: "2K+ indicators", purpose: "Global health statistics (mortality, disease, life expectancy)" },
   { name: "FRED", domain: "api.stlouisfed.org", access: "API Key" as const, records: "800K+ series", purpose: "US economic time series (GDP, unemployment, CPI)" },
+  { name: "Census Bureau", domain: "data.census.gov", access: "Free" as const, records: "ACS 5-year", purpose: "US demographics, poverty, education" },
+  { name: "BLS", domain: "api.bls.gov", access: "Free" as const, records: "130K+ series", purpose: "US labor statistics (unemployment, CPI, wages)" },
+  { name: "USAspending", domain: "api.usaspending.gov", access: "Free" as const, records: "All agencies", purpose: "Federal spending awards and grants" },
+  { name: "College Scorecard", domain: "api.data.gov", access: "API Key" as const, records: "6K+ schools", purpose: "US higher education outcomes" },
+  { name: "HUD", domain: "huduser.gov", access: "Free" as const, records: "All counties", purpose: "Fair Market Rents, income limits" },
+  { name: "CDC WONDER", domain: "wonder.cdc.gov", access: "Free" as const, records: "National", purpose: "US mortality, natality, public health" },
+  { name: "data.gov", domain: "catalog.data.gov", access: "Free" as const, records: "300K+ datasets", purpose: "US federal open dataset discovery" },
+  { name: "INEGI", domain: "inegi.org.mx/api", access: "API Key" as const, records: "400K+ series", purpose: "Mexico economic/demographic time series" },
+  { name: "Banxico", domain: "banxico.org.mx/SieAPIRest", access: "API Key" as const, records: "Financial", purpose: "Mexico central bank series" },
+  { name: "datos.gob.mx", domain: "datos.gob.mx", access: "Free" as const, records: "1000+ datasets", purpose: "Mexico federal open datasets" },
   { name: "Ehrlich tsvector", domain: "internal", access: "Internal" as const, records: "Growing", purpose: "Past findings (institutional memory)" },
 ] as const;
 
