@@ -1,120 +1,226 @@
 Back to [Roadmap Index](README.md)
 
-# Backlog (Post-Hackathon)
+# Post-Hackathon Roadmap
 
-- ~~Phase 11: Investigation Comparison~~ DONE (11A + 11C client-side)
-- ~~Phase 13C: Mexico Integration~~ DONE (INEGI, Banxico, datos.gob.mx)
-- ~~Phase 13D: US Integration~~ DONE (Census, BLS, USAspending, CDC WONDER)
-- Phase 15: Stripe integration for paid credit packs
-- Phase 16: MCP Bridge Self-Service (user registration UI, connection testing, tool auto-discovery)
-- Competitive Sports Domain
-- Batch screening mode (score entire ZINC subsets)
-- Automated synthesis lab integration (Emerald Cloud Lab, Strateos)
-- Community contributions: new domains, new tools, new data sources
-- Rewarded ads for free credits (AdMob/AdSense integration)
-- Admin dashboard for usage analytics
-- Planner agent (Sonnet 4.5) for experiment design between Director and Researcher
-- Reviewer agent (Sonnet 4.5) for findings audit between Researcher and Director
-- Full Bayesian surprise scoring for tree search branch selection
+Hackathon (Feb 10-16, 2026) complete. Phases 0-14 delivered: 91 tools, 28 data sources, 4 domains, multi-model orchestration, tree search, paper gen, PostgreSQL, WorkOS auth, credits, BYOK, upload, landing page.
+
+Post-hackathon focus: **engagement depth** -- making the user an active participant in the scientific process, not just a spectator.
 
 ---
 
-# Competitive Sports Domain -- TODO
+## Phase 15: Stripe + Free Tier (parallel track)
 
-New bounded context for actual competitive sports analytics: game statistics, player performance, team analysis, and sports-specific strategy research.
+Runs alongside Phase 16. Backend-only, minimal console UI.
 
-## Bounded Context: `sports/`
-
-```
-server/src/ehrlich/sports/
-├── domain/
-│   ├── entities.py          # Player, Team, GameStats, SeasonStats, PerformanceMetric
-│   └── repository.py        # SportsDataRepository ABC
-├── application/
-│   └── sports_service.py    # SportsService (stats analysis, performance comparison)
-├── infrastructure/
-│   └── *_client.py          # API clients for sports data providers
-└── tools.py                 # Tools for Claude
-```
-
-## Data Sources (Research Needed)
-- [ ] Basketball: NBA API / Basketball Reference (player stats, advanced metrics, play-by-play)
-- [ ] Soccer/Football: football-data.org or API-Football (match results, player stats, league standings)
-- [ ] American Football: NFL data feeds (player stats, play-by-play, combine data)
-- [ ] General: ESPN API or Sports Reference family (multi-sport coverage)
-
-## Planned Tools
-- [ ] `search_player_stats` -- player statistics by name/team/season (points, assists, rebounds, goals, etc.)
-- [ ] `compare_players` -- side-by-side player comparison with advanced metrics
-- [ ] `analyze_team_performance` -- team-level analytics (win rate, offensive/defensive efficiency)
-- [ ] `search_sports_literature` -- Semantic Scholar + PubMed for sports-specific research (tactics, biomechanics, game theory)
-- [ ] `compute_advanced_metrics` -- sport-specific advanced stats (PER, WAR, xG, passer rating, etc.)
-- [ ] `analyze_matchup` -- head-to-head matchup analysis between players or teams
-
-## Domain Config: `COMPETITIVE_SPORTS`
-- tool_tags: `{"sports", "literature"}`
-- valid_domain_categories: `("competitive_sports", "basketball", "soccer", "football", "baseball", "tennis")`
-- hypothesis_types: `("performance", "tactical", "statistical", "predictive")`
-- score_definitions: performance_score, statistical_significance, sample_size
-- identifier_type: `"player"` or `"team"`
-
-## Visualization
-- [ ] `render_player_radar` -- radar chart comparing player attributes (Recharts)
-- [ ] `render_season_timeline` -- performance trends over a season (Recharts)
-- [ ] `render_shot_chart` -- spatial shot/play visualization (Custom SVG, basketball/soccer)
-
-## Cross-Domain Potential
-- Sports + Training: "What training protocols produce the best NBA pre-season conditioning results?"
-- Sports + Nutrition: "What supplements do elite soccer players use and what's the evidence?"
-- Sports + Molecular: "What are the pharmacological mechanisms behind caffeine's effect on sprint performance?"
+- Stripe Checkout for credit packs (Starter 5cr, Researcher 25cr, Lab 50cr)
+- Stripe Billing for monthly subscription (30cr/mo, 33% discount)
+- Free tier: 3 Haiku investigations/month, no payment required
+- Credit expiration: 60-day policy
+- Webhooks: `checkout.session.completed`, `invoice.paid`, `customer.subscription.deleted`
+- Console: pricing page, purchase flow, balance + transaction history
+- Wire `payment_intent_id` into existing `credit_transactions` table
 
 ---
 
-# Additional Domains -- BACKLOG
+## Phase 16: Interactive Investigations
+
+The biggest engagement leap. Three sub-features that transform investigations from "fire and forget" into conversations.
+
+### 16A: Real-Time Chat During Investigation
+
+User sends messages while phases are executing. The orchestrator receives them as context.
+
+- `POST /investigate/{id}/message` endpoint -- accepts user message while investigation is RUNNING
+- Messages queued via `asyncio.Queue` on the orchestrator
+- Director receives user messages as `<user_guidance>` XML in next prompt
+- Researcher can also receive guidance if relevant to current experiment
+- New SSE event: `user_message` (echo back to UI for chat thread rendering)
+- Console: chat panel alongside the investigation timeline (split view or collapsible drawer)
+- Messages persisted in `events` table with type `user_message`
+
+### 16B: Post-Completion Q&A
+
+After investigation completes, user can ask questions about results. Uses investigation context as grounding.
+
+- `POST /investigate/{id}/ask` endpoint -- accepts question, returns streamed answer
+- Sonnet with investigation context (hypotheses, findings, candidates, paper) as system prompt
+- Grounded answers: must cite specific findings, experiments, or data sources from the investigation
+- Console: chat interface on completed investigation page
+- Q&A pairs persisted for future reference
+- No new credits consumed (Q&A uses lightweight Sonnet calls, included in original investigation cost or capped at N free questions)
+
+### 16C: Chain Investigations + AI Suggestions
+
+Investigation A completes -> system suggests follow-up research questions -> user clicks -> Investigation B starts with A's context.
+
+- `suggestions` field on investigation completion response (3-5 follow-up questions generated by Director during synthesis)
+- Each suggestion carries `parent_investigation_id` + `suggested_prompt` + `rationale`
+- `POST /investigate` accepts optional `parent_id` -- new investigation's Director receives parent's conclusions as explicit context (beyond what `search_prior_research` finds)
+- Console: "Continue Researching" section on completed investigations with clickable suggestion cards
+- Investigation detail page shows lineage: parent -> current -> children
+- Suggestions examples: "We found compound X has high binding affinity -- investigate its ADMET profile and resistance potential", "The DiD estimate was significant but parallel trends assumption is weak -- replicate with RDD using the same data"
+
+**Technical note:** `search_prior_research` already queries past findings via tsvector. Chain investigations add *explicit* context passing (parent conclusions + what was already explored) so the new investigation doesn't repeat work.
+
+---
+
+## Phase 17: Validation & Benchmarking
+
+Incorporates 14G (Validation Runs), which was deferred from the hackathon.
+
+- Molecular science validation: known drug discovery question with verifiable answer
+- Training science validation: exercise physiology question with literature-backed answer
+- Impact evaluation validation: real program evaluation data (CODESON) compared against professional auditors and raw Claude
+- Ehrlich vs raw Claude Opus comparison on identical prompts
+- Automated benchmark suite
+- Case studies for landing page
+- Investigation traces for demos
+
+---
+
+## Phase 18: Investigation Organization
+
+### 18A: Projects
+
+- `projects` table: id, name, description, owner_id, created_at
+- CRUD endpoints: `POST/GET/PUT/DELETE /projects`
+- Assign investigation to project on creation or after
+- Console: project list in sidebar, project detail page with all investigations
+- Default "Uncategorized" project
+
+### 18B: Tags
+
+- `investigation_tags` junction table
+- Tag CRUD on investigations: `POST /investigate/{id}/tags`
+- Console: tag chips on investigation cards, tag filter in sidebar
+- Auto-suggested tags based on domain detection + key findings
+
+### 18C: Search & Filter
+
+- Full-text search across investigation prompts + findings
+- Filter by: domain, status, date range, project, tags, director tier
+- Sort by: date, cost, finding count, candidate count
+- Console: search bar + filter panel on investigations list
+
+---
+
+## Phase 19: Collaboration
+
+Progressive rollout -- each sub-phase is independently valuable.
+
+### 19A: Shared Links (read-only)
+
+Lowest effort, highest immediate value. Scientists share results with colleagues.
+
+- `POST /investigate/{id}/share` generates a unique share token (UUID)
+- `GET /investigate/{id}?token=<share_token>` returns investigation detail without auth
+- Share link includes: report, hypotheses, findings, candidates, paper, visualizations
+- Console: "Share" button generates copyable link
+- Share links expire after 30 days (configurable)
+- Owner can revoke share links
+
+### 19B: Team Workspaces
+
+Research teams see each other's work.
+
+- `teams` table: id, name, owner_id
+- `team_members` junction: team_id, user_id, role (owner/member/viewer)
+- Investigations belong to a team (optional `team_id` on `investigations`)
+- Team members see all team investigations (filtered by team in sidebar)
+- Console: team switcher in sidebar, team settings page
+- Invite via email (WorkOS organization or manual invite)
+
+### 19C: Comments & Discussion
+
+Peer review on investigations.
+
+- `comments` table: id, investigation_id, user_id, content, parent_id (threading), created_at
+- `POST /investigate/{id}/comments` -- add comment
+- Comments on specific findings, hypotheses, or the overall investigation
+- Console: comment thread panel, anchored comments on specific elements
+- Email notifications for new comments (optional)
+
+### 19D: Collaborative Steering (future)
+
+Multiple users approve/reject hypotheses, send chat messages during execution. Requires conflict resolution (what if user A approves and user B rejects?). Defer to after 19A-19C are validated.
+
+---
+
+## Phase 20: Operations & Observability
+
+- Admin dashboard: investigation counts, credit consumption, user activity, cost by model
+- Usage analytics: PostHog or Plausible
+- Error monitoring: Sentry (server + console)
+- Cost transparency: per-investigation token breakdown
+- Rewarded ads: optional AdSense/AdMob for bonus Haiku credits
+
+---
+
+## Phase 21: Agent Architecture Evolution
+
+- Planner agent (Sonnet 4.5): experiment design between Director and Researcher
+- Reviewer agent (Sonnet 4.5): findings audit between Researcher and Director
+- Full Bayesian surprise scoring: KL-divergence for tree search
+- Investigation resume: PAUSED -> RUNNING transition
+
+---
+
+## Phase 22: MCP Bridge Self-Service
+
+- User registration UI for external MCP servers
+- Connection testing, tool auto-discovery, auto-tagging
+- Per-user MCP configs in PostgreSQL
+- Sandboxed execution, rate limiting
+
+---
+
+## Phase 23: Competitive Sports Domain
+
+- New bounded context: `sports/`
+- Data sources: NBA API, football-data.org, ESPN
+- 6 data tools + 3 viz tools
+- Cross-domain: Sports + Training, Sports + Nutrition
+
+---
+
+## Phase 24: Multi-Provider Support (BYOP)
+
+- Abstract `AnthropicClientAdapter` into `LLMClient` ABC
+- OpenAI + Google adapters
+- Model selection per role in console
+
+---
+
+## Phase 25: Additional Data Sources
+
+- OECD, INEGI DENUE, Transparencia Presupuestaria, EPA Envirofacts
+- Expanded organism coverage (E. coli, P. aeruginosa, M. tuberculosis)
+
+---
+
+## Phase 26+: Future Domains (Backlog)
 
 The engine is domain-agnostic via `DomainConfig` + `DomainRegistry`. Adding a new domain requires zero changes to existing code (see `CONTRIBUTING.md`). Potential future domains:
 
-- [ ] Genomics / bioinformatics (variant interpretation, gene expression analysis)
-- [ ] Environmental science (pollutant fate, ecosystem modeling)
-- [ ] Materials science (property prediction, synthesis planning)
-- [ ] Clinical pharmacology (drug interactions, pharmacokinetics)
-
-For molecular science specifically:
-- [ ] Expanded organism coverage (E. coli, P. aeruginosa, A. baumannii, M. tuberculosis)
-- [ ] Per-organism resistance knowledge base with literature references
-- [ ] Organism-aware prompt guidance (Gram-neg vs mycobacteria screening strategies)
+- Genomics / bioinformatics (variant interpretation, gene expression analysis)
+- Environmental science (pollutant fate, ecosystem modeling)
+- Materials science (property prediction, synthesis planning)
+- Clinical pharmacology (drug interactions, pharmacokinetics)
+- Batch screening mode (score entire ZINC subsets)
+- Automated synthesis lab integration (Emerald Cloud Lab, Strateos)
 
 ---
 
-# Phase 11: Investigation Comparison -- BACKLOG
+## Archived Sections
+
+### Phase 11: Investigation Comparison -- DONE
 
 Side-by-side comparison of investigation runs for reproducibility and consensus analysis.
 
-## 11A. Comparison Logic -- DONE
-- [x] Candidate overlap calculation (by identifier)
-- [x] Finding overlap detection (by `source_type+source_id` provenance or Jaccard title similarity > 0.8)
-- [x] Score comparison across runs (grouped bar chart per shared candidate)
-- [x] Finding serialization fix: added `source_type`, `source_id`, `evidence_level`, `confidence` to API response
+- 11A: Comparison Logic -- DONE (candidate overlap, finding overlap, score comparison)
+- 11B: Comparison API -- DONE (client-side using existing detail endpoints)
+- 11C: Comparison Console -- DONE (`/compare/$id1/$id2` route, 8-section analysis)
 
-## 11B. Comparison API -- DONE (client-side)
-All comparison logic is client-side using existing `GET /investigate/{id}` detail endpoints. No new backend routes needed.
+### ~~MCP Server~~ -- REJECTED
 
-## 11C. Comparison Console -- DONE
-- [x] `/compare/$id1/$id2` route with side-by-side analysis
-- [x] Enhanced 5-stat bar (candidates, findings with % supporting, shared count)
-- [x] Side-by-side candidate table with overlap highlighting
-- [x] Summary comparison (markdown-rendered AI synthesis)
-- [x] Score comparison chart (Recharts grouped BarChart for shared candidates)
-- [x] Findings diff view (A-only | Shared | B-only with evidence + source badges)
-- [x] Cost comparison (input/output tokens, tool calls, total cost)
-- [x] Hypothesis summary counts
-
-**Verification:** Compare 2 completed investigations at `/compare/{id1}/{id2}`, verify all 8 sections render correctly.
-
----
-
-# ~~MCP Server~~ -- REJECTED
-
-Exposing Ehrlich's 84 tools as an MCP server was considered and rejected. The tools alone (ChEMBL queries, RDKit computations, etc.) are commodity API wrappers -- the value is the multi-model orchestration (Director-Worker-Summarizer), hypothesis-driven methodology, and parallel experiment execution. An MCP client consuming Ehrlich's tools would lose the scientific rigor that the orchestration guarantees.
-
-Ehrlich remains an MCP **consumer** via `MCPBridge` (connecting to external servers like Excalidraw), which adds value by extending the Researcher's toolkit.
+Exposing Ehrlich's tools as an MCP server was considered and rejected. The tools alone are commodity API wrappers -- the value is the multi-model orchestration, hypothesis-driven methodology, and parallel experiment execution. Ehrlich remains an MCP **consumer** via `MCPBridge`.

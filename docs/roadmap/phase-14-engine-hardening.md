@@ -1,6 +1,6 @@
 Back to [Roadmap Index](README.md)
 
-# Phase 14: Scientific Engine Hardening (Feb 14-15) -- IN PROGRESS
+# Phase 14: Scientific Engine Hardening (Feb 14-15) -- DONE
 
 Architecture cleanup, scientific depth improvements, agentic tree search, and paper generation. Runs in parallel with Phase 13A-2 (upload). Addresses audit findings from codebase review.
 
@@ -114,15 +114,9 @@ Dedicated paper view route with print-optimized CSS for browser-native PDF expor
 
 Result: 42 paper generator tests passing, 138 console tests passing. Zero ruff/mypy/tsc violations.
 
-## 14G: Validation Runs -- TODO
+## 14G: Validation Runs -- Moved to Phase 17
 
-Run real investigations to validate the engine produces meaningful scientific results. Compare Ehrlich vs raw Claude Opus 4.6 on identical prompts.
-
-- [ ] Molecular science validation: known drug discovery question with verifiable answer
-- [ ] Training science validation: exercise physiology question with literature-backed answer
-- [ ] Impact evaluation validation: real program evaluation data (CODESON) compared against professional auditors and raw Claude
-- [ ] Document comparison results: where Ehrlich agrees/disagrees with baseline, where tree search found non-obvious paths
-- [ ] Capture investigation traces for demo video
+Validation runs deferred to post-hackathon Phase 17 (Validation & Benchmarking). See [backlog.md](backlog.md) for full scope including Ehrlich vs raw Claude comparison and automated benchmark suite.
 
 ## 14H: Upload Validation Hardening -- DONE
 

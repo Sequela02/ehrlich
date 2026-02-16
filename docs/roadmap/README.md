@@ -1,6 +1,6 @@
 # Ehrlich Roadmap
 
-Hackathon: Feb 10-16, 2026. Each phase ends with something testable.
+Hackathon: Feb 10-16, 2026. Phases 0-14 delivered during hackathon. Post-hackathon focus: engagement depth, monetization, collaboration.
 
 ## Phases
 
@@ -22,13 +22,22 @@ Hackathon: Feb 10-16, 2026. Each phase ends with something testable.
 | Phase 10D: Landing Site (web/) | DONE | [phase-10d-landing-site.md](phase-10d-landing-site.md) |
 | Phase 10E: Training Science Enhancement | DONE | [phase-10e-training-enhancement.md](phase-10e-training-enhancement.md) |
 | Phase 10F: Nutrition Science Enhancement | DONE | [phase-10f-nutrition-enhancement.md](phase-10f-nutrition-enhancement.md) |
+| Phase 11: Investigation Comparison | DONE | [backlog.md](backlog.md) |
 | Phase 12: Platform Infrastructure | DONE | [phase-12-platform-infrastructure.md](phase-12-platform-infrastructure.md) |
 | Phase 13: Impact Evaluation Domain | DONE | [phase-13-impact-evaluation.md](phase-13-impact-evaluation.md) |
-| Phase 14: Scientific Engine Hardening | IN PROGRESS | [phase-14-engine-hardening.md](phase-14-engine-hardening.md) |
-| Phase 15: Stripe Integration | TODO | [backlog.md](backlog.md) |
-| Phase 16: MCP Bridge Self-Service | TODO | [backlog.md](backlog.md) |
-| Phase 11: Investigation Comparison | DONE | [backlog.md](backlog.md) |
-| Backlog | TODO | [backlog.md](backlog.md) |
+| Phase 14: Scientific Engine Hardening | DONE | [phase-14-engine-hardening.md](phase-14-engine-hardening.md) |
+| Phase 15: Stripe + Free Tier | TODO | [backlog.md](backlog.md) |
+| Phase 16: Interactive Investigations | TODO | [backlog.md](backlog.md) |
+| Phase 17: Validation & Benchmarking | TODO | [backlog.md](backlog.md) |
+| Phase 18: Investigation Organization | TODO | [backlog.md](backlog.md) |
+| Phase 19: Collaboration | TODO | [backlog.md](backlog.md) |
+| Phase 20: Operations & Observability | TODO | [backlog.md](backlog.md) |
+| Phase 21: Agent Architecture Evolution | TODO | [backlog.md](backlog.md) |
+| Phase 22: MCP Bridge Self-Service | TODO | [backlog.md](backlog.md) |
+| Phase 23: Competitive Sports Domain | TODO | [backlog.md](backlog.md) |
+| Phase 24: Multi-Provider Support (BYOP) | TODO | [backlog.md](backlog.md) |
+| Phase 25: Additional Data Sources | TODO | [backlog.md](backlog.md) |
+| Phase 26+: Future Domains | BACKLOG | [backlog.md](backlog.md) |
 
 ## Dependency Graph
 
@@ -73,29 +82,63 @@ Phase 2A-C    Phase 2D-E
      Claude SDK Optimization -- DONE
            |
      Landing Site (web/) -- DONE + DEPLOYED (Vercel)
-     (TanStack Start + Nitro)
            |
      ┌─────┼──────────────┐
      │     │              │
 Training  Nutrition   Competitive
 Enhancement Enhancement  Sports
-  (DONE)    (DONE)     Domain (TODO)
-     │     │              │
-     └─────┼──────────────┘
+  (DONE)    (DONE)     Domain (Phase 23)
+     │     │
+     └─────┘
            |
      Phase 12: Platform Infrastructure -- DONE
      (PostgreSQL + WorkOS Auth + BYOK + Credits)
            |
      Phase 13: Impact Evaluation Domain -- DONE
      (Causal inference + Document upload + MX/US APIs)
-     13A (Foundation) DONE -> 13B (Causal Inference) DONE -> 13A-2 (Upload) DONE -> 13D (US) DONE -> 13C (Mexico) DONE
+     13A -> 13B -> 13A-2 -> 13D -> 13C (all DONE)
            |
-     Phase 14: Scientific Engine Hardening -- IN PROGRESS
-     14A-14F DONE ── 14G (Validation Runs) TODO
+     Phase 14: Scientific Engine Hardening -- DONE
+     14A-14J DONE ── 14G (Validation Runs) -> Phase 17
            |
-     Demo + Video + Submission -- TODO (Feb 16, 3PM ET)
+     ══════════════════════════════════════
+     POST-HACKATHON (Feb 16, 2026 onwards)
+     ══════════════════════════════════════
            |
-     Phase 15: Stripe Integration -- TODO (post-hackathon)
+     ┌─────┴─────┐
+     │           │
+Phase 15      Phase 16
+(Stripe)      (Interactive)
+     │        16A | 16B | 16C
+     └─────┬─────┘
            |
-     Phase 16: MCP Bridge Self-Service -- TODO (post-hackathon)
+     Phase 17: Validation & Benchmarking
+     (includes 14G validation runs)
+           |
+     Phase 18: Investigation Organization
+     18A (Projects) -> 18B (Tags) -> 18C (Search)
+           |
+     Phase 19: Collaboration
+     19A (Shared Links) -> 19B (Teams) -> 19C (Comments) -> 19D (Collaborative Steering)
+           |
+     Phase 20: Operations & Observability
+     (Admin dashboard, Sentry, analytics, rewarded ads)
+           |
+     Phase 21: Agent Architecture Evolution
+     (Planner + Reviewer agents, Bayesian surprise)
+           |
+     Phase 22: MCP Bridge Self-Service
+     (User MCP registration, auto-discovery)
+           |
+     Phase 23: Competitive Sports Domain
+     (NBA, football-data.org, ESPN)
+           |
+     Phase 24: Multi-Provider Support (BYOP)
+     (OpenAI + Google adapters)
+           |
+     Phase 25: Additional Data Sources
+     (OECD, INEGI DENUE, EPA Envirofacts)
+           |
+     Phase 26+: Future Domains
+     (Genomics, Environmental, Materials, Clinical Pharma)
 ```
