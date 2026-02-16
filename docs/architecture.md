@@ -19,7 +19,7 @@ Searches and manages scientific references. Integrates with Semantic Scholar API
 Cheminformatics operations: molecular descriptors, fingerprints, 3D conformer generation, substructure matching, and 2D SVG depiction. All RDKit usage is isolated in the infrastructure adapter (`rdkit_adapter.py`).
 
 ### Analysis
-Dataset exploration and statistical analysis. Loads bioactivity data from ChEMBL, compound search via PubChem, curated pharmacology via GtoPdb, substructure enrichment analysis, property distributions.
+Dataset exploration, statistical analysis, and domain-agnostic causal inference. Loads bioactivity data from ChEMBL, compound search via PubChem, curated pharmacology via GtoPdb, substructure enrichment analysis, property distributions. Causal inference methods (DiD, PSM, RDD, Synthetic Control) with threat assessment and cost-effectiveness analysis -- usable by any domain, not just impact evaluation.
 
 ### Prediction
 Machine learning for activity/outcome prediction. Supports XGBoost models with Morgan fingerprints (all domains) and Chemprop D-MPNN (molecular only). Ensemble predictions combine multiple models.
@@ -33,8 +33,11 @@ Exercise physiology and sports medicine research: evidence-based training analys
 ### Nutrition
 Nutrition science research: supplement evidence analysis, supplement label lookup (NIH DSLD), nutrient data (USDA FoodData), supplement safety monitoring (OpenFDA CAERS), drug interaction screening (RxNav), DRI-based nutrient adequacy assessment, nutrient ratio analysis, and inflammatory index scoring. Uses Semantic Scholar for literature search.
 
+### Impact
+Social program evaluation. Provides economic indicator search (World Bank, WHO GHO, FRED, Census, BLS, INEGI, Banxico), international benchmarking, cross-program comparison, open data discovery (data.gov, datos.gob.mx), and CONEVAL/CREMAA MIR indicator analysis. Hypothesis-driven analysis of any program type (education, health, sports, employment, housing) in any country. Full DDD structure with domain entities, repository ABCs, and 13 infrastructure clients. Causal inference methods (DiD, PSM, RDD, Synthetic Control) live in `analysis/` as domain-agnostic tools. See `docs/adr/impact-evaluation-domain.md` for full design.
+
 ### Investigation
-Hypothesis-driven agent orchestration. Manages the Claude-driven research loop: literature survey, hypothesis formulation (with predictions, criteria, scope), parallel experiment execution, criteria-based evaluation, negative controls, and synthesis. Uses multi-model architecture (Director/Researcher/Summarizer) with user-guided steering, domain classification, and multi-investigation memory. Includes domain configuration system (`DomainConfig` + `DomainRegistry`) for pluggable scientific domains with tool tagging, score definitions, prompt adaptation, and visualization control. Each domain config includes `tool_examples` in `experiment_examples` with realistic tool chaining patterns for complete tool coverage. Optional MCP bridge (`MCPBridge`) connects to external MCP servers for extensibility (e.g. Excalidraw for visual summaries).
+Hypothesis-driven agent orchestration. Manages the Claude-driven research loop: literature survey, hypothesis formulation (with predictions, criteria, scope), parallel experiment execution, criteria-based evaluation, negative controls, and synthesis. Uses multi-model architecture (Director/Researcher/Summarizer) with user-guided steering, domain classification, and multi-investigation memory. Supports document upload (CSV/XLSX/PDF) with prompt injection and queryable data via `query_uploaded_data` tool. Includes domain configuration system (`DomainConfig` + `DomainRegistry`) for pluggable scientific domains with tool tagging, score definitions, prompt adaptation, and visualization control. Each domain config includes `tool_examples` in `experiment_examples` with realistic tool chaining patterns for complete tool coverage. Optional MCP bridge (`MCPBridge`) connects to external MCP servers for extensibility (e.g. Excalidraw for visual summaries).
 
 ## Multi-Model Architecture
 
@@ -44,7 +47,7 @@ Ehrlich uses a three-tier Claude model architecture for cost-efficient investiga
 Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesizes (3-5 calls)
     │                       NO tool access, structured JSON responses only
     │
-    ├── Sonnet 4.5 (Researcher) -- Executes experiments with 70 domain-filtered tools (10-20 calls, parallel x2)
+    ├── Sonnet 4.5 (Researcher) -- Executes experiments with 90 domain-filtered tools (10-20 calls, parallel x2)
     │                               Tool-calling loop with max_iterations_per_experiment guard
     │
     └── Haiku 4.5 (Summarizer)  -- Compresses large tool outputs >2000 chars, PICO+classification, evidence grading
@@ -58,9 +61,9 @@ Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesize
 1. **Classification & PICO** -- Haiku decomposes prompt into PICO framework (Population, Intervention, Comparison, Outcome) and classifies domain in a single call
 2. **Literature Survey** -- Sonnet researcher conducts structured search with domain-filtered tools, citation chasing (snowballing), evidence-level grading; Haiku grades body-of-evidence (GRADE-adapted) and self-assesses quality (AMSTAR-2-adapted)
 3. **Hypothesis Formulation** -- Opus Director formulates 2-4 hypotheses with predictions, criteria, scope, Bayesian priors (grounded in Popper, Platt, Feynman, Bayesian frameworks -- see `docs/scientific-methodology.md`); receives structured XML literature context (PICO + graded findings)
-4. **User Approval Gate** -- User approves/rejects hypotheses before testing begins (5-min auto-approve timeout)
-5. **Experiment Design + Execution** -- Director designs structured experiment protocols (variables, controls, confounders, analysis plan, criteria), 2 Sonnet researchers execute in parallel per batch (max 10 tool calls each) with methodology guidance (sensitivity, applicability domain, uncertainty, verification, negative results)
-6. **Hypothesis Evaluation** -- Director compares findings against both hypothesis-level and experiment-level criteria with methodology checks (control validation, confounders, analysis plan adherence)
+4. **User Approval Gate** -- User approves/rejects hypotheses before testing begins. Investigation transitions to `AWAITING_APPROVAL` and blocks until user acts (no timeout). User can also cancel the investigation at any point.
+5. **Experiment Design + Execution** -- `TreeManager.select_next()` picks up to 2 most promising PROPOSED hypotheses (scored by `branch_score`). Director designs structured experiment protocols (variables, controls, confounders, analysis plan, criteria), 2 Sonnet researchers execute in parallel per batch (max 10 tool calls each) with methodology guidance (sensitivity, applicability domain, uncertainty, verification, negative results)
+6. **Hypothesis Evaluation + Tree Action** -- Director compares findings against both hypothesis-level and experiment-level criteria with methodology checks (control validation, confounders, analysis plan adherence). Director decides tree action: **deepen** (spawn narrower sub-hypothesis at depth+1), **branch** (revise into alternative at same depth), or **prune** (mark branch dead). `TreeManager.apply_evaluation()` creates new hypotheses for deepen/branch, marks REJECTED for prune. Loop continues until no explorable hypotheses remain or `max_depth` (default: 3) is reached
 7. **Controls Validation** -- Score positive/negative controls through trained models; compute Z'-factor assay quality, permutation significance, scaffold-split vs random-split comparison
 8. **Synthesis** -- Director synthesizes final report with ranked candidates, citations, validation metrics, cost breakdown
 
@@ -68,9 +71,23 @@ Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesize
 
 Investigations are persisted to PostgreSQL via `asyncpg` connection pooling. The `InvestigationRepository` implements the `InvestigationRepository` ABC defined in the domain layer. Hypotheses, experiments, findings, candidates, negative controls, citations, domain, and cost data are stored in `JSONB` columns in the `investigations` table. All SSE events are persisted to a separate `events` table for full timeline replay on page reload.
 
-Additional tables: `users` (WorkOS identity, credit balance, encrypted API key), `credit_transactions` (audit trail for credit purchases/spending/refunds). Full-text search uses PostgreSQL `tsvector` + GIN index.
+Additional tables: `users` (WorkOS identity, credit balance), `credit_transactions` (audit trail for credit purchases/spending/refunds). Full-text search uses PostgreSQL `tsvector` + GIN index.
 
 The API keeps `_active_investigations` and `_active_orchestrators` dicts for in-flight SSE streaming and user-guided steering (hypothesis approval). Persists to PostgreSQL on completion (or error).
+
+### Investigation States
+
+`InvestigationStatus` enum enforces a state machine via `transition_to()` with guard logic (`InvalidTransitionError` on invalid transitions):
+
+| State | Description | Allowed Transitions |
+|-------|-------------|--------------------|
+| `PENDING` | Created, not yet started | `RUNNING`, `CANCELLED` |
+| `RUNNING` | Actively executing phases | `AWAITING_APPROVAL`, `PAUSED`, `COMPLETED`, `FAILED`, `CANCELLED` |
+| `AWAITING_APPROVAL` | Blocked on user hypothesis approval | `RUNNING`, `CANCELLED` |
+| `PAUSED` | User-paused (resume not yet implemented) | `RUNNING`, `CANCELLED` |
+| `COMPLETED` | Finished successfully (terminal) | — |
+| `FAILED` | Error occurred (terminal) | — |
+| `CANCELLED` | User-cancelled (terminal) | — |
 
 ## Authentication & Credits
 
@@ -98,7 +115,22 @@ Researcher is always Sonnet 4.5 and Summarizer is always Haiku 4.5, regardless o
 
 ### BYOK (Bring Your Own Key)
 
-Users can provide their own Anthropic API key via the `X-Anthropic-Key` HTTP header. BYOK users bypass the credit system entirely -- they pay Anthropic directly. The API key is forwarded to `AnthropicClientAdapter` for that investigation's API calls.
+Users can provide their own Anthropic API key via the `X-Anthropic-Key` HTTP header. BYOK users bypass the credit system entirely -- they pay Anthropic directly. The API key is forwarded to `AnthropicClientAdapter` for that investigation's API calls. BYOK keys are stored in `sessionStorage` (tab-scoped, cleared on close) and never persisted. API key patterns (`sk-ant-*`) are redacted from error logs via `_sanitize_error()`.
+
+## Security
+
+Defense-in-depth across server and console:
+
+- **Security headers**: `SecurityHeadersMiddleware` sets `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: geolocation=(), microphone=(), camera=()` on all responses.
+- **CORS hardening**: explicit `allow_methods` (`GET`, `POST`, `PUT`, `DELETE`, `OPTIONS`) and `allow_headers` (`Authorization`, `Content-Type`, `X-Anthropic-Key`). Wildcard origins logged as warning in non-development environments (`EHRLICH_ENVIRONMENT`).
+- **Upload isolation**: pending uploads are owner-scoped (`workos_id` validated on claim) with 30-minute TTL auto-expiry. File content validated via magic byte signatures (PDF: `%PDF-`, XLSX: `PK\x03\x04`, CSV: no null bytes + valid UTF-8).
+- **Prompt injection defense**: all user-controlled content in `<uploaded_data>` XML blocks is escaped via `html.escape()` — filenames, column names, dtypes, statistics, sample values, and document excerpts.
+- **Input validation**: request schema enforces `prompt` length (10-10000 chars), `director_tier` regex pattern (`haiku|sonnet|opus`), SMILES `max_length=500`, PDB ID format (`^[0-9A-Za-z]{4}$`), URL path encoding for external API clients (`urllib.parse.quote`).
+- **Markdown XSS**: all `<Markdown>` components use `rehype-sanitize` to strip dangerous HTML from AI-generated content.
+- **Error sanitization**: JWT validation errors return generic "Invalid or expired token" (no token details leaked). Tool execution errors don't expose internal stack traces. Anthropic API errors have `sk-ant-*` patterns redacted before logging.
+- **SQL injection prevention**: database name validated against `^[a-zA-Z0-9_]+$` in `_ensure_database()`. All other queries use parameterized SQL via `asyncpg`.
+- **State guards**: `POST /investigate/{id}/approve` returns 409 Conflict if the investigation is not in `AWAITING_APPROVAL` state. `POST /investigate/{id}/cancel` cancels active or pending investigations. `transition_to()` on the `Investigation` entity enforces valid state transitions with `InvalidTransitionError`. SSE reconnection refreshes auth token on each attempt.
+- **Production build**: source maps disabled in console production builds.
 
 ## Multi-Domain Investigations
 
@@ -112,7 +144,7 @@ The Haiku classifier outputs a JSON array of domain categories. Tool filtering u
 
 Ehrlich queries its own past investigation findings during new research. The `search_prior_research` tool (available during Phase 2 Literature Survey) queries a PostgreSQL `tsvector` column with GIN index on the `investigations` table, indexing finding titles, details, evidence types, hypothesis statements/statuses, and source provenance.
 
-The tool is intercepted in the orchestrator's `_dispatch_tool()` and routed to `InvestigationRepository.search_findings()`, which performs ranked full-text search with prompt context.
+The tool is intercepted by `ToolDispatcher.dispatch()` in `tool_dispatcher.py` and routed to `InvestigationRepository.search_findings()`, which performs ranked full-text search with prompt context.
 
 Findings from past investigations carry provenance `source_type: "ehrlich"`, `source_id: "{investigation_id}"`. Frontend renders Ehrlich-branded source badges linking to past investigations (internal navigation, no external tab).
 
@@ -137,7 +169,7 @@ Invalid SMILES on `/depict` returns a dark error SVG (200 status). Invalid SMILE
 
 ## Domain-Specific Visualization
 
-12 visualization tools produce structured `VisualizationPayload` JSON (viz_type, title, data, config, domain). The orchestrator intercepts viz tool results via `_maybe_viz_event()` and emits a `VisualizationRendered` SSE event. On the frontend, `VizRegistry` maps each `viz_type` to a lazy-loaded React component rendered in the `VisualizationPanel` grid.
+17 visualization tools produce structured `VisualizationPayload` JSON (viz_type, title, data, config, domain). Viz tool results are intercepted by `maybe_viz_event()` in `researcher_executor.py`, which emits a `VisualizationRendered` SSE event. On the frontend, `VizRegistry` maps each `viz_type` to a lazy-loaded React component rendered in the `VisualizationPanel` grid.
 
 | Tool | Chart Library | Purpose |
 |------|--------------|---------|
@@ -153,6 +185,11 @@ Invalid SMILES on `/depict` returns a dark error SVG (200 status). Invalid SMILE
 | `render_nutrient_comparison` | Recharts BarChart | Grouped nutrient profile comparison |
 | `render_nutrient_adequacy` | Recharts BarChart | DRI adequacy assessment with MAR score |
 | `render_therapeutic_window` | Visx | Therapeutic window with EAR/RDA/AI/UL zones |
+| `render_program_dashboard` | Recharts BarChart | Multi-indicator KPI dashboard with target tracking |
+| `render_geographic_comparison` | Recharts BarChart | Region comparison with benchmark reference line |
+| `render_parallel_trends` | Recharts ComposedChart | DiD parallel trends (treatment vs control) |
+| `render_rdd_plot` | Visx | Regression discontinuity scatter with cutoff |
+| `render_causal_diagram` | Visx | DAG showing treatment, outcome, confounders |
 
 Chart theming uses OKLCH color tokens consistent with the application's visual identity.
 
@@ -206,7 +243,7 @@ Separate TanStack Start project for the public-facing landing page. SSR/SSG for 
 - **Console** (`console/`): authenticated SPA for running investigations (TanStack Router, client-side only)
 - **Web** (`web/`): public landing page with SSR/SSG for SEO (TanStack Start + Nitro, server-rendered)
 
-16 component files: Nav (scroll progress, eager), Hero (MolecularNetwork 3D canvas, eager), HowItWorks (6-phase timeline, lazy), ConsolePreview (browser-frame mockups, lazy), Architecture (model cards + dot grid bg + amber glow, lazy), Domains (3 domain cards, lazy), Visualizations (4 category cards, lazy), DataSources (16 source cards + teal glow, lazy), WhoItsFor (3 persona cards, lazy), Differentiators (3 cards, lazy), OpenSource (code snippet + licensing, lazy), Roadmap (planned domains/features, lazy), CTA (pricing tiers + terminal quickstart + primary glow, lazy), SectionHeader, Footer (lazy), MolecularNetwork. All use OKLCH tokens, Motion scroll animations, and staggered children reveals. Section zoning via alternating `bg-surface/30` backgrounds and strategic radial accent glows (amber on Architecture, teal on DataSources, primary on CTA).
+16 component files: Nav (scroll progress, eager), Hero (MolecularNetwork 3D canvas, eager), HowItWorks (6-phase timeline, lazy), ConsolePreview (browser-frame mockups, lazy), Architecture (model cards + dot grid bg + amber glow, lazy), Domains (4 domain cards, lazy), Visualizations (4 category cards, lazy), DataSources (19 source cards + teal glow, lazy), WhoItsFor (3 persona cards, lazy), Differentiators (3 cards, lazy), OpenSource (code snippet + licensing, lazy), Roadmap (planned domains/features, lazy), CTA (pricing tiers + terminal quickstart + primary glow, lazy), SectionHeader, Footer (lazy), MolecularNetwork. All use OKLCH tokens, Motion scroll animations, and staggered children reveals. Section zoning via alternating `bg-surface/30` backgrounds and strategic radial accent glows (amber on Architecture, teal on DataSources, primary on CTA).
 
 Both deploy independently: console to app server, web to CDN/static hosting.
 
@@ -225,22 +262,22 @@ api/ -> investigation/application/ only
 
 ### Multi-Model (Default)
 
-1. User submits research prompt via Console (or selects a template)
-2. API creates Investigation, persists to PostgreSQL, starts MultiModelOrchestrator
+1. User submits research prompt via Console (or selects a template), optionally with uploaded files (CSV/XLSX/PDF via `POST /upload`)
+2. API creates Investigation, links any uploaded files, persists to PostgreSQL, starts MultiModelOrchestrator (with uploaded data context injected into prompts)
 3. **Haiku** decomposes prompt via PICO framework (Population, Intervention, Comparison, Outcome) and classifies domain in a single call; queries past completed investigations in same domain
 4. **Domain detection** -- `DomainRegistry.detect()` returns `list[DomainConfig]` (one or more); `merge_domain_configs()` creates merged config for cross-domain; emits `DomainDetected` SSE event with display config (includes `domains` sub-list for multi-domain); researcher tool list filtered to merged domain-relevant tools
 5. **Researcher** (Sonnet) conducts structured literature survey with domain-filtered tools, citation chasing, evidence-level grading; **Haiku** grades body-of-evidence (GRADE-adapted) and self-assesses quality (AMSTAR-2); emits `LiteratureSurveyCompleted` event
 6. **Director** (Opus) formulates 2-4 hypotheses with predictions, criteria, scope, Bayesian priors; receives structured XML literature context (PICO + graded findings)
-7. **User Approval Gate** -- user approves/rejects hypotheses (5-min timeout auto-approves)
+7. **User Approval Gate** -- investigation transitions to `AWAITING_APPROVAL`, user approves/rejects hypotheses (no timeout, blocks until user acts); `POST /investigate/{id}/cancel` available at any point
 8. For each batch of 2 hypotheses:
    a. **Director** designs experiment protocol (description, tool plan, variables, controls, confounders, analysis plan, criteria, optional statistical test plan)
    b. **2 Researchers** (Sonnet) execute in parallel via asyncio.Queue
    c. **Summarizer** (Haiku) compresses outputs exceeding threshold
-   d. **Director** evaluates hypothesis against pre-defined success/failure criteria
-   e. If revised: new hypothesis spawned with parent link
+   d. **Director** evaluates hypothesis against pre-defined success/failure criteria and decides tree action (deepen/branch/prune)
+   e. `TreeManager.apply_evaluation()` processes action: deepen creates child at depth+1, branch creates sibling at same depth, prune marks REJECTED. Loop repeats with `select_next()` until no explorable hypotheses remain below `max_depth`
 9. **Negative controls** recorded from formulation suggestions
 10. **Director** synthesizes final report with candidates, citations, cost
-11. All events stream via SSE (20 event types) to Console in real-time
+11. All events stream via SSE (21 event types) to Console in real-time
     - `DomainDetected` sends display config (score columns, visualization type) to frontend
     - `FindingRecorded` includes evidence + source provenance (source_type, source_id) + evidence_level (1-6)
     - `LiteratureSurveyCompleted` carries PICO, search stats, evidence grade, self-assessment
@@ -250,4 +287,5 @@ api/ -> investigation/application/ only
     - `ValidationMetricsComputed` carries Z'-factor, quality, control separation stats
     - `InvestigationCompleted` includes candidates, hypotheses, findings, negative controls, validation metrics
 12. Investigation persisted to PostgreSQL with full state + events for timeline replay
-13. Console displays: phase indicator, hypothesis board, lab view (3Dmol.js, molecular domain only), investigation diagram (React Flow), domain-specific visualizations (charts, diagrams), findings with source badges, dynamic candidate table with domain-specific score columns, structured 8-section report with markdown export
+13. Console displays: phase indicator, hypothesis board, lab view (3Dmol.js, molecular domain only), investigation diagram (React Flow), domain-specific visualizations (charts, diagrams), findings with source badges, dynamic candidate table with domain-specific score columns, structured 8-section report
+14. **Paper export** -- `GET /investigate/{id}/paper` generates a structured scientific paper from investigation data + persisted events (PICO, literature survey, experiment methodology, evaluation reasoning, validation metrics). Returns 8 sections (Title, Abstract, Introduction, Methods, Results, Discussion, References, Supplementary) as JSON with `full_markdown` combined document + `visualizations` array. Console offers two export paths: "View Paper" (`/paper/:id` route) renders all sections with numbered figures from VizRegistry, with print-optimized CSS for browser-native PDF export; "Export Markdown" downloads the raw Markdown text

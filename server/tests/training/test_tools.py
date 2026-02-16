@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from ehrlich.literature.domain.paper import Paper
+from ehrlich.training.application.training_service import _compute_i_squared
 from ehrlich.training.domain.entities import ClinicalTrial
 from ehrlich.training.tools import (
     analyze_training_evidence,
@@ -52,12 +53,118 @@ class TestSearchTrainingLiterature:
         assert result["count"] == 1
         assert result["papers"][0]["title"] == "HIIT vs MICT for VO2max"
         assert result["papers"][0]["doi"] == "10.1234/test"
-        mock_scholar.assert_called_once_with("training science HIIT VO2max", limit=10)
+        # Service now fetches limit * 2 to compensate for filtering
+        mock_scholar.assert_called_once_with(
+            "training science HIIT VO2max high intensity interval training", limit=20
+        )
 
     @pytest.mark.asyncio()
     async def test_custom_limit(self, mock_scholar: AsyncMock) -> None:
         await search_training_literature("creatine", limit=5)
-        mock_scholar.assert_called_once_with("training science creatine", limit=5)
+        mock_scholar.assert_called_once_with("training science creatine", limit=10)
+
+    @pytest.mark.asyncio()
+    async def test_mesh_expansion(self, mock_scholar: AsyncMock) -> None:
+        """Test MeSH term expansion for common abbreviations."""
+        await search_training_literature("strength training")
+        mock_scholar.assert_called_once_with(
+            "training science strength training resistance training", limit=20
+        )
+
+    @pytest.mark.asyncio()
+    async def test_filters_non_human_studies(self) -> None:
+        """Test that animal/in-vitro studies are filtered out."""
+        papers = [
+            Paper(
+                title="HIIT in mice models",
+                authors=["Mouse A"],
+                year=2023,
+                abstract="Study in rodents.",
+            ),
+            Paper(
+                title="Human HIIT RCT",
+                authors=["Smith J"],
+                year=2023,
+                abstract="Randomized controlled trial in humans.",
+            ),
+            Paper(
+                title="In vitro muscle cell study",
+                authors=["Lab B"],
+                year=2022,
+                abstract="Cell culture analysis.",
+            ),
+        ]
+        with patch(
+            "ehrlich.training.tools._client.search",
+            new_callable=AsyncMock,
+            return_value=papers,
+        ):
+            result = json.loads(await search_training_literature("HIIT"))
+            assert result["count"] == 1
+            assert result["papers"][0]["title"] == "Human HIIT RCT"
+
+    @pytest.mark.asyncio()
+    async def test_study_type_ranking(self) -> None:
+        """Test that systematic reviews rank above RCTs, which rank above cohort studies."""
+        papers = [
+            Paper(
+                title="Cohort study of HIIT",
+                authors=["Jones C"],
+                year=2024,
+                abstract="Longitudinal cohort analysis.",
+            ),
+            Paper(
+                title="HIIT systematic review",
+                authors=["Smith A"],
+                year=2022,
+                abstract="Systematic review of HIIT protocols.",
+            ),
+            Paper(
+                title="RCT on HIIT",
+                authors=["Brown B"],
+                year=2023,
+                abstract="Randomized controlled trial.",
+            ),
+        ]
+        with patch(
+            "ehrlich.training.tools._client.search",
+            new_callable=AsyncMock,
+            return_value=papers,
+        ):
+            result = json.loads(await search_training_literature("HIIT"))
+            assert result["count"] == 3
+            # Should be ordered: systematic review, RCT, cohort
+            assert "systematic review" in result["papers"][0]["title"].lower()
+            assert "rct" in result["papers"][1]["title"].lower()
+            assert "cohort" in result["papers"][2]["title"].lower()
+
+    @pytest.mark.asyncio()
+    async def test_date_recency_within_same_study_type(self) -> None:
+        """Test that more recent papers rank higher within the same study type."""
+        papers = [
+            Paper(
+                title="HIIT RCT 2020",
+                authors=["Old A"],
+                year=2020,
+                abstract="Randomized trial from 2020.",
+            ),
+            Paper(
+                title="HIIT RCT 2024",
+                authors=["New B"],
+                year=2024,
+                abstract="Randomized trial from 2024.",
+            ),
+        ]
+        with patch(
+            "ehrlich.training.tools._client.search",
+            new_callable=AsyncMock,
+            return_value=papers,
+        ):
+            result = json.loads(await search_training_literature("HIIT"))
+            assert result["count"] == 2
+            # More recent should come first
+            assert result["papers"][0]["year"] == 2024
+            assert result["papers"][1]["year"] == 2020
 
 
 class TestAnalyzeTrainingEvidence:
@@ -439,3 +546,47 @@ class TestPlanPeriodization:
             if (i + 1) % 4 == 0:
                 # Deload weeks should be notably lower
                 assert progression[i] < 0.60
+
+
+class TestComputeISquared:
+    def test_no_heterogeneity(self) -> None:
+        """Test I-squared with identical effect sizes (no heterogeneity)."""
+        effect_sizes = [0.5, 0.5, 0.5, 0.5]
+        sample_sizes = [30.0, 30.0, 30.0, 30.0]
+        i_squared = _compute_i_squared(effect_sizes, sample_sizes)
+        assert i_squared == 0.0
+
+    def test_high_heterogeneity(self) -> None:
+        """Test I-squared with widely varying effect sizes (high heterogeneity)."""
+        effect_sizes = [0.1, 0.5, 0.9, 1.2]
+        sample_sizes = [30.0, 30.0, 30.0, 30.0]
+        i_squared = _compute_i_squared(effect_sizes, sample_sizes)
+        # With large variance, I-squared should be high
+        assert i_squared > 50.0
+
+    def test_inverse_variance_weighting(self) -> None:
+        """Test that larger studies have more influence on weighted mean."""
+        # Two studies: one small (n=10) with large effect, one large (n=100) with small effect
+        effect_sizes = [1.0, 0.1]
+        sample_sizes = [10.0, 100.0]
+        i_squared = _compute_i_squared(effect_sizes, sample_sizes)
+        # Weighted mean should be closer to 0.1 (larger study)
+        # This should result in moderate heterogeneity
+        assert 0.0 < i_squared < 100.0
+
+    def test_single_study(self) -> None:
+        """Test I-squared with only one study (should be 0)."""
+        i_squared = _compute_i_squared([0.5], [30.0])
+        assert i_squared == 0.0
+
+    def test_empty_studies(self) -> None:
+        """Test I-squared with no studies (should be 0)."""
+        i_squared = _compute_i_squared([], [])
+        assert i_squared == 0.0
+
+    def test_zero_weights(self) -> None:
+        """Test I-squared with zero sample sizes (should be 0)."""
+        effect_sizes = [0.5, 0.6, 0.7]
+        sample_sizes = [0.0, 0.0, 0.0]
+        i_squared = _compute_i_squared(effect_sizes, sample_sizes)
+        assert i_squared == 0.0

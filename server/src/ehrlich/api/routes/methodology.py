@@ -7,7 +7,10 @@ from typing import Any
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from ehrlich.api.routes.investigation import _build_domain_registry, _build_registry
+from ehrlich.investigation.application.registry_factory import (
+    build_domain_registry,
+    build_tool_registry,
+)
 
 router = APIRouter(tags=["methodology"])
 
@@ -90,7 +93,7 @@ MODELS: list[dict[str, str]] = [
         "role": "Researcher",
         "model_id": "claude-sonnet-4-5-20250929",
         "purpose": (
-            "Executes experiments with 70 tools in parallel batches. "
+            "Executes experiments with 91 tools in parallel batches."
             "Records findings with evidence provenance and citations."
         ),
     },
@@ -217,6 +220,69 @@ DATA_SOURCES: list[dict[str, str]] = [
         "auth": "none",
         "context": "investigation",
     },
+    {
+        "name": "World Bank",
+        "url": "https://api.worldbank.org/v2",
+        "purpose": "Development indicators (enrollment, poverty, GDP)",
+        "auth": "none",
+        "context": "impact",
+    },
+    {
+        "name": "WHO GHO",
+        "url": "https://ghoapi.azureedge.net/api",
+        "purpose": "Health indicators (life expectancy, mortality, coverage)",
+        "auth": "none",
+        "context": "impact",
+    },
+    {
+        "name": "FRED",
+        "url": "https://api.stlouisfed.org/fred",
+        "purpose": "Economic time series (GDP, employment, inflation)",
+        "auth": "api_key",
+        "context": "impact",
+    },
+    {
+        "name": "Census Bureau",
+        "url": "https://api.census.gov/data",
+        "purpose": "US demographics, poverty, education (ACS 5-year)",
+        "auth": "api_key",
+        "context": "impact",
+    },
+    {
+        "name": "BLS",
+        "url": "https://api.bls.gov/publicAPI/v2",
+        "purpose": "US labor statistics (unemployment, CPI, wages)",
+        "auth": "api_key",
+        "context": "impact",
+    },
+    {
+        "name": "USAspending",
+        "url": "https://api.usaspending.gov/api/v2",
+        "purpose": "Federal spending awards and grants",
+        "auth": "none",
+        "context": "impact",
+    },
+    {
+        "name": "College Scorecard",
+        "url": "https://api.data.gov/ed/collegescorecard/v1",
+        "purpose": "US higher education outcomes (completion, earnings)",
+        "auth": "api_key",
+        "context": "impact",
+    },
+    {
+        "name": "HUD",
+        "url": "https://www.huduser.gov/hudapi/public",
+        "purpose": "Fair Market Rents, income limits, housing data",
+        "auth": "bearer_token",
+        "context": "impact",
+    },
+    {
+        "name": "CDC WONDER",
+        "url": "https://wonder.cdc.gov/controller/datarequest",
+        "purpose": "US mortality, natality, public health statistics",
+        "auth": "none",
+        "context": "impact",
+    },
 ]
 
 # ── Tool context mapping (tag -> display name) ─────────────────────────
@@ -233,6 +299,7 @@ _TAG_TO_CONTEXT: dict[str, str] = {
     "nutrition": "Nutrition Science",
     "safety": "Nutrition Science",
     "interaction": "Nutrition Science",
+    "impact": "Impact Evaluation",
     "ml": "ML",
 }
 
@@ -273,8 +340,8 @@ class MethodologyResponse(BaseModel):
 
 @router.get("/methodology")
 async def get_methodology() -> MethodologyResponse:
-    registry = _build_registry()
-    domain_registry = _build_domain_registry()
+    registry = build_tool_registry()
+    domain_registry = build_domain_registry()
 
     # Build domain info from registry
     domains: list[DomainInfo] = []
@@ -323,6 +390,7 @@ async def get_methodology() -> MethodologyResponse:
         "Simulation",
         "Training Science",
         "Nutrition Science",
+        "Impact Evaluation",
         "Investigation",
     ]
     tool_groups: list[ToolGroup] = []

@@ -95,6 +95,108 @@ class TestSearchSupplementEvidence:
         assert result["outcome"] == "strength"
         assert result["count"] == 1
 
+    @pytest.mark.asyncio()
+    async def test_filters_retracted_papers(self) -> None:
+        """Test that retracted papers are filtered out."""
+        papers = [
+            Paper(
+                title="[RETRACTED] Creatine meta-analysis",
+                authors=["Bad A"],
+                year=2020,
+                abstract="Retracted due to fraud.",
+            ),
+            Paper(
+                title="Creatine systematic review",
+                authors=["Good B"],
+                year=2023,
+                abstract="Valid systematic review.",
+            ),
+            Paper(
+                title="Retracted: Creatine RCT",
+                authors=["Bad C"],
+                year=2022,
+                abstract="Retracted paper.",
+            ),
+        ]
+        with patch(
+            "ehrlich.nutrition.tools._client.search",
+            new_callable=AsyncMock,
+            return_value=papers,
+        ):
+            result = json.loads(await search_supplement_evidence("creatine"))
+            assert result["count"] == 1
+            assert result["papers"][0]["title"] == "Creatine systematic review"
+
+    @pytest.mark.asyncio()
+    async def test_study_type_ranking(self) -> None:
+        """Test that meta-analyses rank above systematic reviews, which rank above RCTs."""
+        papers = [
+            Paper(
+                title="Observational study of creatine",
+                authors=["Jones C"],
+                year=2024,
+                abstract="Cohort analysis of creatine use.",
+            ),
+            Paper(
+                title="Creatine meta-analysis",
+                authors=["Smith A"],
+                year=2022,
+                abstract="Meta-analysis of creatine trials.",
+            ),
+            Paper(
+                title="Systematic review of creatine",
+                authors=["Brown B"],
+                year=2023,
+                abstract="Systematic review of creatine effects.",
+            ),
+            Paper(
+                title="RCT on creatine",
+                authors=["White D"],
+                year=2024,
+                abstract="Randomized controlled trial of creatine.",
+            ),
+        ]
+        with patch(
+            "ehrlich.nutrition.tools._client.search",
+            new_callable=AsyncMock,
+            return_value=papers,
+        ):
+            result = json.loads(await search_supplement_evidence("creatine"))
+            assert result["count"] == 4
+            # Should be ordered: meta-analysis, systematic review, RCT, observational
+            assert "meta-analysis" in result["papers"][0]["title"].lower()
+            assert "systematic review" in result["papers"][1]["title"].lower()
+            assert "rct" in result["papers"][2]["title"].lower()
+            assert "observational" in result["papers"][3]["title"].lower()
+
+    @pytest.mark.asyncio()
+    async def test_date_recency_within_same_study_type(self) -> None:
+        """Test that more recent papers rank higher within the same study type."""
+        papers = [
+            Paper(
+                title="Creatine RCT 2020",
+                authors=["Old A"],
+                year=2020,
+                abstract="Randomized trial from 2020.",
+            ),
+            Paper(
+                title="Creatine RCT 2024",
+                authors=["New B"],
+                year=2024,
+                abstract="Randomized trial from 2024.",
+            ),
+        ]
+        with patch(
+            "ehrlich.nutrition.tools._client.search",
+            new_callable=AsyncMock,
+            return_value=papers,
+        ):
+            result = json.loads(await search_supplement_evidence("creatine"))
+            assert result["count"] == 2
+            # More recent should come first
+            assert result["papers"][0]["year"] == 2024
+            assert result["papers"][1]["year"] == 2020
+
 
 class TestSearchSupplementLabels:
     @pytest.mark.asyncio()
@@ -182,6 +284,9 @@ class TestCompareNutrients:
             assert result["count"] == 1
             assert result["queries"] == ["chicken breast", "salmon"]
             assert result["foods"][0]["description"] == "Chicken breast"
+            # With only 1 food, no comparison is possible
+            assert result["comparison"] == {}
+            assert "mar_scores" in result
 
     @pytest.mark.asyncio()
     async def test_empty_query(self) -> None:
@@ -192,6 +297,60 @@ class TestCompareNutrients:
         ):
             result = json.loads(await compare_nutrients(""))
             assert result["count"] == 0
+            assert result["comparison"] == {}
+            assert result["mar_scores"] == {}
+
+    @pytest.mark.asyncio()
+    async def test_per_nutrient_comparison_and_winner(self) -> None:
+        """Test that per-nutrient deltas and winner are computed correctly."""
+        profile_a = NutrientProfile(
+            fdc_id=1,
+            description="Food A",
+            brand="",
+            category="Test",
+            nutrients=(
+                NutrientEntry(name="Protein", amount=20.0, unit="G", nutrient_number="203"),
+                NutrientEntry(name="Calcium, Ca", amount=100.0, unit="MG", nutrient_number="301"),
+            ),
+        )
+        profile_b = NutrientProfile(
+            fdc_id=2,
+            description="Food B",
+            brand="",
+            category="Test",
+            nutrients=(
+                NutrientEntry(name="Protein", amount=30.0, unit="G", nutrient_number="203"),
+                NutrientEntry(name="Calcium, Ca", amount=80.0, unit="MG", nutrient_number="301"),
+            ),
+        )
+        with patch(
+            "ehrlich.nutrition.tools._service.compare_nutrients",
+            new_callable=AsyncMock,
+            return_value=[profile_a, profile_b],
+        ):
+            result = json.loads(await compare_nutrients("food a, food b"))
+            assert result["count"] == 2
+            comparison = result["comparison"]
+            assert "Protein" in comparison
+            assert comparison["Protein"]["winner"] == "Food B"
+            assert comparison["Protein"]["amounts"]["Food A"] == 20.0
+            assert comparison["Protein"]["amounts"]["Food B"] == 30.0
+            assert "Calcium, Ca" in comparison
+            assert comparison["Calcium, Ca"]["winner"] == "Food A"
+
+    @pytest.mark.asyncio()
+    async def test_mar_score_computation(self) -> None:
+        """Test that MAR scores are computed correctly."""
+        with patch(
+            "ehrlich.nutrition.tools._service.compare_nutrients",
+            new_callable=AsyncMock,
+            return_value=[_SAMPLE_PROFILE],
+        ):
+            result = json.loads(await compare_nutrients("chicken breast"))
+            assert "mar_scores" in result
+            assert "Chicken breast" in result["mar_scores"]
+            # MAR score should be a percentage
+            assert isinstance(result["mar_scores"]["Chicken breast"], (int, float))
 
 
 class TestAssessNutrientAdequacy:

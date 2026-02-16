@@ -56,28 +56,21 @@ export function CompletionSummaryCard({
         </div>
       </div>
 
-      {expanded && cost?.byModel && (
+      {expanded && cost?.byRole && (
         <div className="mt-3 border-t border-primary/10 pt-3">
           <div className="grid grid-cols-4 gap-2 font-mono text-[10px] text-muted-foreground">
-            <span className="font-medium uppercase tracking-wider">Model</span>
+            <span className="font-medium uppercase tracking-wider">Role</span>
             <span className="text-right font-medium uppercase tracking-wider">Input</span>
             <span className="text-right font-medium uppercase tracking-wider">Output</span>
             <span className="text-right font-medium uppercase tracking-wider">Cost</span>
-            {Object.entries(cost.byModel).map(([model, data]) => {
-              const shortName = model.includes("opus")
-                ? "Director (Opus)"
-                : model.includes("sonnet")
-                  ? "Researcher (Sonnet)"
-                  : "Summarizer (Haiku)";
-              return (
-                <div key={model} className="col-span-4 grid grid-cols-4 gap-2">
-                  <span className="truncate text-foreground/70">{shortName}</span>
-                  <span className="text-right tabular-nums">{data.input_tokens.toLocaleString()}</span>
-                  <span className="text-right tabular-nums">{data.output_tokens.toLocaleString()}</span>
-                  <span className="text-right tabular-nums">${data.cost_usd.toFixed(4)}</span>
-                </div>
-              );
-            })}
+            {Object.entries(cost.byRole).map(([role, data]) => (
+              <div key={role} className="col-span-4 grid grid-cols-4 gap-2">
+                <span className="truncate text-foreground/70 capitalize">{role} <span className="text-muted-foreground/50">({data.model_display})</span></span>
+                <span className="text-right tabular-nums">{data.input_tokens.toLocaleString()}</span>
+                <span className="text-right tabular-nums">{data.output_tokens.toLocaleString()}</span>
+                <span className="text-right tabular-nums">${data.cost_usd.toFixed(4)}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}

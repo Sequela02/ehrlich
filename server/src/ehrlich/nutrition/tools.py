@@ -205,6 +205,35 @@ async def compare_nutrients(
     """
     queries = [q.strip() for q in food_queries.split(",") if q.strip()]
     profiles = await _service.compare_nutrients(queries, max_nutrients)
+
+    # Build per-nutrient comparison
+    comparison: dict[str, dict[str, object]] = {}
+    if len(profiles) >= 2:
+        # Collect all nutrient names across all foods
+        nutrient_map: dict[str, dict[str, float]] = {}
+        for p in profiles:
+            for n in p.nutrients:
+                if n.name not in nutrient_map:
+                    nutrient_map[n.name] = {}
+                nutrient_map[n.name][p.description] = n.amount
+
+        # Build comparison for nutrients that appear in 2+ foods
+        for nutrient_name, food_amounts in nutrient_map.items():
+            if len(food_amounts) >= 2:
+                winner = max(food_amounts, key=food_amounts.get)  # type: ignore[arg-type]
+                comparison[nutrient_name] = {
+                    "amounts": food_amounts,
+                    "winner": winner,
+                }
+
+    # Compute MAR (Mean Adequacy Ratio) per food
+    mar_scores: dict[str, float] = {}
+    for p in profiles:
+        assessments = _service.assess_nutrient_adequacy(list(p.nutrients))
+        if assessments:
+            avg_pct_rda = sum(a.pct_rda for a in assessments) / len(assessments)
+            mar_scores[p.description] = round(avg_pct_rda, 1)
+
     return json.dumps(
         {
             "queries": queries,
@@ -227,6 +256,8 @@ async def compare_nutrients(
                 }
                 for p in profiles
             ],
+            "comparison": comparison,
+            "mar_scores": mar_scores,
         }
     )
 

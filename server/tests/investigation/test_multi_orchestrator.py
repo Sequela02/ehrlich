@@ -15,6 +15,7 @@ from ehrlich.investigation.domain.events import (
     FindingRecorded,
     HypothesisEvaluated,
     HypothesisFormulated,
+    HypothesisTreeUpdated,
     InvestigationCompleted,
     InvestigationError,
     NegativeControlRecorded,
@@ -114,7 +115,11 @@ def _evaluation_json(status: str = "supported") -> str:
         {
             "status": status,
             "confidence": 0.85,
+            "certainty_of_evidence": "moderate",
+            "evidence_convergence": "converging",
             "reasoning": "Strong binding evidence from docking",
+            "key_evidence": ["Docking score -9.2 kcal/mol (tier 7)"],
+            "action": "prune",
         }
     )
 
@@ -124,8 +129,27 @@ def _revision_evaluation_json() -> str:
         {
             "status": "revised",
             "confidence": 0.4,
+            "certainty_of_evidence": "low",
+            "evidence_convergence": "mixed",
             "reasoning": "Partial evidence, need narrower scope",
+            "key_evidence": ["Some binding but weak (tier 7)"],
+            "action": "branch",
             "revision": "Thiazolidine with 4-chloro substitution specifically inhibits PBP2a",
+        }
+    )
+
+
+def _deepen_evaluation_json() -> str:
+    return json.dumps(
+        {
+            "status": "revised",
+            "confidence": 0.6,
+            "certainty_of_evidence": "moderate",
+            "evidence_convergence": "mixed",
+            "reasoning": "Promising but needs narrower scope",
+            "key_evidence": ["Moderate binding (tier 5)"],
+            "action": "deepen",
+            "revision": "Thiazolidine analogs with MW < 300 selectively inhibit PBP2a",
         }
     )
 
@@ -938,3 +962,155 @@ class TestStructuredOutputs:
         for kw in captured_kwargs:
             assert kw.get("output_config") is not None
             assert kw["output_config"]["format"]["type"] == "json_schema"
+
+
+class TestTreeSearch:
+    @pytest.mark.asyncio
+    async def test_tree_search_deepens_promising_hypothesis(self) -> None:
+        """Director returns action=deepen, new sub-hypothesis created at depth 1."""
+        director, researcher, summarizer = _make_clients()
+
+        # formulation, design#1, eval#1 (deepen), design#2, eval#2 (prune), synthesis
+        director.stream_message = _make_director_side_effect(
+            _formulation_json(),
+            _experiment_design_json(),
+            _deepen_evaluation_json(),
+            _experiment_design_json(),
+            _evaluation_json("supported"),
+            _synthesis_json(),
+        )
+        researcher.create_message = AsyncMock(return_value=_make_text_response("Done."))
+
+        orchestrator = MultiModelOrchestrator(
+            director=director,
+            researcher=researcher,
+            summarizer=summarizer,
+            registry=_build_registry(),
+            max_iterations_per_experiment=1,
+        )
+
+        investigation = Investigation(prompt="Test tree deepen")
+        events = [e async for e in orchestrator.run(investigation)]
+
+        # Original + deepened child
+        hyp_events = [e for e in events if isinstance(e, HypothesisFormulated)]
+        assert len(hyp_events) == 2
+
+        # Child should have parent_id set
+        child_event = hyp_events[1]
+        assert child_event.parent_id != ""
+
+        # Check tree updated events
+        tree_events = [e for e in events if isinstance(e, HypothesisTreeUpdated)]
+        assert len(tree_events) >= 1
+
+        deepen_events = [e for e in tree_events if e.action == "deepen"]
+        assert len(deepen_events) == 1
+        assert deepen_events[0].children_count == 1
+
+        # Child hypothesis should be at depth 1
+        assert len(investigation.hypotheses) == 2
+        child = investigation.hypotheses[1]
+        assert child.depth == 1
+        assert child.parent_id == investigation.hypotheses[0].id
+
+    @pytest.mark.asyncio
+    async def test_tree_search_prunes_refuted_hypothesis(self) -> None:
+        """Director returns action=prune, hypothesis not re-tested."""
+        director, researcher, summarizer = _make_clients()
+
+        director.stream_message = _make_director_side_effect(
+            _formulation_json(),
+            _experiment_design_json(),
+            _evaluation_json("refuted"),
+            _synthesis_json(),
+        )
+        researcher.create_message = AsyncMock(return_value=_make_text_response("Done."))
+
+        orchestrator = MultiModelOrchestrator(
+            director=director,
+            researcher=researcher,
+            summarizer=summarizer,
+            registry=_build_registry(),
+            max_iterations_per_experiment=1,
+        )
+
+        investigation = Investigation(prompt="Test tree prune")
+        events = [e async for e in orchestrator.run(investigation)]
+
+        tree_events = [e for e in events if isinstance(e, HypothesisTreeUpdated)]
+        assert len(tree_events) == 1
+        assert tree_events[0].action == "prune"
+
+        # Only 1 hypothesis (original), no children created
+        assert len(investigation.hypotheses) == 1
+        assert investigation.hypotheses[0].status.value == "refuted"
+
+    @pytest.mark.asyncio
+    async def test_tree_search_respects_max_depth(self) -> None:
+        """Hypotheses at max_depth are not further deepened."""
+        from ehrlich.investigation.application.tree_manager import TreeManager
+
+        director, researcher, summarizer = _make_clients()
+
+        # With max_depth=1: formulate root (depth=0), test it, deepen to depth=1,
+        # test child, try to deepen again but depth=1 is at max, so prune instead.
+        director.stream_message = _make_director_side_effect(
+            _formulation_json(),
+            _experiment_design_json(),
+            _deepen_evaluation_json(),
+            _experiment_design_json(),
+            _evaluation_json("supported"),
+            _synthesis_json(),
+        )
+        researcher.create_message = AsyncMock(return_value=_make_text_response("Done."))
+
+        tree_manager = TreeManager(max_depth=1)
+        orchestrator = MultiModelOrchestrator(
+            director=director,
+            researcher=researcher,
+            summarizer=summarizer,
+            registry=_build_registry(),
+            max_iterations_per_experiment=1,
+            tree_manager=tree_manager,
+        )
+
+        investigation = Investigation(prompt="Test max depth")
+        async for _ in orchestrator.run(investigation):
+            pass
+
+        # Root tested and deepened, child tested but cannot deepen further
+        assert len(investigation.hypotheses) == 2
+        # Child at depth 1 (which == max_depth) should not produce more children
+        child = investigation.hypotheses[1]
+        assert child.depth == 1
+        assert len(child.children) == 0
+
+    @pytest.mark.asyncio
+    async def test_tree_events_have_investigation_id(self) -> None:
+        """All HypothesisTreeUpdated events include investigation_id."""
+        director, researcher, summarizer = _make_clients()
+
+        director.stream_message = _make_director_side_effect(
+            _formulation_json(),
+            _experiment_design_json(),
+            _evaluation_json(),
+            _synthesis_json(),
+        )
+        researcher.create_message = AsyncMock(return_value=_make_text_response("Done."))
+
+        orchestrator = MultiModelOrchestrator(
+            director=director,
+            researcher=researcher,
+            summarizer=summarizer,
+            registry=_build_registry(),
+            max_iterations_per_experiment=1,
+        )
+
+        investigation = Investigation(prompt="Test tree events")
+        events = [e async for e in orchestrator.run(investigation)]
+
+        tree_events = [e for e in events if isinstance(e, HypothesisTreeUpdated)]
+        assert len(tree_events) >= 1
+        for te in tree_events:
+            assert te.investigation_id == investigation.id

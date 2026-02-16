@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from ehrlich.investigation.domain.investigation import Investigation
+    from ehrlich.investigation.domain.uploaded_file import UploadedFile
 
 
 class InvestigationRepository(ABC):
@@ -21,10 +22,21 @@ class InvestigationRepository(ABC):
     async def update(self, investigation: Investigation) -> None: ...
 
     @abstractmethod
-    async def save_event(self, investigation_id: str, event_type: str, event_data: str) -> None: ...
+    async def save_event(self, investigation_id: str, event_type: str, event_data: str) -> int: ...
 
     @abstractmethod
-    async def get_events(self, investigation_id: str) -> list[dict[str, str]]: ...
+    async def get_events(self, investigation_id: str) -> list[dict[str, Any]]: ...
+
+    @abstractmethod
+    async def get_events_after(self, investigation_id: str, after_id: int) -> list[dict[str, Any]]:
+        """Return events with id > after_id, ordered by id ASC."""
+        ...
 
     @abstractmethod
     async def search_findings(self, query: str, limit: int = 20) -> list[dict[str, Any]]: ...
+
+    @abstractmethod
+    async def save_uploaded_file(self, investigation_id: str, file: UploadedFile) -> None: ...
+
+    @abstractmethod
+    async def get_uploaded_files(self, investigation_id: str) -> list[UploadedFile]: ...

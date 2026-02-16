@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { MolViewer2D } from "@/features/molecule/components/MolViewer2D";
-import { MolViewer3D } from "@/features/molecule/components/MolViewer3D";
+import { MolViewer2D, MolViewer3D } from "@/features/molecule";
 import { apiFetch } from "@/shared/lib/api";
 
 interface ConformerData {
@@ -93,11 +92,10 @@ function MolecularDetail({ smiles, name }: { smiles: string; name: string }) {
           <div className="flex items-center justify-between">
             <span className="font-mono text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Properties</span>
             <span
-              className={`rounded-full px-2 py-0.5 font-mono text-[11px] font-medium ${
-                descriptors.passes_lipinski
+              className={`rounded-full px-2 py-0.5 font-mono text-[11px] font-medium ${descriptors.passes_lipinski
                   ? "bg-primary/20 text-primary"
                   : "bg-destructive/20 text-destructive"
-              }`}
+                }`}
             >
               {descriptors.passes_lipinski ? "Lipinski OK" : "Lipinski Fail"}
             </span>

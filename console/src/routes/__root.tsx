@@ -1,7 +1,7 @@
 import { createRootRoute, Outlet, useMatches } from "@tanstack/react-router";
 import { AppLayout } from "@/shared/components/layout/AppLayout";
 
-const HEADERLESS_ROUTES = ["/investigation/", "/compare/"];
+const HEADERLESS_ROUTES = ["/investigation/", "/compare/", "/paper/"];
 
 export const Route = createRootRoute({
   component: RootComponent,

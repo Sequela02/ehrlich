@@ -37,9 +37,7 @@ export function OpenSource() {
         </h2>
 
         <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mb-16 leading-relaxed font-light">
-          AGPL-3.0 dual licensed. Use it free for research and teaching.
-          Purchase a commercial license for private modifications.
-          Self-host, extend, contribute.
+          Ehrlich is COSS -- Commercial Open-Source Software. The same model used by Supabase, PostHog, Cal.com, and GitLab. The entire codebase is open source under AGPL-3.0. There is no proprietary version.
         </p>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 w-full mb-16">
@@ -84,12 +82,10 @@ export function OpenSource() {
             </div>
             <div>
               <h3 className="text-foreground text-lg font-bold mb-2">
-                67 Tools, Domain-Agnostic
+                85 Tools, 4 Domains
               </h3>
               <p className="text-muted-foreground leading-relaxed text-sm">
-                Chemistry, literature, analysis, prediction, simulation, training,
-                nutrition, visualization, and statistics. Each tagged with domain
-                metadata for automatic filtering. Add a{" "}
+                Molecular, training, nutrition, and impact evaluation. Each domain brings its own tools, scoring, and visualization. Add a{" "}
                 <code className="font-mono text-xs text-primary">DomainConfig</code>{" "}
                 and the engine handles the rest.
               </p>

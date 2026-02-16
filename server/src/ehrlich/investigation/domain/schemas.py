@@ -193,6 +193,10 @@ EVALUATION_SCHEMA: dict[str, Any] = {
             "items": {"type": "string"},
         },
         "revision": {"type": "string"},
+        "action": {
+            "type": "string",
+            "enum": ["deepen", "prune", "branch"],
+        },
     },
     "required": [
         "status",
@@ -201,6 +205,7 @@ EVALUATION_SCHEMA: dict[str, Any] = {
         "evidence_convergence",
         "reasoning",
         "key_evidence",
+        "action",
     ],
     "additionalProperties": False,
 }
@@ -221,12 +226,28 @@ SYNTHESIS_SCHEMA: dict[str, Any] = {
                     "rank": {"type": "integer"},
                     "priority": {"type": "integer"},
                     "scores": {
-                        "type": "object",
-                        "additionalProperties": {"type": "number"},
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {"type": "string"},
+                                "value": {"type": "number"},
+                            },
+                            "required": ["name", "value"],
+                            "additionalProperties": False,
+                        },
                     },
                     "attributes": {
-                        "type": "object",
-                        "additionalProperties": True,
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {"type": "string"},
+                                "value": {"type": "string"},
+                            },
+                            "required": ["name", "value"],
+                            "additionalProperties": False,
+                        },
                     },
                 },
                 "required": [

@@ -13,6 +13,7 @@ from ehrlich.investigation.domain.events import (
     HypothesisApprovalRequested,
     HypothesisEvaluated,
     HypothesisFormulated,
+    HypothesisTreeUpdated,
     InvestigationCompleted,
     InvestigationError,
     LiteratureSurveyCompleted,
@@ -49,6 +50,7 @@ class SSEEventType(StrEnum):
     LITERATURE_SURVEY_COMPLETED = "literature_survey_completed"
     VALIDATION_METRICS = "validation_metrics"
     VISUALIZATION = "visualization"
+    HYPOTHESIS_TREE_UPDATED = "hypothesis_tree_updated"
 
 
 @dataclass(frozen=True)
@@ -294,6 +296,18 @@ def domain_event_to_sse(event: DomainEvent) -> SSEEvent | None:
                 "total_tokens": event.total_tokens,
                 "total_cost_usd": event.total_cost_usd,
                 "tool_calls": event.tool_calls,
+                "investigation_id": event.investigation_id,
+            },
+        )
+    if isinstance(event, HypothesisTreeUpdated):
+        return SSEEvent(
+            event=SSEEventType.HYPOTHESIS_TREE_UPDATED,
+            data={
+                "hypothesis_id": event.hypothesis_id,
+                "action": event.action,
+                "parent_id": event.parent_id,
+                "depth": event.depth,
+                "children_count": event.children_count,
                 "investigation_id": event.investigation_id,
             },
         )

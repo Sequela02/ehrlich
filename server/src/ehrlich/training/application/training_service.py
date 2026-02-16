@@ -41,6 +41,47 @@ _SPORT_BASE_RISK: dict[str, float] = {
 }
 
 
+def _compute_i_squared(effect_sizes: list[float], sample_sizes: list[float]) -> float:
+    """Compute I-squared heterogeneity statistic using inverse-variance weighting.
+
+    I-squared quantifies the percentage of total variation across studies due to
+    heterogeneity rather than chance. Based on Cochran's Q statistic with
+    inverse-variance weights (approximated by sample sizes).
+
+    Args:
+        effect_sizes: Effect sizes from individual studies
+        sample_sizes: Sample sizes from individual studies (used as weights)
+
+    Returns:
+        I-squared percentage (0-100), where 0% = no heterogeneity,
+        100% = all variation is heterogeneity
+    """
+    n = len(effect_sizes)
+    if n <= 1:
+        return 0.0
+
+    # Use sample sizes as inverse-variance weights
+    weights = sample_sizes
+    total_weight = sum(weights)
+
+    if total_weight <= 0:
+        return 0.0
+
+    # Compute weighted mean
+    weighted_mean = sum(w * e for w, e in zip(weights, effect_sizes, strict=True)) / total_weight
+
+    # Compute Cochran's Q statistic (weighted sum of squared deviations)
+    q_stat = sum(w * (e - weighted_mean) ** 2 for w, e in zip(weights, effect_sizes, strict=True))
+
+    # Degrees of freedom
+    df = n - 1
+
+    # I-squared = max(0, (Q - df) / Q * 100)
+    if q_stat > 0:
+        return max(0.0, (q_stat - df) / q_stat * 100)
+    return 0.0
+
+
 class TrainingService:
     def __init__(
         self,
@@ -55,8 +96,56 @@ class TrainingService:
         self._exercises = exercises
 
     async def search_literature(self, query: str, limit: int = 10) -> list[Paper]:
-        training_query = f"training science {query}"
-        return await self._papers.search(training_query, limit=limit)
+        mesh_expansion = {
+            "hiit": "high intensity interval training",
+            "strength": "resistance training",
+            "cardio": "cardiovascular exercise",
+            "flexibility": "stretching exercise",
+            "power": "plyometric training",
+            "endurance": "aerobic exercise",
+        }
+
+        query_lower = query.lower()
+        expanded_terms = [query]
+        for short, full in mesh_expansion.items():
+            if short in query_lower and full not in query_lower:
+                expanded_terms.append(full)
+
+        expanded_query = " ".join(expanded_terms)
+        training_query = f"training science {expanded_query}"
+
+        # Fetch extra papers to compensate for filtering
+        papers = await self._papers.search(training_query, limit=limit * 2)
+
+        # Filter out non-human studies
+        non_human_keywords = {
+            "mice",
+            "rats",
+            "rat",
+            "murine",
+            "in vitro",
+            "cell culture",
+            "drosophila",
+            "zebrafish",
+        }
+        human_papers = [
+            p for p in papers if not any(kw in p.title.lower() for kw in non_human_keywords)
+        ]
+
+        # Sort by study type rank, then year descending
+        def get_study_type_rank(paper: Paper) -> int:
+            text = (paper.title + " " + paper.abstract).lower()
+            if "meta-analysis" in text or "systematic review" in text:
+                return 0
+            if "rct" in text or "randomized" in text:
+                return 1
+            if "cohort" in text or "longitudinal" in text:
+                return 2
+            return 3
+
+        human_papers.sort(key=lambda p: (get_study_type_rank(p), -p.year))
+
+        return human_papers[:limit]
 
     def analyze_training_evidence(
         self,
@@ -76,13 +165,7 @@ class TrainingService:
             else 0.0
         )
 
-        if n > 1:
-            mean_effect = sum(effect_sizes) / n
-            q_stat = sum((e - mean_effect) ** 2 for e in effect_sizes)
-            df = n - 1
-            i_squared = max(0.0, (q_stat - df) / q_stat * 100) if q_stat > 0 else 0.0
-        else:
-            i_squared = 0.0
+        i_squared = _compute_i_squared(effect_sizes, sample_sizes)
 
         avg_quality = sum(quality_scores) / n
 

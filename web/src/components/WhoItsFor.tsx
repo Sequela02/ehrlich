@@ -16,7 +16,7 @@ const PERSONAS = [
   {
     label: "Industry / Pharma",
     usage: "BYOK. Your Anthropic key, our methodology + tools.",
-    description: "67 computational tools, 15 external APIs, structured reporting. Commercial license for private modifications. Self-hosted deployment available.",
+    description: "85 computational tools, 18 external APIs, structured reporting. Commercial license for private modifications. Self-host or use the hosted instance with your own Anthropic key.",
   },
 ] as const;
 
@@ -43,7 +43,7 @@ export function WhoItsFor() {
           Same product at every level.
         </h2>
         <p className="text-base text-muted-foreground leading-relaxed">
-          All 70 tools, all 16 data sources, and the full 6-phase methodology at every tier.
+          All 85 tools, all 19 data sources, and the full 6-phase methodology at every tier.
           The only variable is the Director model quality.
         </p>
       </div>

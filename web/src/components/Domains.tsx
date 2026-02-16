@@ -23,7 +23,7 @@ export function Domains() {
 
       <div className="mb-10 max-w-2xl">
         <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-4">
-          Three domains. Domain-agnostic engine.
+          Four domains. Domain-agnostic engine.
         </h2>
         <p className="text-base text-muted-foreground leading-relaxed">
           Each domain brings its own tools, scoring definitions, and prompt examples.

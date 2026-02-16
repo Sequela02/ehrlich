@@ -35,8 +35,12 @@ data/datasets/
 data/models/
 server/data/
 
-# Claude Code
+# Agent tooling
 .claude/
+.gemini/
+
+# Logs
+*.log
 
 # Environment
 .env

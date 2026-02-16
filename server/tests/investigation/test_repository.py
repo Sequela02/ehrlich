@@ -27,9 +27,7 @@ _TEST_DATABASE_URL = os.environ.get(
 @pytest.fixture
 async def repo() -> InvestigationRepository:
     # Ensure test database exists
-    conn = await asyncpg.connect(
-        "postgresql://postgres:postgres@localhost:5432/postgres"
-    )
+    conn = await asyncpg.connect("postgresql://postgres:postgres@localhost:5432/postgres")
     with contextlib.suppress(asyncpg.DuplicateDatabaseError):
         await conn.execute("CREATE DATABASE ehrlich_test")
     await conn.close()
@@ -92,9 +90,7 @@ def _make_finding(hypothesis_id: str = "") -> Finding:
 
 
 class TestSaveAndGetById:
-    async def test_roundtrip_minimal(
-        self, repo: InvestigationRepository
-    ) -> None:
+    async def test_roundtrip_minimal(self, repo: InvestigationRepository) -> None:
         inv = _make_investigation()
         await repo.save(inv)
 
@@ -104,9 +100,7 @@ class TestSaveAndGetById:
         assert loaded.prompt == inv.prompt
         assert loaded.status == InvestigationStatus.PENDING
 
-    async def test_roundtrip_with_entities(
-        self, repo: InvestigationRepository
-    ) -> None:
+    async def test_roundtrip_with_entities(self, repo: InvestigationRepository) -> None:
         inv = _make_investigation()
         hyp = _make_hypothesis()
         inv.add_hypothesis(hyp)
@@ -214,15 +208,11 @@ class TestSaveAndGetById:
         assert loaded.domain == "molecular"
         assert loaded.cost_data == {"total_cost_usd": 0.05}
 
-    async def test_get_nonexistent_returns_none(
-        self, repo: InvestigationRepository
-    ) -> None:
+    async def test_get_nonexistent_returns_none(self, repo: InvestigationRepository) -> None:
         result = await repo.get_by_id("nonexistent-id")
         assert result is None
 
-    async def test_save_with_user_id(
-        self, repo: InvestigationRepository
-    ) -> None:
+    async def test_save_with_user_id(self, repo: InvestigationRepository) -> None:
         user = await repo.get_or_create_user("workos_abc", "test@example.com")
         inv = _make_investigation()
         await repo.save(inv, user_id=str(user["id"]))
@@ -237,9 +227,7 @@ class TestListAll:
         result = await repo.list_all()
         assert result == []
 
-    async def test_ordered_by_created_at_desc(
-        self, repo: InvestigationRepository
-    ) -> None:
+    async def test_ordered_by_created_at_desc(self, repo: InvestigationRepository) -> None:
         import asyncio
 
         inv1 = _make_investigation(prompt="First")
@@ -255,9 +243,7 @@ class TestListAll:
 
 
 class TestListByUser:
-    async def test_filters_by_user(
-        self, repo: InvestigationRepository
-    ) -> None:
+    async def test_filters_by_user(self, repo: InvestigationRepository) -> None:
         user_a = await repo.get_or_create_user("workos_a", "a@test.com")
         user_b = await repo.get_or_create_user("workos_b", "b@test.com")
 
@@ -272,9 +258,7 @@ class TestListByUser:
 
 
 class TestUpdate:
-    async def test_modify_and_reread(
-        self, repo: InvestigationRepository
-    ) -> None:
+    async def test_modify_and_reread(self, repo: InvestigationRepository) -> None:
         inv = _make_investigation()
         await repo.save(inv)
 
@@ -292,9 +276,7 @@ class TestUpdate:
         assert loaded.iteration == 2
         assert len(loaded.hypotheses) == 1
 
-    async def test_update_triggers_fts_on_completed(
-        self, repo: InvestigationRepository
-    ) -> None:
+    async def test_update_triggers_fts_on_completed(self, repo: InvestigationRepository) -> None:
         inv = _make_investigation(prompt="antimicrobial resistance")
         hyp = _make_hypothesis(statement="Beta-lactam compounds inhibit PBP2a")
         inv.add_hypothesis(hyp)
@@ -321,9 +303,7 @@ class TestUpdate:
 
 
 class TestEvents:
-    async def test_save_and_get_events(
-        self, repo: InvestigationRepository
-    ) -> None:
+    async def test_save_and_get_events(self, repo: InvestigationRepository) -> None:
         inv = _make_investigation()
         await repo.save(inv)
 
@@ -337,9 +317,7 @@ class TestEvents:
         assert events[0]["event_type"] == "hypothesis_formulated"
         assert events[1]["event_type"] == "tool_called"
 
-    async def test_events_ordered_by_id(
-        self, repo: InvestigationRepository
-    ) -> None:
+    async def test_events_ordered_by_id(self, repo: InvestigationRepository) -> None:
         inv = _make_investigation()
         await repo.save(inv)
 
@@ -351,19 +329,61 @@ class TestEvents:
         for i, ev in enumerate(events):
             assert ev["event_type"] == f"event_{i}"
 
-    async def test_events_empty_for_nonexistent(
-        self, repo: InvestigationRepository
-    ) -> None:
+    async def test_events_empty_for_nonexistent(self, repo: InvestigationRepository) -> None:
         inv = _make_investigation()
         await repo.save(inv)
         events = await repo.get_events(inv.id)
         assert events == []
 
+    async def test_save_event_returns_id(self, repo: InvestigationRepository) -> None:
+        inv = _make_investigation()
+        await repo.save(inv)
 
-class TestSearchFindings:
-    async def test_search_returns_matching_findings(
+        id1 = await repo.save_event(inv.id, "event_a", json.dumps({"a": 1}))
+        id2 = await repo.save_event(inv.id, "event_b", json.dumps({"b": 2}))
+        assert isinstance(id1, int)
+        assert isinstance(id2, int)
+        assert id2 > id1
+
+    async def test_get_events_includes_id(self, repo: InvestigationRepository) -> None:
+        inv = _make_investigation()
+        await repo.save(inv)
+
+        saved_id = await repo.save_event(inv.id, "test_event", json.dumps({"x": 1}))
+        events = await repo.get_events(inv.id)
+        assert len(events) == 1
+        assert events[0]["id"] == saved_id
+
+    async def test_get_events_after(self, repo: InvestigationRepository) -> None:
+        inv = _make_investigation()
+        await repo.save(inv)
+
+        ids = []
+        for i in range(5):
+            eid = await repo.save_event(inv.id, f"event_{i}", json.dumps({"i": i}))
+            ids.append(eid)
+
+        # Get events after the 3rd one (index 2)
+        events = await repo.get_events_after(inv.id, ids[2])
+        assert len(events) == 2
+        assert events[0]["event_type"] == "event_3"
+        assert events[1]["event_type"] == "event_4"
+        assert events[0]["id"] == ids[3]
+        assert events[1]["id"] == ids[4]
+
+    async def test_get_events_after_returns_empty_when_caught_up(
         self, repo: InvestigationRepository
     ) -> None:
+        inv = _make_investigation()
+        await repo.save(inv)
+
+        last_id = await repo.save_event(inv.id, "only_event", json.dumps({"x": 1}))
+        events = await repo.get_events_after(inv.id, last_id)
+        assert events == []
+
+
+class TestSearchFindings:
+    async def test_search_returns_matching_findings(self, repo: InvestigationRepository) -> None:
         inv = _make_investigation(prompt="Find MRSA compounds")
         hyp = _make_hypothesis(statement="Vancomycin analogs effective against MRSA")
         inv.add_hypothesis(hyp)
@@ -392,15 +412,11 @@ class TestSearchFindings:
         assert hit["source_type"] == "chembl"
         assert hit["hypothesis_statement"] == "Vancomycin analogs effective against MRSA"
 
-    async def test_search_no_results(
-        self, repo: InvestigationRepository
-    ) -> None:
+    async def test_search_no_results(self, repo: InvestigationRepository) -> None:
         results = await repo.search_findings("xyzzyx_nonexistent_term")
         assert results == []
 
-    async def test_search_respects_limit(
-        self, repo: InvestigationRepository
-    ) -> None:
+    async def test_search_respects_limit(self, repo: InvestigationRepository) -> None:
         # Create 3 investigations with matching findings
         for i in range(3):
             inv = _make_investigation(prompt=f"Penicillin research {i}")
@@ -423,49 +439,37 @@ class TestSearchFindings:
 
 
 class TestGetOrCreateUser:
-    async def test_creates_new_user(
-        self, repo: InvestigationRepository
-    ) -> None:
+    async def test_creates_new_user(self, repo: InvestigationRepository) -> None:
         user = await repo.get_or_create_user("workos_new", "new@test.com")
         assert user["workos_id"] == "workos_new"
         assert user["email"] == "new@test.com"
         assert user["credits"] == 5  # default
 
-    async def test_returns_existing_user(
-        self, repo: InvestigationRepository
-    ) -> None:
+    async def test_returns_existing_user(self, repo: InvestigationRepository) -> None:
         user1 = await repo.get_or_create_user("workos_exist", "exist@test.com")
         user2 = await repo.get_or_create_user("workos_exist", "exist@test.com")
         assert user1["id"] == user2["id"]
         assert user1["credits"] == user2["credits"]
 
-    async def test_idempotent(
-        self, repo: InvestigationRepository
-    ) -> None:
+    async def test_idempotent(self, repo: InvestigationRepository) -> None:
         for _ in range(3):
             user = await repo.get_or_create_user("workos_idem", "idem@test.com")
         assert user["workos_id"] == "workos_idem"
 
 
 class TestGetUserCredits:
-    async def test_default_credits(
-        self, repo: InvestigationRepository
-    ) -> None:
+    async def test_default_credits(self, repo: InvestigationRepository) -> None:
         await repo.get_or_create_user("workos_cred", "cred@test.com")
         credits = await repo.get_user_credits("workos_cred")
         assert credits == 5
 
-    async def test_nonexistent_user_returns_zero(
-        self, repo: InvestigationRepository
-    ) -> None:
+    async def test_nonexistent_user_returns_zero(self, repo: InvestigationRepository) -> None:
         credits = await repo.get_user_credits("workos_nonexist")
         assert credits == 0
 
 
 class TestDeductCredits:
-    async def test_successful_deduction(
-        self, repo: InvestigationRepository
-    ) -> None:
+    async def test_successful_deduction(self, repo: InvestigationRepository) -> None:
         await repo.get_or_create_user("workos_ded", "ded@test.com")
         inv = _make_investigation()
         await repo.save(inv)
@@ -476,9 +480,7 @@ class TestDeductCredits:
         credits = await repo.get_user_credits("workos_ded")
         assert credits == 2
 
-    async def test_insufficient_balance(
-        self, repo: InvestigationRepository
-    ) -> None:
+    async def test_insufficient_balance(self, repo: InvestigationRepository) -> None:
         await repo.get_or_create_user("workos_insuf", "insuf@test.com")
         inv = _make_investigation()
         await repo.save(inv)
@@ -490,9 +492,7 @@ class TestDeductCredits:
         credits = await repo.get_user_credits("workos_insuf")
         assert credits == 5
 
-    async def test_exact_balance_deduction(
-        self, repo: InvestigationRepository
-    ) -> None:
+    async def test_exact_balance_deduction(self, repo: InvestigationRepository) -> None:
         await repo.get_or_create_user("workos_exact", "exact@test.com")
         inv = _make_investigation()
         await repo.save(inv)
@@ -503,9 +503,7 @@ class TestDeductCredits:
         credits = await repo.get_user_credits("workos_exact")
         assert credits == 0
 
-    async def test_records_transaction(
-        self, repo: InvestigationRepository
-    ) -> None:
+    async def test_records_transaction(self, repo: InvestigationRepository) -> None:
         user = await repo.get_or_create_user("workos_txn", "txn@test.com")
         inv = _make_investigation()
         await repo.save(inv)
@@ -525,9 +523,7 @@ class TestDeductCredits:
 
 
 class TestRefundCredits:
-    async def test_successful_refund(
-        self, repo: InvestigationRepository
-    ) -> None:
+    async def test_successful_refund(self, repo: InvestigationRepository) -> None:
         await repo.get_or_create_user("workos_ref", "ref@test.com")
         inv = _make_investigation()
         await repo.save(inv)
@@ -538,9 +534,7 @@ class TestRefundCredits:
         await repo.refund_credits("workos_ref", 3, inv.id)
         assert await repo.get_user_credits("workos_ref") == 5
 
-    async def test_records_refund_transaction(
-        self, repo: InvestigationRepository
-    ) -> None:
+    async def test_records_refund_transaction(self, repo: InvestigationRepository) -> None:
         user = await repo.get_or_create_user("workos_reftx", "reftx@test.com")
         inv = _make_investigation()
         await repo.save(inv)
@@ -560,9 +554,7 @@ class TestRefundCredits:
             assert rows[1]["type"] == "refund"
             assert rows[1]["amount"] == 2
 
-    async def test_refund_nonexistent_user(
-        self, repo: InvestigationRepository
-    ) -> None:
+    async def test_refund_nonexistent_user(self, repo: InvestigationRepository) -> None:
         # Should not raise -- just a no-op
         await repo.refund_credits("workos_nonexist", 5, "inv-id")
 

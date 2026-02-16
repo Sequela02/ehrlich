@@ -180,9 +180,7 @@ class TestToolFunctions:
     async def test_run_categorical_test_json(self) -> None:
         from ehrlich.analysis.tools import run_categorical_test
 
-        result = json.loads(
-            await run_categorical_test([[10, 5], [3, 12]])
-        )
+        result = json.loads(await run_categorical_test([[10, 5], [3, 12]]))
         assert "test_name" in result
         assert "p_value" in result
         assert "effect_size" in result

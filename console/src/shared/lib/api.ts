@@ -29,7 +29,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
     }
   }
 
-  const byokKey = localStorage.getItem("ehrlich_api_key");
+  const byokKey = sessionStorage.getItem("ehrlich_api_key");
   if (byokKey) {
     headers["X-Anthropic-Key"] = byokKey;
   }
@@ -50,6 +50,33 @@ export async function apiFetch<T>(
       ...options?.headers,
     },
     ...options,
+  });
+
+  if (!response.ok) {
+    const error: ApiError = {
+      status: response.status,
+      message: await response.text(),
+    };
+    throw error;
+  }
+
+  return response.json() as Promise<T>;
+}
+
+/**
+ * Upload a file via multipart/form-data with proper auth headers.
+ * Does NOT set Content-Type -- browser sets it with boundary for FormData.
+ */
+export async function apiUpload<T>(
+  path: string,
+  body: FormData,
+): Promise<T> {
+  const authHeaders = await getAuthHeaders();
+
+  const response = await fetch(`${BASE_URL}${path}`, {
+    method: "POST",
+    headers: authHeaders,
+    body,
   });
 
   if (!response.ok) {

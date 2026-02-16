@@ -40,10 +40,12 @@ def _verify_token(token: str) -> dict[str, Any]:
             token,
             signing_key.key,
             algorithms=["RS256"],
+            leeway=60,
         )
         return {"workos_id": payload["sub"], "email": payload.get("email", "")}
     except jwt.exceptions.PyJWTError as e:
-        raise HTTPException(status_code=401, detail=f"Invalid token: {e}") from e
+        logger.warning("JWT validation failed: %s", type(e).__name__)
+        raise HTTPException(status_code=401, detail="Invalid or expired token") from e
 
 
 async def get_current_user(request: Request) -> dict[str, Any]:

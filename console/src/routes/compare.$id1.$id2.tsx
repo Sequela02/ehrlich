@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { PageHeader } from "@/shared/components/layout/PageHeader";
 import { useInvestigationDetail } from "@/features/investigation/hooks/use-investigation-detail";
 import { InvestigationComparison } from "@/features/investigation/components/InvestigationComparison";
 
@@ -17,22 +17,11 @@ function ComparePage() {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-border bg-background px-4 py-3 lg:px-6">
-        <div className="flex items-center gap-3">
-          <a
-            href="/"
-            className="rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </a>
-          <div>
-            <h1 className="text-xl font-semibold">Comparative Analysis</h1>
-            <p className="font-mono text-[11px] text-muted-foreground">
-              {id1.slice(0, 8)} vs {id2.slice(0, 8)}
-            </p>
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        title="Comparative Analysis"
+        subtitle={`${id1.slice(0, 8)} vs ${id2.slice(0, 8)}`}
+        backTo="/"
+      />
       <main className="mx-auto max-w-[1200px] p-4 lg:p-6">
         {loading && (
           <p className="text-sm text-muted-foreground">Loading investigations...</p>

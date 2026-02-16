@@ -1,4 +1,4 @@
-import { StrictMode, useEffect } from "react";
+import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
@@ -7,6 +7,7 @@ import { useAuth } from "@/shared/hooks/use-auth";
 import { setTokenProvider } from "@/shared/lib/api";
 import { routeTree } from "./routeTree.gen";
 import "./styles/globals.css";
+import "./styles/print.css";
 
 const WORKOS_CLIENT_ID = import.meta.env.VITE_WORKOS_CLIENT_ID;
 const WORKOS_REDIRECT_URI = import.meta.env.VITE_WORKOS_REDIRECT_URI;
@@ -30,11 +31,21 @@ declare module "@tanstack/react-router" {
 
 /** Syncs WorkOS getAccessToken into the module-level API fetch wrapper. */
 function AuthSync({ children }: { children: React.ReactNode }) {
-  const { getAccessToken } = useAuth();
+  const { getAccessToken, isLoading } = useAuth();
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     setTokenProvider(getAccessToken);
+    setIsReady(true);
   }, [getAccessToken]);
+
+  if (isLoading || !isReady) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-background text-muted-foreground">
+        Loading...
+      </div>
+    );
+  }
 
   return <>{children}</>;
 }

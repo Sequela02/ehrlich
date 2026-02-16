@@ -1,9 +1,26 @@
-import { useState, type ReactNode } from "react";
-import { BookOpen, Coins, Key, LogIn, LogOut } from "lucide-react";
-import { useAuth } from "@/shared/hooks/use-auth";
-import { useCredits } from "@/features/investigation/hooks/use-credits";
+import { useState, createContext, useContext, useEffect, type ReactNode } from "react";
+import { Menu } from "lucide-react";
+import { useLocation } from "@tanstack/react-router";
 import { Toaster } from "@/shared/components/ui/Toaster";
 import { MethodologyDrawer } from "./MethodologyDrawer";
+import { AppSidebar } from "./AppSidebar";
+
+interface LayoutContextType {
+  sidebarOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
+  sidebarCollapsed: boolean;
+  setSidebarCollapsed: (collapsed: boolean) => void;
+}
+
+const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
+
+export function useLayout() {
+  const context = useContext(LayoutContext);
+  if (!context) {
+    throw new Error("useLayout must be used within AppLayout");
+  }
+  return context;
+}
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -11,86 +28,72 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children, hideHeader }: AppLayoutProps) {
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const { user, isLoading, signIn, signOut } = useAuth();
-  const { data: creditData } = useCredits();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    // Persist collapsed state
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("sidebarCollapsed") === "true";
+    }
+    return false;
+  });
+  const [methodologyOpen, setMethodologyOpen] = useState(false);
+  const location = useLocation();
+
+  // Close sidebar on route change (mobile)
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
+
+  // Update persistence
+  useEffect(() => {
+    localStorage.setItem("sidebarCollapsed", String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
 
   return (
-    <div className="min-h-screen bg-background">
-      {!hideHeader && (
-        <header className="border-b border-border">
-          <div className="mx-auto flex h-12 max-w-[1200px] items-center justify-between px-6">
-            <div className="flex items-center gap-3">
-              <a href="/" className="flex items-center gap-2 text-lg font-semibold tracking-tight">
-                <span className="inline-block h-4 w-1 rounded-sm bg-primary" />
-                EHRLICH
-              </a>
-              <span className="rounded border border-primary/30 px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wider text-primary">
-                alpha
-              </span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="hidden font-mono text-[11px] tracking-wide text-muted-foreground sm:block">
-                Scientific Discovery Engine
-              </span>
-              <button
-                onClick={() => setDrawerOpen(true)}
-                className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                title="Methodology"
-                aria-label="Open methodology"
-              >
-                <BookOpen className="h-4 w-4" />
-              </button>
+    <LayoutContext.Provider
+      value={{
+        sidebarOpen,
+        setSidebarOpen,
+        sidebarCollapsed,
+        setSidebarCollapsed,
+      }}
+    >
+      <div className="flex h-screen w-full overflow-hidden bg-background">
+        <AppSidebar
+          open={sidebarOpen}
+          setOpen={setSidebarOpen}
+          collapsed={sidebarCollapsed}
+          setCollapsed={setSidebarCollapsed}
+          onMethodologyClick={() => setMethodologyOpen(true)}
+        />
 
-              {!isLoading && (
-                <>
-                  {user ? (
-                    <div className="flex items-center gap-2">
-                      {creditData && (
-                        <span className="inline-flex items-center gap-1 rounded border border-border px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-                          {creditData.is_byok ? (
-                            <>
-                              <Key className="h-3 w-3 text-primary" />
-                              BYOK
-                            </>
-                          ) : (
-                            <>
-                              <Coins className="h-3 w-3 text-primary" />
-                              {creditData.credits} cr
-                            </>
-                          )}
-                        </span>
-                      )}
-                      <span className="hidden font-mono text-[11px] text-muted-foreground sm:block">
-                        {user.email}
-                      </span>
-                      <button
-                        onClick={() => signOut()}
-                        className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                        title="Sign out"
-                        aria-label="Sign out"
-                      >
-                        <LogOut className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => signIn()}
-                      className="inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 font-mono text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                    >
-                      <LogIn className="h-3.5 w-3.5" />
-                      Sign in
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
+        <main className="flex flex-1 flex-col overflow-hidden bg-background transition-all duration-200 ease-in-out">
+          {/* Mobile Header for generic pages */}
+          {!hideHeader && (
+            <header className="flex h-14 shrink-0 items-center border-b border-border px-4 lg:hidden">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="mr-3 rounded-md p-1 text-muted-foreground hover:bg-muted"
+                aria-label="Open sidebar"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <span className="font-semibold tracking-tight">EHRLICH</span>
+            </header>
+          )}
+
+          {/* Page Content */}
+          <div className="flex-1 overflow-y-auto">
+            {children}
           </div>
-        </header>
-      )}
-      <main>{children}</main>
-      <Toaster />
-      <MethodologyDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-    </div>
+        </main>
+
+        <Toaster />
+        <MethodologyDrawer
+          open={methodologyOpen}
+          onClose={() => setMethodologyOpen(false)}
+        />
+      </div>
+    </LayoutContext.Provider>
   );
 }
