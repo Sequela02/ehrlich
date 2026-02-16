@@ -3,7 +3,7 @@ WORKDIR /app
 COPY pyproject.toml .
 RUN uv sync --no-dev --no-install-project
 COPY src/ src/
-RUN touch /README.md && uv sync --no-dev
+RUN touch /README.md && uv sync --no-dev --no-editable
 
 FROM python:3.12-slim-bookworm
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
