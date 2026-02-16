@@ -245,7 +245,7 @@ Separate TanStack Start project for the public-facing landing page. SSR/SSG for 
 
 16 component files: Nav (scroll progress, eager), Hero (MolecularNetwork 3D canvas, eager), HowItWorks (6-phase timeline, lazy), ConsolePreview (browser-frame mockups, lazy), Architecture (model cards + dot grid bg + amber glow, lazy), Domains (4 domain cards, lazy), Visualizations (4 category cards, lazy), DataSources (19 source cards + teal glow, lazy), WhoItsFor (3 persona cards, lazy), Differentiators (3 cards, lazy), OpenSource (code snippet + licensing, lazy), Roadmap (planned domains/features, lazy), CTA (pricing tiers + terminal quickstart + primary glow, lazy), SectionHeader, Footer (lazy), MolecularNetwork. All use OKLCH tokens, Motion scroll animations, and staggered children reveals. Section zoning via alternating `bg-surface/30` backgrounds and strategic radial accent glows (amber on Architecture, teal on DataSources, primary on CTA).
 
-Both deploy independently: console to app server, web to CDN/static hosting.
+Both deploy independently: console and web to Vercel, server to Docker (Coolify/any host). Database provisioned separately (managed PostgreSQL).
 
 ## Dependency Rules
 

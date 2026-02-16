@@ -107,34 +107,34 @@ function ProfileSettings() {
                     </CardContent>
                 </Card>
 
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center gap-2">
-                            <CreditCard className="h-5 w-5 text-primary" />
-                            <CardTitle className="text-base">Credits & Usage</CardTitle>
-                        </div>
-                        <CardDescription>
-                            Your current credit balance and plan status.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-lg border p-4 bg-card/50">
-                            <div className="space-y-1">
-                                <span className="font-semibold text-foreground">
-                                    {creditData?.is_byok ? "BYOK Active" : "Standard Credits"}
-                                </span>
-                                <p className="text-xs text-muted-foreground max-w-[300px]">
-                                    {creditData?.is_byok
-                                        ? "You are using your own API key. No credits are consumed."
-                                        : "Credits allow you to run investigations without an API key."}
-                                </p>
+                {!creditData?.is_byok && (
+                    <Card>
+                        <CardHeader>
+                            <div className="flex items-center gap-2">
+                                <CreditCard className="h-5 w-5 text-primary" />
+                                <CardTitle className="text-base">Credits & Usage</CardTitle>
                             </div>
-                            <div className="mt-4 sm:mt-0 text-3xl font-bold tabular-nums">
-                                {creditData?.credits ?? 0}
+                            <CardDescription>
+                                Your current credit balance and plan status.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between rounded-lg border p-4 bg-card/50">
+                                <div className="space-y-1">
+                                    <span className="font-semibold text-foreground">
+                                        Standard Credits
+                                    </span>
+                                    <p className="text-xs text-muted-foreground max-w-[300px]">
+                                        Credits allow you to run investigations without an API key.
+                                    </p>
+                                </div>
+                                <div className="mt-4 sm:mt-0 text-3xl font-bold tabular-nums">
+                                    {creditData?.credits ?? 0}
+                                </div>
                             </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+                )}
             </div>
         </div>
     );

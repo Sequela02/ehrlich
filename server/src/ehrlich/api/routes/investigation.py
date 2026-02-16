@@ -361,6 +361,7 @@ async def start_investigation(
         "credit_cost": credit_cost if not is_byok else 0,
         "workos_id": user["workos_id"],
         "is_byok": is_byok,
+        "api_key_override": http_request.headers.get("X-Anthropic-Key") or None,
     }
 
     return InvestigateResponse(id=investigation.id, status=investigation.status.value)
@@ -465,9 +466,8 @@ async def stream_investigation(
     mcp_configs = build_mcp_configs()
     mcp_bridge = MCPBridge() if mcp_configs else None
 
-    api_key_override = request.headers.get("X-Anthropic-Key") or None
-
     meta = _investigation_meta.get(investigation.id, {})
+    api_key_override = meta.get("api_key_override")
     tier = meta.get("tier", "opus")
     director_model_override = TIER_MODELS.get(tier)
 

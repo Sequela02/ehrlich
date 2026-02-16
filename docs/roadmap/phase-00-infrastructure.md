@@ -9,7 +9,7 @@ Back to [Roadmap Index](README.md)
 - [x] Console scaffolding: React 19, TypeScript, Bun, Vite, TanStack Router
 - [x] Console features: investigation + molecule component stubs
 - [x] CI/CD: GitHub Actions (ruff, mypy, pytest, tsc, vite build)
-- [x] Docker: multi-stage builds (server + console)
+- [x] Docker: multi-stage build (server only; console/web deploy on Vercel)
 - [x] Pre-commit: ruff lint + format
 - [x] All quality gates passing (ruff 0, mypy 0, pytest 5/5, tsc 0)
 

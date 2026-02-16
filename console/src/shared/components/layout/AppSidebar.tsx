@@ -268,7 +268,7 @@ export function AppSidebar({
                                                         {user.email}
                                                     </span>
                                                     <span className="flex items-center gap-1.5 truncate text-[10px] text-muted-foreground/70">
-                                                        {creditData?.credits ?? 0} credits
+                                                        {creditData?.is_byok ? "BYOK" : `${creditData?.credits ?? 0} credits`}
                                                     </span>
                                                 </div>
                                                 <Settings className="h-3.5 w-3.5 text-muted-foreground/50" />

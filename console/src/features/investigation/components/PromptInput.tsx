@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowUp, Paperclip, Brain } from "lucide-react";
+import { ArrowUp, Paperclip, Brain, Key, Unplug, Settings } from "lucide-react";
 import { useInvestigation } from "../hooks/use-investigation";
 import { useCredits } from "../hooks/use-credits";
 import { FileUpload, type FileUploadRef, type UploadedFile } from "./FileUpload";
@@ -12,6 +12,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/shared/components/ui/popover";
+import { useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { cn } from "@/shared/lib/utils";
 
 const TIERS: {
@@ -69,8 +71,10 @@ export function PromptInput({ value, onChange }: PromptInputProps) {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const fileUploadRef = useRef<FileUploadRef>(null);
 
+  const queryClient = useQueryClient();
   const selectedTier = TIERS.find((t) => t.value === tier) || TIERS[2];
   const isByok = creditData?.is_byok ?? false;
+  const storedKey = sessionStorage.getItem("ehrlich_api_key");
   const hasEnoughCredits =
     isByok || !creditData || creditData.credits >= selectedTier.credits;
 
@@ -200,9 +204,11 @@ export function PromptInput({ value, onChange }: PromptInputProps) {
                   >
                     <div className="flex w-full items-center justify-between">
                       <span className="font-medium">{t.label}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {t.credits} cr
-                      </span>
+                      {!isByok && (
+                        <span className="text-xs text-muted-foreground">
+                          {t.credits} cr
+                        </span>
+                      )}
                     </div>
                     <span className="text-[10px] text-muted-foreground/80">
                       {t.description}
@@ -220,10 +226,53 @@ export function PromptInput({ value, onChange }: PromptInputProps) {
               </div>
             </PopoverContent>
           </Popover>
+
+          {isByok && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="flex items-center gap-1 rounded-md border border-accent/30 bg-accent/10 px-2 py-1 transition-colors hover:bg-accent/20">
+                  <Key className="h-3 w-3 text-accent" />
+                  <span className="font-mono text-[10px] font-medium text-accent">BYOK</span>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-3" align="start">
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <h4 className="text-xs font-medium">Your API Key</h4>
+                    <p className="font-mono text-[10px] text-muted-foreground">
+                      sk-...{storedKey?.slice(-4)}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground/70">
+                      Costs billed directly to your Anthropic account.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        sessionStorage.removeItem("ehrlich_api_key");
+                        void queryClient.invalidateQueries({ queryKey: ["credits"] });
+                      }}
+                      className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-[11px] font-medium text-destructive transition-colors hover:bg-destructive/10"
+                    >
+                      <Unplug className="h-3 w-3" />
+                      Disconnect
+                    </button>
+                    <Link
+                      to="/settings"
+                      className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted"
+                    >
+                      <Settings className="h-3 w-3" />
+                      Manage
+                    </Link>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
-          {!hasEnoughCredits && (
+          {!isByok && !hasEnoughCredits && (
             <span className="text-[10px] text-destructive">
               Insufficient credits
             </span>

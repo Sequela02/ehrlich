@@ -310,13 +310,20 @@ uv run python data/scripts/prepare_data.py --all
 
 Cached datasets are stored in `data/datasets/` as parquet files.
 
-### Docker
+### Docker (Server Only)
+
+The server deploys via Docker. Frontends (console, web) deploy on Vercel. The database is provisioned separately (managed PostgreSQL recommended).
 
 ```bash
+# Set required env vars
+export EHRLICH_DATABASE_URL=postgresql://user:pass@your-db-host:5432/ehrlich
+export EHRLICH_ANTHROPIC_API_KEY=sk-ant-...
+export EHRLICH_CORS_ORIGINS=https://your-console-domain.vercel.app
+
 docker compose up
 ```
 
-Server at :8000, Console at :3000.
+Server at :8000.
 
 ## API Endpoints
 

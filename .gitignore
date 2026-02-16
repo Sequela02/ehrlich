@@ -63,3 +63,6 @@ Thumbs.db
 
 # Docker
 docker-compose.override.yml
+
+# Demo video (local only)
+demo-video/
