@@ -37,10 +37,10 @@ export const FOOTER_LINKS = {
 } as const;
 
 export const EXAMPLE_PROMPTS = [
-  "Find antimicrobial compounds effective against MRSA with low resistance risk",
+  "Find drug candidates against antibiotic-resistant bacteria",
   "Compare HIIT vs steady-state training for VO2max in adults over 40",
-  "Evaluate creatine monohydrate for strength performance and safety",
-  "Identify microplastic degradation products with high aquatic toxicity",
+  "Is creatine safe and effective for strength performance?",
+  "Does Mexico's conditional cash transfer program reduce school dropout rates?",
 ] as const;
 
 export const DIFFERENTIATORS = [
@@ -48,13 +48,13 @@ export const DIFFERENTIATORS = [
     label: "Real Computation",
     tagline: "91 tools that compute, not summarize.",
     description:
-      "Ehrlich trains ML models, runs molecular docking, executes statistical tests, and validates with negative controls. Every tool returns structured data from real computation or real APIs.",
+      "Ehrlich trains ML models, runs causal inference, executes statistical tests, and validates with controls. Every tool returns structured data from real computation or real APIs -- not summaries.",
     capabilities: [
-      "RDKit molecular descriptors + fingerprints",
-      "XGBoost + Chemprop with scaffold-split validation",
-      "AutoDock Vina molecular docking",
-      "scipy.stats hypothesis testing (t-test, Mann-Whitney, Fisher)",
-      "Z'-factor assay quality + permutation significance",
+      "Molecular docking + drug-likeness profiling",
+      "ML classifiers on any structured data (train, predict, cluster)",
+      "Causal inference: Difference-in-Differences, Propensity Score Matching, RDD",
+      "Statistical testing (t-test, Mann-Whitney, Fisher, chi-squared)",
+      "Nutrient interaction screening + adverse event monitoring",
     ],
   },
   {
@@ -78,7 +78,7 @@ export const DIFFERENTIATORS = [
     capabilities: [
       "Falsifiable hypotheses with predictions + criteria",
       "Controlled experiments with confounders + analysis plans",
-      "8-tier evidence hierarchy with source provenance",
+      "8-tier evidence hierarchy traced to original sources",
       "GRADE certainty grading on final synthesis",
       "User approval gate before experiment execution",
     ],
@@ -92,15 +92,15 @@ export const DOMAINS = [
     description:
       "Drug discovery, antimicrobial resistance, environmental toxicology, agricultural biocontrol.",
     capabilities: [
-      "RDKit cheminformatics (descriptors, fingerprints, 3D conformers)",
-      "ChEMBL bioactivity screening (MIC, Ki, IC50, EC50)",
-      "AutoDock Vina molecular docking",
-      "ADMET profiling + Lipinski drug-likeness",
-      "EPA CompTox environmental toxicity",
-      "PDB protein targets + UniProt annotations",
+      "Molecular property analysis (structure, 3D shape, fingerprints)",
+      "Drug effectiveness screening across thousands of assays",
+      "3D binding simulation (how molecules fit into proteins)",
+      "Drug safety and absorption prediction (ADMET profiling)",
+      "Environmental toxicity data (EPA CompTox)",
+      "Protein target discovery (200K+ structures)",
     ],
     sources: "ChEMBL, PubChem, RCSB PDB, UniProt, Open Targets, EPA CompTox, GtoPdb",
-    prompt: "Find compounds effective against carbapenem-resistant Klebsiella with favorable ADMET profiles",
+    prompt: "Find drug candidates effective against antibiotic-resistant Klebsiella",
     vizTools: ["Binding scatter", "ADMET radar", "Forest plot", "Evidence matrix"],
   },
   {
@@ -109,12 +109,12 @@ export const DOMAINS = [
     description:
       "Exercise physiology, protocol optimization, injury risk assessment, clinical trial evidence.",
     capabilities: [
-      "Pooled effect sizes + heterogeneity analysis",
-      "Protocol comparison with composite scoring",
+      "Combine multiple studies to measure overall training impact",
+      "Side-by-side protocol comparison with evidence ranking",
       "Injury risk scoring (sport, load, history, age)",
-      "ACWR, monotony, strain, session RPE metrics",
-      "ClinicalTrials.gov + PubMed with MeSH terms",
-      "Banister fitness-fatigue performance modeling",
+      "Training load monitoring (cumulative stress, recovery, fatigue)",
+      "Clinical trial + PubMed literature search",
+      "Performance modeling (predict fatigue dips and peak readiness)",
     ],
     sources: "ClinicalTrials.gov, PubMed, wger, Semantic Scholar",
     prompt: "Compare periodized vs non-periodized resistance training in trained athletes",
@@ -126,12 +126,12 @@ export const DOMAINS = [
     description:
       "Supplement evidence, nutrient adequacy, drug interactions, inflammatory scoring, safety monitoring.",
     capabilities: [
-      "NIH DSLD supplement label ingredient lookup",
-      "USDA FoodData nutrient profiling",
-      "DRI-based adequacy (EAR/RDA/AI/UL)",
-      "Drug-supplement interaction screening (RxNav)",
-      "OpenFDA CAERS adverse event monitoring",
-      "Dietary Inflammatory Index (DII) scoring",
+      "Supplement label ingredient lookup (120K+ products)",
+      "Nutrient profiling across 1.1M+ foods",
+      "Intake adequacy vs recommended targets (minimum, safe upper limit)",
+      "Drug-supplement interaction screening",
+      "Adverse event reports from FDA database",
+      "Inflammatory index scoring for dietary patterns",
     ],
     sources: "NIH DSLD, USDA FoodData, OpenFDA CAERS, RxNav",
     prompt: "Assess safety and efficacy of vitamin D3 + K2 supplementation at high doses",
@@ -143,11 +143,11 @@ export const DOMAINS = [
     description:
       "Causal analysis of social programs: education, health, employment, housing, sports. Four causal methods (DiD, PSM, RDD, Synthetic Control), 13 data sources across US and Mexico.",
     capabilities: [
-      "4 causal methods: DiD, PSM, RDD, Synthetic Control",
-      "Automated validity threat assessment (WWC/CONEVAL/CREMAA)",
-      "US data: Census, BLS, USAspending, College Scorecard, HUD, CDC WONDER",
-      "Mexico data: INEGI, Banxico, datos.gob.mx + CREMAA/MIR validation",
-      "World Bank, WHO GHO, FRED economic indicators",
+      "4 causal methods to measure real program impact (not just correlation)",
+      "Automated checks for hidden biases in study design",
+      "US federal data: spending, education, housing, health, labor",
+      "Mexico data: INEGI, Banxico, datos.gob.mx + indicator quality validation",
+      "World Bank + WHO global indicators (190+ countries)",
       "Cross-program comparison + cost-effectiveness analysis",
     ],
     sources: "World Bank, WHO GHO, FRED, Census, BLS, USAspending, College Scorecard, HUD, CDC WONDER, data.gov, INEGI, Banxico, datos.gob.mx",

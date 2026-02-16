@@ -114,12 +114,12 @@ export function Architecture() {
             <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Multi-Model Architecture</span>
           </div>
           <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">
-            Cost-optimized <span className="text-primary">reasoning.</span>
+            A research team, <span className="text-primary">assembled per question.</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Each model is chosen for what it does best. Opus reasons deeply about hypotheses.
-            Sonnet executes tools fast. Haiku compresses results cheaply.
-            The result: ~$3-4 per investigation instead of ~$11 all-Opus.
+            Every investigation assembles a team of three specialized models.
+            A Director that thinks deeply. Researchers that execute in parallel.
+            A Summarizer that compresses noise. Cost: ~$3-4 instead of ~$11 all-Opus.
           </p>
         </div>
 
@@ -153,8 +153,8 @@ export function Architecture() {
                 delay={0.4}
                 reason="WHY: Fast tool execution. Domain-filtered to only relevant tools."
               >
-                Executes experiment protocol. Queries ChEMBL, runs docking, trains
-                ML models, screens compounds. Max 10 tool calls per experiment.
+                Executes experiment protocol. Queries databases, trains models,
+                runs statistical tests, screens candidates. Max 10 tool calls per experiment.
               </ModelCard>
             </div>
             <div className="flex flex-col items-center">
@@ -166,7 +166,7 @@ export function Architecture() {
                 reason="WHY: Parallel execution halves wall-clock time per batch."
               >
                 Independent experiment on a different hypothesis. Cross-references
-                citations, validates controls, runs statistical tests.
+                literature, validates controls, computes metrics.
               </ModelCard>
             </div>
           </div>
