@@ -13,7 +13,7 @@ export interface ExperimentNode {
   id: string;
   hypothesisId: string;
   description: string;
-  status: "planned" | "running" | "completed" | "failed";
+  status: "planned" | "running" | "completed" | "failed" | "awaiting_approval" | "paused" | "cancelled";
 }
 
 export interface FindingNode {
@@ -55,6 +55,9 @@ const EXPERIMENT_COLORS: Record<ExperimentNode["status"], { stroke: string; fill
   running: { stroke: "#3b82f6", fill: "#1e3a5f", text: "#93c5fd" },
   completed: { stroke: "#22c55e", fill: "#14532d", text: "#86efac" },
   failed: { stroke: "#ef4444", fill: "#450a0a", text: "#fca5a5" },
+  awaiting_approval: { stroke: "#f59e0b", fill: "#451a03", text: "#fcd34d" },
+  paused: { stroke: "#6366f1", fill: "#1e1b4b", text: "#a5b4fc" },
+  cancelled: { stroke: "#374151", fill: "#111827", text: "#6b7280" },
 };
 
 const EVIDENCE_COLORS: Record<FindingNode["evidenceType"], { stroke: string; fill: string; text: string }> = {

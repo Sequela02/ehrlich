@@ -171,3 +171,17 @@ Addressed UI/UX audit findings to improve usability and reduce cognitive load. I
 
 Result: 4 files refactored, 1 deleted, 2 verified tests. Improved lighthouse accessibility and layout stability.
 
+## 14J: Investigation State Machine -- DONE
+
+Replaced ad-hoc status assignments with a guarded state machine. Added 3 new states, removed auto-approval timeout, added cancel endpoint.
+
+- [x] Added `AWAITING_APPROVAL`, `PAUSED`, `CANCELLED` to `InvestigationStatus` enum
+- [x] Added `InvalidTransitionError` + `_VALID_TRANSITIONS` map + `transition_to()` method on `Investigation` entity
+- [x] Removed 5-min auto-approval timeout (`asyncio.wait_for(..., timeout=300)`) -- investigation blocks indefinitely until user acts
+- [x] `phase_runner.py`: transitions to `AWAITING_APPROVAL` before blocking, checks for cancellation after unblocking
+- [x] `multi_orchestrator.py`: `is_awaiting_approval` property (derived from status, not boolean), `approve_hypotheses()` uses `transition_to(RUNNING)`, new `cancel()` method
+- [x] `POST /investigate/{id}/cancel` endpoint -- cancels active orchestrator or DB-only investigation, returns 409 for terminal states
+- [x] Stream handler supports `AWAITING_APPROVAL` and `CANCELLED` states, `_replay_final` handles `CANCELLED`
+- [x] Cleaned up unused `HypothesisApprovalRequested` import from orchestrator
+
+Result: 4 files modified (`investigation.py` domain, `multi_orchestrator.py`, `phase_runner.py`, `investigation.py` routes). 1015 tests passing. Zero ruff violations.

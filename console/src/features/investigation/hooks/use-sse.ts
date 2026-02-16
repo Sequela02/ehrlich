@@ -166,6 +166,24 @@ export function useSSE(url: string | null): SSEState {
     }
 
     const sseEvent: SSEEvent = { event: eventType, data: parsed.data };
+
+    // Coalesce consecutive thinking chunks into a single event
+    if (eventType === "thinking") {
+      setEvents((prev) => {
+        const last = prev[prev.length - 1];
+        if (last?.event === "thinking") {
+          const merged = [...prev];
+          merged[merged.length - 1] = {
+            event: "thinking",
+            data: { ...last.data, text: (last.data.text as string) + (parsed.data.text as string) },
+          };
+          return merged;
+        }
+        return [...prev, sseEvent];
+      });
+      return;
+    }
+
     setEvents((prev) => [...prev, sseEvent]);
 
     switch (eventType) {
@@ -224,11 +242,11 @@ export function useSSE(url: string | null): SSEState {
           prev.map((e) =>
             e.id === expId
               ? {
-                  ...e,
-                  status: "completed",
-                  tool_count: parsed.data.tool_count as number,
-                  finding_count: parsed.data.finding_count as number,
-                }
+                ...e,
+                status: "completed",
+                tool_count: parsed.data.tool_count as number,
+                finding_count: parsed.data.finding_count as number,
+              }
               : e,
           ),
         );
@@ -392,7 +410,7 @@ export function useSSE(url: string | null): SSEState {
             totalTokens: costData.total_tokens as number,
             totalCost: costData.total_cost_usd as number,
             toolCalls: costData.tool_calls as number,
-            byModel: costData.by_model as CostInfo["byModel"],
+            byRole: (costData.by_role ?? costData.by_model) as CostInfo["byRole"],
           });
         }
         setCompleted(true);
@@ -407,11 +425,20 @@ export function useSSE(url: string | null): SSEState {
         break;
       }
       case "error":
-        setError(parsed.data.error as string);
+        const errMsg = parsed.data.error as string;
+        setError(errMsg);
         doneRef.current = true;
-        toast.error("Investigation failed", {
-          description: parsed.data.error as string,
-        });
+
+        if (errMsg.toLowerCase().includes("cancelled")) {
+          toast.info("Investigation cancelled", {
+            description: "The investigation was stopped by user request.",
+          });
+        } else {
+          toast.error("Investigation failed", {
+            description: errMsg,
+          });
+        }
+
         if (sourceRef.current) {
           sourceRef.current.close();
           sourceRef.current = null;

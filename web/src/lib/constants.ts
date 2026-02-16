@@ -15,7 +15,7 @@ export const NAV_LINKS = [
   { label: "Architecture", href: "#architecture" },
   { label: "Domains", href: "#domains" },
   { label: "Who It's For", href: "#who-its-for" },
-  { label: "Pricing", href: "#pricing" },
+  { label: "Beta", href: "#pricing" },
   { label: "GitHub", href: "https://github.com/sequelcore/ehrlich" },
 ] as const;
 
@@ -23,7 +23,7 @@ export const FOOTER_LINKS = {
   product: [
     { label: "Console", href: "/console" },
     { label: "Methodology", href: "/console/methodology" },
-    { label: "Pricing", href: "#pricing" },
+    { label: "Beta", href: "#pricing" },
   ],
   developers: [
     { label: "GitHub", href: "https://github.com/sequelcore/ehrlich" },
@@ -305,7 +305,8 @@ export const PLANNED_FEATURES = [
   },
 ] as const;
 
-export const PRICING_TIERS = [
+/*
+export const PRICING_TIERS_ORIGINAL = [
   {
     name: "Free",
     price: "$0",
@@ -371,3 +372,40 @@ export const PRICING_TIERS = [
     highlight: false,
   },
 ] as const;
+*/
+
+export const PUBLIC_BETA_TIERS = [
+  {
+    name: "Credits",
+    price: "Pay-as-you-go",
+    period: "",
+    credits: "Haiku (1), Sonnet (3), Opus (5)",
+    description: "Hosted infrastructure with no setup. Credits cover Anthropic API costs.",
+    features: [
+      "Haiku investigation = 1 credit",
+      "Sonnet investigation = 3 credits",
+      "Opus investigation = 5 credits",
+      "Full 6-phase methodology",
+      "Hosted high-performance infrastructure",
+    ],
+    cta: "Buy Credits",
+    highlight: true,
+  },
+  {
+    name: "BYOK",
+    price: "Free",
+    period: "during beta",
+    credits: "Unlimited (Subject to Anthropic limits)",
+    description: "Bring Your Own Key. Use your Anthropic API key directly. Ideal for judges and heavy testing.",
+    features: [
+      "Your own Anthropic API key",
+      "No Ehrlich credit limits",
+      "We cover the compute/hosting cost",
+      "Full 91 tool access",
+      "Perfect for hackathon evaluation",
+    ],
+    cta: "Use Own Key",
+    highlight: false,
+  },
+] as const;
+

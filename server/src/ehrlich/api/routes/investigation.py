@@ -325,14 +325,41 @@ async def approve_hypotheses(
     repo = _get_repository()
     await _verify_ownership(investigation_id, user, repo)
 
-    # Verify orchestrator is awaiting approval
-    if not orchestrator.is_awaiting_approval():
+    if not orchestrator.is_awaiting_approval:
         raise HTTPException(
             status_code=409, detail="Investigation is not awaiting hypothesis approval"
         )
 
     orchestrator.approve_hypotheses(request.approved_ids, request.rejected_ids)
     return {"status": "approved"}
+
+
+@router.post("/investigate/{investigation_id}/cancel")
+async def cancel_investigation(
+    investigation_id: str,
+    user: dict[str, Any] = _require_user,
+) -> dict[str, str]:
+    repo = _get_repository()
+    await _verify_ownership(investigation_id, user, repo)
+
+    orchestrator = _active_orchestrators.get(investigation_id)
+    if orchestrator is not None:
+        orchestrator.cancel()
+        return {"status": "cancelled"}
+
+    # No active orchestrator — check DB for cancellable states
+    investigation = await repo.get_by_id(investigation_id)
+    if investigation is None:
+        raise HTTPException(status_code=404, detail="Investigation not found")
+    if investigation.status in (
+        InvestigationStatus.COMPLETED,
+        InvestigationStatus.FAILED,
+        InvestigationStatus.CANCELLED,
+    ):
+        raise HTTPException(status_code=409, detail="Investigation already in terminal state")
+    investigation.transition_to(InvestigationStatus.CANCELLED)
+    await repo.update(investigation)
+    return {"status": "cancelled"}
 
 
 @router.get("/investigate/{investigation_id}/stream")
@@ -354,18 +381,28 @@ async def stream_investigation(
 
     status = investigation.status
 
-    # Completed or failed -- replay final status
-    if status in (InvestigationStatus.COMPLETED, InvestigationStatus.FAILED):
+    # Completed, failed, or cancelled -- replay final status
+    if status in (
+        InvestigationStatus.COMPLETED,
+        InvestigationStatus.FAILED,
+        InvestigationStatus.CANCELLED,
+    ):
         return EventSourceResponse(_replay_final(investigation))
 
-    # Running -- subscribe to live events if broadcast is active
-    if status == InvestigationStatus.RUNNING:
+    # Running or awaiting approval -- subscribe to live events if broadcast is active
+    if status in (InvestigationStatus.RUNNING, InvestigationStatus.AWAITING_APPROVAL):
         if investigation.id in _subscribers:
             return EventSourceResponse(_subscribe(investigation))
-        raise HTTPException(
-            status_code=409,
-            detail="Investigation is running but stream is not available for reconnection",
+
+        # Zombie investigation (server restarted) -- mark as failed so UI shows error
+        logger.warning(
+            "Found zombie investigation %s (%s but no subscribers)", investigation.id, status.value
         )
+        # Bypass transition_to(): zombie recovery requires forcing terminal state
+        investigation.status = InvestigationStatus.FAILED
+        investigation.error = "Investigation interrupted by server restart"
+        await repo.update(investigation)
+        return EventSourceResponse(_replay_final(investigation))
 
     # Pending -- start the investigation and stream
     settings = get_settings()
@@ -407,12 +444,13 @@ async def stream_investigation(
                         "event": sse_event.event.value,
                         "data": sse_event.format(),
                     }
-                    # Skip completed/error (replayed from state) and cost_update (transient)
+                    # Skip transient events from DB persistence
                     if sse_event.event not in (
                         SSEEventType.COMPLETED,
                         SSEEventType.ERROR,
                         SSEEventType.COST_UPDATE,
                         SSEEventType.HYPOTHESIS_APPROVAL_REQUESTED,
+                        SSEEventType.THINKING,
                     ):
                         await repo.save_event(
                             investigation.id,
@@ -491,12 +529,13 @@ async def _replay_final(
             }
         )
         yield {"event": SSEEventType.COMPLETED.value, "data": data}
-    elif investigation.status == InvestigationStatus.FAILED:
+    elif investigation.status in (InvestigationStatus.FAILED, InvestigationStatus.CANCELLED):
+        error_msg = investigation.error or f"Investigation {investigation.status.value}"
         data = json.dumps(
             {
                 "event": SSEEventType.ERROR.value,
                 "data": {
-                    "error": investigation.error,
+                    "error": error_msg,
                     "investigation_id": investigation.id,
                 },
             }

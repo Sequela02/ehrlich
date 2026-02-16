@@ -285,11 +285,12 @@ export function InvestigationReport({
               <Stat label="Tool Calls" value={cost.toolCalls.toLocaleString()} />
               <Stat label="Total Cost" value={`$${cost.totalCost.toFixed(4)}`} />
             </div>
-            {cost.byModel && Object.keys(cost.byModel).length > 0 && (
+            {cost.byRole && Object.keys(cost.byRole).length > 0 && (
               <div className="mt-4 overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-border text-left font-mono text-[10px] uppercase tracking-wider text-muted-foreground/70">
+                      <th className="pb-2 pr-4">Role</th>
                       <th className="pb-2 pr-4">Model</th>
                       <th className="pb-2 pr-4">Input</th>
                       <th className="pb-2 pr-4">Output</th>
@@ -298,9 +299,10 @@ export function InvestigationReport({
                     </tr>
                   </thead>
                   <tbody>
-                    {Object.entries(cost.byModel).map(([model, mc]) => (
-                      <tr key={model} className="border-b border-border/50 last:border-0">
-                        <td className="py-2 pr-4 font-mono">{model}</td>
+                    {Object.entries(cost.byRole).map(([role, mc]) => (
+                      <tr key={role} className="border-b border-border/50 last:border-0">
+                        <td className="py-2 pr-4 font-mono capitalize">{role}</td>
+                        <td className="py-2 pr-4 font-mono text-muted-foreground/70">{mc.model_display}</td>
                         <td className="py-2 pr-4 font-mono tabular-nums">{mc.input_tokens.toLocaleString()}</td>
                         <td className="py-2 pr-4 font-mono tabular-nums">{mc.output_tokens.toLocaleString()}</td>
                         <td className="py-2 pr-4 font-mono tabular-nums">{mc.calls}</td>

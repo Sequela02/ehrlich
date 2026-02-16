@@ -61,7 +61,7 @@ Opus 4.6 (Director)     -- Formulates hypotheses, evaluates evidence, synthesize
 1. **Classification & PICO** -- Haiku decomposes prompt into PICO framework (Population, Intervention, Comparison, Outcome) and classifies domain in a single call
 2. **Literature Survey** -- Sonnet researcher conducts structured search with domain-filtered tools, citation chasing (snowballing), evidence-level grading; Haiku grades body-of-evidence (GRADE-adapted) and self-assesses quality (AMSTAR-2-adapted)
 3. **Hypothesis Formulation** -- Opus Director formulates 2-4 hypotheses with predictions, criteria, scope, Bayesian priors (grounded in Popper, Platt, Feynman, Bayesian frameworks -- see `docs/scientific-methodology.md`); receives structured XML literature context (PICO + graded findings)
-4. **User Approval Gate** -- User approves/rejects hypotheses before testing begins (5-min auto-approve timeout)
+4. **User Approval Gate** -- User approves/rejects hypotheses before testing begins. Investigation transitions to `AWAITING_APPROVAL` and blocks until user acts (no timeout). User can also cancel the investigation at any point.
 5. **Experiment Design + Execution** -- `TreeManager.select_next()` picks up to 2 most promising PROPOSED hypotheses (scored by `branch_score`). Director designs structured experiment protocols (variables, controls, confounders, analysis plan, criteria), 2 Sonnet researchers execute in parallel per batch (max 10 tool calls each) with methodology guidance (sensitivity, applicability domain, uncertainty, verification, negative results)
 6. **Hypothesis Evaluation + Tree Action** -- Director compares findings against both hypothesis-level and experiment-level criteria with methodology checks (control validation, confounders, analysis plan adherence). Director decides tree action: **deepen** (spawn narrower sub-hypothesis at depth+1), **branch** (revise into alternative at same depth), or **prune** (mark branch dead). `TreeManager.apply_evaluation()` creates new hypotheses for deepen/branch, marks REJECTED for prune. Loop continues until no explorable hypotheses remain or `max_depth` (default: 3) is reached
 7. **Controls Validation** -- Score positive/negative controls through trained models; compute Z'-factor assay quality, permutation significance, scaffold-split vs random-split comparison
@@ -74,6 +74,20 @@ Investigations are persisted to PostgreSQL via `asyncpg` connection pooling. The
 Additional tables: `users` (WorkOS identity, credit balance), `credit_transactions` (audit trail for credit purchases/spending/refunds). Full-text search uses PostgreSQL `tsvector` + GIN index.
 
 The API keeps `_active_investigations` and `_active_orchestrators` dicts for in-flight SSE streaming and user-guided steering (hypothesis approval). Persists to PostgreSQL on completion (or error).
+
+### Investigation States
+
+`InvestigationStatus` enum enforces a state machine via `transition_to()` with guard logic (`InvalidTransitionError` on invalid transitions):
+
+| State | Description | Allowed Transitions |
+|-------|-------------|--------------------|
+| `PENDING` | Created, not yet started | `RUNNING`, `CANCELLED` |
+| `RUNNING` | Actively executing phases | `AWAITING_APPROVAL`, `PAUSED`, `COMPLETED`, `FAILED`, `CANCELLED` |
+| `AWAITING_APPROVAL` | Blocked on user hypothesis approval | `RUNNING`, `CANCELLED` |
+| `PAUSED` | User-paused (resume not yet implemented) | `RUNNING`, `CANCELLED` |
+| `COMPLETED` | Finished successfully (terminal) | — |
+| `FAILED` | Error occurred (terminal) | — |
+| `CANCELLED` | User-cancelled (terminal) | — |
 
 ## Authentication & Credits
 
@@ -115,7 +129,7 @@ Defense-in-depth across server and console:
 - **Markdown XSS**: all `<Markdown>` components use `rehype-sanitize` to strip dangerous HTML from AI-generated content.
 - **Error sanitization**: JWT validation errors return generic "Invalid or expired token" (no token details leaked). Tool execution errors don't expose internal stack traces. Anthropic API errors have `sk-ant-*` patterns redacted before logging.
 - **SQL injection prevention**: database name validated against `^[a-zA-Z0-9_]+$` in `_ensure_database()`. All other queries use parameterized SQL via `asyncpg`.
-- **State guards**: `POST /investigate/{id}/approve` returns 409 Conflict if the orchestrator is not actively awaiting approval. SSE reconnection refreshes auth token on each attempt.
+- **State guards**: `POST /investigate/{id}/approve` returns 409 Conflict if the investigation is not in `AWAITING_APPROVAL` state. `POST /investigate/{id}/cancel` cancels active or pending investigations. `transition_to()` on the `Investigation` entity enforces valid state transitions with `InvalidTransitionError`. SSE reconnection refreshes auth token on each attempt.
 - **Production build**: source maps disabled in console production builds.
 
 ## Multi-Domain Investigations
@@ -254,7 +268,7 @@ api/ -> investigation/application/ only
 4. **Domain detection** -- `DomainRegistry.detect()` returns `list[DomainConfig]` (one or more); `merge_domain_configs()` creates merged config for cross-domain; emits `DomainDetected` SSE event with display config (includes `domains` sub-list for multi-domain); researcher tool list filtered to merged domain-relevant tools
 5. **Researcher** (Sonnet) conducts structured literature survey with domain-filtered tools, citation chasing, evidence-level grading; **Haiku** grades body-of-evidence (GRADE-adapted) and self-assesses quality (AMSTAR-2); emits `LiteratureSurveyCompleted` event
 6. **Director** (Opus) formulates 2-4 hypotheses with predictions, criteria, scope, Bayesian priors; receives structured XML literature context (PICO + graded findings)
-7. **User Approval Gate** -- user approves/rejects hypotheses (5-min timeout auto-approves)
+7. **User Approval Gate** -- investigation transitions to `AWAITING_APPROVAL`, user approves/rejects hypotheses (no timeout, blocks until user acts); `POST /investigate/{id}/cancel` available at any point
 8. For each batch of 2 hypotheses:
    a. **Director** designs experiment protocol (description, tool plan, variables, controls, confounders, analysis plan, criteria, optional statistical test plan)
    b. **2 Researchers** (Sonnet) execute in parallel via asyncio.Queue

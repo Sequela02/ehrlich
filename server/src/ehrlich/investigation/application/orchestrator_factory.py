@@ -15,6 +15,13 @@ if TYPE_CHECKING:
     from ehrlich.investigation.infrastructure.repository import InvestigationRepository
 
 
+_TIER_RESEARCHER: dict[str, str] = {
+    "claude-haiku-4-5-20251001": "claude-haiku-4-5-20251001",
+    "claude-sonnet-4-5-20250929": "claude-sonnet-4-5-20250929",
+    "claude-opus-4-6": "claude-sonnet-4-5-20250929",
+}
+
+
 def create_orchestrator(
     settings: Any,
     registry: ToolRegistry,
@@ -34,11 +41,14 @@ def create_orchestrator(
     director_effort = settings.director_effort if "opus" in director_model else None
 
     thinking = None
-    if settings.director_thinking == "enabled":
+    if settings.director_thinking == "enabled" and "opus" in director_model:
         thinking = {
             "type": "enabled",
             "budget_tokens": settings.director_thinking_budget,
         }
+
+    # Researcher model follows the tier: Haiku->Haiku, Sonnet->Sonnet, Opus->Sonnet
+    researcher_model = _TIER_RESEARCHER.get(director_model, settings.researcher_model)
 
     director = AnthropicClientAdapter(
         model=director_model,
@@ -48,7 +58,7 @@ def create_orchestrator(
         thinking=thinking,
     )
     researcher = AnthropicClientAdapter(
-        model=settings.researcher_model,
+        model=researcher_model,
         api_key=api_key,
     )
     summarizer = AnthropicClientAdapter(

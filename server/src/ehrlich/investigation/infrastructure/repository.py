@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import uuid
@@ -96,9 +97,44 @@ class InvestigationRepository(_Base):
         self._database_url = database_url
         self._pool: asyncpg.Pool[asyncpg.Record] | None = None
 
-    async def initialize(self) -> None:
+    async def initialize(self, *, max_retries: int = 3, base_delay: float = 2.0) -> None:
+        """Initialize the database connection pool with retry logic.
+
+        Args:
+            max_retries: Maximum number of connection attempts.
+            base_delay: Base delay in seconds between retries (multiplied by attempt number).
+        """
         await self._ensure_database()
-        self._pool = await asyncpg.create_pool(self._database_url, min_size=2, max_size=10)
+
+        last_error: Exception | None = None
+        for attempt in range(1, max_retries + 1):
+            try:
+                self._pool = await asyncpg.create_pool(
+                    self._database_url, min_size=2, max_size=10,
+                )
+                break
+            except OSError as exc:
+                last_error = exc
+                if attempt == max_retries:
+                    logger.critical(
+                        "Failed to connect to PostgreSQL after %d attempts. "
+                        "Is the database server running? URL: %s",
+                        max_retries,
+                        self._database_url.rsplit("@", 1)[-1],  # hide credentials
+                    )
+                    msg = (
+                        f"Cannot connect to PostgreSQL after {max_retries} attempts: {exc}. "
+                        "Verify the database server is running and the connection URL is correct."
+                    )
+                    raise ConnectionError(msg) from exc
+                delay = base_delay * attempt
+                logger.warning(
+                    "PostgreSQL not ready, retrying in %.1fs… (attempt %d/%d)",
+                    delay, attempt, max_retries,
+                )
+                await asyncio.sleep(delay)
+
+        assert self._pool is not None  # noqa: S101 — guaranteed by loop
         async with self._pool.acquire() as conn:
             await conn.execute(_SCHEMA)
         logger.info("PostgreSQL repository initialized")

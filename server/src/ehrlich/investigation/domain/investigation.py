@@ -19,8 +19,47 @@ if TYPE_CHECKING:
 class InvestigationStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
+    AWAITING_APPROVAL = "awaiting_approval"
+    PAUSED = "paused"
     COMPLETED = "completed"
     FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class InvalidTransitionError(Exception):
+    """Raised when an invalid status transition is attempted."""
+
+    def __init__(self, current: InvestigationStatus, target: InvestigationStatus) -> None:
+        super().__init__(f"Cannot transition from '{current}' to '{target}'")
+        self.current = current
+        self.target = target
+
+
+_VALID_TRANSITIONS: dict[InvestigationStatus, frozenset[InvestigationStatus]] = {
+    InvestigationStatus.PENDING: frozenset({
+        InvestigationStatus.RUNNING,
+        InvestigationStatus.CANCELLED,
+    }),
+    InvestigationStatus.RUNNING: frozenset({
+        InvestigationStatus.AWAITING_APPROVAL,
+        InvestigationStatus.PAUSED,
+        InvestigationStatus.COMPLETED,
+        InvestigationStatus.FAILED,
+        InvestigationStatus.CANCELLED,
+    }),
+    InvestigationStatus.AWAITING_APPROVAL: frozenset({
+        InvestigationStatus.RUNNING,
+        InvestigationStatus.CANCELLED,
+    }),
+    InvestigationStatus.PAUSED: frozenset({
+        InvestigationStatus.RUNNING,
+        InvestigationStatus.CANCELLED,
+    }),
+    # Terminal states — no transitions allowed
+    InvestigationStatus.COMPLETED: frozenset(),
+    InvestigationStatus.FAILED: frozenset(),
+    InvestigationStatus.CANCELLED: frozenset(),
+}
 
 
 @dataclass
@@ -45,6 +84,13 @@ class Investigation:
     trained_model_ids: list[str] = field(default_factory=list)
     cost_data: dict[str, object] = field(default_factory=dict)
     uploaded_files: list[UploadedFile] = field(default_factory=list)
+
+    def transition_to(self, new_status: InvestigationStatus) -> None:
+        """Transition to a new status, enforcing valid state transitions."""
+        allowed = _VALID_TRANSITIONS.get(self.status, frozenset())
+        if new_status not in allowed:
+            raise InvalidTransitionError(self.status, new_status)
+        self.status = new_status
 
     def record_finding(self, finding: Finding) -> None:
         self.findings.append(finding)

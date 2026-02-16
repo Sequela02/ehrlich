@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { ArrowRight, Copy, Check } from "lucide-react";
 import { motion, useInView } from "motion/react";
-import { PRICING_TIERS } from "@/lib/constants";
+import { PUBLIC_BETA_TIERS } from "@/lib/constants";
 import { SectionHeader } from "./SectionHeader";
 
 const QUICKSTART = `git clone https://github.com/sequelcore/ehrlich
@@ -36,14 +36,14 @@ export function CTA() {
       {/* Primary accent glow -- final push */}
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/3 rounded-full blur-[140px] pointer-events-none" />
 
-      <SectionHeader title="Pricing" />
+      <SectionHeader title="Public Beta" />
 
       <div className="mb-12 max-w-2xl">
         <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-4">
           Hosted instance pricing.
         </h2>
         <p className="text-base text-muted-foreground leading-relaxed">
-          Self-hosting is free with your own API key. The hosted instance uses credits to cover Anthropic API costs. No feature gates -- all 85 tools, all 19 data sources, full 6-phase methodology at every level. The only variable is the Director model quality.
+          Self-hosting is free with your own API key. The hosted instance uses Pay-as-you-go Credits (Haiku=1, Sonnet=3, Opus=5) to cover Anthropic costs. Alternatively, use <strong>Bring Your Own Key (BYOK) for free, unlimited hosted access</strong> (subject only to your Anthropic API limits).
         </p>
       </div>
 
@@ -53,17 +53,16 @@ export function CTA() {
         initial="hidden"
         animate={isInView ? "visible" : "hidden"}
         variants={containerVariants}
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-20"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-20 max-w-4xl"
       >
-        {PRICING_TIERS.map((tier) => (
+        {PUBLIC_BETA_TIERS.map((tier) => (
           <motion.div
             key={tier.name}
             variants={cardVariants}
-            className={`flex flex-col p-6 lg:p-8 rounded-sm border transition-colors ${
-              tier.highlight
-                ? "border-primary/50 bg-primary/5"
-                : "border-border bg-surface"
-            }`}
+            className={`flex flex-col p-6 lg:p-8 rounded-sm border transition-colors ${tier.highlight
+              ? "border-primary/50 bg-primary/5"
+              : "border-border bg-surface"
+              }`}
           >
             <div className="mb-6">
               <h3 className="font-mono text-sm uppercase tracking-[0.12em] text-foreground mb-2">
@@ -98,11 +97,10 @@ export function CTA() {
 
             <a
               href="/console"
-              className={`text-center font-medium text-sm px-6 py-3 rounded-sm flex items-center justify-center gap-2 transition-colors ${
-                tier.highlight
-                  ? "bg-primary text-primary-foreground hover:opacity-90"
-                  : "border border-border text-foreground hover:border-primary hover:text-primary"
-              }`}
+              className={`text-center font-medium text-sm px-6 py-3 rounded-sm flex items-center justify-center gap-2 transition-colors ${tier.highlight
+                ? "bg-primary text-primary-foreground hover:opacity-90"
+                : "border border-border text-foreground hover:border-primary hover:text-primary"
+                }`}
             >
               {tier.cta}
               <ArrowRight size={14} />

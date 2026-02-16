@@ -175,6 +175,12 @@ export function AppSidebar({
                                                 {inv.status === "running" && (
                                                     <span className="flex h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-primary" />
                                                 )}
+                                                {inv.status === "awaiting_approval" && (
+                                                    <span className="flex h-1.5 w-1.5 shrink-0 animate-pulse rounded-full bg-accent" />
+                                                )}
+                                                {inv.status === "cancelled" && (
+                                                    <span className="flex h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/40" />
+                                                )}
                                             </div>
                                             <span className="truncate text-[10px] text-muted-foreground/60">
                                                 {new Date(inv.created_at).toLocaleDateString()}

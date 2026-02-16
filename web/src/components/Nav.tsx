@@ -35,7 +35,8 @@ export function Nav() {
   return (
     <nav className="fixed top-0 left-0 right-0 h-12 bg-background/90 backdrop-blur-sm z-50 border-b border-border">
       <div className="max-w-[1200px] mx-auto h-full px-6 flex items-center justify-between">
-        <a href="#" className="font-sans font-semibold text-lg tracking-tight text-foreground">
+        <a href="#" className="flex items-center gap-2 font-sans font-semibold text-lg tracking-tight text-foreground">
+          <img src="/logo.svg" alt="Ehrlich Logo" className="w-8 h-8" />
           Ehrlich
         </a>
 
@@ -45,11 +46,10 @@ export function Nav() {
             <a
               key={link.href}
               href={link.href}
-              className={`font-mono text-xs uppercase tracking-wider transition-colors ${
-                link.href.startsWith("#") && activeSection === link.href.slice(1)
+              className={`font-mono text-xs uppercase tracking-wider transition-colors ${link.href.startsWith("#") && activeSection === link.href.slice(1)
                   ? "text-primary"
                   : "text-muted-foreground hover:text-primary"
-              }`}
+                }`}
             >
               {link.label}
             </a>

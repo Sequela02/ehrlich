@@ -172,6 +172,7 @@ async def run_literature_survey(
             response.input_tokens,
             response.output_tokens,
             researcher.model,
+            role="researcher",
             cache_read_tokens=response.cache_read_input_tokens,
             cache_write_tokens=response.cache_write_input_tokens,
         )
@@ -294,6 +295,7 @@ async def run_literature_survey(
             grade_response.input_tokens,
             grade_response.output_tokens,
             summarizer.model,
+            role="summarizer",
             cache_read_tokens=grade_response.cache_read_input_tokens,
             cache_write_tokens=grade_response.cache_write_input_tokens,
         )

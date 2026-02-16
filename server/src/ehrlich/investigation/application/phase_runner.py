@@ -136,6 +136,7 @@ async def run_classification_phase(
             pico_response.input_tokens,
             pico_response.output_tokens,
             summarizer.model,
+            role="summarizer",
             cache_read_tokens=pico_response.cache_read_input_tokens,
             cache_write_tokens=pico_response.cache_write_input_tokens,
         )
@@ -279,6 +280,7 @@ async def run_formulation_phase(
 
     # Request user approval before testing
     if require_approval:
+        investigation.transition_to(InvestigationStatus.AWAITING_APPROVAL)
         yield HypothesisApprovalRequested(
             hypotheses=[
                 {
@@ -295,11 +297,11 @@ async def run_formulation_phase(
             ],
             investigation_id=investigation.id,
         )
-        try:
-            await asyncio.wait_for(approval_event.wait(), timeout=300)
-        except TimeoutError:
-            logger.info("Approval timeout, auto-approving all hypotheses")
+        await approval_event.wait()
         approval_event.clear()
+        # If cancelled during wait, stop early
+        if investigation.status == InvestigationStatus.CANCELLED:
+            return
 
     yield {
         "__phase_result__": {
@@ -789,21 +791,44 @@ async def run_synthesis_phase(
     )
     investigation.summary = synthesis.get("summary", "")
     raw_candidates = synthesis.get("candidates") or []
-    candidates = [
-        Candidate(
-            identifier=c.get("identifier", c.get("smiles", "")),
-            identifier_type=c.get("identifier_type", ""),
-            name=c.get("name", ""),
-            notes=c.get("rationale", c.get("notes", "")),
-            rank=c.get("rank", i + 1),
-            priority=c.get("priority", 0),
-            scores={
-                k: float(v) for k, v in c.get("scores", {}).items() if isinstance(v, (int, float))
-            },
-            attributes={k: str(v) for k, v in c.get("attributes", {}).items()},
+    candidates = []
+    for i, c in enumerate(raw_candidates):
+        # Normalize scores: array [{name, value}] -> dict or already dict
+        raw_scores = c.get("scores", [])
+        if isinstance(raw_scores, list):
+            scores = {
+                s["name"]: float(s["value"])
+                for s in raw_scores
+                if isinstance(s, dict) and "name" in s and "value" in s
+            }
+        else:
+            scores = {
+                k: float(v)
+                for k, v in raw_scores.items()
+                if isinstance(v, (int, float))
+            }
+        # Normalize attributes: array [{name, value}] -> dict or already dict
+        raw_attrs = c.get("attributes", [])
+        if isinstance(raw_attrs, list):
+            attributes = {
+                a["name"]: str(a["value"])
+                for a in raw_attrs
+                if isinstance(a, dict) and "name" in a and "value" in a
+            }
+        else:
+            attributes = {k: str(v) for k, v in raw_attrs.items()}
+        candidates.append(
+            Candidate(
+                identifier=c.get("identifier", c.get("smiles", "")),
+                identifier_type=c.get("identifier_type", ""),
+                name=c.get("name", ""),
+                notes=c.get("rationale", c.get("notes", "")),
+                rank=c.get("rank", i + 1),
+                priority=c.get("priority", 0),
+                scores=scores,
+                attributes=attributes,
+            )
         )
-        for i, c in enumerate(raw_candidates)
-    ]
     citations = synthesis.get("citations") or []
     investigation.set_candidates(candidates, citations)
 
@@ -812,7 +837,7 @@ async def run_synthesis_phase(
     if mcp_bridge and mcp_bridge.has_tool("excalidraw:create_view"):
         diagram_url = await generate_diagram(mcp_bridge, investigation)
 
-    investigation.status = InvestigationStatus.COMPLETED
+    investigation.transition_to(InvestigationStatus.COMPLETED)
     investigation.cost_data = cost.to_dict()
 
     candidate_dicts = [

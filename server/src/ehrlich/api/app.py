@@ -78,7 +78,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             settings.environment,
         )
 
-    await init_repository(settings.database_url)
+    try:
+        await init_repository(settings.database_url)
+    except ConnectionError as exc:
+        logger.critical("Startup aborted: %s", exc)
+        raise SystemExit(1) from exc
     logger.info("PostgreSQL repository initialized")
 
     yield

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CheckCircle2, XCircle, Play } from "lucide-react";
+import { CheckCircle2, XCircle, Play, Ban } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { apiFetch } from "@/shared/lib/api";
 
@@ -13,15 +13,18 @@ interface HypothesisApprovalCardProps {
   investigationId: string;
   hypotheses: PendingHypothesis[];
   onApproved: () => void;
+  onCancelled?: () => void;
 }
 
 export function HypothesisApprovalCard({
   investigationId,
   hypotheses,
   onApproved,
+  onCancelled,
 }: HypothesisApprovalCardProps) {
   const [rejected, setRejected] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   function toggleReject(id: string) {
     setRejected((prev) => {
@@ -46,6 +49,14 @@ export function HypothesisApprovalCard({
     onApproved();
   }
 
+  async function handleCancel() {
+    setCancelling(true);
+    await apiFetch(`/investigate/${investigationId}/cancel`, {
+      method: "POST",
+    });
+    onCancelled?.();
+  }
+
   const approvedCount = hypotheses.length - rejected.size;
 
   return (
@@ -59,14 +70,24 @@ export function HypothesisApprovalCard({
             The Director formulated {hypotheses.length} hypotheses. Approve or reject each before experiments begin.
           </p>
         </div>
-        <button
-          onClick={handleApprove}
-          disabled={submitting || approvedCount === 0}
-          className="inline-flex items-center gap-1.5 rounded-sm bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
-        >
-          <Play className="h-3.5 w-3.5" />
-          {submitting ? "Starting..." : `Test ${approvedCount} Hypotheses`}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleCancel}
+            disabled={cancelling || submitting}
+            className="inline-flex items-center gap-1.5 rounded-sm border border-destructive/30 px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+          >
+            <Ban className="h-3.5 w-3.5" />
+            {cancelling ? "Cancelling..." : "Cancel"}
+          </button>
+          <button
+            onClick={handleApprove}
+            disabled={submitting || cancelling || approvedCount === 0}
+            className="inline-flex items-center gap-1.5 rounded-sm bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            <Play className="h-3.5 w-3.5" />
+            {submitting ? "Starting..." : `Test ${approvedCount} Hypotheses`}
+          </button>
+        </div>
       </div>
       <div className="mt-4 space-y-2">
         {hypotheses.map((h) => {

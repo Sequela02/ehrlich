@@ -67,25 +67,27 @@ class TestCostTracker:
         assert result["total_tokens"] == 150
         assert result["tool_calls"] == 1
         assert isinstance(result["total_cost_usd"], float)
-        assert "by_model" not in result
+        assert "by_role" not in result
 
-    def test_to_dict_with_model_breakdown(self) -> None:
+    def test_to_dict_with_role_breakdown(self) -> None:
         tracker = CostTracker()
-        tracker.add_usage(100, 50, model="claude-opus-4-6")
-        tracker.add_usage(200, 100, model="claude-sonnet-4-5-20250929")
+        tracker.add_usage(100, 50, model="claude-opus-4-6", role="director")
+        tracker.add_usage(200, 100, model="claude-sonnet-4-5-20250929", role="researcher")
         tracker.add_tool_call()
         result = tracker.to_dict()
         assert result["input_tokens"] == 300
         assert result["output_tokens"] == 150
-        assert "by_model" in result
-        breakdown = result["by_model"]
+        assert "by_role" in result
+        breakdown = result["by_role"]
         assert isinstance(breakdown, dict)
-        assert "claude-opus-4-6" in breakdown
-        assert "claude-sonnet-4-5-20250929" in breakdown
-        opus_data = breakdown["claude-opus-4-6"]
-        assert isinstance(opus_data, dict)
-        assert opus_data["input_tokens"] == 100
-        assert opus_data["calls"] == 1
+        assert "director" in breakdown
+        assert "researcher" in breakdown
+        director_data = breakdown["director"]
+        assert isinstance(director_data, dict)
+        assert director_data["input_tokens"] == 100
+        assert director_data["calls"] == 1
+        assert director_data["model"] == "claude-opus-4-6"
+        assert director_data["model_display"] == "Opus 4.6"
 
     def test_cache_aware_cost_calculation(self) -> None:
         tracker = CostTracker()
@@ -124,12 +126,13 @@ class TestCostTracker:
         assert result["cache_read_tokens"] == 2000
         assert result["cache_write_tokens"] == 1000
 
-    def test_cache_tokens_per_model_breakdown(self) -> None:
+    def test_cache_tokens_per_role_breakdown(self) -> None:
         tracker = CostTracker()
         tracker.add_usage(
             100,
             50,
             model="claude-opus-4-6",
+            role="director",
             cache_read_tokens=500,
             cache_write_tokens=200,
         )
@@ -137,17 +140,18 @@ class TestCostTracker:
             200,
             100,
             model="claude-sonnet-4-5-20250929",
+            role="researcher",
             cache_read_tokens=300,
             cache_write_tokens=150,
         )
         result = tracker.to_dict()
-        breakdown = result["by_model"]
+        breakdown = result["by_role"]
         assert isinstance(breakdown, dict)
-        opus = breakdown["claude-opus-4-6"]
-        assert isinstance(opus, dict)
-        assert opus["cache_read_tokens"] == 500
-        assert opus["cache_write_tokens"] == 200
-        sonnet = breakdown["claude-sonnet-4-5-20250929"]
-        assert isinstance(sonnet, dict)
-        assert sonnet["cache_read_tokens"] == 300
-        assert sonnet["cache_write_tokens"] == 150
+        director = breakdown["director"]
+        assert isinstance(director, dict)
+        assert director["cache_read_tokens"] == 500
+        assert director["cache_write_tokens"] == 200
+        researcher = breakdown["researcher"]
+        assert isinstance(researcher, dict)
+        assert researcher["cache_read_tokens"] == 300
+        assert researcher["cache_write_tokens"] == 150

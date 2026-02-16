@@ -268,8 +268,8 @@ def build_synthesis_prompt(config: DomainConfig) -> str:
         '      "rationale": "why this candidate is promising",\n'
         '      "rank": 1,\n'
         '      "priority": 1,\n'
-        '      "scores": {},\n'
-        '      "attributes": {}\n'
+        '      "scores": [{"name": "score_name", "value": 0.85}],\n'
+        '      "attributes": [{"name": "attr_name", "value": "attr_value"}]\n'
         "    }\n"
         "  ],\n"
         '  "citations": ["DOI or reference strings"],\n'

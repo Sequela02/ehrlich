@@ -226,12 +226,28 @@ SYNTHESIS_SCHEMA: dict[str, Any] = {
                     "rank": {"type": "integer"},
                     "priority": {"type": "integer"},
                     "scores": {
-                        "type": "object",
-                        "additionalProperties": {"type": "number"},
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {"type": "string"},
+                                "value": {"type": "number"},
+                            },
+                            "required": ["name", "value"],
+                            "additionalProperties": False,
+                        },
                     },
                     "attributes": {
-                        "type": "object",
-                        "additionalProperties": True,
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {"type": "string"},
+                                "value": {"type": "string"},
+                            },
+                            "required": ["name", "value"],
+                            "additionalProperties": False,
+                        },
                     },
                 },
                 "required": [

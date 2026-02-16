@@ -630,8 +630,8 @@ hypothesis outcomes and key discoveries",
       "rationale": "why this candidate is promising",
       "rank": 1,
       "priority": 1,
-      "scores": {},
-      "attributes": {}
+      "scores": [{"name": "score_name", "value": 0.85}],
+      "attributes": [{"name": "attr_name", "value": "attr_value"}]
     }
   ],
   "citations": ["DOI or reference strings"],

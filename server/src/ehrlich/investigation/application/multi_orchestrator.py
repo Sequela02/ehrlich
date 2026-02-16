@@ -26,7 +26,6 @@ from ehrlich.investigation.application.tool_dispatcher import ToolDispatcher
 from ehrlich.investigation.domain.events import (
     CostUpdate,
     DomainEvent,
-    HypothesisApprovalRequested,
     InvestigationError,
     PhaseChanged,
     Thinking,
@@ -90,14 +89,16 @@ class MultiModelOrchestrator:
         self._dispatcher = ToolDispatcher(registry, self._cache, repository, {})
         self._state_lock = asyncio.Lock()
         self._approval_event = asyncio.Event()
-        self._awaiting_approval = False
         self._investigation: Investigation | None = None
         self._uploaded_files: dict[str, UploadedFile] = {}
         self._uploaded_data_context = ""
 
+    @property
     def is_awaiting_approval(self) -> bool:
         """Return True if the orchestrator is blocked waiting for hypothesis approval."""
-        return self._awaiting_approval
+        if self._investigation is None:
+            return False
+        return self._investigation.status == InvestigationStatus.AWAITING_APPROVAL
 
     def approve_hypotheses(
         self,
@@ -105,13 +106,21 @@ class MultiModelOrchestrator:
         rejected_ids: list[str],
     ) -> None:
         """Called by API to approve/reject hypotheses and unblock the loop."""
-        self._awaiting_approval = False
-        if self._investigation:
-            from ehrlich.investigation.domain.hypothesis import HypothesisStatus
+        if self._investigation is None:
+            return
+        from ehrlich.investigation.domain.hypothesis import HypothesisStatus
 
-            for h in self._investigation.hypotheses:
-                if h.id in rejected_ids:
-                    h.status = HypothesisStatus.REJECTED
+        for h in self._investigation.hypotheses:
+            if h.id in rejected_ids:
+                h.status = HypothesisStatus.REJECTED
+        self._investigation.transition_to(InvestigationStatus.RUNNING)
+        self._approval_event.set()
+
+    def cancel(self) -> None:
+        """Cancel the investigation and unblock any pending waits."""
+        if self._investigation is None:
+            return
+        self._investigation.transition_to(InvestigationStatus.CANCELLED)
         self._approval_event.set()
 
     def _cost_event(self, cost: CostTracker, investigation_id: str) -> CostUpdate:
@@ -156,6 +165,7 @@ class MultiModelOrchestrator:
                 response.input_tokens,
                 response.output_tokens,
                 self._director.model,
+                role="director",
                 cache_read_tokens=response.cache_read_input_tokens,
                 cache_write_tokens=response.cache_write_input_tokens,
             )
@@ -167,7 +177,7 @@ class MultiModelOrchestrator:
     # ------------------------------------------------------------------
 
     async def run(self, investigation: Investigation) -> AsyncGenerator[DomainEvent, None]:
-        investigation.status = InvestigationStatus.RUNNING
+        investigation.transition_to(InvestigationStatus.RUNNING)
         cost = CostTracker()
 
         # Build uploaded data context for prompt injection
@@ -257,11 +267,7 @@ class MultiModelOrchestrator:
                     neg_control_suggestions = result["neg_control_suggestions"]
                     pos_control_suggestions = result["pos_control_suggestions"]
                 else:
-                    if isinstance(event, HypothesisApprovalRequested):
-                        self._awaiting_approval = True
                     yield event
-
-            self._awaiting_approval = False
 
             # 4. Hypothesis testing loop
             async for event in run_hypothesis_testing_phase(
@@ -312,7 +318,7 @@ class MultiModelOrchestrator:
 
         except Exception as e:
             logger.exception("Investigation %s failed", investigation.id)
-            investigation.status = InvestigationStatus.FAILED
+            investigation.transition_to(InvestigationStatus.FAILED)
             investigation.error = str(e)
             investigation.cost_data = cost.to_dict()
             yield InvestigationError(error=str(e), investigation_id=investigation.id)

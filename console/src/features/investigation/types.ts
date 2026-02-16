@@ -21,6 +21,15 @@ export type SSEEventType =
   | "hypothesis_tree_updated"
   | "positive_control";
 
+export type InvestigationStatus =
+  | "pending"
+  | "running"
+  | "awaiting_approval"
+  | "paused"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
 export interface SSEEvent {
   event: SSEEventType;
   data: Record<string, unknown>;
@@ -283,13 +292,13 @@ export interface InvestigationRequest {
 
 export interface InvestigationResponse {
   id: string;
-  status: string;
+  status: InvestigationStatus;
 }
 
 export interface InvestigationSummary {
   id: string;
   prompt: string;
-  status: string;
+  status: InvestigationStatus;
   created_at: string;
   candidate_count: number;
 }
@@ -348,7 +357,7 @@ export interface VisualizationData {
 export interface InvestigationDetail {
   id: string;
   prompt: string;
-  status: string;
+  status: InvestigationStatus;
   hypotheses: Hypothesis[];
   experiments: Experiment[];
   findings: Finding[];
@@ -360,7 +369,9 @@ export interface InvestigationDetail {
   cost_data: Record<string, unknown>;
 }
 
-export interface ModelCost {
+export interface RoleCost {
+  model: string;
+  model_display: string;
   input_tokens: number;
   output_tokens: number;
   calls: number;
@@ -373,5 +384,5 @@ export interface CostInfo {
   totalTokens: number;
   totalCost: number;
   toolCalls: number;
-  byModel?: Record<string, ModelCost>;
+  byRole?: Record<string, RoleCost>;
 }
