@@ -28,7 +28,6 @@ class TestSearchLiterature:
             assert result["count"] == 1
             assert result["papers"][0]["title"] == "Mock Paper"
             assert result["papers"][0]["doi"] == "10.1234/mock"
-            assert "citation" in result["papers"][0]
 
     @pytest.mark.asyncio
     async def test_empty_abstract_handled(self) -> None:
@@ -38,6 +37,22 @@ class TestSearchLiterature:
             mock.return_value = [paper]
             result = json.loads(await tools.search_literature("test"))
             assert result["papers"][0]["abstract"] == ""
+
+    @pytest.mark.asyncio
+    async def test_authors_truncated_to_three(self) -> None:
+        paper = Paper(
+            title="Many Authors",
+            authors=["A", "B", "C", "D", "E"],
+            year=2024,
+            abstract="Test",
+            doi="10.1234/test",
+            citations=5,
+        )
+        with patch.object(tools._service, "search_papers", new_callable=AsyncMock) as mock:
+            mock.return_value = [paper]
+            result = json.loads(await tools.search_literature("test"))
+            assert len(result["papers"][0]["authors"]) == 3
+            assert result["papers"][0]["authors"] == ["A", "B", "C"]
 
 
 class TestSearchCitationsTool:

@@ -27,6 +27,7 @@ class ToolDispatcher:
         self._cache = cache
         self._repository = repository
         self._uploaded_files = uploaded_files
+        self._seen_paper_keys: set[str] = set()
 
     def update_uploaded_files(self, files: dict[str, UploadedFile]) -> None:
         self._uploaded_files = files
@@ -51,6 +52,8 @@ class ToolDispatcher:
         args_hash = ToolCache.hash_args(tool_input)
         cached = self._cache.get(tool_name, args_hash)
         if cached is not None:
+            if tool_name in ("search_literature", "search_citations"):
+                return self._dedup_papers(cached)
             return cached
 
         func = self._registry.get(tool_name)
@@ -61,10 +64,37 @@ class ToolDispatcher:
             result = await func(**tool_input)
             result_str = str(result)
             self._cache.put(tool_name, args_hash, result_str)
+
+            if tool_name in ("search_literature", "search_citations"):
+                result_str = self._dedup_papers(result_str)
+
             return result_str
         except Exception:
             logger.exception("Tool %s failed", tool_name)
             return json.dumps({"error": f"Tool {tool_name} failed"})
+
+    def _dedup_papers(self, result_str: str) -> str:
+        try:
+            data = json.loads(result_str)
+            papers = data.get("papers", [])
+            deduped = []
+
+            for paper in papers:
+                doi = paper.get("doi", "")
+                title = paper.get("title", "")
+                year = paper.get("year", 0)
+
+                key = doi if doi else f"{title.lower()}:{year}"
+
+                if key not in self._seen_paper_keys:
+                    self._seen_paper_keys.add(key)
+                    deduped.append(paper)
+
+            data["papers"] = deduped
+            data["count"] = len(deduped)
+            return json.dumps(data)
+        except (json.JSONDecodeError, KeyError):
+            return result_str
 
     def _handle_query_uploaded_data(self, tool_input: dict[str, Any]) -> str:
         """Handle query_uploaded_data tool calls from in-memory uploaded files."""

@@ -125,6 +125,7 @@ Scopes: kernel, shared, literature, chemistry, analysis, prediction, simulation,
 - **Context compaction**: `_build_prior_context()` compresses completed hypotheses for Director
 - **Prompt engineering**: XML-tagged instructions, multishot examples (2 per Director prompt), tool usage examples for Researcher
 - **ToolCache**: in-memory TTL cache (deterministic: forever, API: 24h-7d)
+- **Token optimization**: `token-efficient-tools-2025-02-19` beta header on all API calls; literature dedup by DOI across queries in `ToolDispatcher`; authors truncated to 3 in search results; default 5 papers per query (was 10)
 - **Event persistence**: PostgreSQL `events` table; completed investigations replay full timeline
 - **Structured outputs**: Director uses `output_config` with 6 JSON schemas (`domain/schemas.py`)
 - **Director streaming**: `_director_call()` async generator with `stream_message()`; Researcher/Summarizer non-streaming

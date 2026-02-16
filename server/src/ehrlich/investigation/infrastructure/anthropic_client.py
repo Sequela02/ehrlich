@@ -207,6 +207,8 @@ class AnthropicClientAdapter:
         if tool_choice is not None:
             kwargs["tool_choice"] = tool_choice
 
+        kwargs["extra_headers"] = {"anthropic-beta": "token-efficient-tools-2025-02-19"}
+
         return kwargs
 
 

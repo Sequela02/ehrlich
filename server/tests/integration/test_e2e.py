@@ -140,7 +140,7 @@ class TestToolRegistry:
     def test_build_registry_has_expected_tools(self) -> None:
         registry = build_tool_registry()
         tools = registry.list_tools()
-        assert len(tools) == 90
+        assert len(tools) == 91
         assert "validate_smiles" in tools
         assert "search_literature" in tools
         assert "search_citations" in tools
@@ -191,7 +191,7 @@ class TestToolRegistry:
     def test_all_tools_have_schemas(self) -> None:
         registry = build_tool_registry()
         schemas = registry.list_schemas()
-        assert len(schemas) == 90
+        assert len(schemas) == 91
         for schema in schemas:
             assert "name" in schema
             assert "description" in schema

@@ -19,7 +19,7 @@ class LiteratureService:
         self._fallback = fallback
         self._references = references or CoreReferenceSet()
 
-    async def search_papers(self, query: str, limit: int = 10) -> list[Paper]:
+    async def search_papers(self, query: str, limit: int = 5) -> list[Paper]:
         try:
             return await self._primary.search(query, limit)
         except ExternalServiceError:
@@ -32,7 +32,7 @@ class LiteratureService:
         self,
         paper_id: str,
         direction: str = "both",
-        limit: int = 10,
+        limit: int = 5,
     ) -> list[Paper]:
         papers: list[Paper] = []
         try:
